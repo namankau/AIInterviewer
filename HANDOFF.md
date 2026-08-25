@@ -94,9 +94,8 @@ served over HTTP. I verified it fails when the fix is reverted.
 - **Google sign-in end to end.** The provider is enabled on your project and the flow
   is implemented, but completing it needs a browser and a real Google account. The
   redirect allow-list entry (`http://localhost:3000/**`) is worth confirming.
-- **Nothing that needs the database password.** `DATABASE_URL` and `DATABASE_USER` are
-  filled in from the project's pooler config; `DATABASE_PASSWORD` is still blank, so the
-  API has never run against the hosted database.
+- **The browser half of Google sign-in.** Everything up to the redirect is verified;
+  completing consent and landing on the dashboard needs a human with a Google account.
 - **The local Supabase stack.** Docker is not installed on this machine, so
   `npm run db:start` and `npm run db:reset` are unrun. The `[auth.external.google]`
   block in `config.toml` is likewise unverified.
@@ -130,6 +129,22 @@ Once `SUPABASE_ACCESS_TOKEN` was in place, `npm run db:push` applied
 
 The project is Postgres 17, matching `config.toml`'s `major_version` — open question 2
 is settled.
+
+### `npm run dev` verified against the hosted project
+
+With the database password in place, both services start and talk to the real project:
+
+- `GET /api/health` → 200 with build info; `GET /api/v1/me` → 401 with the error envelope
+- web landing and `/login` → 200, and `/dashboard` while signed out → 307 to
+  `/login?next=%2Fdashboard`, so the guard works
+- the JDBC credentials connect to `aws-0-ap-south-1.pooler.supabase.com:5432` and see
+  five tables, all with RLS enabled
+
+The first `npm run dev` failed with `spawn EINVAL`: on Windows, Node will not spawn a
+`.cmd` or `.bat` without a shell, and a shell then splits `Live Projects` on the space.
+`scripts/dev.mjs` now runs the real entry points instead — `next/dist/bin/next` under
+this Node, and `GradleWrapperMain` out of the wrapper jar, which is what `gradlew` does
+once it has located a JVM. `scripts/supabase.mjs` had the same defect and the same fix.
 
 ## Verification status
 

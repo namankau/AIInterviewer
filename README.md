@@ -46,10 +46,14 @@ Fill in `.env` — both apps read this one file, and every key is documented the
 **Hosted Supabase** (the default; required for Google sign-in):
 
 ```bash
-npx supabase login       # once per machine
+npm run db:login         # once per machine
 npm run db:link          # once per clone; also sets up the IPv4 connection
 npm run db:push          # applies supabase/migrations
 ```
+
+If you are signed in to more than one Supabase account, skip `db:login` and put a
+personal access token for the owning account in `.env` as `SUPABASE_ACCESS_TOKEN`
+instead — see "Two Supabase accounts" below.
 
 Then set the `DATABASE_*` values in `.env` from **Dashboard → Connect → JDBC** (use the
 session pooler host) and **Settings → Database** for the password:
@@ -109,21 +113,38 @@ curl http://localhost:8080/api/v1/me -H "Authorization: Bearer <access token>"
 
 ## Database workflow
 
-**Always drive the CLI through `npm run db:*` or `npx supabase`, never a bare
-`supabase`.** The CLI is pinned as a dev dependency so every machine and CI agree on a
-version. A separately installed global CLI — via scoop, brew or the installer — will
-usually be older, and an older CLI cannot parse a `supabase/config.toml` written by a
-newer one. It fails like this:
+**Always drive the CLI through `npm run db:*`, never a bare `supabase`.** Those scripts
+run the pinned CLI with `.env` loaded. A globally installed CLI — scoop, brew, the
+installer — will usually be older, and an older CLI cannot parse a
+`supabase/config.toml` written by a newer one:
 
 ```
 failed to parse config: 'experimental' has invalid keys: pgdelta
 ```
 
-That is a version mismatch, not a broken config. Use the pinned CLI, or update the
-global one to match.
+That is a version mismatch, not a broken config.
+
+### Two Supabase accounts
+
+`supabase login` stores exactly one token per machine, so if you belong to more than one
+account the last login wins — and every command then fails with:
+
+```
+Your account does not have the necessary privileges to access this endpoint
+```
+
+That message reads like a permissions tier, but it usually means the wrong account.
+`npm run supabase -- projects list` shows what the current token can actually see; if
+this project is not in that list, that is the problem.
+
+The fix is to pin the repository rather than the machine: create a personal access
+token at <https://supabase.com/dashboard/account/tokens> while signed in as the account
+that owns the project, and put it in `.env` as `SUPABASE_ACCESS_TOKEN`. It overrides the
+global login for this repo only, so your other account keeps working everywhere else.
 
 | Command | What it does |
 |---|---|
+| `npm run db:login` | Store a CLI login for this machine |
 | `npm run db:link` | Link this clone to the hosted project (once) |
 | `npm run db:start` / `db:stop` | Local Supabase stack (Docker) |
 | `npm run db:reset` | Rebuild the local database from migrations, then seed |

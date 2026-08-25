@@ -14,14 +14,16 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "db:link": "supabase link --project-ref moeronogmgtmbdnzfzgu",
-    "db:start": "supabase start",
-    "db:stop": "supabase stop",
-    "db:status": "supabase status",
-    "db:push": "supabase db push",
-    "db:reset": "supabase db reset",
-    "db:diff": "supabase db diff -f",
-    "db:lint": "supabase db lint --level warning"
+    "supabase": "node --env-file-if-exists=.env scripts/supabase.mjs",
+    "db:login": "npm run supabase -- login",
+    "db:link": "npm run supabase -- link --project-ref moeronogmgtmbdnzfzgu",
+    "db:start": "npm run supabase -- start",
+    "db:stop": "npm run supabase -- stop",
+    "db:status": "npm run supabase -- status",
+    "db:push": "npm run supabase -- db push",
+    "db:reset": "npm run supabase -- db reset",
+    "db:diff": "npm run supabase -- db diff -f",
+    "db:lint": "npm run supabase -- db lint --level warning"
   },
   "engines": {
     "node": ">=20.12"

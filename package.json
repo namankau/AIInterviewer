@@ -14,6 +14,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "db:link": "supabase link --project-ref moeronogmgtmbdnzfzgu",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:status": "supabase status",

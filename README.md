@@ -46,8 +46,8 @@ Fill in `.env` — both apps read this one file, and every key is documented the
 **Hosted Supabase** (the default; required for Google sign-in):
 
 ```bash
-npx supabase login
-npx supabase link --project-ref <project-ref>
+npx supabase login       # once per machine
+npm run db:link          # once per clone; also sets up the IPv4 connection
 npm run db:push          # applies supabase/migrations
 ```
 
@@ -109,8 +109,22 @@ curl http://localhost:8080/api/v1/me -H "Authorization: Bearer <access token>"
 
 ## Database workflow
 
+**Always drive the CLI through `npm run db:*` or `npx supabase`, never a bare
+`supabase`.** The CLI is pinned as a dev dependency so every machine and CI agree on a
+version. A separately installed global CLI — via scoop, brew or the installer — will
+usually be older, and an older CLI cannot parse a `supabase/config.toml` written by a
+newer one. It fails like this:
+
+```
+failed to parse config: 'experimental' has invalid keys: pgdelta
+```
+
+That is a version mismatch, not a broken config. Use the pinned CLI, or update the
+global one to match.
+
 | Command | What it does |
 |---|---|
+| `npm run db:link` | Link this clone to the hosted project (once) |
 | `npm run db:start` / `db:stop` | Local Supabase stack (Docker) |
 | `npm run db:reset` | Rebuild the local database from migrations, then seed |
 | `npm run db:push` | Apply pending migrations to the linked hosted project |

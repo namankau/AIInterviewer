@@ -130,6 +130,18 @@ project. **I deleted it afterwards and confirmed the project has zero users.**
 | `./gradlew test` | pass — 20 tests |
 | `./gradlew build` | pass |
 
+## Diff size
+
+2,988 hand-written lines across 70 files, excluding `package-lock.json`, the Gradle
+wrapper, and the generated `supabase/config.toml`. That is well past the ~800-line
+guidance in `CLAUDE.md`, and the task was too big for one reviewable commit.
+
+If it had been split, the seam I would use is: **(a)** monorepo, tooling, CI and the
+two apps saying hello, **(b)** database schema, RLS and the Supabase CLI setup,
+**(c)** authentication — Google sign-in, the JWKS resource server, and `/api/v1/me`.
+(c) is the part that genuinely needs review; (a) is mostly generated. Worth reading in
+that order.
+
 ## Merge status
 
 Merged into `develop`. CI has not run yet, so treat the first push as the real gate —

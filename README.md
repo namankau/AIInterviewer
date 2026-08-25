@@ -182,6 +182,7 @@ cd apps/api && ./gradlew ktlintCheck test build
 ## Conventions
 
 - Branch as `feat/<slug>` or `fix/<slug>`, merge into `develop`. `main` is
-  release-only.
+  release-only and moves through a pull request, by hand — agents push to `develop`
+  and nothing else.
 - Conventional commits, referencing the PRD section: `feat: resume upload (PRD 05)`.
 - Never commit `.env`. New secrets go into `.env.example` with an empty value.

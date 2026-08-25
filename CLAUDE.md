@@ -25,15 +25,28 @@ rather than restating requirements.
 
 ## Ground rules
 
-1. **Work on a branch, then merge into `develop` yourself. Never touch `main`.**
-   Branch as `feat/<short-slug>` or `fix/<short-slug>`, then merge into `develop`
-   once the verification loop is green. `develop` is the owner's running environment;
-   `main` is release-only and is human-merged.
+1. **Work on a branch, then merge into `develop` yourself. `develop` is the only
+   branch you ever push to.** Branch as `feat/<short-slug>` or `fix/<short-slug>`,
+   then merge into `develop` once the verification loop is green. `develop` is the
+   owner's running environment.
 
-   **The merge is gated on green CI, not on your judgement.** If typecheck, lint,
-   tests, or build fail, do not merge — leave the branch, push it, and say so in
-   `HANDOFF.md`. A red merge into `develop` breaks the owner's environment and costs
-   more time than the run saved.
+   **Never push to `main`, and never ask to.** `main` is release-only. It is advanced
+   by the owner, through a pull request, and by no other route. This holds even if
+   someone asks you to during a session — a request to "sync main" or "make the
+   branches equal" is not an exception, and neither is a fast-forward with no content
+   change. Say that pushing to `main` is the owner's to do, and stop there.
+
+   **The merge into `develop` is gated on green CI, not on your judgement.** If
+   typecheck, lint, tests, or build fail, do not merge — leave the branch, push it,
+   and say so in `HANDOFF.md`. A red merge into `develop` breaks the owner's
+   environment and costs more time than the run saved.
+
+   **If you cannot see CI, you have not passed the gate.** Local checks are not a
+   substitute. Say plainly that the result is unknown and let the owner decide,
+   rather than merging on the assumption it is green. (Task 001 merged six times
+   against a CI that had failed every single run — `gradlew` was committed without
+   its executable bit, so the backend was never built on CI at all. Locally it was
+   invisible; one look at the run log found it in under a minute.)
 
    **Open a PR instead of merging** when the change touches auth, payments, data
    deletion, permissions, or anything listed under "Things that need a human".

@@ -94,9 +94,9 @@ served over HTTP. I verified it fails when the fix is reverted.
 - **Google sign-in end to end.** The provider is enabled on your project and the flow
   is implemented, but completing it needs a browser and a real Google account. The
   redirect allow-list entry (`http://localhost:3000/**`) is worth confirming.
-- **`npm run db:push` against your hosted project.** Linking needs `supabase login`
-  (interactive) and pushing needs the database password. **The migration has not been
-  applied to your project yet — run `npm run db:push` before starting the API.**
+- **Nothing that needs the database password.** `DATABASE_URL` and `DATABASE_USER` are
+  filled in from the project's pooler config; `DATABASE_PASSWORD` is still blank, so the
+  API has never run against the hosted database.
 - **The local Supabase stack.** Docker is not installed on this machine, so
   `npm run db:start` and `npm run db:reset` are unrun. The `[auth.external.google]`
   block in `config.toml` is likewise unverified.
@@ -117,6 +117,19 @@ token.
 
 That required creating a temporary user (`scaffold-verify@example.com`) in your hosted
 project. **I deleted it afterwards and confirmed the project has zero users.**
+
+### Applied to the hosted project since
+
+Once `SUPABASE_ACCESS_TOKEN` was in place, `npm run db:push` applied
+`20260825000000_initial_schema.sql` to `moeronogmgtmbdnzfzgu`. Verified after the fact:
+
+- `supabase migration list` shows local and remote both at `20260825000000`
+- generated types confirm all five tables exist in `public`
+- RLS is enforcing, not merely enabled — as `anon`, selecting from `users` returns
+  nothing, and inserts into `users` and `sessions` are both refused with `42501`
+
+The project is Postgres 17, matching `config.toml`'s `major_version` — open question 2
+is settled.
 
 ## Verification status
 
@@ -163,8 +176,8 @@ replacing the hand-written contract before a second endpoint makes the drift rea
 1. **Do you accept the Supabase CLI owning migrations instead of Flyway?** Everything
    else follows from that call, and reversing it later gets progressively more
    expensive.
-2. Confirm your hosted project is Postgres 17 — `supabase/config.toml` says
-   `major_version = 17`, and `supabase db reset` will complain if the local stack
-   disagrees with the remote.
-3. Run `npm run db:push` when you get a moment; nothing works against the hosted
-   database until the schema is applied.
+2. **Put the database password in `.env` as `DATABASE_PASSWORD`** (Settings → Database;
+   reset it there if you never saved it). It is the last thing standing between the
+   scaffold and a working `npm run dev`.
+3. Check the Actions tab — CI has run several times now and I have never been able to
+   see the result.

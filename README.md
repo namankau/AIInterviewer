@@ -55,14 +55,23 @@ If you are signed in to more than one Supabase account, skip `db:login` and put 
 personal access token for the owning account in `.env` as `SUPABASE_ACCESS_TOKEN`
 instead — see "Two Supabase accounts" below.
 
-Then set the `DATABASE_*` values in `.env` from **Dashboard → Connect → JDBC** (use the
-session pooler host) and **Settings → Database** for the password:
+Then set the `DATABASE_*` values in `.env`, taking the password from **Settings →
+Database**:
 
 ```
-DATABASE_URL=jdbc:postgresql://<pooler-host>:5432/postgres?sslmode=require
+DATABASE_URL=jdbc:postgresql://aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
 DATABASE_USER=postgres.<project-ref>
 DATABASE_PASSWORD=<database password>
 ```
+
+Two things that will otherwise cost you an afternoon:
+
+- **Use the pooler host, not `db.<ref>.supabase.co`.** The direct host is IPv6-only, and
+  most networks cannot reach it. The CLI reports this as
+  `IPv6 is not supported on your current network`.
+- **Use port 5432, not 6543.** Both are on the pooler host; 6543 is transaction mode,
+  which gives each statement a different backend and breaks the server-side prepared
+  statements the JDBC driver uses. 5432 is session mode.
 
 **Local stack** (needs Docker; gives you Postgres, Auth, Storage and Studio):
 

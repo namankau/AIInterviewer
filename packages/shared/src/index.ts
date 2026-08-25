@@ -1,0 +1,13 @@
+/**
+ * Contract for the versioned public API in `apps/api`.
+ *
+ * Hand-written for now — see HANDOFF.md. Generating these from an OpenAPI document
+ * the backend already publishes is the right end state; it was not worth the
+ * complexity on the scaffolding run. Until then, changing a response shape in the
+ * backend means changing it here in the same commit.
+ *
+ * The web app and, in Phase 3, the mobile apps consume the same contract.
+ */
+
+export * from "./api.js";
+export * from "./domain.js";

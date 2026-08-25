@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: web (typecheck, lint, test, build)
+    runs-on: ubuntu-latest
+    env:
+      # Placeholders. Nothing in the verification loop reaches Supabase or the API;
+      # these exist because the web app refuses to build with the values missing.
+      NEXT_PUBLIC_SUPABASE_URL: https://project.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+
+  api:
+    name: api (ktlint, test, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: ktlintCheck test build
+        working-directory: apps/api
+        run: ./gradlew ktlintCheck test build --no-daemon

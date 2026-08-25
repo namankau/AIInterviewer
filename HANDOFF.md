@@ -144,9 +144,14 @@ that order.
 
 ## Merge status
 
-Merged into `develop`. CI has not run yet, so treat the first push as the real gate —
-if it goes red, the failure will be environmental (Ubuntu, Node 22, Temurin 21) rather
-than logical, since the same commands pass here.
+Merged into `develop` at `8597c11` and pushed, along with `feat/001-scaffold`.
+
+**CI ran unobserved.** The push triggered `.github/workflows/ci.yml` for the first time,
+but the repository is private and the GitHub CLI is not installed on this machine, so I
+could not read the result. `CLAUDE.md` makes green CI the merge gate rather than my
+judgement, and I could not check that gate — so **please look at the Actions tab**. All
+seven checks pass locally; if CI is red, expect an environment difference (Ubuntu,
+Node 22, Temurin 21) rather than a logic error.
 
 ## Suggested next task
 

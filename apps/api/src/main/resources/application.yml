@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: interviewos-api
+  datasource:
+    # The schema is owned by the Supabase CLI (supabase/migrations), not by this app.
+    # The API reads and writes rows; it never runs DDL.
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: ${API_PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+interviewos:
+  auth:
+    # Backend verifies Supabase-issued JWTs against the project's published JWKS.
+    # No shared secret, and no user id is ever taken from the request body.
+    supabase-url: ${SUPABASE_URL}
+    audience: authenticated
+  web:
+    # Browser origins allowed to call the versioned public API. Mobile clients are
+    # not browsers and are unaffected by CORS.
+    allowed-origins: ${WEB_ALLOWED_ORIGINS:http://localhost:3000}

@@ -74,8 +74,10 @@ rather than restating requirements.
 | Backend | Spring Boot (Kotlin) | Chosen to match the owner's expertise; this is deliberate, do not propose migrating |
 | Database | PostgreSQL + pgvector | Single store for relational and vector workloads at this scale |
 | Platform | Supabase (auth, storage, Postgres) | Google OAuth via Supabase Auth |
-| Voice transport | LiveKit or Pipecat (decision pending) | Must have mature Android + iOS SDKs — Phase 3 depends on it |
-| Payments | Razorpay (India), Stripe (international) | Not needed until Phase 1 |
+| AI provider | **Google Gemini** | `gemini-3.5-flash` for reasoning, audio understanding and scoring; `gemini-2.5-flash-preview-tts` for the interviewer's voice. Do not use Anthropic or OpenAI here. `gemini-2.5-pro` 404s for new keys |
+| Voice (turn-based) | **Gemini alone — no voice vendor** | Browser `MediaRecorder` → upload → Gemini. Verified 2026-08-25: Gemini both speaks the question and understands the spoken answer, so no STT/TTS vendor is needed |
+| Voice (realtime) | LiveKit or Pipecat — still undecided | Only needed for barge-in and sub-second turn-taking. Not needed for the turn-based loop. Must have mature Android + iOS SDKs |
+| Payments | Razorpay | India-first, UPI. Stripe only if international demand appears |
 
 **Do not introduce:** a separate vector database, a second backend language, a state
 management library before there is state that needs managing, or a component library
@@ -183,6 +185,44 @@ tool than a consumer app.
 - Reports are where visual richness belongs.
 - Mobile-responsive from day one. Accessible by default: transcript alongside audio,
   keyboard navigation, adequate contrast.
+
+### The quality bar
+
+This must not look like a generated template. Candidates are handing it their career
+anxiety and a payment; a page that looks assembled from defaults reads as untrustworthy
+before a single question is asked. Concretely, the tells to avoid:
+
+- Purple-to-blue gradients, glassmorphism, neon accents on dark cards, emoji as
+  iconography, "🚀 Get Started" energy.
+- Three-column feature grids of identical cards with an icon, a bold noun, and two
+  lines of filler.
+- Centred hero, huge gradient headline, two buttons, meaningless abstract SVG.
+- Rounded-everything with a large drop shadow on every surface.
+- Text that says nothing: "seamless", "powerful", "revolutionise your prep".
+
+What to do instead: a real typographic hierarchy with deliberate scale contrast;
+generous whitespace and restraint over decoration; asymmetry and editorial layout
+rather than symmetric card grids; specific, concrete copy — a real employer name and a
+real round type beats an adjective; one accent colour used sparingly for meaning, not
+mood. Prose that sounds like a person who has sat on both sides of an interview table.
+
+---
+
+## Product decisions (settled — implement, do not relitigate)
+
+- **Interview modality is voice, with camera on.** The candidate speaks their answers.
+  Camera is requested at session start and video is recorded. Body-language analysis is
+  a later moat, not MVP — capture it now, analyse it later.
+- **Recording consent is a hard gate.** Explicit, specific consent before capture
+  starts, covering audio and video separately, stored with a timestamp. No consent, no
+  session. Account deletion removes the media objects, not just the rows.
+- **Free tier: one complete mock interview, then paid.** The free interview must
+  include the full report, because the report is what sells the product.
+- **Payments: Razorpay.** Do not wire real payments without the owner — keys and
+  pricing are a human decision.
+- **Community interview reports and salary data are later phases.** Do not scaffold
+  them. When they arrive, contributions are anonymised before entering the corpus and
+  contributors are rewarded with credits.
 
 ---
 

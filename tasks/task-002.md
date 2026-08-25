@@ -1,166 +1,199 @@
-# Task 002 — The first complete interview loop
+# Task 002 — Onboarding, and the first complete voice interview
 
 **Run type:** unattended overnight
 **Target branch:** `feat/002-interview-loop` → merge into `develop` when green
 **PRD reference:** §05 (profile), §06 (engine), §09 (feedback and scoring), §13 (mobile-readiness)
+**Depends on:** task 001, merged
 
-Read `CLAUDE.md` first. Everything in it applies, including that `develop` is the only
-branch you push to. This file describes what to build tonight.
+Read `CLAUDE.md` first — all of it, including the quality bar under "Design direction"
+and the settled product decisions. `develop` is the only branch you push to.
 
 ---
 
 ## Goal
 
-A candidate who has never used the product signs in, is ready to interview within four
-minutes, takes a complete text-based mock interview, and gets a report that quotes what
-they actually said. They can schedule a future session and see their readiness change
-across attempts.
+A stranger lands on the site, understands what it is, signs in, uploads a resume,
+confirms what was parsed, and takes a real spoken mock interview with their camera on.
+Afterwards they get a report that quotes what they actually said, and they can see their
+readiness move across attempts.
 
-The interview is **text-based this run**. Voice is a later phase. Compose, conduct and
-score entirely server-side so the transport can be swapped without touching the logic.
-
-Success means: a stranger can be given the URL, and get through onboarding → interview →
-report without being told what to do.
+Success means the owner can hand the URL to a candidate with no explanation, and the
+candidate gets through it and finds the report worth paying for.
 
 ---
 
 ## Decisions already made — do not relitigate
 
-These are settled. Implement them; do not spend the run reconsidering.
-
-1. **Text interview, spoken-style.** One question at a time, typed answers, a visible
-   timer and round label. The session screen stays near-empty per the design direction:
-   no score ticker, no live hints.
-2. **Adaptive if a key is present, deterministic if not.** If `ANTHROPIC_API_KEY` is
-   set, the engine uses it for follow-up selection and scoring. If it is absent, the
-   engine falls back to a deterministic difficulty ladder over the seeded question bank
-   and rubric-based scoring. **Both paths must work.** The app must never crash or
-   render a dead screen because a key is missing, and the UI must say which mode
-   produced a report.
-3. **Question bank is archetype-level, never employer-specific.** Seed questions per
-   (archetype, function, round type, difficulty). Every item carries `provenance_tier`
-   = `model_knowledge` and surfaces as a general pattern. Inventing a specific claim
-   about a real employer's process is the worst failure this product has — if
-   retrieval has nothing for a named company, fall back to the archetype and say so in
-   the UI.
-4. **Notifications go through an outbox, not a direct send.** Write rows to a
-   `notifications` table with a scheduled send time and a status. A dispatcher reads
-   the outbox. Transport is an interface with a logging implementation as the default.
-   Email and WhatsApp adapters are configuration, not code changes — see "Blocked".
-5. **Readiness is derived, never stored as a target.** Aggregate completed sessions by
-   (company, role). Do not create a targets entity — see PRD §05 and the schema comment.
-6. **Keep the design language from task 001.** Tokens in `globals.css`, one accent, one
-   primary action per screen. Reports are where visual richness belongs.
+1. **Google Gemini is the AI provider.** `GEMINI_API_KEY` is in `.env` and works.
+   - `gemini-3.5-flash` — reasoning, audio understanding, scoring
+   - `gemini-2.5-flash-preview-tts` — interviewer voice, returns 24 kHz PCM
+   - `gemini-2.5-pro` 404s for new keys. Do not use it. Do not use Anthropic or OpenAI.
+2. **Voice is turn-based and needs no voice vendor.** Verified: Gemini both speaks the
+   question and understands a spoken answer. Browser `MediaRecorder` captures the
+   answer, uploads it, the backend sends it to Gemini. **Do not add LiveKit or Pipecat**
+   — realtime barge-in is a later, separate decision.
+3. **Camera on, consent first.** Request mic and camera at session start. Record both.
+   Consent is explicit, separately covers audio and video, and is stored with a
+   timestamp. No consent, no session. Body-language *analysis* is not in this task —
+   capture the video, analyse later.
+4. **All interview logic server-side.** The browser captures media and renders. It never
+   selects a question or computes a score.
+5. **Degrade honestly, never fake.** If Gemini is unavailable, say so and let the
+   candidate retry — do not silently fall back to canned questions and present the
+   result as a real assessment. A failed session is `failed`, not a fake pass.
+6. **Question grounding is archetype-level.** Resolve the named company to an archetype.
+   If nothing is known about that specific employer, use archetype and function patterns
+   and *say so in the UI*. Never invent a specific claim about a real company's process.
 
 ---
 
 ## Scope
 
-### 1. Onboarding — get to a first interview fast
+### 1. The public site
 
-- Profile step: function, current level, target level, total experience, preferred
-  language. Everything else deferred and asked contextually later.
-- Resume upload to Supabase Storage, private bucket, RLS so a candidate can only reach
-  their own object. Extract raw text server-side and show it back for confirmation.
-  **Structured field extraction is not required tonight** — store the text, keep
-  `parse_status` honest.
-- The dashboard's single primary action stays "start an interview".
+This is the brand surface and the SEO surface. It must not look generated — re-read the
+quality bar in `CLAUDE.md` before writing any markup.
 
-### 2. Session setup and the interview itself
+- A landing page that explains the product in specific language: which employer
+  archetypes, which round types, what the report actually contains.
+- Honest pricing: one free interview including the full report, then paid.
+- Server-rendered, fast, real metadata.
 
-- Candidate names company and role at the start of a session, picks a round type, and
-  begins. Resolve the company to an archetype server-side; when it is unrecognised,
-  say which archetype was assumed rather than guessing specifics.
-- Turn-by-turn: question, typed answer, next turn chosen by the engine. Persist every
-  turn as it happens so a refresh or a dropped connection does not lose the session.
-- Exit mid-session leaves the session `abandoned`, not deleted.
+### 2. Onboarding — resume, then profile
 
-### 3. Scoring and the report (PRD §09)
+- Upload PDF and DOCX. Reject anything else with a clear message. Size limit enforced on
+  both client and server. Store in Supabase Storage, private, owner-only via RLS.
+- Record in `resumes` with `parse_status = pending`. Re-upload creates a new version;
+  keep prior versions rather than hard-deleting.
+- **Parse asynchronously** — upload returns immediately, the UI reflects real status.
+  Transitions `pending → processing → parsed | failed`, with a readable reason on
+  failure. Extract with Gemini: employers with dates, titles and level progression,
+  projects with technologies, domains, education, certifications, detected skills, and
+  gaps and short tenures computed from the dates.
+- **Mark uncertain fields low-confidence rather than guessing.** A wrong employer
+  silently degrades every future interview.
+- Confirmation screen: everything pre-filled and editable, low-confidence fields
+  visually flagged, user can add what the parser missed. This *is* the profile step —
+  do not build a separate multi-step wizard.
+- Then: function, current level, target level, total experience. Skills reconciled
+  between parser-detected and self-rated, with explicit "weak areas I want pushed on".
+  Context fields (location, relocation, work authorisation, notice, compensation band)
+  are optional and must never block reaching a first interview.
 
-The report is where perceived value concentrates. A generic encouraging summary destroys
-credibility. Required contents:
+Parse quality matters more than parse speed. Report honestly on what it handled badly.
+
+### 3. The interview
+
+- Candidate names company and role, picks a round type, grants consent, and begins.
+- Interviewer speaks each question (TTS). Candidate answers by voice with camera on.
+- Persist every turn as it happens — a refresh or a dropped connection must not lose the
+  session. Store audio and video objects owner-only.
+- The engine assesses each answer in flight and chooses the next turn: follow up, probe,
+  challenge a weak claim, move on, or raise difficulty (PRD §06).
+- The session screen stays near-empty: speaking indicator, timer, round label, exit.
+  No score ticker, no live hints. Show the live camera preview small and unobtrusive.
+- Exiting mid-session leaves it `abandoned`, not deleted.
+
+### 4. The report (PRD §09)
+
+This is where perceived value concentrates and where payment is justified. Required:
 
 - Competency scores against the function and level rubric, **each justified by a quoted
   moment from the candidate's own transcript**.
 - Answer-level annotations: what worked, what was vague, what a real interviewer would
-  have probed.
+  have probed, and a stronger framing for the weakest answers.
+- Communication analysis: structure, filler density, pace, rambling, handling not
+  knowing an answer.
 - A targeted practice plan and the next recommended session type.
-- An outcome judgement, clearly framed as a simulation.
+- An outcome simulation, clearly labelled as a simulation.
 
-### 4. Readiness view
+### 5. Readiness
 
-Group completed sessions by (company, role). Show competency movement across attempts
-and recurring weaknesses. This is the retention surface — it must read as evidence, not
-as a score badge.
+Group completed sessions by (company, role), derived — **there is no targets table**.
+Show competency movement across attempts and recurring weaknesses. Evidence, not a badge.
 
-### 5. Scheduling and reminders
+### 6. Free tier and payment
 
-- Schedule a session for a future date and time; it appears on the dashboard.
-- On scheduling, enqueue reminder rows in the outbox (24h before and 1h before).
-- The dispatcher runs on a schedule, marks rows sent or failed, and retries with
-  backoff. With no provider configured it logs and marks `skipped_no_transport` —
-  that is a valid, tested outcome, not a failure.
+- One complete interview free, report included. After that, gate starting a new session.
+- Razorpay integration behind an interface, in test mode only. **Do not wire live keys
+  or set real prices** — that is the owner's decision. Build the seam; leave it unarmed.
 
-### 6. Tests
+### 7. API
 
-Per `CLAUDE.md`: unit tests for composition, scoring and readiness aggregation; at least
-one happy-path and one auth-failure integration test per endpoint; UI tests for
-behaviour and accessibility. No test may depend on a live third-party API — mock at the
-boundary, including the LLM.
+Extend the versioned public API — mobile will consume the same routes.
 
----
+- `POST /api/v1/resumes`, `GET /api/v1/resumes/{id}`
+- `GET /api/v1/profile`, `PATCH /api/v1/profile`
+- `POST /api/v1/sessions`, `GET /api/v1/sessions/{id}`, `POST /api/v1/sessions/{id}/turns`
+- `GET /api/v1/sessions/{id}/report`, `GET /api/v1/readiness`
 
-## Blocked — do not attempt, note in `HANDOFF.md`
+Every route enforces ownership. A user must never read another user's resume, session,
+media or report.
 
-These need credentials or approvals that no amount of implementation effort replaces.
-Build the seams; leave the wiring.
+### 8. Tests
 
-- **WhatsApp reminders.** Requires a WhatsApp Business account, business verification,
-  and per-template approval from Meta. Approval alone takes longer than this run. Build
-  the adapter interface and leave it unimplemented.
-- **Email delivery.** Requires a provider account and a verified sending domain. Add
-  the key names to `.env.example`, implement one adapter behind the interface, and
-  leave it unconfigured.
-- **Anything committing spend, or any production credential.** Same rule as always.
+- Unit: date maths (tenure, gaps) — silent bugs live here. Session composition. Scoring.
+  Readiness aggregation. Free-tier gating.
+- API integration: happy path, unauthenticated, **and a cross-user access attempt that
+  must fail**, per route.
+- UI: behaviour and accessibility, not snapshots.
+- **Mock Gemini at the boundary.** No test may call a live third-party API.
 
 ---
 
-## Out of scope tonight
+## Blocked — build the seam, note it in `HANDOFF.md`
 
-Voice or WebRTC of any kind. Community-contributed reports and the contribution flow.
-Payments. Scrapers of any kind — still out of scope by decision, not oversight. Any new
-function vertical beyond Wave 1 (backend/full-stack, QA and automation, data and AI
-engineering); each needs a rubric built with domain input first.
+- **WhatsApp reminders.** Needs a WhatsApp Business account, business verification and
+  per-template approval from Meta; approval takes days. Adapter interface only.
+- **Email delivery.** Needs a provider account and a verified sending domain. One
+  adapter behind the interface, left unconfigured.
+- **Live payments.** Test mode only. Real keys and pricing are the owner's.
+
+---
+
+## Out of scope
+
+Realtime voice transport and barge-in. Body-language analysis. Community-contributed
+reports, rewards, and salary data — later phases, do not scaffold. Scrapers, always.
+Function verticals beyond Wave 1 (backend/full-stack, QA and automation, data and AI
+engineering).
 
 ---
 
 ## Definition of done
 
-- [ ] A signed-in candidate can complete onboarding, an interview, and reach a report
+- [ ] A stranger completes landing → sign-in → resume → profile → interview → report
       with no instruction
-- [ ] The full loop works with `ANTHROPIC_API_KEY` unset, and improves when it is set
-- [ ] Every competency score in a report cites a quote from that transcript
-- [ ] Readiness groups completed sessions by company and role, derived not stored
-- [ ] Reminders are enqueued on scheduling and the dispatcher drains the outbox
-- [ ] No employer-specific claim is ever rendered without a provenance label
-- [ ] RLS on every new table; storage objects reachable only by their owner
-- [ ] Typecheck, lint, tests and build pass for both apps
-- [ ] **CI is green and you have seen it** — `gh run watch`. If you cannot see it, you
-      have not passed the gate; say so and do not merge
-- [ ] `HANDOFF.md` written per the template in `CLAUDE.md`
-- [ ] Merged into `develop`, or the branch pushed unmerged with the reason stated
+- [ ] The interview is spoken, camera on, consent captured before any capture starts
+- [ ] Every competency score cites a quote from that transcript
+- [ ] Cross-user access is proven impossible by a test, on every route
+- [ ] Media objects are owner-only and account deletion removes them
+- [ ] Free-tier gating works and the free interview includes the full report
+- [ ] No employer-specific claim renders without a provenance label
+- [ ] Typecheck, lint, tests, build green for both apps
+- [ ] **CI green and you have seen it** — `gh run watch`. Cannot see it, gate not passed
+- [ ] `HANDOFF.md` per template, including honest parse-quality and cost observations
+- [ ] Merged into `develop`, or branch pushed unmerged with the reason stated
 
 ---
 
 ## Notes for the run
 
-- Prefer boring choices. `gh` is installed and authenticated; use it to verify CI rather
-  than assuming.
-- If the run is going to overrun, **ship the interview loop end to end and drop
-  scheduling and reminders.** A complete loop that works beats six half-features. Say
-  what you dropped in `HANDOFF.md`.
-- Keep PRs reviewable. Task 001 ran to ~3,000 lines in one commit, which was too large;
-  split this one along the numbered sections above.
-- Migrations are owned by the Supabase CLI in `supabase/migrations`. Never edit an
-  applied migration — add a new one. Verify with `npm run db:push` against the linked
-  project.
+- **If you are going to overrun, ship the loop end to end and drop scheduling,
+  reminders and payment.** A complete interview that works beats six half-features.
+  Say what you dropped.
+- Split the work: public site, onboarding, interview, report, readiness. Task 001 ran to
+  ~3,000 lines in one commit and that was too large to review.
+- Use fixture resumes you generate yourself. Never commit a real person's resume.
+- Keep Gemini prompts and response schemas in version control, and note observed
+  per-session token cost in `HANDOFF.md` — it is a per-user cost that decides pricing.
+- `gh` is installed and authenticated. Verify CI rather than assuming.
+- Migrations are owned by the Supabase CLI. Never edit an applied one; add a new one.
+
+---
+
+## After this task
+
+Write `tasks/task-003.md` yourself, choosing what most advances a paid, trustworthy
+product from wherever task 002 actually ends — not from where it hoped to end. State
+the reasoning in one paragraph at the top.

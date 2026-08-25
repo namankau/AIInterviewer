@@ -1,0 +1,9 @@
+# Test-only configuration. No test reaches a database or a network endpoint:
+# the MVC slices authenticate with a pre-built token, so the JWKS URL below is
+# never resolved.
+interviewos:
+  auth:
+    supabase-url: https://project.supabase.co
+    audience: authenticated
+  web:
+    allowed-origins: http://localhost:3000

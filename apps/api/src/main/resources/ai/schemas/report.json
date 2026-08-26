@@ -1,0 +1,71 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "headline": { "type": "STRING" },
+    "summary": { "type": "STRING" },
+    "competencies": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "competency": { "type": "STRING" },
+          "score": { "type": "INTEGER" },
+          "maxScore": { "type": "INTEGER" },
+          "rationale": { "type": "STRING" },
+          "evidenceQuote": { "type": "STRING" },
+          "turnIndex": { "type": "INTEGER", "nullable": true }
+        },
+        "required": ["competency", "score", "maxScore", "rationale", "evidenceQuote"]
+      }
+    },
+    "annotations": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "turnIndex": { "type": "INTEGER" },
+          "question": { "type": "STRING" },
+          "worked": { "type": "STRING", "nullable": true },
+          "vague": { "type": "STRING", "nullable": true },
+          "wouldProbe": { "type": "STRING", "nullable": true },
+          "strongerFraming": { "type": "STRING", "nullable": true }
+        },
+        "required": ["turnIndex", "question"]
+      }
+    },
+    "communication": {
+      "type": "OBJECT",
+      "properties": {
+        "structure": { "type": "STRING" },
+        "fillerDensity": { "type": "STRING" },
+        "pace": { "type": "STRING" },
+        "rambling": { "type": "STRING" },
+        "handlingUncertainty": { "type": "STRING" }
+      },
+      "required": ["structure", "fillerDensity", "pace", "rambling", "handlingUncertainty"]
+    },
+    "practicePlan": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "focus": { "type": "STRING" },
+          "why": { "type": "STRING" },
+          "drill": { "type": "STRING" }
+        },
+        "required": ["focus", "why", "drill"]
+      }
+    },
+    "recommendedNextSession": { "type": "STRING" },
+    "outcomeSimulation": {
+      "type": "OBJECT",
+      "properties": {
+        "label": { "type": "STRING" },
+        "likelihood": { "type": "STRING" },
+        "reasoning": { "type": "STRING" }
+      },
+      "required": ["label", "likelihood", "reasoning"]
+    }
+  },
+  "required": ["headline", "summary", "competencies", "annotations", "communication", "practicePlan", "recommendedNextSession", "outcomeSimulation"]
+}

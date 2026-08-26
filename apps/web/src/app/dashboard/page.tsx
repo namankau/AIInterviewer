@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AccountSummary } from "@/components/account-summary";
+import { DashboardPanel } from "@/components/dashboard-panel";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -22,28 +23,7 @@ export default function DashboardPage() {
 
       <main className="flex flex-1 flex-col gap-12 py-12">
         <AccountSummary />
-
-        <section aria-labelledby="next-interview" className="flex flex-col gap-5">
-          <h1 id="next-interview" className="text-title text-ink">
-            Start your first interview
-          </h1>
-          <p className="max-w-prose text-body text-ink-muted">
-            You will name the company and the role when you begin. Nothing to set up in advance,
-            and no limit on how many employers you practise for.
-          </p>
-          <div>
-            <button
-              type="button"
-              disabled
-              className="inline-flex cursor-not-allowed items-center rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast opacity-50"
-            >
-              Start an interview
-            </button>
-            <p className="pt-3 text-caption text-ink-subtle">
-              Interview sessions arrive in a later task.
-            </p>
-          </div>
-        </section>
+        <DashboardPanel />
       </main>
     </div>
   );

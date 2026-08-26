@@ -1,4 +1,14 @@
-import type { ApiError, MeResponse } from "@interviewos/shared";
+import type {
+  ApiError,
+  EntitlementView,
+  MeResponse,
+  ReadinessGroup,
+  SessionReport,
+  SessionSummary,
+  SessionView,
+  StartSessionRequest,
+  SubmitAnswerResponse,
+} from "@interviewos/shared";
 
 import { env } from "@/lib/env";
 
@@ -43,7 +53,85 @@ async function apiGet<T>(path: string, { accessToken, signal }: ApiGetOptions): 
   return (await response.json()) as T;
 }
 
+async function apiSend<T>(
+  path: string,
+  method: "POST" | "PATCH",
+  accessToken: string,
+  body?: unknown,
+): Promise<T> {
+  const isForm = body instanceof FormData;
+  const response = await fetch(`${env.apiBaseUrl}${path}`, {
+    method,
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      // Let the browser set the multipart boundary itself.
+      ...(isForm || body === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    ...(body === undefined ? {} : { body: isForm ? body : JSON.stringify(body) }),
+  });
+
+  if (!response.ok) {
+    const envelope = (await response.json().catch(() => null)) as ApiError | null;
+    throw new ApiRequestError(
+      response.status,
+      envelope?.error ?? "unknown_error",
+      envelope?.message ?? `Request to ${path} failed with status ${response.status}.`,
+    );
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  return (await response.json()) as T;
+}
+
 /** `GET /api/v1/me` — the same endpoint the mobile apps will call. */
 export function fetchMe(options: ApiGetOptions): Promise<MeResponse> {
   return apiGet<MeResponse>("/api/v1/me", options);
+}
+
+export function fetchEntitlement(options: ApiGetOptions): Promise<EntitlementView> {
+  return apiGet<EntitlementView>("/api/v1/entitlement", options);
+}
+
+export function fetchSessions(options: ApiGetOptions): Promise<SessionSummary[]> {
+  return apiGet<SessionSummary[]>("/api/v1/sessions", options);
+}
+
+export function fetchSession(id: string, options: ApiGetOptions): Promise<SessionView> {
+  return apiGet<SessionView>(`/api/v1/sessions/${id}`, options);
+}
+
+export function fetchReport(id: string, options: ApiGetOptions): Promise<SessionReport> {
+  return apiGet<SessionReport>(`/api/v1/sessions/${id}/report`, options);
+}
+
+export function fetchReadiness(options: ApiGetOptions): Promise<ReadinessGroup[]> {
+  return apiGet<ReadinessGroup[]>("/api/v1/readiness", options);
+}
+
+export function startSession(accessToken: string, request: StartSessionRequest): Promise<SessionView> {
+  return apiSend<SessionView>("/api/v1/sessions", "POST", accessToken, request);
+}
+
+export function abandonSession(accessToken: string, id: string): Promise<void> {
+  return apiSend<void>(`/api/v1/sessions/${id}/abandon`, "POST", accessToken);
+}
+
+/** Uploads one spoken answer, plus video when the candidate consented to it. */
+export function submitAnswer(
+  accessToken: string,
+  sessionId: string,
+  turnIndex: number,
+  audio: Blob,
+  video: Blob | null,
+): Promise<SubmitAnswerResponse> {
+  const form = new FormData();
+  form.append("turnIndex", String(turnIndex));
+  form.append("audio", audio, "answer.webm");
+  if (video) {
+    form.append("video", video, "answer-video.webm");
+  }
+  return apiSend<SubmitAnswerResponse>(`/api/v1/sessions/${sessionId}/turns`, "POST", accessToken, form);
 }

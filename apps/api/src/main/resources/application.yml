@@ -37,3 +37,17 @@ interviewos:
     # Browser origins allowed to call the versioned public API. Mobile clients are
     # not browsers and are unaffected by CORS.
     allowed-origins: ${WEB_ALLOWED_ORIGINS:http://localhost:3000}
+  gemini:
+    # One provider covers the whole loop — resume parsing, the interviewer's voice,
+    # understanding the spoken answer, and the report. No STT or TTS vendor.
+    api-key: ${GEMINI_API_KEY:}
+  storage:
+    # Service role bypasses RLS. Ownership is enforced by the API from the verified
+    # token subject and by keying every object under `{userId}/`.
+    supabase-url: ${SUPABASE_URL}
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+
+spring.servlet.multipart:
+  # Interview answers arrive as audio and video blobs; resumes as PDF or DOCX.
+  max-file-size: 40MB
+  max-request-size: 60MB

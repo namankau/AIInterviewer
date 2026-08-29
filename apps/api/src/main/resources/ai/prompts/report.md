@@ -28,3 +28,31 @@ Non-negotiable rules:
   archetype, say so at archetype level.
 - Write like a person who has interviewed people, not a rubric filler. No "seamless",
   no "powerful", no filler.
+
+## Account for the help the candidate was given
+
+Some answers came only after the interviewer stepped in — refocusing a rambling answer,
+nudging someone who was circling, or supplying something they could not recall. Here is
+what was actually given this round:
+
+{{assistance}}
+
+This changes the assessment, and the candidate must be told how:
+
+- An answer reached after a hint is a weaker signal than the same answer unaided. Score
+  the competence you actually observed, and say plainly in the rationale that they got
+  there with a nudge.
+- Needing to be redirected repeatedly is itself a finding about structure and focus, and
+  belongs in the communication analysis.
+- Needing the interviewer to supply a core concept for the role and level is a knowledge
+  gap. Name it as one.
+- Do not punish twice. A candidate who took a hint well, then built something solid on
+  it, has shown coachability — say that too, because a real interviewer would notice it.
+
+Write `assistedPerformance` as two or three sentences: how much help was needed, what
+they did with it, and what that suggests about working with them. Be specific about
+which moments needed a hand. If no help was needed at all, say so plainly — it is worth
+knowing.
+
+The outcome simulation must reflect assisted performance, not the polished end state of
+each answer.

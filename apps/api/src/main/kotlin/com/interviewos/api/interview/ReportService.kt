@@ -1,6 +1,7 @@
 package com.interviewos.api.interview
 
 import com.interviewos.api.ai.AiUnavailableException
+import com.interviewos.api.ai.Intervention
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
 import com.interviewos.api.ai.ReportContent
@@ -69,9 +70,23 @@ class ReportService(
                 grounding = archetype.roundEmphasis,
             )
 
+        // Counted from the turns, not asked of the model: this is what the candidate is
+        // judged on, so the model does not get to be generous about it.
+        val assistance = AssistanceSummary.of(turns)
+
         val composed =
             try {
-                interviewAi.composeReport(brief, turns.map { TurnTranscript(it.questionText, it.answerTranscript) })
+                interviewAi.composeReport(
+                    brief,
+                    turns.map {
+                        TurnTranscript(
+                            questionText = it.questionText,
+                            answerTranscript = it.answerTranscript,
+                            intervention = Intervention.parse(it.intervention),
+                            interventionNote = it.interventionNote,
+                        )
+                    },
+                )
             } catch (e: AiUnavailableException) {
                 log.warn("Report composition failed for session {}", sessionId, e)
                 throw ApiException.upstreamUnavailable(
@@ -80,7 +95,7 @@ class ReportService(
             }
 
         val verified = withVerifiedEvidence(composed.value, turns)
-        val payload = payloadOf(verified, session, roundType, archetype, turns.size)
+        val payload = payloadOf(verified, session, roundType, archetype, turns.size, assistance)
 
         repository.saveReport(
             sessionId = sessionId,
@@ -125,6 +140,7 @@ class ReportService(
         roundType: RoundType,
         archetype: Archetype,
         answeredTurns: Int,
+        assistance: AssistanceSummary,
     ): Map<String, Any?> =
         mapOf(
             "sessionId" to session.id.toString(),
@@ -140,6 +156,23 @@ class ReportService(
                     .toString(),
             "headline" to content.headline,
             "summary" to content.summary,
+            // Counts are computed from the turns; the narrative is the model's, written
+            // against those counts. Both are shown, so the two cannot quietly diverge.
+            "assistance" to
+                mapOf(
+                    "totalAnswers" to assistance.totalAnswers,
+                    "unaidedAnswers" to assistance.unaidedAnswers,
+                    "assistedAnswers" to assistance.assistedAnswers,
+                    "headline" to assistance.headline,
+                    "narrative" to content.assistedPerformance,
+                    "breakdown" to
+                        assistance.breakdown
+                            .filterKeys { it.isAssisted }
+                            .map { (intervention, count) ->
+                                mapOf("label" to intervention.label, "count" to count)
+                            },
+                    "moments" to assistance.notes,
+                ),
             "competencies" to
                 content.competencies.map {
                     mapOf(

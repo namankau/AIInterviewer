@@ -122,6 +122,9 @@ data class AnswerAudio(
 data class TurnTranscript(
     val questionText: String,
     val answerTranscript: String?,
+    /** What the interviewer supplied on this turn, so the report can weigh it. */
+    val intervention: Intervention = Intervention.NONE,
+    val interventionNote: String? = null,
 )
 
 /**
@@ -136,8 +139,44 @@ data class AnswerAssessment(
     val strengths: List<String>,
     val gaps: List<String>,
     val suggestedNextAction: String,
+    /** What the interviewer had to supply on this turn. See [Intervention]. */
+    val intervention: String = Intervention.NONE.wireValue,
+    /** One sentence naming what was supplied, so the report can tell the candidate. */
+    val interventionNote: String? = null,
     val nextQuestionText: String?,
 )
+
+/**
+ * How much the interviewer had to help on a single turn.
+ *
+ * A real interviewer interrupts rambling, offers a forgotten term, and nudges a
+ * candidate who is circling the answer — sitting in silence while someone drowns is
+ * neither realistic nor informative. But help received is signal: reaching the answer
+ * after two hints is not the same performance as reaching it unaided, and the report
+ * says so rather than averaging the difference away.
+ */
+enum class Intervention(
+    val wireValue: String,
+    val label: String,
+    /**
+     * How much this turn's competence should be discounted when the candidate needed
+     * this level of help. 1.0 means the answer stands entirely on its own.
+     */
+    val credit: Double,
+) {
+    NONE("none", "Answered unaided", 1.0),
+    REDIRECTED("redirected", "Needed refocusing", 0.85),
+    HINTED("hinted", "Needed a nudge", 0.7),
+    GUIDED("guided", "Needed leading", 0.5),
+    CORRECTED("corrected", "Was corrected", 0.4),
+    ;
+
+    val isAssisted: Boolean get() = this != NONE
+
+    companion object {
+        fun parse(value: String?): Intervention = entries.firstOrNull { it.wireValue.equals(value?.trim(), ignoreCase = true) } ?: NONE
+    }
+}
 
 // ---------------------------------------------------------------------------
 // The report (PRD 09)
@@ -188,6 +227,11 @@ data class OutcomeSimulation(
 data class ReportContent(
     val headline: String,
     val summary: String,
+    /**
+     * How the candidate did once the interviewer's help is accounted for. Written by the
+     * model; the counts it is given are computed from the turns, not guessed.
+     */
+    val assistedPerformance: String? = null,
     val competencies: List<CompetencyScore>,
     val annotations: List<AnswerAnnotation>,
     val communication: CommunicationAnalysis,

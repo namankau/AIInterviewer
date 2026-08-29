@@ -2,6 +2,7 @@ package com.interviewos.api.interview
 
 import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.AnswerAudio
+import com.interviewos.api.ai.Intervention
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
 import com.interviewos.api.ai.TurnTranscript
@@ -160,6 +161,7 @@ class InterviewService(
             }
 
         val nextAction = normaliseAction(assessment.value.suggestedNextAction)
+        val intervention = Intervention.parse(assessment.value.intervention)
         repository.recordAnswer(
             sessionId = sessionId,
             userId = userId,
@@ -169,6 +171,10 @@ class InterviewService(
             videoPath = videoPath,
             assessmentJson = objectMapper.writeValueAsString(assessment.value),
             nextAction = nextAction,
+            intervention = intervention.wireValue,
+            // Only keep a note when help was actually given, so the report cannot
+            // report assistance that did not happen.
+            interventionNote = assessment.value.interventionNote?.takeIf { intervention.isAssisted },
         )
 
         val answered = repository.countAnsweredTurns(sessionId, userId)
@@ -341,6 +347,16 @@ class InterviewService(
         const val MAX_TURNS = 8
         const val SIGNED_URL_SECONDS = 3600
         val ALLOWED_ACTIONS =
-            setOf("follow_up", "probe", "challenge", "move_on", "raise_difficulty", "conclude")
+            setOf(
+                "follow_up",
+                "probe",
+                "challenge",
+                "move_on",
+                "raise_difficulty",
+                "redirect",
+                "hint",
+                "guide",
+                "conclude",
+            )
     }
 }

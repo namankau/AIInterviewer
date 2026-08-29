@@ -186,7 +186,8 @@ class SessionRepository(
         jdbcClient
             .sql(
                 """
-                select turn_index, question_text, question_audio_path, answer_transcript, answered_at
+                select turn_index, question_text, question_audio_path, answer_transcript, answered_at,
+                       intervention::text as intervention, intervention_note
                   from public.session_turns
                  where session_id = :s and user_id = :u and turn_index = :i
                 """.trimIndent(),
@@ -204,7 +205,8 @@ class SessionRepository(
         jdbcClient
             .sql(
                 """
-                select turn_index, question_text, question_audio_path, answer_transcript, answered_at
+                select turn_index, question_text, question_audio_path, answer_transcript, answered_at,
+                       intervention::text as intervention, intervention_note
                   from public.session_turns
                  where session_id = :s and user_id = :u
                  order by turn_index desc limit 1
@@ -224,6 +226,8 @@ class SessionRepository(
         videoPath: String?,
         assessmentJson: String,
         nextAction: String,
+        intervention: String,
+        interventionNote: String?,
     ) {
         jdbcClient
             .sql(
@@ -234,7 +238,9 @@ class SessionRepository(
                        answer_video_path = :video,
                        answered_at = now(),
                        assessment = cast(:assessment as jsonb),
-                       next_action = cast(:action as public.turn_next_action)
+                       next_action = cast(:action as public.turn_next_action),
+                       intervention = cast(:intervention as public.intervention_type),
+                       intervention_note = :note
                  where session_id = :s and user_id = :u and turn_index = :i
                 """.trimIndent(),
             ).param("t", transcript)
@@ -242,6 +248,8 @@ class SessionRepository(
             .param("video", videoPath)
             .param("assessment", assessmentJson)
             .param("action", nextAction)
+            .param("intervention", intervention)
+            .param("note", interventionNote)
             .param("s", sessionId)
             .param("u", userId)
             .param("i", turnIndex)
@@ -267,7 +275,8 @@ class SessionRepository(
         jdbcClient
             .sql(
                 """
-                select turn_index, question_text, question_audio_path, answer_transcript, answered_at
+                select turn_index, question_text, question_audio_path, answer_transcript, answered_at,
+                       intervention::text as intervention, intervention_note
                   from public.session_turns
                  where session_id = :s and user_id = :u
                  order by turn_index
@@ -362,6 +371,8 @@ class SessionRepository(
             questionAudioPath = rs.getString("question_audio_path"),
             answerTranscript = rs.getString("answer_transcript"),
             answeredAt = rs.getTimestamp("answered_at")?.toInstant(),
+            intervention = rs.getString("intervention") ?: "none",
+            interventionNote = rs.getString("intervention_note"),
         )
 }
 
@@ -384,6 +395,9 @@ data class TurnRow(
     val questionAudioPath: String?,
     val answerTranscript: String?,
     val answeredAt: Instant?,
+    /** What the interviewer had to supply on this turn — see Intervention. */
+    val intervention: String = "none",
+    val interventionNote: String? = null,
 )
 
 data class ReadinessRow(

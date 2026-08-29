@@ -1,3 +1,27 @@
+# Correction — 29 August 2026
+
+The verification described below was real, but narrower than it reads. I drove the loop
+with **WAV** audio posted by a script. A browser was never run through it, and three
+things that only a browser exercises were broken:
+
+- **Answer submission returned 500 whenever the camera was on.** Chrome labels a
+  recording `video/webm;codecs=vp9,opus`; the comma is illegal in an unquoted HTTP
+  parameter, so parsing the part's content type threw before the upload was attempted.
+- **The interviewer's voice never played.** Gemini's TTS returns headerless PCM, which
+  no `<audio>` element can decode. Every question was silent text on screen.
+- **The camera opened without video consent**, because the client keyed off session
+  status rather than the consent flag — which the API did not expose at all.
+
+All three are fixed and re-verified by posting Chrome's exact content types at a running
+API against live Gemini: 200, both media objects stored, the answer transcribed from
+webm/opus, and the question audio serving as `audio/wav` with a RIFF header.
+
+**The lesson worth keeping:** "verified end to end" meant end to end *of the server*. The
+client's real output was never in the loop. Anything that only a browser produces —
+container formats, consent, device permissions — needs a browser to verify.
+
+---
+
 # Handoff — 26 August 2026
 
 ## Task

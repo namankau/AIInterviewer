@@ -109,6 +109,23 @@ export interface ReportOutcome {
   reasoning: string;
 }
 
+/**
+ * How much the interviewer had to help, and what the candidate did with it.
+ *
+ * The counts are computed from the recorded turns; the narrative is written by the model
+ * against those counts. Both are shown so the two cannot quietly disagree.
+ */
+export interface ReportAssistance {
+  totalAnswers: number;
+  unaidedAnswers: number;
+  assistedAnswers: number;
+  headline: string;
+  narrative: string | null;
+  breakdown: Array<{ label: string; count: number }>;
+  /** What was actually supplied, in the interviewer's words. */
+  moments: string[];
+}
+
 export interface SessionReport {
   sessionId: string;
   companyName: string;
@@ -120,6 +137,7 @@ export interface SessionReport {
   generatedAt: string;
   headline: string;
   summary: string;
+  assistance: ReportAssistance;
   competencies: ReportCompetency[];
   annotations: ReportAnnotation[];
   communication: ReportCommunication;

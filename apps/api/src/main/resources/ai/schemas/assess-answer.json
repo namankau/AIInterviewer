@@ -7,9 +7,24 @@
     "gaps": { "type": "ARRAY", "items": { "type": "STRING" } },
     "suggestedNextAction": {
       "type": "STRING",
-      "enum": ["follow_up", "probe", "challenge", "move_on", "raise_difficulty", "conclude"]
+      "enum": [
+        "follow_up",
+        "probe",
+        "challenge",
+        "move_on",
+        "raise_difficulty",
+        "redirect",
+        "hint",
+        "guide",
+        "conclude"
+      ]
     },
+    "intervention": {
+      "type": "STRING",
+      "enum": ["none", "redirected", "hinted", "guided", "corrected"]
+    },
+    "interventionNote": { "type": "STRING", "nullable": true },
     "nextQuestionText": { "type": "STRING", "nullable": true }
   },
-  "required": ["transcript", "summary", "strengths", "gaps", "suggestedNextAction"]
+  "required": ["transcript", "summary", "strengths", "gaps", "suggestedNextAction", "intervention"]
 }

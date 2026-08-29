@@ -1,6 +1,6 @@
 "use client";
 
-import type { SessionReport } from "@interviewos/shared";
+import type { ReportAssistance, SessionReport } from "@interviewos/shared";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -65,6 +65,8 @@ export function ReportView({ sessionId }: { sessionId: string }) {
           {report.archetypeLabel.toLowerCase()} rubric
         </p>
       </header>
+
+      {report.assistance ? <AssistancePanel assistance={report.assistance} /> : null}
 
       <Section title="Competencies" lead="Each score is anchored to something you actually said.">
         {report.competencies.length === 0 ? (
@@ -166,6 +168,56 @@ export function ReportView({ sessionId }: { sessionId: string }) {
         </p>
       </footer>
     </article>
+  );
+}
+
+/**
+ * How much the interviewer stepped in.
+ *
+ * Shown high in the report and stated plainly, because a candidate who was hinted to the
+ * answer deserves to know that is what happened — a report that quietly folds assisted
+ * answers into the same score as unaided ones is flattering them into a real rejection.
+ */
+function AssistancePanel({ assistance }: { assistance: ReportAssistance }) {
+  const unaided = assistance.assistedAnswers === 0;
+
+  return (
+    <section
+      aria-labelledby="assistance"
+      className="flex flex-col gap-4 rounded-lg border border-line bg-surface-raised p-6"
+    >
+      <div className="flex flex-col gap-1">
+        <h2 id="assistance" className="text-heading text-ink">
+          {unaided ? "You did this unaided" : "Where you needed a hand"}
+        </h2>
+        <p className="text-caption text-ink-subtle">{assistance.headline}</p>
+      </div>
+
+      {assistance.breakdown.length > 0 ? (
+        <ul className="flex flex-wrap gap-x-6 gap-y-2">
+          {assistance.breakdown.map((item) => (
+            <li key={item.label} className="text-caption text-ink-muted">
+              {item.label}
+              <span className="pl-2 font-mono text-ink-subtle">×{item.count}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {assistance.narrative ? (
+        <p className="max-w-prose text-body text-ink-muted">{assistance.narrative}</p>
+      ) : null}
+
+      {assistance.moments.length > 0 ? (
+        <ul className="flex flex-col gap-1.5 border-t border-line pt-4">
+          {assistance.moments.map((moment) => (
+            <li key={moment} className="text-caption text-ink-subtle">
+              — {moment}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
   );
 }
 

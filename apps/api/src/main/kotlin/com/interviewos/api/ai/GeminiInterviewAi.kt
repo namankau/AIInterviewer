@@ -106,11 +106,48 @@ class GeminiInterviewAi(
         val body =
             transcript
                 .mapIndexed { index, turn ->
-                    "Turn $index\nQ: ${turn.questionText}\nA: ${turn.answerTranscript ?: "(no answer captured)"}"
+                    buildString {
+                        append("Turn $index\nQ: ${turn.questionText}\n")
+                        append("A: ${turn.answerTranscript ?: "(no answer captured)"}")
+                        // Marked inline so the model cannot praise an answer it was
+                        // handed without noticing that it handed it over.
+                        if (turn.intervention.isAssisted) {
+                            append("\n[interviewer intervened — ${turn.intervention.label.lowercase()}")
+                            turn.interventionNote?.let { append(": $it") }
+                            append("]")
+                        }
+                    }
                 }.joinToString("\n\n")
-        val prompt = fillBrief(loadPrompt("report"), brief).replace("{{transcript}}", body)
+        val prompt =
+            fillBrief(loadPrompt("report"), brief)
+                .replace("{{transcript}}", body)
+                .replace("{{assistance}}", assistanceContext(transcript))
         val (node, usage) = generateJson(properties.reasoningModel, listOf(textPart(prompt)), schema("report"))
         return AiResult(objectMapper.treeToValue(node, ReportContent::class.java), usage)
+    }
+
+    /**
+     * Counts of help given, so the model's narrative is built on the real numbers rather
+     * than its own impression of how the round went.
+     */
+    private fun assistanceContext(transcript: List<TurnTranscript>): String {
+        val answered = transcript.filter { it.answerTranscript != null }
+        if (answered.isEmpty()) return "No answers were recorded."
+
+        val assisted = answered.filter { it.intervention.isAssisted }
+        if (assisted.isEmpty()) {
+            return "The candidate answered all ${answered.size} questions without any help."
+        }
+
+        return buildString {
+            append("The candidate answered ${answered.size - assisted.size} of ${answered.size} unaided. ")
+            append("The interviewer stepped in on ${assisted.size}:\n")
+            assisted
+                .groupingBy { it.intervention }
+                .eachCount()
+                .forEach { (intervention, count) -> append("- ${intervention.label}: $count turn(s)\n") }
+            assisted.mapNotNull { it.interventionNote }.forEach { append("- what was given: $it\n") }
+        }
     }
 
     // ---------------------------------------------------------------------------

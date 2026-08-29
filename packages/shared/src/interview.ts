@@ -32,6 +32,8 @@ export interface SessionView {
   roundLabel: string;
   language: string;
   status: "created" | "in_progress" | "completed" | "abandoned" | "failed";
+  /** Whether video was consented to. The only thing that may open the camera. */
+  consentVideo: boolean;
   startedAt: string | null;
   endedAt: string | null;
   turnsCompleted: number;

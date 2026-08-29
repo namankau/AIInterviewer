@@ -144,9 +144,12 @@ class InterviewService(
             throw ApiException.conflict("That question has already been answered.", code = "already_answered")
         }
 
-        val answerPath = store(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType)
+        // Keeping the recording is worth doing but not worth ending the round for: the
+        // candidate has already spoken, the transcript is what the report is built from,
+        // and losing the interview over a storage blip would be the worse failure.
+        val answerPath = storeOrWarn(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType)
         val videoPath =
-            video?.let { store(userId, sessionId, "turn-$turnIndex-video", it, videoContentType ?: "video/webm") }
+            video?.let { storeOrWarn(userId, sessionId, "turn-$turnIndex-video", it, videoContentType ?: "video/webm") }
 
         val roundType = RoundType.fromDbValue(session.roundType)
         val resolution =
@@ -242,6 +245,7 @@ class InterviewService(
             roundLabel = roundType.label,
             language = session.language,
             status = session.status,
+            consentVideo = session.consentVideo,
             startedAt = session.startedAt,
             endedAt = session.endedAt,
             turnsCompleted = repository.countAnsweredTurns(sessionId, userId),
@@ -310,6 +314,21 @@ class InterviewService(
             null
         } catch (e: ObjectStorageException) {
             log.warn("Could not store question audio for session {} turn {}", sessionId, turnIndex, e)
+            null
+        }
+
+    /** Media is evidence, not a precondition. A failure is logged and the round goes on. */
+    private fun storeOrWarn(
+        userId: UUID,
+        sessionId: UUID,
+        name: String,
+        bytes: ByteArray,
+        contentType: String,
+    ): String? =
+        try {
+            store(userId, sessionId, name, bytes, contentType)
+        } catch (e: ObjectStorageException) {
+            log.warn("Could not store {} for session {}", name, sessionId, e)
             null
         }
 

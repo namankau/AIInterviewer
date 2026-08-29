@@ -1,5 +1,6 @@
 package com.interviewos.api.storage
 
+import com.interviewos.api.common.ContentTypes
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
@@ -33,7 +34,7 @@ class SupabaseObjectStorage(
                 .headers { it.setBearerAuth(properties.serviceRoleKey) }
                 .header("apikey", properties.serviceRoleKey)
                 .header("x-upsert", "true")
-                .contentType(MediaType.parseMediaType(contentType))
+                .contentType(mediaTypeOf(contentType))
                 .body(bytes)
                 .retrieve()
                 .toBodilessEntity()
@@ -125,6 +126,15 @@ class SupabaseObjectStorage(
             throw ObjectStorageException("Failed to delete objects under $bucket/$prefix.", ex)
         }
     }
+
+    /**
+     * Browser recordings carry codec parameters that are not legal HTTP tokens
+     * (`video/webm;codecs=vp9,opus`), and a parse failure here would abort the upload.
+     * A valid type is kept as sent; anything else falls back to its bare type/subtype.
+     */
+    private fun mediaTypeOf(contentType: String): MediaType =
+        runCatching { MediaType.parseMediaType(contentType) }
+            .getOrElse { MediaType.parseMediaType(ContentTypes.base(contentType)) }
 
     private fun requireConfigured() {
         if (!properties.configured) {

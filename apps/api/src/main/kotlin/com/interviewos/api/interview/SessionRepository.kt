@@ -99,6 +99,7 @@ class SessionRepository(
                 select id, company_name, company_archetype::text as archetype, role_title,
                        round_type::text as round_type, language::text as language,
                        status::text as status, started_at, ended_at,
+                       (consent_video_at is not null) as consent_video,
                        coalesce(archetype_confidence, 'inferred') as archetype_confidence
                   from public.sessions
                  where id = :id and user_id = :u
@@ -362,6 +363,7 @@ class SessionRepository(
             status = rs.getString("status"),
             startedAt = rs.getTimestamp("started_at")?.toInstant(),
             endedAt = rs.getTimestamp("ended_at")?.toInstant(),
+            consentVideo = rs.getBoolean("consent_video"),
         )
 
     private fun mapTurn(rs: ResultSet) =
@@ -387,6 +389,8 @@ data class SessionRow(
     val status: String,
     val startedAt: Instant?,
     val endedAt: Instant?,
+    /** Whether the candidate agreed to video. The camera must not open without it. */
+    val consentVideo: Boolean,
 )
 
 data class TurnRow(

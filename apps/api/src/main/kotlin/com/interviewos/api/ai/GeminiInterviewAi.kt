@@ -1,5 +1,6 @@
 package com.interviewos.api.ai
 
+import com.interviewos.api.common.ContentTypes
 import org.springframework.core.io.ClassPathResource
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
@@ -71,8 +72,23 @@ class GeminiInterviewAi(
         val data = inline.path("data").asString()
         if (data.isNullOrBlank()) throw AiUnavailableException("Gemini returned no audio for the question.")
         val mimeType = inline.path("mimeType").asString()?.takeIf { it.isNotBlank() } ?: "audio/L16;rate=24000"
-        return AiResult(SpokenAudio(Base64.getDecoder().decode(data), mimeType), usageOf(response, properties.speechModel))
+        return AiResult(playable(Base64.getDecoder().decode(data), mimeType), usageOf(response, properties.speechModel))
     }
+
+    /**
+     * Speech leaves here in a form a browser can actually play. Gemini returns headerless
+     * PCM, which every `<audio>` element refuses, so it is wrapped in a WAV container
+     * before anyone stores or signs a URL for it.
+     */
+    private fun playable(
+        bytes: ByteArray,
+        mimeType: String,
+    ): SpokenAudio =
+        if (WavAudio.isRawPcm(mimeType)) {
+            SpokenAudio(WavAudio.wrap(bytes, WavAudio.sampleRateOf(mimeType)), "audio/wav")
+        } else {
+            SpokenAudio(bytes, ContentTypes.base(mimeType))
+        }
 
     override fun composeOpeningQuestion(brief: InterviewBrief): AiResult<AskedQuestion> {
         val prompt = fillBrief(loadPrompt("opening-question"), brief)

@@ -30,8 +30,10 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const withVideo = session?.status === "in_progress";
-  const capture = useInterviewCapture({ withVideo: !!withVideo });
+  // Consent, and only consent, decides whether the camera opens. Tying this to session
+  // status meant a candidate who declined video was recorded anyway (PRD 12).
+  const withVideo = session?.consentVideo === true;
+  const capture = useInterviewCapture({ withVideo });
 
   // Load the session, and resume mid-interview if the tab was refreshed.
   useEffect(() => {

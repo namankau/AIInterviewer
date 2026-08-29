@@ -16,7 +16,7 @@ if (existsSync(rootEnvFile)) {
 
 const nextConfig: NextConfig = {
   // Shared API types are consumed straight from TypeScript source in the workspace.
-  transpilePackages: ["@interviewos/shared"],
+  transpilePackages: ["@acemyinterview/shared"],
   typedRoutes: true,
 };
 

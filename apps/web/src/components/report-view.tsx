@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReportAssistance, SessionReport } from "@interviewos/shared";
+import type { ReportAssistance, SessionReport } from "@acemyinterview/shared";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 

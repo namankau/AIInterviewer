@@ -17,7 +17,7 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-3xl flex-col px-6 py-10">
       <header className="flex items-center justify-between gap-4 border-b border-line pb-6">
-        <p className="text-caption tracking-wide text-ink-subtle uppercase">InterviewOS</p>
+        <p className="text-caption tracking-wide text-ink-subtle uppercase">AceMyInterview</p>
         <SignOutButton />
       </header>
 

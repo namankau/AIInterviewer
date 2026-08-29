@@ -1,5 +1,7 @@
 package com.interviewos.api.common
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.validation.FieldError
@@ -36,5 +38,23 @@ class ApiExceptionHandler {
             .status(413)
             .body(ApiError("file_too_large", "That file is larger than the upload limit."))
 
+    /**
+     * Anything that reaches here is a defect. The client still gets the same envelope
+     * every other failure uses — a caller should never have to parse two error shapes,
+     * and Spring's default body leaks the request path and timestamp for no benefit.
+     * The detail goes to the log, where it belongs, not to the browser.
+     */
+    @ExceptionHandler(Exception::class)
+    fun handleUnexpected(ex: Exception): ResponseEntity<ApiError> {
+        log.error("Unhandled exception serving a request", ex)
+        return ResponseEntity
+            .status(500)
+            .body(ApiError("internal_error", "Something went wrong on our side. Please try again."))
+    }
+
     private fun describe(error: FieldError): String = error.defaultMessage ?: "is invalid"
+
+    private companion object {
+        val log: Logger = LoggerFactory.getLogger(ApiExceptionHandler::class.java)
+    }
 }

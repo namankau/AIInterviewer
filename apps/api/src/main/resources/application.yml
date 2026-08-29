@@ -1,6 +1,6 @@
 spring:
   application:
-    name: interviewos-api
+    name: acemyinterview-api
   datasource:
     # The schema is owned by the Supabase CLI (supabase/migrations), not by this app.
     # The API reads and writes rows; it never runs DDL.

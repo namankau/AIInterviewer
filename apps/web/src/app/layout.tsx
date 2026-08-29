@@ -4,8 +4,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "InterviewOS",
-    template: "%s · InterviewOS",
+    default: "AceMyInterview",
+    template: "%s · AceMyInterview",
   },
   description:
     "Voice-first AI mock interviews grounded in how interviews at real employers actually run — " +

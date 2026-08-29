@@ -10,6 +10,8 @@ import com.interviewos.api.common.ApiException
 import com.interviewos.api.storage.ObjectStorage
 import com.interviewos.api.storage.ObjectStorageException
 import com.interviewos.api.storage.StorageProperties
+import com.interviewos.api.user.SupabaseIdentity
+import com.interviewos.api.user.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -30,6 +32,7 @@ import java.util.UUID
 @Service
 class InterviewService(
     private val repository: SessionRepository,
+    private val userRepository: UserRepository,
     private val archetypeResolver: ArchetypeResolver,
     private val interviewAi: InterviewAi,
     private val storage: ObjectStorage,
@@ -55,9 +58,15 @@ class InterviewService(
 
     @Transactional
     fun start(
-        userId: UUID,
+        identity: SupabaseIdentity,
         request: StartSessionRequest,
     ): SessionView {
+        // Provisioning used to be a side effect of GET /me, so starting an interview
+        // before that endpoint had ever been called failed on the users foreign key.
+        // Any entry point that creates user-owned rows has to stand on its own.
+        userRepository.provision(identity)
+        val userId = identity.id
+
         if (!request.consentAudio) {
             throw ApiException.badRequest(
                 "The interview is spoken, so recording your voice is required. Nothing is captured without your consent.",

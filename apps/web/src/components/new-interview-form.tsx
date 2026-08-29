@@ -1,6 +1,6 @@
 "use client";
 
-import type { RoundType } from "@interviewos/shared";
+import type { RoundType } from "@acemyinterview/shared";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 

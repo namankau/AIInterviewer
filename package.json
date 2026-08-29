@@ -1,5 +1,5 @@
 {
-  "name": "interviewos",
+  "name": "acemyinterview",
   "version": "0.1.0",
   "private": true,
   "description": "Voice-first AI mock interview platform (see docs/InterviewOS_PRD_v1.1.pdf)",
@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "dev": "node --env-file=.env scripts/dev.mjs",
-    "dev:web": "npm run dev --workspace @interviewos/web",
+    "dev:web": "npm run dev --workspace @acemyinterview/web",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",

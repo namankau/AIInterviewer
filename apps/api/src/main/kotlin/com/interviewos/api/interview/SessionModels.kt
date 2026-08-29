@@ -54,6 +54,11 @@ data class SessionView(
     val roundLabel: String,
     val language: String,
     val status: String,
+    /**
+     * Whether video was consented to. The client decides whether to open the camera from
+     * this and nothing else — consent is per stream and is a hard gate (PRD 12).
+     */
+    val consentVideo: Boolean,
     val startedAt: Instant?,
     val endedAt: Instant?,
     val turnsCompleted: Int,

@@ -8,7 +8,7 @@ import type {
   SessionView,
   StartSessionRequest,
   SubmitAnswerResponse,
-} from "@interviewos/shared";
+} from "@acemyinterview/shared";
 
 import { env } from "@/lib/env";
 

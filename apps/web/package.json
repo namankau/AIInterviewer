@@ -1,5 +1,5 @@
 {
-  "name": "@interviewos/web",
+  "name": "@acemyinterview/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@interviewos/shared": "*",
+    "@acemyinterview/shared": "*",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "next": "16.3.2",

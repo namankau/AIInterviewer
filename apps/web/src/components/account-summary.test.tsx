@@ -1,4 +1,4 @@
-import type { MeResponse } from "@interviewos/shared";
+import type { MeResponse } from "@acemyinterview/shared";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

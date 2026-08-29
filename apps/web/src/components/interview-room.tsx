@@ -1,6 +1,6 @@
 "use client";
 
-import type { SessionView, TurnView } from "@interviewos/shared";
+import type { SessionView, TurnView } from "@acemyinterview/shared";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 

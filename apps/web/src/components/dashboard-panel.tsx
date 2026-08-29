@@ -1,6 +1,6 @@
 "use client";
 
-import type { EntitlementView, ReadinessGroup, SessionSummary } from "@interviewos/shared";
+import type { EntitlementView, ReadinessGroup, SessionSummary } from "@acemyinterview/shared";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 

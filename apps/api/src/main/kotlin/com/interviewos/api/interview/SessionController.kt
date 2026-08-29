@@ -47,7 +47,7 @@ class SessionController(
     fun start(
         @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: StartSessionRequest,
-    ): SessionView = interviewService.start(callerOf(jwt), request)
+    ): SessionView = interviewService.start(SupabaseIdentity.from(jwt), request)
 
     @GetMapping("/sessions/{id}")
     fun session(

@@ -1,6 +1,6 @@
 "use client";
 
-import type { MeResponse } from "@interviewos/shared";
+import type { MeResponse } from "@acemyinterview/shared";
 import { useEffect, useState } from "react";
 
 import { fetchMe } from "@/lib/api";

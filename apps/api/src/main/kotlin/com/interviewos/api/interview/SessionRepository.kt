@@ -60,20 +60,22 @@ class SessionRepository(
         language: String,
         consentAudio: Boolean,
         consentVideo: Boolean,
+        durationMinutes: Int,
     ): UUID =
         jdbcClient
             .sql(
                 """
                 insert into public.sessions (
                     user_id, company_name, company_archetype, role_title, round_type, language,
-                    status, started_at, consent_audio_at, consent_video_at, archetype_confidence
+                    status, started_at, consent_audio_at, consent_video_at, archetype_confidence,
+                    duration_minutes
                 ) values (
                     :u, :company, cast(:archetype as public.employer_archetype), :role,
                     cast(:round as public.round_type), cast(:language as public.interview_language),
                     'in_progress', now(),
                     case when :consentAudio then now() end,
                     case when :consentVideo then now() end,
-                    :confidence
+                    :confidence, :durationMinutes
                 )
                 returning id
                 """.trimIndent(),
@@ -85,6 +87,7 @@ class SessionRepository(
             .param("language", language)
             .param("consentAudio", consentAudio)
             .param("consentVideo", consentVideo)
+            .param("durationMinutes", durationMinutes)
             .param("confidence", confidence.dbValue)
             .query(UUID::class.java)
             .single()
@@ -99,7 +102,7 @@ class SessionRepository(
                 select id, company_name, company_archetype::text as archetype, role_title,
                        round_type::text as round_type, language::text as language,
                        status::text as status, started_at, ended_at,
-                       (consent_video_at is not null) as consent_video,
+                       (consent_video_at is not null) as consent_video, duration_minutes,
                        coalesce(archetype_confidence, 'inferred') as archetype_confidence
                   from public.sessions
                  where id = :id and user_id = :u
@@ -163,12 +166,14 @@ class SessionRepository(
         turnIndex: Int,
         questionText: String,
         questionAudioPath: String?,
+        phase: TurnPhase,
     ) {
         jdbcClient
             .sql(
                 """
-                insert into public.session_turns (session_id, user_id, turn_index, question_text, question_audio_path)
-                values (:s, :u, :i, :q, :audio)
+                insert into public.session_turns
+                       (session_id, user_id, turn_index, question_text, question_audio_path, phase)
+                values (:s, :u, :i, :q, :audio, cast(:phase as public.turn_phase))
                 on conflict (session_id, turn_index) do nothing
                 """.trimIndent(),
             ).param("s", sessionId)
@@ -176,6 +181,7 @@ class SessionRepository(
             .param("i", turnIndex)
             .param("q", questionText)
             .param("audio", questionAudioPath)
+            .param("phase", phase.dbValue)
             .update()
     }
 
@@ -188,7 +194,8 @@ class SessionRepository(
             .sql(
                 """
                 select turn_index, question_text, question_audio_path, answer_transcript, answered_at,
-                       intervention::text as intervention, intervention_note
+                       intervention::text as intervention, intervention_note,
+                       phase::text as phase, delivery_note
                   from public.session_turns
                  where session_id = :s and user_id = :u and turn_index = :i
                 """.trimIndent(),
@@ -207,7 +214,8 @@ class SessionRepository(
             .sql(
                 """
                 select turn_index, question_text, question_audio_path, answer_transcript, answered_at,
-                       intervention::text as intervention, intervention_note
+                       intervention::text as intervention, intervention_note,
+                       phase::text as phase, delivery_note
                   from public.session_turns
                  where session_id = :s and user_id = :u
                  order by turn_index desc limit 1
@@ -229,6 +237,7 @@ class SessionRepository(
         nextAction: String,
         intervention: String,
         interventionNote: String?,
+        deliveryNote: String?,
     ) {
         jdbcClient
             .sql(
@@ -241,7 +250,8 @@ class SessionRepository(
                        assessment = cast(:assessment as jsonb),
                        next_action = cast(:action as public.turn_next_action),
                        intervention = cast(:intervention as public.intervention_type),
-                       intervention_note = :note
+                       intervention_note = :note,
+                       delivery_note = :delivery
                  where session_id = :s and user_id = :u and turn_index = :i
                 """.trimIndent(),
             ).param("t", transcript)
@@ -251,6 +261,7 @@ class SessionRepository(
             .param("action", nextAction)
             .param("intervention", intervention)
             .param("note", interventionNote)
+            .param("delivery", deliveryNote)
             .param("s", sessionId)
             .param("u", userId)
             .param("i", turnIndex)
@@ -277,7 +288,8 @@ class SessionRepository(
             .sql(
                 """
                 select turn_index, question_text, question_audio_path, answer_transcript, answered_at,
-                       intervention::text as intervention, intervention_note
+                       intervention::text as intervention, intervention_note,
+                       phase::text as phase, delivery_note
                   from public.session_turns
                  where session_id = :s and user_id = :u
                  order by turn_index
@@ -364,6 +376,7 @@ class SessionRepository(
             startedAt = rs.getTimestamp("started_at")?.toInstant(),
             endedAt = rs.getTimestamp("ended_at")?.toInstant(),
             consentVideo = rs.getBoolean("consent_video"),
+            durationMinutes = rs.getInt("duration_minutes"),
         )
 
     private fun mapTurn(rs: ResultSet) =
@@ -374,6 +387,8 @@ class SessionRepository(
             answerTranscript = rs.getString("answer_transcript"),
             answeredAt = rs.getTimestamp("answered_at")?.toInstant(),
             intervention = rs.getString("intervention") ?: "none",
+            phase = rs.getString("phase"),
+            deliveryNote = rs.getString("delivery_note"),
             interventionNote = rs.getString("intervention_note"),
         )
 }
@@ -391,6 +406,8 @@ data class SessionRow(
     val endedAt: Instant?,
     /** Whether the candidate agreed to video. The camera must not open without it. */
     val consentVideo: Boolean,
+    /** How long this round was scheduled to run. The clock, not a counter, ends it. */
+    val durationMinutes: Int,
 )
 
 data class TurnRow(
@@ -402,6 +419,10 @@ data class TurnRow(
     /** What the interviewer had to supply on this turn — see Intervention. */
     val intervention: String = "none",
     val interventionNote: String? = null,
+    /** Where this exchange sat in the round: `warmup`, `main` or `closing`. */
+    val phase: String = TurnPhase.MAIN.dbValue,
+    /** What the interviewer observed about delivery, from the video when there was one. */
+    val deliveryNote: String? = null,
 )
 
 data class ReadinessRow(

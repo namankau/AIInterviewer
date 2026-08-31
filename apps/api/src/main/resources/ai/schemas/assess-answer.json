@@ -1,10 +1,24 @@
 {
   "type": "OBJECT",
   "properties": {
-    "transcript": { "type": "STRING" },
-    "summary": { "type": "STRING" },
-    "strengths": { "type": "ARRAY", "items": { "type": "STRING" } },
-    "gaps": { "type": "ARRAY", "items": { "type": "STRING" } },
+    "transcript": {
+      "type": "STRING"
+    },
+    "summary": {
+      "type": "STRING"
+    },
+    "strengths": {
+      "type": "ARRAY",
+      "items": {
+        "type": "STRING"
+      }
+    },
+    "gaps": {
+      "type": "ARRAY",
+      "items": {
+        "type": "STRING"
+      }
+    },
     "suggestedNextAction": {
       "type": "STRING",
       "enum": [
@@ -21,10 +35,33 @@
     },
     "intervention": {
       "type": "STRING",
-      "enum": ["none", "redirected", "hinted", "guided", "corrected"]
+      "enum": [
+        "none",
+        "redirected",
+        "hinted",
+        "guided",
+        "corrected"
+      ]
     },
-    "interventionNote": { "type": "STRING", "nullable": true },
-    "nextQuestionText": { "type": "STRING", "nullable": true }
+    "interventionNote": {
+      "type": "STRING",
+      "nullable": true
+    },
+    "deliveryObservation": {
+      "type": "STRING",
+      "nullable": true
+    },
+    "nextQuestionText": {
+      "type": "STRING",
+      "nullable": true
+    }
   },
-  "required": ["transcript", "summary", "strengths", "gaps", "suggestedNextAction", "intervention"]
+  "required": [
+    "transcript",
+    "summary",
+    "strengths",
+    "gaps",
+    "suggestedNextAction",
+    "intervention"
+  ]
 }

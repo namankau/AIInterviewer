@@ -17,13 +17,24 @@ interface InterviewAi {
         language: String,
     ): AiResult<SpokenAudio>
 
-    fun composeOpeningQuestion(brief: InterviewBrief): AiResult<AskedQuestion>
+    fun composeOpeningQuestion(
+        brief: InterviewBrief,
+        round: RoundContext,
+    ): AiResult<AskedQuestion>
 
+    /**
+     * Judges one spoken answer. [video] is sent when the candidate consented to the
+     * camera, so delivery is assessed on how they actually came across rather than on a
+     * transcript alone; it is null when they declined, and the model is told to stay
+     * silent about presence in that case.
+     */
     fun assessAnswer(
         brief: InterviewBrief,
+        round: RoundContext,
         priorTurns: List<TurnTranscript>,
         currentQuestion: String,
         answer: AnswerAudio,
+        video: AnswerVideo?,
     ): AiResult<AnswerAssessment>
 
     fun composeReport(

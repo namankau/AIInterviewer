@@ -84,6 +84,10 @@ class ReportService(
                             answerTranscript = it.answerTranscript,
                             intervention = Intervention.parse(it.intervention),
                             interventionNote = it.interventionNote,
+                            // Marked so the model does not score "tell me about yourself"
+                            // as though it were evidence of system-design ability.
+                            warmUp = TurnPhase.fromDbValue(it.phase) == TurnPhase.WARMUP,
+                            deliveryNote = it.deliveryNote,
                         )
                     },
                 )
@@ -94,7 +98,7 @@ class ReportService(
                 )
             }
 
-        val verified = withVerifiedEvidence(composed.value, turns)
+        val verified = withVerifiedEvidence(composed.value, turns).withoutUnseenPresence(session.consentVideo)
         val payload = payloadOf(verified, session, roundType, archetype, turns.size, assistance)
 
         repository.saveReport(
@@ -107,6 +111,19 @@ class ReportService(
         )
         return payload
     }
+
+    /**
+     * Strips any claim about how the candidate looked when there was no camera. A model
+     * asked about presence will describe some anyway, and a report that says a candidate
+     * "maintained good eye contact" in an audio-only round is fabricated evidence — the
+     * same failure as an invented quote, in a different costume.
+     */
+    private fun ReportContent.withoutUnseenPresence(hadVideo: Boolean): ReportContent =
+        if (hadVideo || communication.presence == null) {
+            this
+        } else {
+            copy(communication = communication.copy(presence = null))
+        }
 
     /**
      * Drops any competency score whose evidence quote does not actually appear in the
@@ -202,6 +219,9 @@ class ReportService(
                     "pace" to content.communication.pace,
                     "rambling" to content.communication.rambling,
                     "handlingUncertainty" to content.communication.handlingUncertainty,
+                    // Null unless the candidate had the camera on. The report never
+                    // describes presence it did not see.
+                    "presence" to content.communication.presence,
                 ),
             "practicePlan" to
                 content.practicePlan.map {

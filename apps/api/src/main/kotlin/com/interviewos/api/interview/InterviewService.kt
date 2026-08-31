@@ -2,9 +2,11 @@ package com.interviewos.api.interview
 
 import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.AnswerAudio
+import com.interviewos.api.ai.AnswerVideo
 import com.interviewos.api.ai.Intervention
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
+import com.interviewos.api.ai.RoundContext
 import com.interviewos.api.ai.TurnTranscript
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.storage.ObjectStorage
@@ -16,6 +18,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.ObjectMapper
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -103,12 +107,14 @@ class InterviewService(
                 language = request.language,
                 consentAudio = request.consentAudio,
                 consentVideo = request.consentVideo,
+                durationMinutes = request.durationMinutes,
             )
 
         val brief = briefFor(request.companyName.trim(), resolution, request.roleTitle.trim(), roundType, request.language)
+        val plan = InterviewPlan.opening(request.durationMinutes)
         val opening =
             try {
-                interviewAi.composeOpeningQuestion(brief)
+                interviewAi.composeOpeningQuestion(brief, plan.toContext())
             } catch (e: AiUnavailableException) {
                 repository.markSessionStatus(sessionId, userId, "failed")
                 log.warn("Opening question failed for session {}", sessionId, e)
@@ -118,7 +124,7 @@ class InterviewService(
             }
 
         val audioPath = speakAndStore(userId, sessionId, turnIndex = 0, text = opening.value.text, language = request.language)
-        repository.insertTurn(sessionId, userId, 0, opening.value.text, audioPath)
+        repository.insertTurn(sessionId, userId, 0, opening.value.text, audioPath, plan.phase)
 
         return view(userId, sessionId)
     }
@@ -151,6 +157,17 @@ class InterviewService(
         val videoPath =
             video?.let { storeOrWarn(userId, sessionId, "turn-$turnIndex-video", it, videoContentType ?: "video/webm") }
 
+        // The plan for what happens next, decided here rather than by the model: this
+        // answer is in the bag, so the count it is planned against includes it.
+        val plan =
+            InterviewPlan.forTurn(
+                turnIndex = turnIndex + 1,
+                answeredTurns = repository.countAnsweredTurns(sessionId, userId) + 1,
+                startedAt = session.startedAt,
+                durationMinutes = session.durationMinutes,
+                now = Instant.now(),
+            )
+
         val roundType = RoundType.fromDbValue(session.roundType)
         val resolution =
             ArchetypeResolution(Archetype.fromDbValue(session.archetype), confidenceOf(session.archetypeConfidence))
@@ -159,11 +176,20 @@ class InterviewService(
             repository
                 .listTranscript(sessionId, userId)
                 .filter { it.turnIndex < turnIndex && it.answerTranscript != null }
-                .map { TurnTranscript(it.questionText, it.answerTranscript) }
+                .map { it.toTranscript() }
 
         val assessment =
             try {
-                interviewAi.assessAnswer(brief, priorTurns, turn.questionText, audio)
+                interviewAi.assessAnswer(
+                    brief = brief,
+                    round = plan.toContext(),
+                    priorTurns = priorTurns,
+                    currentQuestion = turn.questionText,
+                    answer = audio,
+                    // Sent only when the candidate consented to the camera. Delivery is
+                    // then judged on how they actually came across, not on words alone.
+                    video = video?.let { AnswerVideo(it, videoContentType ?: "video/webm") },
+                )
             } catch (e: AiUnavailableException) {
                 repository.markSessionStatus(sessionId, userId, "failed")
                 log.warn("Answer assessment failed for session {} turn {}", sessionId, turnIndex, e)
@@ -187,10 +213,13 @@ class InterviewService(
             // Only keep a note when help was actually given, so the report cannot
             // report assistance that did not happen.
             interventionNote = assessment.value.interventionNote?.takeIf { intervention.isAssisted },
+            deliveryNote = assessment.value.deliveryObservation?.takeIf { it.isNotBlank() },
         )
 
         val answered = repository.countAnsweredTurns(sessionId, userId)
-        val shouldConclude = nextAction == "conclude" || answered >= MAX_TURNS
+        // The clock ends the round. `mustConclude` also covers the turn ceiling, which is
+        // there so a runaway session cannot run up an unbounded model bill.
+        val shouldConclude = plan.mustConclude || nextAction == "conclude"
         if (shouldConclude) {
             repository.markSessionStatus(sessionId, userId, "completed")
             return SubmitAnswerResponse(sessionComplete = true, turnsCompleted = answered, nextTurn = null)
@@ -204,12 +233,19 @@ class InterviewService(
 
         val nextIndex = turnIndex + 1
         val nextAudioPath = speakAndStore(userId, sessionId, nextIndex, nextText, session.language)
-        repository.insertTurn(sessionId, userId, nextIndex, nextText, nextAudioPath)
+        repository.insertTurn(sessionId, userId, nextIndex, nextText, nextAudioPath, plan.phase)
 
         return SubmitAnswerResponse(
             sessionComplete = false,
             turnsCompleted = answered,
-            nextTurn = TurnView(nextIndex, nextText, signedUrl(nextAudioPath), answered = false),
+            nextTurn =
+                TurnView(
+                    turnIndex = nextIndex,
+                    questionText = nextText,
+                    questionAudioUrl = signedUrl(nextAudioPath),
+                    phase = plan.phase.dbValue,
+                    answered = false,
+                ),
         )
     }
 
@@ -248,12 +284,24 @@ class InterviewService(
             consentVideo = session.consentVideo,
             startedAt = session.startedAt,
             endedAt = session.endedAt,
+            durationMinutes = session.durationMinutes,
+            // The deadline is the server's, so a client clock that drifts or a tab that
+            // sleeps cannot buy the candidate extra time.
+            scheduledEndAt = session.startedAt?.plus(Duration.ofMinutes(session.durationMinutes.toLong())),
             turnsCompleted = repository.countAnsweredTurns(sessionId, userId),
-            maxTurns = MAX_TURNS,
+            maxTurns = InterviewPlan.MAX_TURNS,
             currentTurn =
                 latest
                     ?.takeIf { it.answeredAt == null }
-                    ?.let { TurnView(it.turnIndex, it.questionText, signedUrl(it.questionAudioPath), answered = false) },
+                    ?.let {
+                        TurnView(
+                            turnIndex = it.turnIndex,
+                            questionText = it.questionText,
+                            questionAudioUrl = signedUrl(it.questionAudioPath),
+                            phase = it.phase,
+                            answered = false,
+                        )
+                    },
         )
     }
 
@@ -317,6 +365,31 @@ class InterviewService(
             null
         }
 
+    private fun TurnPlan.toContext() =
+        RoundContext(
+            phase =
+                when (phase) {
+                    TurnPhase.WARMUP -> "warm-up"
+                    TurnPhase.MAIN -> "main round"
+                    TurnPhase.CLOSING -> "closing"
+                },
+            minutesElapsed = minutesElapsed,
+            minutesRemaining = minutesRemaining,
+            durationMinutes = durationMinutes,
+            briefTheCandidate = briefTheCandidate,
+            mustConclude = mustConclude,
+        )
+
+    private fun TurnRow.toTranscript() =
+        TurnTranscript(
+            questionText = questionText,
+            answerTranscript = answerTranscript,
+            intervention = Intervention.parse(intervention),
+            interventionNote = interventionNote,
+            warmUp = TurnPhase.fromDbValue(phase) == TurnPhase.WARMUP,
+            deliveryNote = deliveryNote,
+        )
+
     /** Media is evidence, not a precondition. A failure is logged and the round goes on. */
     private fun storeOrWarn(
         userId: UUID,
@@ -371,8 +444,6 @@ class InterviewService(
         }
 
     private companion object {
-        /** Keeps a session bounded, and keeps per-session model cost predictable. */
-        const val MAX_TURNS = 8
         const val SIGNED_URL_SECONDS = 3600
         val ALLOWED_ACTIONS =
             setOf(

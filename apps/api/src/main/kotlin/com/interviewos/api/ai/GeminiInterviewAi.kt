@@ -90,27 +90,42 @@ class GeminiInterviewAi(
             SpokenAudio(bytes, ContentTypes.base(mimeType))
         }
 
-    override fun composeOpeningQuestion(brief: InterviewBrief): AiResult<AskedQuestion> {
-        val prompt = fillBrief(loadPrompt("opening-question"), brief)
+    override fun composeOpeningQuestion(
+        brief: InterviewBrief,
+        round: RoundContext,
+    ): AiResult<AskedQuestion> {
+        val prompt = fillRound(fillBrief(loadPrompt("opening-question"), brief), round)
         val (node, usage) = generateJson(properties.reasoningModel, listOf(textPart(prompt)), schema("opening-question"))
         return AiResult(objectMapper.treeToValue(node, AskedQuestion::class.java), usage)
     }
 
     override fun assessAnswer(
         brief: InterviewBrief,
+        round: RoundContext,
         priorTurns: List<TurnTranscript>,
         currentQuestion: String,
         answer: AnswerAudio,
+        video: AnswerVideo?,
     ): AiResult<AnswerAssessment> {
         val history =
             priorTurns.joinToString("\n") { turn ->
                 "Q: ${turn.questionText}\nA: ${turn.answerTranscript ?: "(no answer captured)"}"
             }
         val prompt =
-            fillBrief(loadPrompt("assess-answer"), brief)
+            fillRound(fillBrief(loadPrompt("assess-answer"), brief), round)
                 .replace("{{currentQuestion}}", currentQuestion)
                 .replace("{{history}}", history.ifBlank { "(this is the first answer)" })
-        val parts = listOf(textPart(prompt), inlineDataPart(answer.contentType, answer.bytes))
+
+        val parts =
+            buildList {
+                add(textPart(prompt))
+                add(inlineDataPart(answer.contentType, answer.bytes))
+                // Inline parts share one request budget, so an oversized take is dropped
+                // rather than allowed to fail the turn. Delivery falls back to the audio.
+                video?.takeIf { it.bytes.size <= MAX_INLINE_VIDEO_BYTES }?.let {
+                    add(inlineDataPart(it.contentType, it.bytes))
+                }
+            }
         val (node, usage) = generateJson(properties.reasoningModel, parts, schema("assess-answer"))
         return AiResult(objectMapper.treeToValue(node, AnswerAssessment::class.java), usage)
     }
@@ -123,8 +138,10 @@ class GeminiInterviewAi(
             transcript
                 .mapIndexed { index, turn ->
                     buildString {
-                        append("Turn $index\nQ: ${turn.questionText}\n")
+                        append("Turn $index${if (turn.warmUp) " (warm-up)" else ""}\n")
+                        append("Q: ${turn.questionText}\n")
                         append("A: ${turn.answerTranscript ?: "(no answer captured)"}")
+                        turn.deliveryNote?.let { append("\n[delivery observed: $it]") }
                         // Marked inline so the model cannot praise an answer it was
                         // handed without noticing that it handed it over.
                         if (turn.intervention.isAssisted) {
@@ -141,6 +158,55 @@ class GeminiInterviewAi(
         val (node, usage) = generateJson(properties.reasoningModel, listOf(textPart(prompt)), schema("report"))
         return AiResult(objectMapper.treeToValue(node, ReportContent::class.java), usage)
     }
+
+    /**
+     * Fills in where the round is up to, and what that means the interviewer should be
+     * doing now. The pacing sentence is written here rather than left to the model,
+     * because a model asked to pace itself will neither warm up nor wrap up.
+     */
+    private fun fillRound(
+        template: String,
+        round: RoundContext,
+    ): String =
+        template
+            .replace("{{phase}}", round.phase)
+            .replace("{{minutesElapsed}}", round.minutesElapsed.toString())
+            .replace("{{minutesRemaining}}", round.minutesRemaining.toString())
+            .replace("{{durationMinutes}}", round.durationMinutes.toString())
+            .replace("{{pacing}}", pacingFor(round))
+
+    private fun pacingFor(round: RoundContext): String =
+        when {
+            round.mustConclude -> {
+                "The time is up. Close the interview off on this turn: thank them, tell them what happens " +
+                    "next, and set `suggestedNextAction` to `conclude`. Do not open a new line of questioning."
+            }
+
+            round.briefTheCandidate -> {
+                "The warm-up is over and you now know who you are talking to. Before your next question, " +
+                    "tell them how the rest of the round will run - that there are about " +
+                    "${round.minutesRemaining} minutes left, roughly what you will cover given this round " +
+                    "type, that you want them to think out loud, and that they can ask you to repeat or " +
+                    "clarify anything. Two or three sentences, spoken plainly. Then ask your first " +
+                    "substantive question in the same turn."
+            }
+
+            round.phase == CLOSING_PHASE -> {
+                "Only ${round.minutesRemaining} minutes remain. Do not open new ground. Finish the thread " +
+                    "you are on, or ask one last question you can get a complete answer to."
+            }
+
+            round.phase == WARMUP_PHASE -> {
+                "You are still warming up. Find out who they are: their background, something they built " +
+                    "and are proud of, and what they actually work in day to day. Follow what they say - " +
+                    "this is where you learn what is worth probing later. No hard questions yet."
+            }
+
+            else -> {
+                "You are in the main round with ${round.minutesRemaining} minutes left. Pace yourself so " +
+                    "the round finishes properly rather than being cut off mid-answer."
+            }
+        }
 
     /**
      * Counts of help given, so the model's narrative is built on the real numbers rather
@@ -240,6 +306,16 @@ class GeminiInterviewAi(
     }
 
     private fun textPart(text: String): Map<String, Any> = mapOf("text" to text)
+
+    private companion object {
+        /**
+         * Gemini caps a single request's inline payload at 20 MB. Answers are short, so a
+         * take larger than this is a runaway recorder rather than a thorough candidate.
+         */
+        const val MAX_INLINE_VIDEO_BYTES = 15 * 1024 * 1024
+        const val WARMUP_PHASE = "warm-up"
+        const val CLOSING_PHASE = "closing"
+    }
 
     private fun inlineDataPart(
         contentType: String,

@@ -1,5 +1,7 @@
 package com.interviewos.api.interview
 
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 import java.time.Instant
@@ -26,6 +28,13 @@ data class StartSessionRequest(
      */
     val consentAudio: Boolean = false,
     val consentVideo: Boolean = false,
+    /**
+     * How long the round should run. Real loops are time-boxed and so is this one — the
+     * clock is what ends the interview, not a turn counter.
+     */
+    @field:Min(10)
+    @field:Max(120)
+    val durationMinutes: Int = 40,
 )
 
 /** One exchange as the client needs to render it. */
@@ -34,6 +43,8 @@ data class TurnView(
     val questionText: String,
     /** Short-lived signed URL for the spoken question. Null if speech was unavailable. */
     val questionAudioUrl: String?,
+    /** `warmup`, `main` or `closing` — the room labels the stage the candidate is in. */
+    val phase: String,
     val answered: Boolean,
 )
 
@@ -61,7 +72,15 @@ data class SessionView(
     val consentVideo: Boolean,
     val startedAt: Instant?,
     val endedAt: Instant?,
+    /** The scheduled length of the round, in minutes. */
+    val durationMinutes: Int,
+    /**
+     * When the round is scheduled to end. The server's clock is the authority — a client
+     * that sleeps its tab or drifts cannot buy the candidate extra time.
+     */
+    val scheduledEndAt: Instant?,
     val turnsCompleted: Int,
+    /** A ceiling on exchanges, not a target. The clock ends the round. */
     val maxTurns: Int,
     val currentTurn: TurnView?,
 )

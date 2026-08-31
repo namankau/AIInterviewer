@@ -118,6 +118,34 @@ data class AnswerAudio(
     val contentType: String,
 )
 
+/**
+ * The same answer as video, when the candidate consented to the camera. Sent to the
+ * model alongside the audio so delivery is judged on how someone actually came across —
+ * composure, eye contact, whether they froze — and not on a transcript alone.
+ */
+data class AnswerVideo(
+    val bytes: ByteArray,
+    val contentType: String,
+)
+
+/**
+ * Where the round is up to, as the model needs to be told it.
+ *
+ * The engine decides all of this. A model left to pace itself opens on the hardest
+ * question it can think of and never wraps up (CLAUDE.md: interview logic is server-side).
+ */
+data class RoundContext(
+    /** `warm-up`, `main round`, or `closing`. */
+    val phase: String,
+    val minutesElapsed: Int,
+    val minutesRemaining: Int,
+    val durationMinutes: Int,
+    /** Set out how the round will run before asking the first substantive question. */
+    val briefTheCandidate: Boolean,
+    /** The clock has run out. Close the interview off warmly on this turn. */
+    val mustConclude: Boolean,
+)
+
 /** One completed exchange, as the model needs to see the history. */
 data class TurnTranscript(
     val questionText: String,
@@ -125,6 +153,13 @@ data class TurnTranscript(
     /** What the interviewer supplied on this turn, so the report can weigh it. */
     val intervention: Intervention = Intervention.NONE,
     val interventionNote: String? = null,
+    /**
+     * Warm-up answers are context — who the candidate is, what they have built. They are
+     * not evidence of competence and the report must not score them as though they were.
+     */
+    val warmUp: Boolean = false,
+    /** How they came across on this turn, from the video when there was one. */
+    val deliveryNote: String? = null,
 )
 
 /**
@@ -143,6 +178,12 @@ data class AnswerAssessment(
     val intervention: String = Intervention.NONE.wireValue,
     /** One sentence naming what was supplied, so the report can tell the candidate. */
     val interventionNote: String? = null,
+    /**
+     * How the candidate came across on this turn — pace, structure, composure, and, when
+     * video was sent, what their body language actually showed. Observation only: it
+     * never becomes a score on its own.
+     */
+    val deliveryObservation: String? = null,
     val nextQuestionText: String?,
 )
 
@@ -208,6 +249,11 @@ data class CommunicationAnalysis(
     val pace: String,
     val rambling: String,
     val handlingUncertainty: String,
+    /**
+     * How they carried themselves on camera. Null when the candidate declined video —
+     * the report says nothing about presence it did not see.
+     */
+    val presence: String? = null,
 )
 
 data class PracticePlanItem(

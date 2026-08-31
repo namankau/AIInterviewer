@@ -13,8 +13,16 @@ export interface TurnView {
   questionText: string;
   /** Short-lived signed URL for the spoken question. Null when speech was unavailable. */
   questionAudioUrl: string | null;
+  /** Where this exchange sits in the round. */
+  phase: TurnPhase;
   answered: boolean;
 }
+
+/**
+ * A round warms up before it gets hard, and closes rather than stopping dead. The server
+ * decides which stage a turn belongs to; the room only labels it.
+ */
+export type TurnPhase = "warmup" | "main" | "closing";
 
 export interface SessionView {
   id: string;
@@ -36,7 +44,15 @@ export interface SessionView {
   consentVideo: boolean;
   startedAt: string | null;
   endedAt: string | null;
+  /** How long the round is scheduled to run. */
+  durationMinutes: number;
+  /**
+   * When the round is scheduled to end, decided by the server. The room counts down to
+   * this rather than to a clock of its own.
+   */
+  scheduledEndAt: string | null;
   turnsCompleted: number;
+  /** A ceiling on exchanges, not a target — the clock is what ends the round. */
   maxTurns: number;
   currentTurn: TurnView | null;
 }
@@ -48,6 +64,11 @@ export interface StartSessionRequest {
   language: string;
   consentAudio: boolean;
   consentVideo: boolean;
+  /**
+   * How long the round should run. Omitted, the server picks a realistic 40 minutes —
+   * the default lives there so every client gets the same round, not just this one.
+   */
+  durationMinutes?: number;
 }
 
 export interface SubmitAnswerResponse {

@@ -92,6 +92,10 @@
         },
         "handlingUncertainty": {
           "type": "STRING"
+        },
+        "presence": {
+          "type": "STRING",
+          "nullable": true
         }
       },
       "required": [

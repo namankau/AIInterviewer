@@ -6,51 +6,9 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ApiRequestError, composeRound, startSession } from "@/lib/api";
+import { ROUND_CATALOGUE } from "@/lib/rounds";
 import { useAccessToken } from "@/lib/use-access-token";
 
-/** The rounds a candidate actually chooses between, in the order they meet them. */
-const ROUNDS: Array<{ value: RoundType; label: string; blurb: string }> = [
-  {
-    value: "project_deep_dive",
-    label: "Project deep-dive",
-    blurb: "Your own work, interrogated. What you decided, what you traded off, what you'd change.",
-  },
-  {
-    value: "technical_fundamentals",
-    label: "Technical fundamentals",
-    blurb: "Concept depth at your level. Precision matters more than vocabulary.",
-  },
-  {
-    value: "system_design",
-    label: "System design",
-    blurb: "Requirements, components, failure modes, and the trade-offs you can defend.",
-  },
-  {
-    value: "coding_practical",
-    label: "Coding, spoken aloud",
-    blurb: "Approach, edge cases and complexity — reasoned out loud rather than typed.",
-  },
-  {
-    value: "behavioural_competency",
-    label: "Behavioural",
-    blurb: "Structured competency questions that want a specific situation, not a policy.",
-  },
-  {
-    value: "techno_managerial",
-    label: "Techno-managerial",
-    blurb: "Delivery, estimation, escalation — how you behave when the plan slips.",
-  },
-  {
-    value: "case_client_scenario",
-    label: "Case and client scenario",
-    blurb: "A client situation to structure aloud, escalating as you get comfortable.",
-  },
-  {
-    value: "hr_fit_closing",
-    label: "HR, fit and closing",
-    blurb: "Notice, compensation, relocation, visa. The least-rehearsed part of most loops.",
-  },
-];
 
 /**
  * Real sentences, not placeholder poetry. Each one is a round this actually runs, and
@@ -146,7 +104,7 @@ export function NewInterviewForm() {
           rows={3}
           maxLength={600}
           required
-          placeholder={EXAMPLES[0]}
+          placeholder="Infosys MR round next Tuesday. 5 years, Java backend."
           className="w-full resize-none rounded-lg border border-line bg-surface-raised px-4 py-3.5 text-body text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
         />
 
@@ -172,7 +130,7 @@ export function NewInterviewForm() {
 
       <section className="flex flex-col gap-3 border-t border-line pt-6">
         <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-          Rounds people ask for
+          Or start from one of these
         </p>
         <ul className="flex flex-col gap-2">
           {EXAMPLES.map((example) => (
@@ -328,7 +286,7 @@ function RoundSetup({
       <fieldset className="flex flex-col gap-4">
         <legend className="pb-1 text-heading text-ink">Which round?</legend>
         <div className="grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-2">
-          {ROUNDS.map((round) => {
+          {ROUND_CATALOGUE.map((round) => {
             const selected = roundType === round.value;
             return (
               <label

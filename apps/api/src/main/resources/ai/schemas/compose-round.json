@@ -1,0 +1,36 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "company": { "type": "STRING" },
+    "role": { "type": "STRING" },
+    "level": { "type": "STRING" },
+    "roundType": {
+      "type": "STRING",
+      "enum": [
+        "technical_fundamentals",
+        "project_deep_dive",
+        "coding_practical",
+        "system_design",
+        "case_client_scenario",
+        "techno_managerial",
+        "behavioural_competency",
+        "hr_fit_closing"
+      ]
+    },
+    "durationMinutes": { "type": "INTEGER", "nullable": true },
+    "language": { "type": "STRING", "enum": ["english", "hindi_english"] },
+    "understood": { "type": "STRING" },
+    "assumptions": { "type": "ARRAY", "items": { "type": "STRING" } },
+    "confidence": { "type": "STRING", "enum": ["high", "medium", "low"] }
+  },
+  "required": [
+    "company",
+    "role",
+    "level",
+    "roundType",
+    "language",
+    "understood",
+    "assumptions",
+    "confidence"
+  ]
+}

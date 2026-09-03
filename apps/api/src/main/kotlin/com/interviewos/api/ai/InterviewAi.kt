@@ -12,6 +12,17 @@ package com.interviewos.api.ai
 interface InterviewAi {
     fun parseResume(file: ResumeFile): AiResult<ParsedResume>
 
+    /**
+     * Reads a candidate's one-line description of the interview they are preparing for
+     * and turns it into the setup for a round.
+     *
+     * This reads their sentence. It does not research their employer: what a company's
+     * process actually looks like is decided from the archetype, and a model inventing it
+     * here would put a fabricated claim in front of the candidate before the round even
+     * starts.
+     */
+    fun composeRound(query: String): AiResult<ComposedRound>
+
     fun synthesizeSpeech(
         text: String,
         language: String,

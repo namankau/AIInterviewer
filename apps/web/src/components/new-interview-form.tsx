@@ -1,11 +1,11 @@
 "use client";
 
-import type { RoundType } from "@acemyinterview/shared";
+import type { RoundDraft, RoundType } from "@acemyinterview/shared";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { ApiRequestError, startSession } from "@/lib/api";
+import { ApiRequestError, composeRound, startSession } from "@/lib/api";
 import { useAccessToken } from "@/lib/use-access-token";
 
 /** The rounds a candidate actually chooses between, in the order they meet them. */
@@ -52,20 +52,177 @@ const ROUNDS: Array<{ value: RoundType; label: string; blurb: string }> = [
   },
 ];
 
+/**
+ * Real sentences, not placeholder poetry. Each one is a round this actually runs, and
+ * naming Infosys and a techno-managerial panel beside Google says more about coverage
+ * than a paragraph of copy would.
+ */
+const EXAMPLES = [
+  "Infosys MR round next Tuesday — 5 years, Java backend, and I always fumble the escalation questions.",
+  "Google L4 system design in six weeks. I haven't interviewed in four years.",
+  "Deloitte consultant case round. First time doing a case, I have no idea how to structure one.",
+  "HR round at Adyen — Amsterdam, and I need to talk about relocation and notice period.",
+];
+
+/**
+ * Setting up a round.
+ *
+ * The composer comes first because a candidate knows what they are walking into as a
+ * sentence, not as four fields: "Infosys MR round next Tuesday" is how they think about
+ * it, and making them decompose that into company, role, round type and duration is work
+ * we can do for them.
+ *
+ * The draft is always shown back before anything starts. A setup that quietly guessed
+ * wrong would waste the round, and a candidate gets one free one — so the model proposes
+ * and the candidate confirms, with everything it assumed listed where they can see it.
+ *
+ * Company and role are still named per session and nothing is stored as a target
+ * (PRD 05). The composer changes how they are typed, not what is kept.
+ */
 export function NewInterviewForm() {
   const router = useRouter();
   const accessToken = useAccessToken();
 
-  const [companyName, setCompanyName] = useState("");
-  const [roleTitle, setRoleTitle] = useState("");
-  const [roundType, setRoundType] = useState<RoundType>("project_deep_dive");
-  const [language, setLanguage] = useState("english");
+  const [query, setQuery] = useState("");
+  const [draft, setDraft] = useState<RoundDraft | null>(null);
+  const [reading, setReading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function read(event: React.FormEvent) {
+    event.preventDefault();
+    if (!accessToken || reading || query.trim() === "") return;
+
+    setReading(true);
+    setError(null);
+    try {
+      setDraft(await composeRound(accessToken, query.trim()));
+    } catch (cause) {
+      setError(
+        cause instanceof ApiRequestError
+          ? cause.message
+          : "We could not read that just now. Fill the round in yourself and it starts the same way.",
+      );
+      setDraft(blankDraft());
+    } finally {
+      setReading(false);
+    }
+  }
+
+  if (draft) {
+    return (
+      <RoundSetup
+        draft={draft}
+        query={query}
+        error={error}
+        onEdit={() => {
+          setDraft(null);
+          setError(null);
+        }}
+        onStart={(id) => router.push(`/interview/${id}`)}
+        accessToken={accessToken}
+      />
+    );
+  }
+
+  return (
+    <form onSubmit={read} className="flex flex-col gap-8">
+      <header className="flex flex-col gap-3">
+        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">New interview</p>
+        <h1 className="text-title text-balance text-ink">What are you walking into?</h1>
+        <p className="max-w-prose text-body text-ink-muted">
+          Say it in one line — the employer, the round, whatever you are worried about. The round
+          gets set up from that, and you get to correct it before anything starts.
+        </p>
+      </header>
+
+      <div className="flex flex-col gap-3">
+        <label htmlFor="composer" className="sr-only">
+          Describe the interview you are preparing for
+        </label>
+        <textarea
+          id="composer"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          rows={3}
+          maxLength={600}
+          required
+          placeholder={EXAMPLES[0]}
+          className="w-full resize-none rounded-lg border border-line bg-surface-raised px-4 py-3.5 text-body text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
+        />
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="submit" disabled={reading || query.trim() === "" || !accessToken} aria-busy={reading}>
+            {reading ? "Reading that…" : "Set up the round"}
+          </Button>
+          <button
+            type="button"
+            onClick={() => setDraft(blankDraft())}
+            className="text-caption text-ink-muted underline-offset-4 hover:text-ink hover:underline"
+          >
+            Or fill it in yourself
+          </button>
+        </div>
+      </div>
+
+      {error ? (
+        <p role="alert" className="text-body text-danger">
+          {error}
+        </p>
+      ) : null}
+
+      <section className="flex flex-col gap-3 border-t border-line pt-6">
+        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+          Rounds people ask for
+        </p>
+        <ul className="flex flex-col gap-2">
+          {EXAMPLES.map((example) => (
+            <li key={example}>
+              <button
+                type="button"
+                onClick={() => setQuery(example)}
+                className="text-left text-caption text-ink-muted underline-offset-4 hover:text-ink hover:underline"
+              >
+                {example}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </form>
+  );
+}
+
+/**
+ * The draft, shown back for correction. Every field is editable — the model proposes and
+ * the candidate decides, because they are the one who knows what they are walking into.
+ */
+function RoundSetup({
+  draft,
+  query,
+  error: composeError,
+  onEdit,
+  onStart,
+  accessToken,
+}: {
+  draft: RoundDraft;
+  query: string;
+  error: string | null;
+  onEdit: () => void;
+  onStart: (sessionId: string) => void;
+  accessToken: string | null | undefined;
+}) {
+  const [companyName, setCompanyName] = useState(draft.companyName);
+  const [roleTitle, setRoleTitle] = useState(draft.roleTitle);
+  const [roundType, setRoundType] = useState<RoundType>(draft.roundType);
+  const [durationMinutes, setDurationMinutes] = useState(draft.durationMinutes);
+  const [language, setLanguage] = useState(draft.language);
   const [consentAudio, setConsentAudio] = useState(false);
   const [consentVideo, setConsentVideo] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const ready = companyName.trim() !== "" && roleTitle.trim() !== "" && consentAudio && !!accessToken;
+  const ready =
+    companyName.trim() !== "" && roleTitle.trim() !== "" && consentAudio && !!accessToken;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -81,8 +238,9 @@ export function NewInterviewForm() {
         language,
         consentAudio,
         consentVideo,
+        durationMinutes,
       });
-      router.push(`/interview/${session.id}`);
+      onStart(session.id);
     } catch (cause) {
       setPending(false);
       setError(
@@ -94,15 +252,49 @@ export function NewInterviewForm() {
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-12">
+    <form onSubmit={submit} className="flex flex-col gap-10">
       <header className="flex flex-col gap-3">
-        <p className="text-caption tracking-wide text-ink-subtle uppercase">New interview</p>
-        <h1 className="text-title text-ink">Who are you interviewing with?</h1>
-        <p className="max-w-prose text-body text-ink-muted">
-          Nothing is saved as a target. You name the employer each time, and there is no limit on
-          how many you practise for.
-        </p>
+        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">New interview</p>
+        <h1 className="text-title text-balance text-ink">
+          {draft.understood || "Set up your round"}
+        </h1>
+        {query ? (
+          <p className="text-caption text-ink-subtle">
+            From: &ldquo;{query}&rdquo;{" "}
+            <button
+              type="button"
+              onClick={onEdit}
+              className="text-accent underline-offset-4 hover:underline"
+            >
+              edit
+            </button>
+          </p>
+        ) : null}
       </header>
+
+      {composeError ? (
+        <p role="alert" className="text-body text-danger">
+          {composeError}
+        </p>
+      ) : null}
+
+      {draft.assumptions.length > 0 ? (
+        <section aria-labelledby="assumed" className="rounded-lg border border-line bg-surface-sunken p-5">
+          <h2 id="assumed" className="pb-2 font-mono text-micro tracking-widest text-ink-subtle uppercase">
+            What we filled in for you
+          </h2>
+          <ul className="flex flex-col gap-1">
+            {draft.assumptions.map((assumption) => (
+              <li key={assumption} className="text-caption text-ink-muted">
+                {assumption}
+              </li>
+            ))}
+          </ul>
+          <p className="pt-3 text-caption text-ink-subtle">
+            Change anything below that is wrong. You get one round — it should be the right one.
+          </p>
+        </section>
+      ) : null}
 
       <div className="grid gap-6 sm:grid-cols-2">
         <Field label="Company" hint="The employer you're interviewing with.">
@@ -128,6 +320,10 @@ export function NewInterviewForm() {
           />
         </Field>
       </div>
+
+      {companyName.trim() !== "" ? (
+        <p className="text-caption text-ink-muted">{draft.groundingNote}</p>
+      ) : null}
 
       <fieldset className="flex flex-col gap-4">
         <legend className="pb-1 text-heading text-ink">Which round?</legend>
@@ -159,12 +355,30 @@ export function NewInterviewForm() {
         </div>
       </fieldset>
 
-      <Field label="Language" hint="The register the interviewer uses.">
-        <select value={language} onChange={(event) => setLanguage(event.target.value)} className={INPUT}>
-          <option value="english">English</option>
-          <option value="hindi_english">Hindi-English, code-switched</option>
-        </select>
-      </Field>
+      <div className="grid gap-6 sm:grid-cols-2">
+        <Field label="Length" hint="Real rounds are time-boxed. The clock ends this one.">
+          <select
+            value={durationMinutes}
+            onChange={(event) => setDurationMinutes(Number(event.target.value))}
+            className={INPUT}
+          >
+            <option value={20}>20 minutes — a short round</option>
+            <option value={30}>30 minutes</option>
+            <option value={40}>40 minutes — a typical round</option>
+            <option value={60}>60 minutes — a full panel</option>
+          </select>
+        </Field>
+        <Field label="Language" hint="The register the interviewer uses.">
+          <select
+            value={language}
+            onChange={(event) => setLanguage(event.target.value)}
+            className={INPUT}
+          >
+            <option value="english">English</option>
+            <option value="hindi_english">Hindi-English, code-switched</option>
+          </select>
+        </Field>
+      </div>
 
       <fieldset className="flex flex-col gap-4 rounded-lg border border-line bg-surface-raised p-5">
         <legend className="px-2 text-heading text-ink">Before we start</legend>
@@ -202,6 +416,25 @@ export function NewInterviewForm() {
       </div>
     </form>
   );
+}
+
+/** The manual path: the same setup with nothing filled in and nothing assumed. */
+function blankDraft(): RoundDraft {
+  return {
+    companyName: "",
+    roleTitle: "",
+    level: "",
+    roundType: "project_deep_dive",
+    roundLabel: "Project deep-dive",
+    durationMinutes: 40,
+    language: "english",
+    understood: "Who are you interviewing with?",
+    assumptions: [],
+    confidence: "low",
+    archetypeLabel: "",
+    archetypeConfidence: "inferred",
+    groundingNote: "",
+  };
 }
 
 const INPUT =

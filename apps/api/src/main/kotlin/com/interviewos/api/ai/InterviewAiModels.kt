@@ -108,6 +108,27 @@ data class SpokenAudio(
     val mimeType: String,
 )
 
+/**
+ * A round drafted from a candidate's own words, plus what had to be assumed to draft it.
+ *
+ * [company] may be empty, and that is a real answer rather than a failure — the round
+ * runs on general patterns and the candidate is told so. A guessed employer would be
+ * worse, because it silently changes which loop they practise against.
+ */
+data class ComposedRound(
+    val company: String,
+    val role: String,
+    val level: String,
+    val roundType: String,
+    val durationMinutes: Int?,
+    val language: String,
+    /** One sentence back to the candidate, saying what was taken from what they wrote. */
+    val understood: String,
+    /** Everything filled in that they did not say, so they can correct it at a glance. */
+    val assumptions: List<String>,
+    val confidence: String,
+)
+
 data class AskedQuestion(
     val text: String,
 )

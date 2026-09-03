@@ -42,6 +42,19 @@ class SessionController(
         @AuthenticationPrincipal jwt: Jwt,
     ): List<SessionSummary> = interviewService.list(callerOf(jwt))
 
+    /**
+     * Reads one line of intent into a draft round. Creates nothing — the candidate
+     * corrects it and starts the session through `POST /sessions` like anyone else.
+     */
+    @PostMapping("/round-drafts")
+    fun composeRound(
+        @AuthenticationPrincipal jwt: Jwt,
+        @Valid @RequestBody request: ComposeRoundRequest,
+    ): RoundDraft {
+        callerOf(jwt)
+        return interviewService.composeRound(request)
+    }
+
     @PostMapping("/sessions")
     @ResponseStatus(HttpStatus.CREATED)
     fun start(

@@ -216,8 +216,13 @@ mood. Prose that sounds like a person who has sat on both sides of an interview 
 - **Recording consent is a hard gate.** Explicit, specific consent before capture
   starts, covering audio and video separately, stored with a timestamp. No consent, no
   session. Account deletion removes the media objects, not just the rows.
-- **Free tier: one complete mock interview, then paid.** The free interview must
-  include the full report, because the report is what sells the product.
+- **Every round is free, for now.** There is no paid tier and no limit: gating an
+  unproven product turns away the people whose use of it is currently worth more than
+  the model calls it saves. This is a deliberate change from the PRD's one-free-round
+  position (§10) — **do not "restore" the gate.** When a paid tier exists, it comes back
+  through one config property, `interviewos.entitlement.free-rounds`, and the arithmetic
+  and tests for it are already in `Entitlement.kt`. Whatever the free tier ends up being,
+  it must include the full report, because the report is what sells the product.
 - **Payments: Razorpay.** Do not wire real payments without the owner — keys and
   pricing are a human decision.
 - **Community interview reports and salary data are later phases.** Do not scaffold

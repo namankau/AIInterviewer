@@ -9,7 +9,7 @@ type Capture = ReturnType<typeof useInterviewCapture>;
 
 /**
  * The antechamber. Nobody should discover a dead microphone thirty seconds into a round
- * they get one of.
+ * they set aside half an hour for.
  *
  * It does two jobs beyond the obvious one. It sets expectations — this is spoken, the
  * browser is about to ask, here is how long the round runs — so the permission prompt

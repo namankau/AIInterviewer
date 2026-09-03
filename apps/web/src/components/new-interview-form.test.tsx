@@ -61,8 +61,9 @@ describe("NewInterviewForm", () => {
   });
 
   /**
-   * A wrong guess would waste the round, and a candidate gets one free one. Everything
-   * the model filled in has to be visible, and everything has to be editable.
+   * A wrong guess would waste the round — the wrong employer means the wrong rubric, and
+   * they find out half an hour in. Everything the model filled in has to be visible, and
+   * everything has to be editable.
    */
   it("lists what it assumed, and lets the candidate correct it", async () => {
     composeRound.mockResolvedValue(draft);

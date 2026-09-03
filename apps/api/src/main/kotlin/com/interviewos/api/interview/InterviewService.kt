@@ -46,6 +46,7 @@ class InterviewService(
     private val storageProperties: StorageProperties,
     private val objectMapper: ObjectMapper,
     private val questionSpeech: QuestionSpeech,
+    private val entitlementProperties: EntitlementProperties,
     @Qualifier("interviewBackgroundExecutor") private val backgroundExecutor: TaskExecutor,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -56,6 +57,7 @@ class InterviewService(
                 completedSessions = repository.countCompletedSessions(userId),
                 paidSessionCredits = repository.countPaidSessionCredits(userId),
                 sessionInProgress = repository.findOpenSessionId(userId) != null,
+                freeRounds = entitlementProperties.freeRounds,
             )
         return EntitlementView(
             allowed = decision.allowed,
@@ -143,6 +145,7 @@ class InterviewService(
                 completedSessions = repository.countCompletedSessions(userId),
                 paidSessionCredits = repository.countPaidSessionCredits(userId),
                 sessionInProgress = repository.findOpenSessionId(userId) != null,
+                freeRounds = entitlementProperties.freeRounds,
             )
         if (!decision.allowed) {
             throw when (decision.reason) {

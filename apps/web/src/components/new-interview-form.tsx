@@ -31,8 +31,9 @@ const EXAMPLES = [
  * we can do for them.
  *
  * The draft is always shown back before anything starts. A setup that quietly guessed
- * wrong would waste the round, and a candidate gets one free one — so the model proposes
- * and the candidate confirms, with everything it assumed listed where they can see it.
+ * wrong would waste the round — the wrong employer means the wrong rubric, and they find
+ * out half an hour in — so the model proposes and the candidate confirms, with everything
+ * it assumed listed where they can see it.
  *
  * Company and role are still named per session and nothing is stored as a target
  * (PRD 05). The composer changes how they are typed, not what is kept.
@@ -249,7 +250,8 @@ function RoundSetup({
             ))}
           </ul>
           <p className="pt-3 text-caption text-ink-subtle">
-            Change anything below that is wrong. You get one round — it should be the right one.
+            Change anything below that is wrong. The wrong employer means the wrong rubric, and
+            you would find out half an hour in.
           </p>
         </section>
       ) : null}

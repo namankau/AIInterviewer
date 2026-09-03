@@ -172,11 +172,11 @@ Hinglish (*"kal Zoho ka interview hai, DSA round, thoda nervous hoon"* → Zoho,
 
 ## Verification status
 
-| Check | 003 | 004 | 005 | 006 |
-|---|---|---|---|---|
-| `npm run typecheck / lint / test / build` | pass | pass | pass | pass |
-| `./gradlew ktlintCheck test build` | pass | pass | pass | pass |
-| CI run, both jobs | 33712963020 | 33715475254 | 33717058869 | 33734883939 |
+| Check | 003 | 004 | 005 | 006 | 008 |
+|---|---|---|---|---|---|
+| `npm run typecheck / lint / test / build` | pass | pass | pass | pass | pass |
+| `./gradlew ktlintCheck test build` | pass | pass | pass | pass | pass |
+| CI run, both jobs | 33712963020 | 33715475254 | 33717058869 | 33734883939 | see below |
 
 Web tests 40, API tests 48. Every merge waited on `gh run watch`.
 
@@ -188,6 +188,7 @@ All four merged into `develop`, each after CI was green on both jobs:
 - `feat/004-the-room` → `231bf42`
 - `feat/005-the-composer` → `c600916`
 - `feat/006-shell-and-catalogue` → `dc6ff32`
+- `feat/008-no-payment-gate` — every round free (added after the run; see above)
 
 `chore/007-browser-harness` (this file plus `scripts/e2e/`) is pushed and merged on the
 same gate. Two migrations were applied to the hosted database with `npm run db:push`:
@@ -195,6 +196,31 @@ same gate. Two migrations were applied to the hosted database with `npm run db:p
 additive.
 
 Nothing was pushed to `main`.
+
+## Added after the run: no free-versus-paid gate
+
+You asked for every round to be free until there is a real paid system to gate behind.
+Done, and verified: a candidate with **two completed rounds started a third** — 201, not
+402.
+
+It is a config property rather than deleted code. `interviewos.entitlement.free-rounds`
+is absent, which means unlimited; `EntitlementProperties` defaults it to null and
+`application.yml` carries the commented line that brings it back. `Entitlement.kt` still
+does the arithmetic and its tests still cover both sides, so restoring the gate is one
+line of YAML, not a rewrite.
+
+Two things worth knowing:
+
+- **The one-at-a-time rule stays.** It is not commercial — two live sessions would race
+  each other's turns — so `session_in_progress` still blocks.
+- **`EntitlementView.remainingFree` is now `number | null`,** where null means there is
+  no limit. Reading null as "none left" would have put a paywall notice on a product
+  with no paywall, so the dashboard branches on it explicitly.
+
+Copy that promised a gate is gone: the landing page now says *"Every round is free right
+now… When there is something worth charging for, we will say so before we charge for
+it."* And **`CLAUDE.md` is updated** — its settled-decisions list said "one complete mock
+interview, then paid", which the next autonomous run would have read as a bug to fix.
 
 ## The two things I did not build, because they are yours to decide
 
@@ -245,6 +271,10 @@ to actually delete. It is small, and it has now survived two runs.
 
 1. **Loops: yes, no, or a narrower version?** This is the one that changes the roadmap.
 2. **Is 3.5 s of silence too short to end an answer?** My only test voice was synthetic.
-3. **Their pricing has an "Interview Sprint" — ₹3,999 for 3 months, prepaid, no
-   auto-renew, shaped to a 6–10 week job hunt.** That matches how candidates actually
-   buy far better than a subscription does. Worth considering before Razorpay is wired.
+3. **Nothing limits model spend now that rounds are unlimited.** A round is roughly two
+   Gemini calls per turn plus one for the report, and anyone signed in can run as many as
+   they like. That is the right trade while you are gathering feedback, but it is worth a
+   ceiling — per day, or per account — before the link goes anywhere public.
+4. **When pricing does arrive, their "Interview Sprint" is the shape to beat** — ₹3,999
+   for 3 months, prepaid, no auto-renew, built around a 6–10 week job hunt. That matches
+   how candidates actually buy far better than a subscription does.

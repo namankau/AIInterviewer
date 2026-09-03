@@ -77,10 +77,17 @@ export function DashboardPanel() {
 
           {loaded && entitlement ? (
             <p className="text-caption text-ink-subtle">
+              {/*
+                * `remainingFree` is null while there is no limit, which is the case
+                * today. Reading that as "none left" would have put a paywall notice on
+                * a product that has no paywall.
+                */}
               {entitlement.allowed
-                ? entitlement.remainingFree > 0
-                  ? "Your first interview is free, report included."
-                  : null
+                ? entitlement.remainingFree === null
+                  ? "Every round is free while we are building this. Report included, no card."
+                  : entitlement.remainingFree > 0
+                    ? "Your first interview is free, report included."
+                    : null
                 : entitlement.message}
             </p>
           ) : null}

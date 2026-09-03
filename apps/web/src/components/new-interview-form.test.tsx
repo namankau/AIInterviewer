@@ -82,12 +82,16 @@ describe("NewInterviewForm", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: /record my voice/i }));
     await userEvent.click(screen.getByRole("button", { name: /begin interview/i }));
 
-    await waitFor(() => expect(startSession).toHaveBeenCalled());
-    expect(startSession.mock.calls[0][1]).toMatchObject({
-      companyName: "Infosys",
-      roleTitle: "Technology Lead",
-      roundType: "behavioural_competency",
-    });
+    await waitFor(() =>
+      expect(startSession).toHaveBeenCalledWith(
+        "token",
+        expect.objectContaining({
+          companyName: "Infosys",
+          roleTitle: "Technology Lead",
+          roundType: "behavioural_competency",
+        }),
+      ),
+    );
   });
 
   it("shows the grounding note, so an unrecognised employer is known before the round", async () => {

@@ -41,6 +41,17 @@ interviewos:
     # One provider covers the whole loop — resume parsing, the interviewer's voice,
     # understanding the spoken answer, and the report. No STT or TTS vendor.
     api-key: ${GEMINI_API_KEY:}
+  # How many completed rounds a candidate gets before being asked to pay.
+  #
+  # Deliberately absent, which means unlimited. There is no paid tier to gate against
+  # yet, and a limit on an unproven product turns away the people whose use of it is
+  # currently worth more than the model calls it saves.
+  #
+  # To bring the gate back, uncomment both lines. Nothing else changes -- the arithmetic
+  # in Entitlement and the tests over it already cover both sides.
+  #
+  # entitlement:
+  #   free-rounds: 1
   storage:
     # Service role bypasses RLS. Ownership is enforced by the API from the verified
     # token subject and by keying every object under `{userId}/`.

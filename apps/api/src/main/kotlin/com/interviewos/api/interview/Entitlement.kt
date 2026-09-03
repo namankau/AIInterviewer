@@ -7,28 +7,40 @@ package com.interviewos.api.interview
  * payments — rather than stored as a flag, so it cannot drift out of sync with reality
  * (CLAUDE.md: progress is derived, not declared).
  *
- * The free tier is one *complete* interview including its report, because the report is
- * what sells the product. A session the candidate abandoned does not consume it: they
- * never saw the thing they came for.
+ * **There is no round limit at the moment.** `interviewos.entitlement.free-rounds` is
+ * unset, which means unlimited: there is no paid tier to gate against yet, and a limit on
+ * an unproven product costs feedback worth more than the model calls it saves. Setting
+ * that property to a number brings the allowance back with no other change — the
+ * arithmetic below and the tests over it are unchanged, which is the point of leaving
+ * them in place rather than deleting them.
+ *
+ * The one restriction that is *not* commercial, and stays either way: one interview at a
+ * time. Two live sessions would race each other's turns.
+ *
+ * When the allowance does come back it counts *complete* interviews, including the
+ * report, because the report is what sells the product. A session the candidate abandoned
+ * does not consume it: they never saw the thing they came for.
  */
 object Entitlement {
-    const val FREE_COMPLETED_SESSIONS = 1
-
+    /**
+     * @param freeRounds how many completed rounds a candidate gets before paying, or null
+     *   for no limit at all.
+     */
     fun evaluate(
         completedSessions: Int,
         paidSessionCredits: Int,
         sessionInProgress: Boolean,
+        freeRounds: Int?,
     ): EntitlementDecision {
         if (sessionInProgress) {
             return EntitlementDecision(
                 allowed = false,
                 reason = Reason.SESSION_IN_PROGRESS,
-                remainingFree = remainingFree(completedSessions),
+                remainingFree = remainingFree(freeRounds, completedSessions),
             )
         }
 
-        val allowance = FREE_COMPLETED_SESSIONS + paidSessionCredits
-        if (completedSessions >= allowance) {
+        if (freeRounds != null && completedSessions >= freeRounds + paidSessionCredits) {
             return EntitlementDecision(
                 allowed = false,
                 reason = Reason.FREE_TIER_EXHAUSTED,
@@ -39,11 +51,15 @@ object Entitlement {
         return EntitlementDecision(
             allowed = true,
             reason = Reason.ALLOWED,
-            remainingFree = remainingFree(completedSessions),
+            remainingFree = remainingFree(freeRounds, completedSessions),
         )
     }
 
-    private fun remainingFree(completedSessions: Int): Int = (FREE_COMPLETED_SESSIONS - completedSessions).coerceAtLeast(0)
+    /** Null means there is no allowance to count down — not that none is left. */
+    private fun remainingFree(
+        freeRounds: Int?,
+        completedSessions: Int,
+    ): Int? = freeRounds?.let { (it - completedSessions).coerceAtLeast(0) }
 
     enum class Reason {
         ALLOWED,
@@ -58,13 +74,18 @@ object Entitlement {
 data class EntitlementDecision(
     val allowed: Boolean,
     val reason: Entitlement.Reason,
-    val remainingFree: Int,
+    /** How many free rounds are left, or null when there is no limit. */
+    val remainingFree: Int?,
 ) {
     val message: String
         get() =
             when (reason) {
                 Entitlement.Reason.ALLOWED -> {
-                    "You can start an interview."
+                    if (remainingFree == null) {
+                        "Every round is free while we are building this. Practise as often as you like."
+                    } else {
+                        "You can start an interview."
+                    }
                 }
 
                 Entitlement.Reason.SESSION_IN_PROGRESS -> {

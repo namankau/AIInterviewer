@@ -66,8 +66,9 @@ describe("DeviceCheck", () => {
   });
 
   /**
-   * The round is spoken and a candidate gets one free one. Walking into it with a
-   * blocked microphone would burn it, so entry is closed until the device works.
+   * The round is spoken, and it is half an hour of the candidate's time. Walking into
+   * it with a blocked microphone would waste all of it, so entry is closed until the
+   * device works.
    */
   it("will not let anyone in without a microphone", async () => {
     const onEnter = vi.fn();

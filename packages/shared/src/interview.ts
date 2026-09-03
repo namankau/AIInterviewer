@@ -5,7 +5,13 @@ export interface EntitlementView {
   allowed: boolean;
   reason: "allowed" | "session_in_progress" | "free_tier_exhausted";
   message: string;
-  remainingFree: number;
+  /**
+   * How many free rounds are left, or null when there is no limit.
+   *
+   * Null is the case today: every round is free until there is a paid tier worth gating
+   * against. `free_tier_exhausted` cannot occur while it is null.
+   */
+  remainingFree: number | null;
 }
 
 export interface TurnView {

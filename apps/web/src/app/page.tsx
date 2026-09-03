@@ -75,9 +75,11 @@ function Hero() {
               href="/login"
               className="rounded-md bg-accent px-6 py-3 text-body font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
             >
-              Take one free interview
+              Take a free interview
             </Link>
-            <span className="text-caption text-ink-subtle">Full report included. No card.</span>
+            <span className="text-caption text-ink-subtle">
+              Every round free while we build. Full report included, no card.
+            </span>
           </div>
         </div>
 
@@ -315,20 +317,26 @@ function ReportContents() {
   );
 }
 
+/**
+ * There is no paid tier yet, so this promises exactly what the product does: every round,
+ * free, while it is being built. Saying "free trial" or naming a future price would be
+ * selling something that does not exist.
+ */
 function Pricing() {
   return (
     <section>
       <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-6 py-20">
-        <h2 className="text-display text-balance text-ink">One interview free, report and all.</h2>
+        <h2 className="text-display text-balance text-ink">Every round is free right now.</h2>
         <p className="max-w-xl text-body text-ink-muted">
-          The report is the thing worth paying for, so you get a complete one before you decide.
-          No card, and nothing withheld from the free round.
+          Not a trial round, and not a sample report — the whole thing, as many times as you
+          want, while we are still building it. No card. When there is something worth charging
+          for, we will say so before we charge for it.
         </p>
         <Link
           href="/login"
           className="rounded-md bg-accent px-6 py-3 text-body font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
         >
-          Start your free interview
+          Start an interview
         </Link>
       </div>
     </section>

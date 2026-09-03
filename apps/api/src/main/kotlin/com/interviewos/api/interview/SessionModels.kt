@@ -150,7 +150,8 @@ data class EntitlementView(
     val allowed: Boolean,
     val reason: String,
     val message: String,
-    val remainingFree: Int,
+    /** How many free rounds are left, or null when there is no limit — which is the case today. */
+    val remainingFree: Int?,
 )
 
 data class SessionSummary(

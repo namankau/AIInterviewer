@@ -160,28 +160,61 @@ class SessionRepository(
 
     // -- turns ----------------------------------------------------------------
 
+    /**
+     * Records a question. The turn is written before its audio exists, so the candidate
+     * can start reading immediately; [speechStatus] says whether a voice is still coming.
+     */
     fun insertTurn(
         sessionId: UUID,
         userId: UUID,
         turnIndex: Int,
         questionText: String,
-        questionAudioPath: String?,
         phase: TurnPhase,
+        speechStatus: SpeechStatus,
     ) {
         jdbcClient
             .sql(
                 """
                 insert into public.session_turns
-                       (session_id, user_id, turn_index, question_text, question_audio_path, phase)
-                values (:s, :u, :i, :q, :audio, cast(:phase as public.turn_phase))
+                       (session_id, user_id, turn_index, question_text, phase, question_audio_status)
+                values (:s, :u, :i, :q, cast(:phase as public.turn_phase), cast(:speech as public.speech_status))
                 on conflict (session_id, turn_index) do nothing
                 """.trimIndent(),
             ).param("s", sessionId)
             .param("u", userId)
             .param("i", turnIndex)
             .param("q", questionText)
-            .param("audio", questionAudioPath)
             .param("phase", phase.dbValue)
+            .param("speech", speechStatus.dbValue)
+            .update()
+    }
+
+    /**
+     * Attaches the spoken question once it has rendered, or marks it as never coming.
+     *
+     * Written from a background thread after the answering transaction has committed, so
+     * it deliberately does not touch anything else on the row.
+     */
+    fun setQuestionSpeech(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        audioPath: String?,
+        status: SpeechStatus,
+    ) {
+        jdbcClient
+            .sql(
+                """
+                update public.session_turns
+                   set question_audio_path = :audio,
+                       question_audio_status = cast(:status as public.speech_status)
+                 where session_id = :s and user_id = :u and turn_index = :i
+                """.trimIndent(),
+            ).param("audio", audioPath)
+            .param("status", status.dbValue)
+            .param("s", sessionId)
+            .param("u", userId)
+            .param("i", turnIndex)
             .update()
     }
 
@@ -193,7 +226,9 @@ class SessionRepository(
         jdbcClient
             .sql(
                 """
-                select turn_index, question_text, question_audio_path, answer_transcript, answered_at,
+                select turn_index, question_text, question_audio_path,
+                       question_audio_status::text as question_audio_status,
+                       answer_transcript, answered_at,
                        intervention::text as intervention, intervention_note,
                        phase::text as phase, delivery_note
                   from public.session_turns
@@ -213,7 +248,9 @@ class SessionRepository(
         jdbcClient
             .sql(
                 """
-                select turn_index, question_text, question_audio_path, answer_transcript, answered_at,
+                select turn_index, question_text, question_audio_path,
+                       question_audio_status::text as question_audio_status,
+                       answer_transcript, answered_at,
                        intervention::text as intervention, intervention_note,
                        phase::text as phase, delivery_note
                   from public.session_turns
@@ -287,7 +324,9 @@ class SessionRepository(
         jdbcClient
             .sql(
                 """
-                select turn_index, question_text, question_audio_path, answer_transcript, answered_at,
+                select turn_index, question_text, question_audio_path,
+                       question_audio_status::text as question_audio_status,
+                       answer_transcript, answered_at,
                        intervention::text as intervention, intervention_note,
                        phase::text as phase, delivery_note
                   from public.session_turns
@@ -384,6 +423,7 @@ class SessionRepository(
             turnIndex = rs.getInt("turn_index"),
             questionText = rs.getString("question_text"),
             questionAudioPath = rs.getString("question_audio_path"),
+            questionAudioStatus = rs.getString("question_audio_status") ?: SpeechStatus.READY.dbValue,
             answerTranscript = rs.getString("answer_transcript"),
             answeredAt = rs.getTimestamp("answered_at")?.toInstant(),
             intervention = rs.getString("intervention") ?: "none",
@@ -414,6 +454,8 @@ data class TurnRow(
     val turnIndex: Int,
     val questionText: String,
     val questionAudioPath: String?,
+    /** `pending`, `ready` or `unavailable` — whether a voice is still coming for this question. */
+    val questionAudioStatus: String = SpeechStatus.READY.dbValue,
     val answerTranscript: String?,
     val answeredAt: Instant?,
     /** What the interviewer had to supply on this turn — see Intervention. */

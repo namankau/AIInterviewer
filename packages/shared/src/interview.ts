@@ -11,12 +11,20 @@ export interface EntitlementView {
 export interface TurnView {
   turnIndex: number;
   questionText: string;
-  /** Short-lived signed URL for the spoken question. Null when speech was unavailable. */
+  /** Short-lived signed URL for the spoken question. Null until the voice has rendered. */
   questionAudioUrl: string | null;
+  /**
+   * Speech is synthesised after the question text is sent, so the room has to tell
+   * "still coming" apart from "not coming": a null URL alone says only that there is
+   * nothing to play yet. `unavailable` means the turn runs as written text.
+   */
+  questionAudioStatus: SpeechStatus;
   /** Where this exchange sits in the round. */
   phase: TurnPhase;
   answered: boolean;
 }
+
+export type SpeechStatus = "pending" | "ready" | "unavailable";
 
 /**
  * A round warms up before it gets hard, and closes rather than stopping dead. The server

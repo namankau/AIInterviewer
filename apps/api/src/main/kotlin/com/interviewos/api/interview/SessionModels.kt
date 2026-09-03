@@ -41,8 +41,14 @@ data class StartSessionRequest(
 data class TurnView(
     val turnIndex: Int,
     val questionText: String,
-    /** Short-lived signed URL for the spoken question. Null if speech was unavailable. */
+    /** Short-lived signed URL for the spoken question. Null until the voice has rendered. */
     val questionAudioUrl: String?,
+    /**
+     * `pending`, `ready` or `unavailable`. Speech is synthesised after the question text
+     * is sent, so the room needs to tell "still coming" apart from "not coming" — a null
+     * URL alone says only that there is nothing to play yet.
+     */
+    val questionAudioStatus: String,
     /** `warmup`, `main` or `closing` — the room labels the stage the candidate is in. */
     val phase: String,
     val answered: Boolean,

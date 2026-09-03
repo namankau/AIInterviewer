@@ -80,6 +80,17 @@ class SessionController(
         )
     }
 
+    /**
+     * One question, so the room can collect the interviewer's voice once it has
+     * rendered. The question text itself arrived with the previous response.
+     */
+    @GetMapping("/sessions/{id}/turns/{turnIndex}")
+    fun turn(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable id: UUID,
+        @PathVariable turnIndex: Int,
+    ): TurnView = interviewService.turn(callerOf(jwt), id, turnIndex)
+
     @PostMapping("/sessions/{id}/abandon")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun abandon(

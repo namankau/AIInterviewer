@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AppShell } from "@/components/app-shell";
 import { NewInterviewForm } from "@/components/new-interview-form";
 
 export const metadata: Metadata = { title: "Start an interview" };
@@ -11,8 +12,10 @@ export const metadata: Metadata = { title: "Start an interview" };
  */
 export default function NewInterviewPage() {
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-16">
-      <NewInterviewForm />
-    </div>
+    <AppShell breadcrumb="new interview">
+      <div className="w-full max-w-2xl">
+        <NewInterviewForm />
+      </div>
+    </AppShell>
   );
 }

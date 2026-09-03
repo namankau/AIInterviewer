@@ -12,14 +12,20 @@
  */
 
 :root {
-  --surface: #fcfcfa;
+  /*
+   * Paper, not white. A page with a little warmth in it reads as something printed and
+   * considered; #ffffff reads as a default nobody chose. The ramp is four steps so a
+   * panel can sit on the page without a border and still be legible as a separate thing.
+   */
+  --surface: #fbf8f4;
   --surface-raised: #ffffff;
-  --surface-sunken: #f2f2ee;
-  --ink: #12141a;
-  --ink-muted: #545a66;
-  --ink-subtle: #868d99;
-  --line: #e2e2dc;
-  --line-strong: #c9c9c1;
+  --surface-sunken: #f2ede5;
+  --ink: #14151a;
+  --ink-muted: #56544f;
+  --ink-subtle: #8a877f;
+  /* Hairlines, not borders. A rule in a printed table is thinner than a card edge. */
+  --line: #14151a14;
+  --line-strong: #14151a2e;
   --accent: #1c4f7c;
   --accent-strong: #143a5c;
   --accent-contrast: #ffffff;
@@ -31,14 +37,14 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface: #0c0e12;
-    --surface-raised: #14171d;
-    --surface-sunken: #090b0e;
-    --ink: #e8eaed;
-    --ink-muted: #9aa2ae;
-    --ink-subtle: #6b7280;
-    --line: #232830;
-    --line-strong: #333a45;
+    --surface: #0b0c10;
+    --surface-raised: #14161c;
+    --surface-sunken: #101218;
+    --ink: #edeae5;
+    --ink-muted: #9a978f;
+    --ink-subtle: #6a675f;
+    --line: #edeae514;
+    --line-strong: #edeae52e;
     --accent: #6ea8dc;
     --accent-strong: #92c0e8;
     --accent-contrast: #0b0d11;
@@ -69,17 +75,24 @@
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono:
     ui-monospace, "JetBrains Mono", "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
+  /*
+   * Headings are set in a serif against a sans interface. That single contrast is most
+   * of what separates an editorial page from a dashboard, and it costs nothing: these
+   * are faces every machine already has. A licensed display face would be better still,
+   * but choosing one is the owner's call, not an autonomous run's.
+   */
+  --font-display: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
 
   /* A short scale. Anything off it should have to justify itself. */
-  --text-hero: clamp(2.5rem, 6vw, 4rem);
-  --text-hero--line-height: 1.04;
-  --text-hero--letter-spacing: -0.035em;
-  --text-display: clamp(2rem, 4vw, 2.75rem);
-  --text-display--line-height: 1.1;
-  --text-display--letter-spacing: -0.025em;
-  --text-title: 1.6rem;
-  --text-title--line-height: 1.2;
-  --text-title--letter-spacing: -0.015em;
+  --text-hero: clamp(2.5rem, 6vw, 4.25rem);
+  --text-hero--line-height: 1.02;
+  --text-hero--letter-spacing: -0.02em;
+  --text-display: clamp(2rem, 4vw, 2.9rem);
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: -0.015em;
+  --text-title: 1.7rem;
+  --text-title--line-height: 1.18;
+  --text-title--letter-spacing: -0.01em;
   --text-heading: 1.0625rem;
   --text-heading--line-height: 1.4;
   --text-heading--letter-spacing: -0.005em;
@@ -103,6 +116,17 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+  }
+
+  /*
+   * The three display sizes are the serif. Applying it here rather than at every call
+   * site means a heading cannot accidentally be set in the interface face.
+   */
+  .text-hero,
+  .text-display,
+  .text-title {
+    font-family: var(--font-display);
+    font-weight: 400;
   }
 
   /* Tabular figures everywhere numbers are compared down a column. */

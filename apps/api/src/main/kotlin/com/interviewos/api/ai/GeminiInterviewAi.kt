@@ -130,6 +130,25 @@ class GeminiInterviewAi(
         return AiResult(objectMapper.treeToValue(node, AnswerAssessment::class.java), usage)
     }
 
+    override fun offerHint(
+        brief: InterviewBrief,
+        round: RoundContext,
+        priorTurns: List<TurnTranscript>,
+        currentQuestion: String,
+    ): AiResult<OfferedHint> {
+        val history =
+            priorTurns.joinToString("\n") { turn ->
+                "Q: ${turn.questionText}\nA: ${turn.answerTranscript ?: "(no answer captured)"}"
+            }
+        val prompt =
+            fillRound(fillBrief(loadPrompt("offer-hint"), brief), round)
+                .replace("{{currentQuestion}}", currentQuestion)
+                .replace("{{history}}", history.ifBlank { "(nothing yet - this is the first question)" })
+
+        val (node, usage) = generateJson(properties.reasoningModel, listOf(textPart(prompt)), schema("offer-hint"))
+        return AiResult(objectMapper.treeToValue(node, OfferedHint::class.java), usage)
+    }
+
     override fun composeReport(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,

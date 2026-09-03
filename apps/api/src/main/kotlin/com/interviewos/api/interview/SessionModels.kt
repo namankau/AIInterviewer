@@ -91,6 +91,20 @@ data class SessionView(
     val currentTurn: TurnView?,
 )
 
+/**
+ * Help the candidate asked for, and the fact that asking was recorded.
+ *
+ * [assistanceLabel] is shown in the room at the moment the hint is given, not saved for
+ * the report. Someone deciding whether to ask for help should know what it will cost
+ * them before they read about it afterwards.
+ */
+data class HintView(
+    val turnIndex: Int,
+    val text: String,
+    val assistanceLevel: String,
+    val assistanceLabel: String,
+)
+
 data class SubmitAnswerResponse(
     val sessionComplete: Boolean,
     val turnsCompleted: Int,

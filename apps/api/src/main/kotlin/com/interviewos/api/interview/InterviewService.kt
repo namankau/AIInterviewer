@@ -275,6 +275,80 @@ class InterviewService(
         )
     }
 
+    /**
+     * A nudge on the question the candidate is currently stuck on.
+     *
+     * One per question, and recorded against them. A candidate frozen on a question had
+     * no move but silence before this, which is neither realistic — a real interviewer
+     * nudges — nor useful, because a round that stalls produces nothing to score. Making
+     * help askable is only fair to everyone else if asking is also counted, so the level
+     * the model judges it at is stored and weighed in the report.
+     *
+     * A hint that cannot be produced does not fail the session. Unlike an assessment,
+     * nothing is being scored here, so the round carries on without one.
+     */
+    @Transactional
+    fun requestHint(
+        userId: UUID,
+        sessionId: UUID,
+        turnIndex: Int,
+    ): HintView {
+        val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
+        if (session.status != "in_progress") {
+            throw ApiException.conflict("This interview is no longer running.", code = "session_not_running")
+        }
+
+        val turn =
+            repository.findTurn(sessionId, userId, turnIndex)
+                ?: throw ApiException.notFound("That question is not part of this interview.")
+        if (turn.answeredAt != null) {
+            throw ApiException.conflict("That question has already been answered.", code = "already_answered")
+        }
+
+        // Asking twice returns the same hint rather than buying a second one. Idempotent
+        // because a dropped response or a double click should not cost the candidate
+        // more credit than they asked to spend.
+        turn.hintText?.let { existing ->
+            val level = Intervention.parse(turn.hintLevel)
+            return HintView(turnIndex, existing, level.wireValue, level.label)
+        }
+
+        val roundType = RoundType.fromDbValue(session.roundType)
+        val resolution =
+            ArchetypeResolution(Archetype.fromDbValue(session.archetype), confidenceOf(session.archetypeConfidence))
+        val brief = briefFor(session.companyName, resolution, session.roleTitle, roundType, session.language)
+        val plan =
+            InterviewPlan.forTurn(
+                turnIndex = turnIndex,
+                answeredTurns = repository.countAnsweredTurns(sessionId, userId),
+                startedAt = session.startedAt,
+                durationMinutes = session.durationMinutes,
+                now = Instant.now(),
+            )
+        val priorTurns =
+            repository
+                .listTranscript(sessionId, userId)
+                .filter { it.turnIndex < turnIndex && it.answerTranscript != null }
+                .map { it.toTranscript() }
+
+        val offered =
+            try {
+                interviewAi.offerHint(brief, plan.toContext(), priorTurns, turn.questionText)
+            } catch (e: AiUnavailableException) {
+                log.warn("Hint unavailable for session {} turn {}", sessionId, turnIndex, e)
+                throw ApiException.upstreamUnavailable(
+                    "The interviewer could not be reached for that. Your round is unaffected - answer as best you can.",
+                )
+            }
+
+        // A level the model did not supply must not read as free help, so anything
+        // unrecognised falls to `hinted` rather than to `none`.
+        val level = Intervention.parse(offered.value.assistanceLevel).takeIf { it.isAssisted } ?: Intervention.HINTED
+        repository.recordHint(sessionId, userId, turnIndex, offered.value.text, level.wireValue)
+
+        return HintView(turnIndex, offered.value.text, level.wireValue, level.label)
+    }
+
     fun abandon(
         userId: UUID,
         sessionId: UUID,

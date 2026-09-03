@@ -9,6 +9,7 @@ import com.interviewos.api.ai.AnswerVideo
 import com.interviewos.api.ai.AskedQuestion
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
+import com.interviewos.api.ai.OfferedHint
 import com.interviewos.api.ai.ParsedResume
 import com.interviewos.api.ai.ReportContent
 import com.interviewos.api.ai.ResumeFile
@@ -169,6 +170,13 @@ private abstract class StubAi : InterviewAi {
         answer: AnswerAudio,
         video: AnswerVideo?,
     ): AiResult<AnswerAssessment> = unsupported()
+
+    override fun offerHint(
+        brief: InterviewBrief,
+        round: RoundContext,
+        priorTurns: List<TurnTranscript>,
+        currentQuestion: String,
+    ): AiResult<OfferedHint> = unsupported()
 
     override fun composeReport(
         brief: InterviewBrief,

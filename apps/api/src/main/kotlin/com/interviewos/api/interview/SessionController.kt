@@ -91,6 +91,17 @@ class SessionController(
         @PathVariable turnIndex: Int,
     ): TurnView = interviewService.turn(callerOf(jwt), id, turnIndex)
 
+    /**
+     * Help, asked for rather than offered. One per question, and recorded — the round
+     * would not be worth much if a candidate could quietly farm hints out of it.
+     */
+    @PostMapping("/sessions/{id}/turns/{turnIndex}/hint")
+    fun hint(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable id: UUID,
+        @PathVariable turnIndex: Int,
+    ): HintView = interviewService.requestHint(callerOf(jwt), id, turnIndex)
+
     @PostMapping("/sessions/{id}/abandon")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun abandon(

@@ -37,6 +37,18 @@ interface InterviewAi {
         video: AnswerVideo?,
     ): AiResult<AnswerAssessment>
 
+    /**
+     * The nudge a candidate gets when they ask for help mid-question, plus the model's
+     * own judgement of how much it gave away. That judgement is recorded against them:
+     * help that is not counted is help that quietly inflates a report.
+     */
+    fun offerHint(
+        brief: InterviewBrief,
+        round: RoundContext,
+        priorTurns: List<TurnTranscript>,
+        currentQuestion: String,
+    ): AiResult<OfferedHint>
+
     fun composeReport(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,

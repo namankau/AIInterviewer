@@ -79,6 +79,19 @@ export interface StartSessionRequest {
   durationMinutes?: number;
 }
 
+/**
+ * Help the candidate asked for, and what asking cost them.
+ *
+ * `assistanceLabel` is shown in the room the moment the hint arrives. Someone deciding
+ * whether to ask should learn the price then, not when they read the report.
+ */
+export interface HintView {
+  turnIndex: number;
+  text: string;
+  assistanceLevel: "redirected" | "hinted" | "guided";
+  assistanceLabel: string;
+}
+
 export interface SubmitAnswerResponse {
   sessionComplete: boolean;
   turnsCompleted: number;

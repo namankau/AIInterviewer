@@ -91,6 +91,10 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
       analyserRef.current = analyser;
 
       setState("ready");
+      // The meter runs from the moment the device opens, not from the moment recording
+      // starts. A candidate checking their microphone before the round needs to see it
+      // move to believe it works, which is the whole point of the check.
+      runMeter();
       return stream;
     } catch (cause) {
       setState("denied");
@@ -101,7 +105,7 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
       );
       return null;
     }
-  }, [withVideo]);
+  }, [runMeter, withVideo]);
 
   const start = useCallback(async (): Promise<boolean> => {
     const stream = streamRef.current ?? (await requestDevices());

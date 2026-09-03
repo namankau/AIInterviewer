@@ -1,0 +1,11 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "text": { "type": "STRING" },
+    "assistanceLevel": {
+      "type": "STRING",
+      "enum": ["redirected", "hinted", "guided"]
+    }
+  },
+  "required": ["text", "assistanceLevel"]
+}

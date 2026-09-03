@@ -86,6 +86,42 @@ class AssistanceSummaryTest {
         assertEquals(1, AssistanceSummary.of(listOf(row)).unaidedAnswers)
     }
 
+    @Test
+    fun `counts help the candidate asked for, not just help they were offered`() {
+        // Unaided on the answer itself, but they had to ask to get going.
+        val summary = AssistanceSummary.of(listOf(answered(0), askedForHelp(1, Intervention.HINTED)))
+
+        assertEquals(1, summary.unaidedAnswers)
+        assertEquals(1, summary.assistedAnswers)
+        assertTrue(summary.creditedRatio < 1.0)
+    }
+
+    @Test
+    fun `credits a turn at whichever help was more generous`() {
+        // Asked for a nudge, and was then led through the answer anyway. Crediting the
+        // nudge would hide the leading; crediting the leading is the honest read.
+        val row = askedForHelp(0, Intervention.HINTED).copy(intervention = Intervention.GUIDED.wireValue)
+        val ledOnly = AssistanceSummary.of(listOf(answered(0, Intervention.GUIDED)))
+
+        assertEquals(ledOnly.creditedRatio, AssistanceSummary.of(listOf(row)).creditedRatio)
+    }
+
+    @Test
+    fun `a hint that shaped the answer is not erased by a mild intervention on it`() {
+        // The reverse case: led into it by the hint, then only refocused afterwards.
+        val row = askedForHelp(0, Intervention.GUIDED).copy(intervention = Intervention.REDIRECTED.wireValue)
+
+        assertEquals(Intervention.GUIDED.credit, AssistanceSummary.of(listOf(row)).creditedRatio)
+    }
+
+    @Test
+    fun `marks a note as asked for so the report does not read it as volunteered`() {
+        val summary = AssistanceSummary.of(listOf(askedForHelp(0, Intervention.HINTED)))
+
+        assertTrue(summary.notes.single().startsWith("asked for help - "))
+        assertTrue(summary.promptContext().contains("asked for help - "))
+    }
+
     private fun answered(
         index: Int,
         intervention: Intervention = Intervention.NONE,
@@ -98,6 +134,15 @@ class AssistanceSummaryTest {
         answeredAt = Instant.parse("2026-08-26T10:00:00Z"),
         intervention = intervention.wireValue,
         interventionNote = note,
+    )
+
+    private fun askedForHelp(
+        index: Int,
+        level: Intervention,
+    ) = answered(index).copy(
+        hintRequestedAt = Instant.parse("2026-08-26T09:59:00Z"),
+        hintText = "Think about what happens when two writes land in the same second.",
+        hintLevel = level.wireValue,
     )
 
     private fun unanswered(index: Int) =

@@ -1,22 +1,43 @@
 "use client";
 
-import type { SessionView, TurnView } from "@acemyinterview/shared";
+import type { HintView, SessionView, TurnView } from "@acemyinterview/shared";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ApiRequestError, abandonSession, fetchSession, submitAnswer } from "@/lib/api";
+import { DeviceCheck } from "@/components/device-check";
+import {
+  ApiRequestError,
+  abandonSession,
+  fetchSession,
+  requestHint,
+  submitAnswer,
+} from "@/lib/api";
+import { initialSilenceState, observe, shouldEnd } from "@/lib/silence";
 import { useAccessToken } from "@/lib/use-access-token";
 import { useInterviewCapture } from "@/lib/use-interview-capture";
 import { useQuestionAudio } from "@/lib/use-question-audio";
 
-type Phase = "loading" | "briefing" | "asking" | "answering" | "submitting" | "complete" | "error";
+type Phase =
+  | "loading"
+  | "checking"
+  | "asking"
+  | "answering"
+  | "submitting"
+  | "complete"
+  | "error";
 
 /**
  * The live interview.
  *
- * Deliberately near-empty (CLAUDE.md): the question, a speaking indicator, a timer, the
- * round label, and a way out. No score ticker, no hints, no gamification — nothing that
- * would tell a candidate mid-answer how they are doing, because a real interview doesn't.
+ * Deliberately near-empty (CLAUDE.md): the question, a speaking indicator, the round
+ * clock, and a way out. No score ticker, no running feedback, nothing that tells a
+ * candidate mid-answer how they are doing — a real interview does not.
+ *
+ * Two controls earn their place beside those. The answer ends itself on silence, because
+ * pressing a button when you stop talking is the tell that this is a form rather than a
+ * conversation. And help can be asked for, because a candidate frozen on a question has
+ * no realistic move otherwise — a real interviewer nudges. Asking is recorded, and the
+ * room says so before they ask rather than after.
  */
 export function InterviewRoom({ sessionId }: { sessionId: string }) {
   const router = useRouter();
@@ -27,6 +48,9 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   const [phase, setPhase] = useState<Phase>("loading");
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const [hint, setHint] = useState<HintView | null>(null);
+  const [hintPending, setHintPending] = useState(false);
+  const [audioBlocked, setAudioBlocked] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -35,12 +59,8 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   // status meant a candidate who declined video was recorded anyway (PRD 12).
   const withVideo = session?.consentVideo === true;
   const capture = useInterviewCapture({ withVideo });
-
-  // The question text arrives without its voice; this follows the voice in.
   const questionAudio = useQuestionAudio({ sessionId, turn, accessToken });
-  const [audioBlocked, setAudioBlocked] = useState(false);
 
-  // Load the session, and resume mid-interview if the tab was refreshed.
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
@@ -50,12 +70,16 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         if (!active) return;
         setSession(loaded);
         setTurn(loaded.currentTurn);
-        setPhase(loaded.status === "completed" ? "complete" : loaded.currentTurn ? "briefing" : "complete");
+        setPhase(
+          loaded.status === "completed" || !loaded.currentTurn ? "complete" : "checking",
+        );
       })
       .catch((cause) => {
         if (!active) return;
         setPhase("error");
-        setError(cause instanceof ApiRequestError ? cause.message : "This interview could not be loaded.");
+        setError(
+          cause instanceof ApiRequestError ? cause.message : "This interview could not be loaded.",
+        );
       });
 
     return () => {
@@ -63,29 +87,11 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     };
   }, [accessToken, sessionId]);
 
-  // Attach the camera preview once devices are open.
   useEffect(() => {
     if (videoRef.current && capture.stream) {
       videoRef.current.srcObject = capture.stream;
     }
   }, [capture.stream, phase]);
-
-  // Answer timer. Reset happens where the answer starts, not here — resetting inside an
-  // effect body would cascade an extra render on every phase change.
-  useEffect(() => {
-    if (phase !== "answering") return;
-    const startedAt = Date.now();
-    const id = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 250);
-    return () => clearInterval(id);
-  }, [phase]);
-
-  const beginAnswering = useCallback(async () => {
-    const started = await capture.start();
-    if (started) {
-      setElapsed(0);
-      setPhase("answering");
-    }
-  }, [capture]);
 
   const finishAnswer = useCallback(async () => {
     if (!accessToken || !turn) return;
@@ -95,12 +101,19 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     setPhase("submitting");
     setError(null);
     try {
-      const result = await submitAnswer(accessToken, sessionId, turn.turnIndex, captured.audio, captured.video);
+      const result = await submitAnswer(
+        accessToken,
+        sessionId,
+        turn.turnIndex,
+        captured.audio,
+        captured.video,
+      );
       if (result.sessionComplete || !result.nextTurn) {
         capture.release();
         setPhase("complete");
         return;
       }
+      setHint(null);
       setTurn(result.nextTurn);
       setSession((current) =>
         current ? { ...current, turnsCompleted: result.turnsCompleted } : current,
@@ -114,14 +127,66 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     }
   }, [accessToken, capture, sessionId, turn]);
 
-  // Play the spoken question once its voice has rendered.
-  //
-  // Autoplay with sound is blocked until the document has been interacted with, and
-  // arriving here is a navigation rather than a gesture — so a refused play is the
-  // normal case on the first question, not an error. We surface a control instead of
-  // swallowing it, which is what used to leave the interviewer silent.
+  // The meter and the submit callback are read through refs by the tick below. The
+  // meter changes on every animation frame, and rebuilding the interval each time would
+  // throw away the silence it has accumulated and mean an answer never ended itself.
+  const latest = useRef({ level: capture.level, finish: finishAnswer });
   useEffect(() => {
-    if (phase !== "asking" && phase !== "briefing") return;
+    latest.current = { level: capture.level, finish: finishAnswer };
+  });
+
+  // The answer timer and the silence that ends the answer run off one tick, so a reading
+  // and the timestamp it is judged against cannot disagree.
+  useEffect(() => {
+    if (phase !== "answering") return;
+    const startedAt = Date.now();
+    let silence = initialSilenceState;
+    let ended = false;
+
+    const id = setInterval(() => {
+      const now = Date.now();
+      setElapsed(Math.floor((now - startedAt) / 1000));
+      silence = observe(silence, latest.current.level, now);
+      if (!ended && shouldEnd(silence, now, startedAt)) {
+        ended = true;
+        void latest.current.finish();
+      }
+    }, 200);
+
+    return () => clearInterval(id);
+  }, [phase]);
+
+  const beginAnswering = useCallback(async () => {
+    const started = await capture.start();
+    if (started) {
+      setElapsed(0);
+      setPhase("answering");
+    }
+  }, [capture]);
+
+  const askForHint = useCallback(async () => {
+    if (!accessToken || !turn || hintPending) return;
+    setHintPending(true);
+    setError(null);
+    try {
+      setHint(await requestHint(accessToken, sessionId, turn.turnIndex));
+    } catch (cause) {
+      setError(
+        cause instanceof ApiRequestError
+          ? cause.message
+          : "The interviewer could not be reached for that.",
+      );
+    } finally {
+      setHintPending(false);
+    }
+  }, [accessToken, hintPending, sessionId, turn]);
+
+  // Autoplay with sound is refused until the document has been interacted with. Entering
+  // the room is that interaction, which is most of why the antechamber exists — but a
+  // refusal is still surfaced rather than swallowed, because silence with no explanation
+  // is how the interviewer stayed mute for a whole release.
+  useEffect(() => {
+    if (phase !== "asking") return;
     const element = audioRef.current;
     if (!element || !questionAudio.url) return;
     setAudioBlocked(false);
@@ -148,7 +213,9 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     return (
       <Centered>
         <div className="flex max-w-md flex-col items-center gap-6 text-center">
-          <p className="text-caption tracking-wide text-ink-subtle uppercase">Interview finished</p>
+          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+            Interview finished
+          </p>
           <h1 className="text-title text-ink">That&rsquo;s the end of the round.</h1>
           <p className="text-body text-ink-muted">
             Your report is being put together from what you actually said.
@@ -164,35 +231,42 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     );
   }
 
+  if (phase === "checking" && session) {
+    return <DeviceCheck session={session} capture={capture} onEnter={() => setPhase("asking")} />;
+  }
+
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between border-b border-line px-6 py-4">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line px-6 py-4">
         <div className="flex items-baseline gap-3">
-          <span className="text-caption tracking-wide text-ink-subtle uppercase">
+          <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
             {session?.roundLabel}
           </span>
           <span className="text-caption text-ink-subtle">
             {session?.companyName} · {session?.roleTitle}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={leave}
-          className="text-caption text-ink-muted underline-offset-4 hover:text-ink hover:underline"
-        >
-          Leave interview
-        </button>
+        <div className="flex items-center gap-5">
+          <RoundClock endsAt={session?.scheduledEndAt ?? null} phase={turn?.phase} />
+          <button
+            type="button"
+            onClick={leave}
+            className="text-caption text-ink-muted underline-offset-4 hover:text-ink hover:underline"
+          >
+            Leave interview
+          </button>
+        </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-12 px-6 py-16">
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-10 px-6 py-16">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <SpeakingDot active={phase === "answering"} level={capture.level} />
-            <span className="text-caption text-ink-subtle">
+            <span className="text-caption text-ink-subtle" role="status">
               {phase === "answering"
-                ? `Recording · ${formatDuration(elapsed)}`
+                ? `Listening · ${formatDuration(elapsed)}`
                 : phase === "submitting"
-                  ? "Thinking…"
+                  ? "Thinking about that…"
                   : "Interviewer"}
             </span>
           </div>
@@ -204,8 +278,8 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
               <audio ref={audioRef} src={questionAudio.url} controls className="w-full max-w-sm" />
               {audioBlocked ? (
                 <p className="text-caption text-ink-subtle">
-                  Your browser held the audio back until you interact with the page — press play, or
-                  just read the question and answer.
+                  Your browser held the audio back — press play, or just read the question and
+                  answer.
                 </p>
               ) : null}
             </div>
@@ -216,6 +290,15 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           ) : null}
         </div>
 
+        {hint ? (
+          <aside className="rounded-lg border border-line bg-accent-wash px-5 py-4">
+            <p className="pb-1.5 font-mono text-micro tracking-widest text-ink-subtle uppercase">
+              You asked for help · recorded as &ldquo;{hint.assistanceLabel.toLowerCase()}&rdquo;
+            </p>
+            <p className="text-body text-ink">{hint.text}</p>
+          </aside>
+        ) : null}
+
         {error ? (
           <p role="alert" className="text-body text-danger">
             {error}
@@ -223,7 +306,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         ) : null}
 
         <div className="flex flex-wrap items-center gap-4">
-          {phase === "briefing" || phase === "asking" ? (
+          {phase === "asking" ? (
             <button
               type="button"
               onClick={beginAnswering}
@@ -249,10 +332,23 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
             </p>
           ) : null}
 
-          <span className="text-caption text-ink-subtle">
-            Question {(turn?.turnIndex ?? 0) + 1} of up to {session?.maxTurns}
-          </span>
+          {!hint && (phase === "asking" || phase === "answering") ? (
+            <button
+              type="button"
+              onClick={askForHint}
+              disabled={hintPending}
+              className="text-caption text-ink-muted underline-offset-4 hover:text-ink hover:underline disabled:opacity-50"
+            >
+              {hintPending ? "Asking…" : "I'm stuck — give me a nudge"}
+            </button>
+          ) : null}
         </div>
+
+        <p className="text-caption text-ink-subtle">
+          {phase === "answering"
+            ? "Stop talking and the interviewer moves on. Pausing to think is fine."
+            : "Asking for a nudge is allowed once per question, and the report records that you did."}
+        </p>
 
         {capture.error ? (
           <p role="alert" className="text-caption text-danger">
@@ -272,6 +368,41 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Counts down to the server's deadline, not to a clock of its own — a drifting tab or a
+ * sleeping laptop must not buy the candidate extra time.
+ */
+function RoundClock({ endsAt, phase }: { endsAt: string | null; phase?: TurnView["phase"] }) {
+  const [remaining, setRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!endsAt) return;
+    const deadline = new Date(endsAt).getTime();
+    const tick = () => setRemaining(Math.max(0, Math.floor((deadline - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1_000);
+    return () => clearInterval(id);
+  }, [endsAt]);
+
+  if (remaining === null) return null;
+
+  return (
+    <span className="flex items-baseline gap-2">
+      {phase ? (
+        <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+          {phase === "warmup" ? "Warm-up" : phase === "closing" ? "Closing" : "Main round"}
+        </span>
+      ) : null}
+      <span
+        className="font-mono text-caption text-ink-muted tabular-nums"
+        aria-label={`${Math.ceil(remaining / 60)} minutes left in this round`}
+      >
+        {formatDuration(remaining)}
+      </span>
+    </span>
   );
 }
 

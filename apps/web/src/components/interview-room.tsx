@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError, abandonSession, fetchSession, submitAnswer } from "@/lib/api";
 import { useAccessToken } from "@/lib/use-access-token";
 import { useInterviewCapture } from "@/lib/use-interview-capture";
+import { useQuestionAudio } from "@/lib/use-question-audio";
 
 type Phase = "loading" | "briefing" | "asking" | "answering" | "submitting" | "complete" | "error";
 
@@ -34,6 +35,10 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   // status meant a candidate who declined video was recorded anyway (PRD 12).
   const withVideo = session?.consentVideo === true;
   const capture = useInterviewCapture({ withVideo });
+
+  // The question text arrives without its voice; this follows the voice in.
+  const questionAudio = useQuestionAudio({ sessionId, turn, accessToken });
+  const [audioBlocked, setAudioBlocked] = useState(false);
 
   // Load the session, and resume mid-interview if the tab was refreshed.
   useEffect(() => {
@@ -109,14 +114,19 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     }
   }, [accessToken, capture, sessionId, turn]);
 
-  // Play the spoken question when a new one arrives.
+  // Play the spoken question once its voice has rendered.
+  //
+  // Autoplay with sound is blocked until the document has been interacted with, and
+  // arriving here is a navigation rather than a gesture — so a refused play is the
+  // normal case on the first question, not an error. We surface a control instead of
+  // swallowing it, which is what used to leave the interviewer silent.
   useEffect(() => {
     if (phase !== "asking" && phase !== "briefing") return;
     const element = audioRef.current;
-    if (element && turn?.questionAudioUrl) {
-      element.play().catch(() => undefined);
-    }
-  }, [phase, turn]);
+    if (!element || !questionAudio.url) return;
+    setAudioBlocked(false);
+    element.play().catch(() => setAudioBlocked(true));
+  }, [phase, questionAudio.url]);
 
   async function leave() {
     capture.release();
@@ -189,8 +199,20 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
           <p className="text-title text-balance text-ink">{turn?.questionText}</p>
 
-          {turn?.questionAudioUrl ? (
-            <audio ref={audioRef} src={turn.questionAudioUrl} controls className="mt-2 w-full max-w-sm" />
+          {questionAudio.url ? (
+            <div className="flex flex-col gap-2">
+              <audio ref={audioRef} src={questionAudio.url} controls className="w-full max-w-sm" />
+              {audioBlocked ? (
+                <p className="text-caption text-ink-subtle">
+                  Your browser held the audio back until you interact with the page — press play, or
+                  just read the question and answer.
+                </p>
+              ) : null}
+            </div>
+          ) : questionAudio.status === "pending" ? (
+            <p className="text-caption text-ink-subtle" role="status">
+              The interviewer is about to say this aloud. You can start answering now.
+            </p>
           ) : null}
         </div>
 

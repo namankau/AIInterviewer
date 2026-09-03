@@ -8,6 +8,7 @@ import type {
   SessionView,
   StartSessionRequest,
   SubmitAnswerResponse,
+  TurnView,
 } from "@acemyinterview/shared";
 
 import { env } from "@/lib/env";
@@ -101,6 +102,18 @@ export function fetchSessions(options: ApiGetOptions): Promise<SessionSummary[]>
 
 export function fetchSession(id: string, options: ApiGetOptions): Promise<SessionView> {
   return apiGet<SessionView>(`/api/v1/sessions/${id}`, options);
+}
+
+/**
+ * One question. The room asks for this while a turn's speech is still `pending`, to
+ * pick up the interviewer's voice after the question text has already been shown.
+ */
+export function fetchTurn(
+  sessionId: string,
+  turnIndex: number,
+  options: ApiGetOptions,
+): Promise<TurnView> {
+  return apiGet<TurnView>(`/api/v1/sessions/${sessionId}/turns/${turnIndex}`, options);
 }
 
 export function fetchReport(id: string, options: ApiGetOptions): Promise<SessionReport> {

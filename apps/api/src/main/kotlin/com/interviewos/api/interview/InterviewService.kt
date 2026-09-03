@@ -15,12 +15,15 @@ import com.interviewos.api.storage.StorageProperties
 import com.interviewos.api.user.SupabaseIdentity
 import com.interviewos.api.user.UserRepository
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.core.task.TaskExecutor
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 
 /**
  * Conducts an interview.
@@ -42,6 +45,8 @@ class InterviewService(
     private val storage: ObjectStorage,
     private val storageProperties: StorageProperties,
     private val objectMapper: ObjectMapper,
+    private val questionSpeech: QuestionSpeech,
+    @Qualifier("interviewBackgroundExecutor") private val backgroundExecutor: TaskExecutor,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -123,8 +128,8 @@ class InterviewService(
                 )
             }
 
-        val audioPath = speakAndStore(userId, sessionId, turnIndex = 0, text = opening.value.text, language = request.language)
-        repository.insertTurn(sessionId, userId, 0, opening.value.text, audioPath, plan.phase)
+        repository.insertTurn(sessionId, userId, 0, opening.value.text, plan.phase, SpeechStatus.PENDING)
+        questionSpeech.render(SpeechRequest(userId, sessionId, 0, opening.value.text, request.language))
 
         return view(userId, sessionId)
     }
@@ -153,9 +158,23 @@ class InterviewService(
         // Keeping the recording is worth doing but not worth ending the round for: the
         // candidate has already spoken, the transcript is what the report is built from,
         // and losing the interview over a storage blip would be the worse failure.
-        val answerPath = storeOrWarn(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType)
-        val videoPath =
-            video?.let { storeOrWarn(userId, sessionId, "turn-$turnIndex-video", it, videoContentType ?: "video/webm") }
+        //
+        // It also has no bearing on what gets asked next, so it uploads alongside the
+        // assessment rather than ahead of it: the candidate waits for the longer of the
+        // two rather than for their sum.
+        val storedMedia =
+            CompletableFuture.supplyAsync(
+                {
+                    StoredMedia(
+                        audioPath = storeOrWarn(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType),
+                        videoPath =
+                            video?.let {
+                                storeOrWarn(userId, sessionId, "turn-$turnIndex-video", it, videoContentType ?: "video/webm")
+                            },
+                    )
+                },
+                backgroundExecutor,
+            )
 
         // The plan for what happens next, decided here rather than by the model: this
         // answer is in the bag, so the count it is planned against includes it.
@@ -200,13 +219,16 @@ class InterviewService(
 
         val nextAction = normaliseAction(assessment.value.suggestedNextAction)
         val intervention = Intervention.parse(assessment.value.intervention)
+        // The upload has almost always finished under the assessment by now. Joining it
+        // cannot fail the turn: storeOrWarn has already turned its own errors into nulls.
+        val media = storedMedia.join()
         repository.recordAnswer(
             sessionId = sessionId,
             userId = userId,
             turnIndex = turnIndex,
             transcript = assessment.value.transcript,
-            audioPath = answerPath,
-            videoPath = videoPath,
+            audioPath = media.audioPath,
+            videoPath = media.videoPath,
             assessmentJson = objectMapper.writeValueAsString(assessment.value),
             nextAction = nextAction,
             intervention = intervention.wireValue,
@@ -232,9 +254,12 @@ class InterviewService(
         }
 
         val nextIndex = turnIndex + 1
-        val nextAudioPath = speakAndStore(userId, sessionId, nextIndex, nextText, session.language)
-        repository.insertTurn(sessionId, userId, nextIndex, nextText, nextAudioPath, plan.phase)
+        repository.insertTurn(sessionId, userId, nextIndex, nextText, plan.phase, SpeechStatus.PENDING)
+        questionSpeech.render(SpeechRequest(userId, sessionId, nextIndex, nextText, session.language))
 
+        // The question goes back in writing straight away and its voice follows, which
+        // the room asks for separately. A candidate ready to start talking should not be
+        // held behind audio they may well talk over.
         return SubmitAnswerResponse(
             sessionComplete = false,
             turnsCompleted = answered,
@@ -242,7 +267,8 @@ class InterviewService(
                 TurnView(
                     turnIndex = nextIndex,
                     questionText = nextText,
-                    questionAudioUrl = signedUrl(nextAudioPath),
+                    questionAudioUrl = null,
+                    questionAudioStatus = SpeechStatus.PENDING.dbValue,
                     phase = plan.phase.dbValue,
                     answered = false,
                 ),
@@ -293,19 +319,48 @@ class InterviewService(
             currentTurn =
                 latest
                     ?.takeIf { it.answeredAt == null }
-                    ?.let {
-                        TurnView(
-                            turnIndex = it.turnIndex,
-                            questionText = it.questionText,
-                            questionAudioUrl = signedUrl(it.questionAudioPath),
-                            phase = it.phase,
-                            answered = false,
-                        )
-                    },
+                    ?.let { turnViewOf(it) },
         )
     }
 
+    /**
+     * One turn, so the room can pick up the interviewer's voice once it has rendered.
+     *
+     * This is a poll rather than a push because the thing being waited on is small, the
+     * wait is a few seconds, and a candidate who starts answering before the voice lands
+     * has lost nothing — the question was already in front of them in writing.
+     */
+    fun turn(
+        userId: UUID,
+        sessionId: UUID,
+        turnIndex: Int,
+    ): TurnView {
+        repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
+        val turn =
+            repository.findTurn(sessionId, userId, turnIndex)
+                ?: throw ApiException.notFound("That question is not part of this interview.")
+        return turnViewOf(turn)
+    }
+
     fun list(userId: UUID): List<SessionSummary> = repository.listSessions(userId)
+
+    /**
+     * A turn as the room sees it.
+     *
+     * The URL is signed only once the speech is actually `ready`. A `pending` turn that
+     * happened to carry a stale path would otherwise hand the room a URL to nothing.
+     */
+    private fun turnViewOf(turn: TurnRow): TurnView {
+        val status = SpeechStatus.fromDbValue(turn.questionAudioStatus)
+        return TurnView(
+            turnIndex = turn.turnIndex,
+            questionText = turn.questionText,
+            questionAudioUrl = if (status == SpeechStatus.READY) signedUrl(turn.questionAudioPath) else null,
+            questionAudioStatus = status.dbValue,
+            phase = turn.phase,
+            answered = turn.answeredAt != null,
+        )
+    }
 
     /**
      * What the candidate is told about grounding. Deliberately plain: an inferred
@@ -345,25 +400,6 @@ class InterviewService(
         targetLevel = null,
         grounding = resolution.grounding,
     )
-
-    /** Speech is a nicety — a failure here degrades to a written question, not a dead session. */
-    private fun speakAndStore(
-        userId: UUID,
-        sessionId: UUID,
-        turnIndex: Int,
-        text: String,
-        language: String,
-    ): String? =
-        try {
-            val spoken = interviewAi.synthesizeSpeech(text, language)
-            store(userId, sessionId, "turn-$turnIndex-question", spoken.value.audio, spoken.value.mimeType)
-        } catch (e: AiUnavailableException) {
-            log.warn("Speech unavailable for session {} turn {}; falling back to text", sessionId, turnIndex, e)
-            null
-        } catch (e: ObjectStorageException) {
-            log.warn("Could not store question audio for session {} turn {}", sessionId, turnIndex, e)
-            null
-        }
 
     private fun TurnPlan.toContext() =
         RoundContext(
@@ -459,3 +495,9 @@ class InterviewService(
             )
     }
 }
+
+/** Where an answer's recordings ended up. Either may be null: storage is not a gate. */
+private data class StoredMedia(
+    val audioPath: String?,
+    val videoPath: String?,
+)

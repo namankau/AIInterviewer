@@ -57,14 +57,36 @@ data class AssistanceSummary(
     companion object {
         fun of(turns: List<TurnRow>): AssistanceSummary {
             val answered = turns.filter { it.answerTranscript != null }
-            val interventions = answered.map { Intervention.parse(it.intervention) }
+            val interventions = answered.map(::helpOn)
 
             return AssistanceSummary(
                 totalAnswers = answered.size,
                 unaidedAnswers = interventions.count { !it.isAssisted },
                 breakdown = interventions.groupingBy { it }.eachCount(),
-                notes = answered.mapNotNull { it.interventionNote?.takeIf(String::isNotBlank) },
+                notes =
+                    answered.flatMap { turn ->
+                        listOfNotNull(
+                            turn.interventionNote?.takeIf(String::isNotBlank),
+                            // Marked as asked for, because it reads differently in a
+                            // report from help the interviewer decided to volunteer.
+                            turn.hintText?.takeIf(String::isNotBlank)?.let { "asked for help - $it" },
+                        )
+                    },
             )
+        }
+
+        /**
+         * How much help a turn actually needed.
+         *
+         * A candidate can be helped twice on one question: once because they asked, and
+         * again because the interviewer intervened on the answer that followed. The turn
+         * is credited at whichever was more generous, since crediting the lesser would
+         * let a hint that shaped the whole answer disappear behind a mild intervention.
+         */
+        private fun helpOn(turn: TurnRow): Intervention {
+            val onAnswer = Intervention.parse(turn.intervention)
+            val asked = turn.hintText?.let { Intervention.parse(turn.hintLevel) } ?: Intervention.NONE
+            return if (asked.credit < onAnswer.credit) asked else onAnswer
         }
     }
 }

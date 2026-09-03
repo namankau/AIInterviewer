@@ -1,6 +1,7 @@
 import type {
   ApiError,
   EntitlementView,
+  HintView,
   MeResponse,
   ReadinessGroup,
   SessionReport,
@@ -126,6 +127,22 @@ export function fetchReadiness(options: ApiGetOptions): Promise<ReadinessGroup[]
 
 export function startSession(accessToken: string, request: StartSessionRequest): Promise<SessionView> {
   return apiSend<SessionView>("/api/v1/sessions", "POST", accessToken, request);
+}
+
+/**
+ * Asks the interviewer for a nudge on the current question. One per question, and it
+ * goes on the record — the API is the authority on both.
+ */
+export function requestHint(
+  accessToken: string,
+  sessionId: string,
+  turnIndex: number,
+): Promise<HintView> {
+  return apiSend<HintView>(
+    `/api/v1/sessions/${sessionId}/turns/${turnIndex}/hint`,
+    "POST",
+    accessToken,
+  );
 }
 
 export function abandonSession(accessToken: string, id: string): Promise<void> {

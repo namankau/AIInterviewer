@@ -230,7 +230,8 @@ class SessionRepository(
                        question_audio_status::text as question_audio_status,
                        answer_transcript, answered_at,
                        intervention::text as intervention, intervention_note,
-                       phase::text as phase, delivery_note
+                       phase::text as phase, delivery_note,
+                       hint_requested_at, hint_text, hint_level::text as hint_level
                   from public.session_turns
                  where session_id = :s and user_id = :u and turn_index = :i
                 """.trimIndent(),
@@ -252,7 +253,8 @@ class SessionRepository(
                        question_audio_status::text as question_audio_status,
                        answer_transcript, answered_at,
                        intervention::text as intervention, intervention_note,
-                       phase::text as phase, delivery_note
+                       phase::text as phase, delivery_note,
+                       hint_requested_at, hint_text, hint_level::text as hint_level
                   from public.session_turns
                  where session_id = :s and user_id = :u
                  order by turn_index desc limit 1
@@ -262,6 +264,37 @@ class SessionRepository(
             .query { rs, _ -> mapTurn(rs) }
             .optional()
             .orElse(null)
+
+    /**
+     * Records help the candidate asked for, on the turn they asked it on.
+     *
+     * Deliberately separate from `intervention`, which holds what the interviewer chose
+     * to supply in response to the answer. Writing both to one column would let the
+     * assessment of an answer overwrite the hint that shaped it.
+     */
+    fun recordHint(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        hintText: String,
+        hintLevel: String,
+    ) {
+        jdbcClient
+            .sql(
+                """
+                update public.session_turns
+                   set hint_requested_at = now(),
+                       hint_text = :hint,
+                       hint_level = cast(:level as public.intervention_type)
+                 where session_id = :s and user_id = :u and turn_index = :i
+                """.trimIndent(),
+            ).param("hint", hintText)
+            .param("level", hintLevel)
+            .param("s", sessionId)
+            .param("u", userId)
+            .param("i", turnIndex)
+            .update()
+    }
 
     fun recordAnswer(
         sessionId: UUID,
@@ -328,7 +361,8 @@ class SessionRepository(
                        question_audio_status::text as question_audio_status,
                        answer_transcript, answered_at,
                        intervention::text as intervention, intervention_note,
-                       phase::text as phase, delivery_note
+                       phase::text as phase, delivery_note,
+                       hint_requested_at, hint_text, hint_level::text as hint_level
                   from public.session_turns
                  where session_id = :s and user_id = :u
                  order by turn_index
@@ -430,6 +464,9 @@ class SessionRepository(
             phase = rs.getString("phase"),
             deliveryNote = rs.getString("delivery_note"),
             interventionNote = rs.getString("intervention_note"),
+            hintRequestedAt = rs.getTimestamp("hint_requested_at")?.toInstant(),
+            hintText = rs.getString("hint_text"),
+            hintLevel = rs.getString("hint_level"),
         )
 }
 
@@ -465,6 +502,11 @@ data class TurnRow(
     val phase: String = TurnPhase.MAIN.dbValue,
     /** What the interviewer observed about delivery, from the video when there was one. */
     val deliveryNote: String? = null,
+    /** Set when the candidate asked for help on this question, rather than being offered it. */
+    val hintRequestedAt: Instant? = null,
+    val hintText: String? = null,
+    /** How much that hint gave away, on the same scale as the interviewer's own help. */
+    val hintLevel: String? = null,
 )
 
 data class ReadinessRow(

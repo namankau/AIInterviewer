@@ -112,6 +112,17 @@ data class AskedQuestion(
     val text: String,
 )
 
+/**
+ * A hint the candidate asked for, and how much of the answer it gave away.
+ *
+ * [assistanceLevel] maps onto [Intervention], so a requested hint is discounted on the
+ * same scale as help the interviewer volunteered.
+ */
+data class OfferedHint(
+    val text: String,
+    val assistanceLevel: String,
+)
+
 /** The candidate's answer as captured in the browser. */
 data class AnswerAudio(
     val bytes: ByteArray,

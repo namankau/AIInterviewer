@@ -85,46 +85,63 @@ enum class Archetype(
     val dbValue: String,
     val label: String,
     val roundEmphasis: String,
+    /**
+     * How the archetype reads mid-sentence, article and all.
+     *
+     * Lower-casing [label] to drop into prose turned "Service-based IT firm" into
+     * "service-based it firm", and prefixing a bare "a" produced "a Indian product
+     * company". Small, but it is the difference between copy someone wrote and copy
+     * something generated.
+     */
+    val inProse: String,
 ) {
     GLOBAL_PRODUCT(
         "global_product",
         "Global product company",
         "Coding, system design, and behavioural rounds against published leadership principles, with a bar raiser.",
+        "a global product company loop",
     ),
     INDIAN_PRODUCT(
         "indian_product",
         "Indian product company or startup",
         "Practical coding, product sense, ownership scenarios, and often a founder round.",
+        "an Indian product company loop",
     ),
     SERVICE_BASED_IT(
         "service_based_it",
         "Service-based IT firm",
         "Aptitude, technical fundamentals, a detailed project walkthrough, techno-managerial discussion, and HR fit.",
+        "a service-based IT loop",
     ),
     CONSULTING_BIG_FOUR(
         "consulting_big_four",
         "Consulting or Big Four",
         "Case discussion, client-scenario handling, a manager round, and values and fit.",
+        "a consulting and Big Four loop",
     ),
     EUROPEAN_EMPLOYER(
         "european_employer",
         "European employer",
         "Structured competency rounds, culture and values fit, and a frank relocation and visa conversation.",
+        "a European employer's loop",
     ),
     GCC_CAPTIVE(
         "gcc_captive",
         "GCC or captive centre",
         "Domain depth, stakeholder management, and process and compliance awareness.",
+        "a GCC or captive centre loop",
     ),
     REGULATED_PROFESSIONAL(
         "regulated_professional",
         "Regulated or professional practice",
         "Technical statute knowledge, ethics and judgement scenarios, and fit for the practice.",
+        "a regulated professional practice loop",
     ),
     INDUSTRIAL_MANUFACTURING(
         "industrial_manufacturing",
         "Industrial or manufacturing",
         "Core domain fundamentals, plant and process scenarios, and safety and quality reasoning.",
+        "an industrial and manufacturing loop",
     ),
     ;
 

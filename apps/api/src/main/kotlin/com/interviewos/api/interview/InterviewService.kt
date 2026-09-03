@@ -498,13 +498,13 @@ class InterviewService(
     ): String =
         when (confidence) {
             Confidence.RECOGNISED -> {
-                "Run as a ${archetype.label.lowercase()} loop. These are general patterns for that kind of " +
-                    "employer, not a description of $company's current process."
+                "Run as ${archetype.inProse}. These are general patterns for that kind of employer, " +
+                    "not a description of $company's current process."
             }
 
             Confidence.INFERRED -> {
-                "We do not have specific information about $company, so this runs on general " +
-                    "${archetype.label.lowercase()} patterns."
+                "We do not recognise $company, so this runs as ${archetype.inProse} on general patterns " +
+                    "rather than on anything specific to them."
             }
         }
 

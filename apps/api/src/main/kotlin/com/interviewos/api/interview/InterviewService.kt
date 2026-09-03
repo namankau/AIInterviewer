@@ -65,6 +65,57 @@ class InterviewService(
         )
     }
 
+    /**
+     * Reads one line of intent into a draft round, and says what it had to assume.
+     *
+     * Nothing is created here. The draft goes back to the candidate to correct, and the
+     * session is started through the normal path — so the composer is a faster way into
+     * the same setup rather than a second way to create a session with its own rules.
+     *
+     * The employer read out of the sentence is resolved to an archetype here rather than
+     * in the model, so the candidate learns *before* the round whether we actually
+     * recognise where they are interviewing. A model that both guessed the company and
+     * described its process would be inventing the one thing we must never invent.
+     */
+    fun composeRound(request: ComposeRoundRequest): RoundDraft {
+        val composed =
+            try {
+                interviewAi.composeRound(request.query.trim()).value
+            } catch (e: AiUnavailableException) {
+                log.warn("Could not compose a round from a candidate's query", e)
+                throw ApiException.upstreamUnavailable(
+                    "We could not read that just now. Fill the round in yourself and it will start the same way.",
+                )
+            }
+
+        val company = composed.company.trim().take(120)
+        val roundType = RoundType.parseOrNull(composed.roundType) ?: RoundType.PROJECT_DEEP_DIVE
+        val resolution = archetypeResolver.resolve(company)
+        val duration = composed.durationMinutes?.coerceIn(MIN_ROUND_MINUTES, MAX_ROUND_MINUTES) ?: DEFAULT_ROUND_MINUTES
+
+        return RoundDraft(
+            companyName = company,
+            roleTitle = composed.role.trim().take(120),
+            level = composed.level.trim().take(60),
+            roundType = roundType.dbValue,
+            roundLabel = roundType.label,
+            durationMinutes = duration,
+            language = if (composed.language == "hindi_english") "hindi_english" else "english",
+            understood = composed.understood.trim(),
+            assumptions = composed.assumptions.map { it.trim() }.filter { it.isNotBlank() },
+            confidence = composed.confidence.lowercase().takeIf { it in DRAFT_CONFIDENCES } ?: "low",
+            archetypeLabel = resolution.archetype.label,
+            archetypeConfidence = resolution.confidence.dbValue,
+            groundingNote =
+                if (company.isBlank()) {
+                    "You have not named an employer, so this runs on general patterns for the round type. " +
+                        "Name one and the round is shaped to that kind of employer instead."
+                } else {
+                    candidateFacingNote(company, resolution.archetype, resolution.confidence)
+                },
+        )
+    }
+
     @Transactional
     fun start(
         identity: SupabaseIdentity,
@@ -555,6 +606,10 @@ class InterviewService(
 
     private companion object {
         const val SIGNED_URL_SECONDS = 3600
+        const val DEFAULT_ROUND_MINUTES = 40
+        const val MIN_ROUND_MINUTES = 10
+        const val MAX_ROUND_MINUTES = 120
+        val DRAFT_CONFIDENCES = setOf("high", "medium", "low")
         val ALLOWED_ACTIONS =
             setOf(
                 "follow_up",

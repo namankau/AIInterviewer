@@ -91,6 +91,40 @@ data class SessionView(
     val currentTurn: TurnView?,
 )
 
+/** What the candidate typed into the composer. */
+data class ComposeRoundRequest(
+    @field:NotBlank(message = "Tell us what you are preparing for.")
+    @field:Size(max = 600)
+    val query: String = "",
+)
+
+/**
+ * A round drafted from one sentence, shown back before anything is created.
+ *
+ * Nothing here is saved. The candidate corrects what is wrong and starts the round from
+ * the normal endpoint, so the composer is a convenience over the same setup rather than
+ * a second way to create a session.
+ *
+ * [groundingNote] and [archetypeConfidence] are resolved server-side from whatever
+ * employer was read out of the sentence, so a candidate learns before the round starts
+ * whether we actually recognise where they are interviewing.
+ */
+data class RoundDraft(
+    val companyName: String,
+    val roleTitle: String,
+    val level: String,
+    val roundType: String,
+    val roundLabel: String,
+    val durationMinutes: Int,
+    val language: String,
+    val understood: String,
+    val assumptions: List<String>,
+    val confidence: String,
+    val archetypeLabel: String,
+    val archetypeConfidence: String,
+    val groundingNote: String,
+)
+
 /**
  * Help the candidate asked for, and the fact that asking was recorded.
  *

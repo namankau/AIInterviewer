@@ -4,6 +4,7 @@ import type {
   HintView,
   MeResponse,
   ReadinessGroup,
+  RoundDraft,
   SessionReport,
   SessionSummary,
   SessionView,
@@ -123,6 +124,14 @@ export function fetchReport(id: string, options: ApiGetOptions): Promise<Session
 
 export function fetchReadiness(options: ApiGetOptions): Promise<ReadinessGroup[]> {
   return apiGet<ReadinessGroup[]>("/api/v1/readiness", options);
+}
+
+/**
+ * Reads one line of intent into a draft round. Creates nothing — the candidate corrects
+ * the draft and starts the session through `startSession` like anyone else.
+ */
+export function composeRound(accessToken: string, query: string): Promise<RoundDraft> {
+  return apiSend<RoundDraft>("/api/v1/round-drafts", "POST", accessToken, { query });
 }
 
 export function startSession(accessToken: string, request: StartSessionRequest): Promise<SessionView> {

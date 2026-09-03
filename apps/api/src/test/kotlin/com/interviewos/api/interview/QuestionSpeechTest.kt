@@ -7,6 +7,7 @@ import com.interviewos.api.ai.AnswerAssessment
 import com.interviewos.api.ai.AnswerAudio
 import com.interviewos.api.ai.AnswerVideo
 import com.interviewos.api.ai.AskedQuestion
+import com.interviewos.api.ai.ComposedRound
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
 import com.interviewos.api.ai.OfferedHint
@@ -156,6 +157,8 @@ private class FailingStorage : ObjectStorage {
 /** Only speech is exercised here; the rest of the port is not reached. */
 private abstract class StubAi : InterviewAi {
     override fun parseResume(file: ResumeFile): AiResult<ParsedResume> = unsupported()
+
+    override fun composeRound(query: String): AiResult<ComposedRound> = unsupported()
 
     override fun composeOpeningQuestion(
         brief: InterviewBrief,

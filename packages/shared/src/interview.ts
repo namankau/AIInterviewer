@@ -65,6 +65,40 @@ export interface SessionView {
   currentTurn: TurnView | null;
 }
 
+/** One line of intent, as the candidate typed it. */
+export interface ComposeRoundRequest {
+  query: string;
+}
+
+/**
+ * A round drafted from that one line, shown back before anything is created.
+ *
+ * Nothing is saved. The candidate corrects what is wrong and starts the round through
+ * the normal endpoint, so the composer is a faster way into the same setup rather than a
+ * second way to create a session.
+ *
+ * `companyName` may be empty, and that is an answer rather than a failure: the round
+ * runs on general patterns and `groundingNote` says so. A guessed employer would be
+ * worse, because it silently changes which loop the candidate practises against.
+ */
+export interface RoundDraft {
+  companyName: string;
+  roleTitle: string;
+  level: string;
+  roundType: RoundType;
+  roundLabel: string;
+  durationMinutes: number;
+  language: string;
+  /** One sentence back to the candidate, saying what was taken from what they wrote. */
+  understood: string;
+  /** Everything filled in that they did not say, so they can correct it at a glance. */
+  assumptions: string[];
+  confidence: "high" | "medium" | "low";
+  archetypeLabel: string;
+  archetypeConfidence: "recognised" | "inferred";
+  groundingNote: string;
+}
+
 export interface StartSessionRequest {
   companyName: string;
   roleTitle: string;

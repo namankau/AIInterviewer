@@ -90,6 +90,12 @@ class GeminiInterviewAi(
             SpokenAudio(bytes, ContentTypes.base(mimeType))
         }
 
+    override fun composeRound(query: String): AiResult<ComposedRound> {
+        val prompt = loadPrompt("compose-round").replace("{{query}}", query)
+        val (node, usage) = generateJson(properties.reasoningModel, listOf(textPart(prompt)), schema("compose-round"))
+        return AiResult(objectMapper.treeToValue(node, ComposedRound::class.java), usage)
+    }
+
     override fun composeOpeningQuestion(
         brief: InterviewBrief,
         round: RoundContext,

@@ -182,7 +182,20 @@ class InterviewService(
                 )
             }
 
-        repository.insertTurn(sessionId, userId, 0, opening.value.text, plan.phase, SpeechStatus.PENDING)
+        repository.insertTurn(
+            sessionId = sessionId,
+            userId = userId,
+            turnIndex = 0,
+            questionText = opening.value.text,
+            phase = plan.phase,
+            speechStatus = SpeechStatus.PENDING,
+            provenanceJson =
+                provenanceJson(
+                    basis = opening.value.questionBasis,
+                    probes = opening.value.questionProbes,
+                    askedBecause = opening.value.questionAskedBecause,
+                ),
+        )
         questionSpeech.render(SpeechRequest(userId, sessionId, 0, opening.value.text, request.language))
 
         return view(userId, sessionId)
@@ -308,7 +321,20 @@ class InterviewService(
         }
 
         val nextIndex = turnIndex + 1
-        repository.insertTurn(sessionId, userId, nextIndex, nextText, plan.phase, SpeechStatus.PENDING)
+        repository.insertTurn(
+            sessionId = sessionId,
+            userId = userId,
+            turnIndex = nextIndex,
+            questionText = nextText,
+            phase = plan.phase,
+            speechStatus = SpeechStatus.PENDING,
+            provenanceJson =
+                provenanceJson(
+                    basis = assessment.value.questionBasis,
+                    probes = assessment.value.questionProbes,
+                    askedBecause = assessment.value.questionAskedBecause,
+                ),
+        )
         questionSpeech.render(SpeechRequest(userId, sessionId, nextIndex, nextText, session.language))
 
         // The question goes back in writing straight away and its voice follows, which
@@ -469,6 +495,16 @@ class InterviewService(
                 ?: throw ApiException.notFound("That question is not part of this interview.")
         return turnViewOf(turn)
     }
+
+    /** Why a question was asked, ready to store. See [QuestionProvenance.fromModel]. */
+    private fun provenanceJson(
+        basis: String?,
+        probes: String?,
+        askedBecause: String?,
+    ): String? =
+        QuestionProvenance
+            .fromModel(basis, probes, askedBecause)
+            ?.let { objectMapper.writeValueAsString(it) }
 
     fun list(userId: UUID): List<SessionSummary> = repository.listSessions(userId)
 

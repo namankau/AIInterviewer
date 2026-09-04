@@ -1,6 +1,11 @@
 "use client";
 
-import type { ReportAssistance, SessionReport } from "@acemyinterview/shared";
+import type {
+  ReportAssessedArea,
+  ReportAssistance,
+  ReportQuestionSources,
+  SessionReport,
+} from "@acemyinterview/shared";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -123,6 +128,20 @@ export function ReportView({ sessionId }: { sessionId: string }) {
         </dl>
       </Section>
 
+      {report.strengths.length > 0 ? (
+        <Section title="What held up" lead="With the words that show it.">
+          <AreaList areas={report.strengths} tone="positive" />
+        </Section>
+      ) : null}
+
+      {report.developmentAreas.length > 0 ? (
+        <Section title="What did not" lead="Named plainly, because a soft report is a real rejection later.">
+          <AreaList areas={report.developmentAreas} tone="critical" />
+        </Section>
+      ) : null}
+
+      <QuestionSources sources={report.questionSources} />
+
       {report.practicePlan.length > 0 ? (
         <Section title="What to work on" lead="Before the next attempt, in this order.">
           <ol className="flex flex-col gap-6">
@@ -218,6 +237,128 @@ function AssistancePanel({ assistance }: { assistance: ReportAssistance }) {
         </ul>
       ) : null}
     </section>
+  );
+}
+
+/**
+ * A strength or a weakness: what it was, the words that show it, why it matters at this
+ * level, and one thing to do. The quote is the load-bearing part — anything without one
+ * was dropped server-side before it reached here.
+ */
+function AreaList({
+  areas,
+  tone,
+}: {
+  areas: ReportAssessedArea[];
+  tone: "positive" | "critical";
+}) {
+  return (
+    <ul className="flex flex-col divide-y divide-line border-y border-line">
+      {areas.map((item) => (
+        <li key={item.area} className="flex flex-col gap-3 py-6">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h3 className="text-heading text-ink">{item.area}</h3>
+            {item.turnIndex !== null ? (
+              <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+                question {item.turnIndex + 1}
+              </span>
+            ) : null}
+          </div>
+
+          <blockquote
+            className={`border-l-2 pl-4 text-body italic ${
+              tone === "positive" ? "border-positive text-ink-muted" : "border-danger text-ink-muted"
+            }`}
+          >
+            &ldquo;{item.evidenceQuote}&rdquo;
+          </blockquote>
+
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <Note term="Why it matters" detail={item.whyItMatters} />
+            <Note term="What to do" detail={item.whatToDo} />
+          </dl>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Where the questions came from.
+ *
+ * The disclosure is not a footnote to be tucked away — it is the reason this section can
+ * be believed. Every question today is written from the model's general knowledge of an
+ * employer archetype, with no retrieved sources behind it, and the page says so before it
+ * shows anything else. A candidate who reads "asked at Google in March", checks, and
+ * finds nothing will never trust this report again, and they would be right.
+ *
+ * When a real corpus exists, `sources` fills in per question and the disclosure changes
+ * with the tier. Nothing else here has to move.
+ */
+function QuestionSources({ sources }: { sources: ReportQuestionSources }) {
+  if (sources.entries.length === 0) return null;
+
+  return (
+    <Section title="Why you were asked these" lead={sources.headline}>
+      <p className="max-w-prose rounded-lg border border-line bg-surface-sunken p-4 text-caption text-ink-muted">
+        {sources.disclosure}
+      </p>
+
+      <ol className="flex flex-col divide-y divide-line border-y border-line">
+        {sources.entries.map((entry) => (
+          <li key={entry.turnIndex} className="flex flex-col gap-3 py-6">
+            <div className="flex flex-wrap items-baseline gap-3">
+              <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+                question {entry.turnIndex + 1}
+              </span>
+              {entry.phase === "warmup" ? (
+                <span className="rounded border border-line-strong px-1.5 py-0.5 font-mono text-micro text-ink-subtle">
+                  warm-up
+                </span>
+              ) : null}
+            </div>
+
+            <p className="max-w-prose text-body text-ink">{entry.question}</p>
+
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <Note term="What it was testing" detail={entry.probes} />
+              <Note term="Why you got it" detail={entry.askedBecause} />
+            </dl>
+
+            <div className="flex flex-col gap-1 border-l-2 border-line-strong pl-4">
+              <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+                Basis
+              </span>
+              <p className="max-w-prose text-caption text-ink-muted">{entry.basis}</p>
+              <p className="max-w-prose text-caption text-ink-subtle">{entry.tierDisclosure}</p>
+            </div>
+
+            {entry.sources.length > 0 ? (
+              <ul className="flex flex-col gap-1 pl-4">
+                {entry.sources.map((source) => (
+                  <li key={`${source.title}-${source.url ?? ""}`} className="text-caption text-ink-muted">
+                    {source.url ? (
+                      <a
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-accent underline-offset-4 hover:underline"
+                      >
+                        {source.title}
+                      </a>
+                    ) : (
+                      source.title
+                    )}
+                    {source.publisher ? ` · ${source.publisher}` : ""}
+                    {source.year ? ` · ${source.year}` : ""}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </Section>
   );
 }
 

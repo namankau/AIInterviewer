@@ -99,7 +99,7 @@ class ReportService(
             }
 
         val verified = withVerifiedEvidence(composed.value, turns).withoutUnseenPresence(session.consentVideo)
-        val payload = payloadOf(verified, session, roundType, archetype, turns.size, assistance)
+        val payload = payloadOf(verified, session, roundType, archetype, turns, assistance)
 
         repository.saveReport(
             sessionId = sessionId,
@@ -135,12 +135,13 @@ class ReportService(
         turns: List<TurnRow>,
     ): ReportContent {
         val haystack = turns.joinToString(" ") { it.answerTranscript.orEmpty() }.normaliseForMatch()
-        val (kept, dropped) =
-            content.competencies.partition { competency ->
-                val quote = competency.evidenceQuote.normaliseForMatch()
-                quote.isNotBlank() && haystack.contains(quote)
-            }
 
+        fun grounded(quote: String): Boolean {
+            val normalised = quote.normaliseForMatch()
+            return normalised.isNotBlank() && haystack.contains(normalised)
+        }
+
+        val (kept, dropped) = content.competencies.partition { grounded(it.evidenceQuote) }
         if (dropped.isNotEmpty()) {
             log.warn(
                 "Dropped {} competency score(s) whose evidence was not in the transcript: {}",
@@ -148,7 +149,25 @@ class ReportService(
                 dropped.joinToString { it.competency },
             )
         }
-        return content.copy(competencies = kept)
+
+        // Strengths and development areas quote the candidate too, so they answer to the
+        // same rule. An invented quote is no less invented for sitting under a friendlier
+        // heading.
+        val (keptStrengths, droppedStrengths) = content.strengths.partition { grounded(it.evidenceQuote) }
+        val (keptAreas, droppedAreas) = content.developmentAreas.partition { grounded(it.evidenceQuote) }
+        if (droppedStrengths.isNotEmpty() || droppedAreas.isNotEmpty()) {
+            log.warn(
+                "Dropped {} strength(s) and {} development area(s) whose evidence was not in the transcript",
+                droppedStrengths.size,
+                droppedAreas.size,
+            )
+        }
+
+        return content.copy(
+            competencies = kept,
+            strengths = keptStrengths,
+            developmentAreas = keptAreas,
+        )
     }
 
     private fun payloadOf(
@@ -156,7 +175,7 @@ class ReportService(
         session: SessionRow,
         roundType: RoundType,
         archetype: Archetype,
-        answeredTurns: Int,
+        turns: List<TurnRow>,
         assistance: AssistanceSummary,
     ): Map<String, Any?> =
         mapOf(
@@ -166,7 +185,7 @@ class ReportService(
             "roundType" to roundType.dbValue,
             "roundLabel" to roundType.label,
             "archetypeLabel" to archetype.label,
-            "answeredTurns" to answeredTurns,
+            "answeredTurns" to turns.size,
             "generatedAt" to
                 java.time.Instant
                     .now()
@@ -223,6 +242,12 @@ class ReportService(
                     // describes presence it did not see.
                     "presence" to content.communication.presence,
                 ),
+            "strengths" to content.strengths.map { areaOf(it) },
+            "developmentAreas" to content.developmentAreas.map { areaOf(it) },
+            // Why each question was asked, taken from what was recorded when it was
+            // composed rather than reconstructed now. Reconstructing it would mean asking
+            // a model to recall its own reasoning, which is how invented citations happen.
+            "questionSources" to questionSourcesOf(session, archetype, turns),
             "practicePlan" to
                 content.practicePlan.map {
                     mapOf("focus" to it.focus, "why" to it.why, "drill" to it.drill)
@@ -235,6 +260,93 @@ class ReportService(
                     "reasoning" to content.outcomeSimulation.reasoning,
                 ),
         )
+
+    private fun areaOf(area: com.interviewos.api.ai.AssessedArea): Map<String, Any?> =
+        mapOf(
+            "area" to area.area,
+            "evidenceQuote" to area.evidenceQuote,
+            "turnIndex" to area.turnIndex,
+            "whyItMatters" to area.whyItMatters,
+            "whatToDo" to area.whatToDo,
+        )
+
+    /**
+     * Where the round's questions came from.
+     *
+     * This is the section the product is betting on: a candidate should be able to see
+     * what each question was testing and why they, specifically, got it. Two rules keep
+     * it worth reading.
+     *
+     * **Nothing is invented at report time.** Each entry is the provenance recorded when
+     * the question was composed. A turn with none recorded is simply absent rather than
+     * reconstructed.
+     *
+     * **The confidence line is the truth, not a hedge.** `sources` is empty on every
+     * question today because there is no retrieval corpus, so the header says the
+     * questions are archetype patterns rather than sourced reports of this employer's
+     * process — and says whether we even recognised the employer. A candidate who reads
+     * "asked at Google in March" and finds nothing behind it never trusts the report
+     * again, and they would be right.
+     */
+    private fun questionSourcesOf(
+        session: SessionRow,
+        archetype: Archetype,
+        turns: List<TurnRow>,
+    ): Map<String, Any?> {
+        val entries =
+            turns.mapNotNull { turn ->
+                val provenance =
+                    turn.provenanceJson?.let {
+                        try {
+                            objectMapper.readValue(it, QuestionProvenance::class.java)
+                        } catch (e: RuntimeException) {
+                            log.warn("Unreadable provenance on turn {}", turn.turnIndex, e)
+                            null
+                        }
+                    } ?: return@mapNotNull null
+
+                mapOf(
+                    "turnIndex" to turn.turnIndex,
+                    "question" to turn.questionText,
+                    "phase" to turn.phase,
+                    "probes" to provenance.probes,
+                    "askedBecause" to provenance.askedBecause,
+                    "basis" to provenance.basis,
+                    "tier" to provenance.tier.dbValue,
+                    "tierDisclosure" to provenance.tier.disclosure,
+                    "sources" to
+                        provenance.sources.map {
+                            mapOf(
+                                "title" to it.title,
+                                "publisher" to it.publisher,
+                                "url" to it.url,
+                                "year" to it.year,
+                            )
+                        },
+                )
+            }
+
+        val recognised = Confidence.entries.firstOrNull { it.dbValue == session.archetypeConfidence } == Confidence.RECOGNISED
+        return mapOf(
+            "entries" to entries,
+            "employerRecognised" to recognised,
+            "archetypeLabel" to archetype.label,
+            "headline" to
+                if (recognised) {
+                    "These questions were composed for ${archetype.inProse}, ${session.roleTitle}, from " +
+                        "general knowledge of how that kind of employer interviews."
+                } else {
+                    "We do not have specific information about ${session.companyName}, so these questions " +
+                        "were composed from the general patterns of ${archetype.inProse}."
+                },
+            // Said plainly, and said even though it is unflattering. It is the difference
+            // between a citation and a claim.
+            "disclosure" to
+                "None of these are sourced reports of questions ${session.companyName} has actually asked. " +
+                "We do not have a corpus of real interview reports yet, and we would rather tell you that " +
+                "than show you a citation we cannot stand behind.",
+        )
+    }
 
     private companion object {
         val WHITESPACE = Regex("\\s+")

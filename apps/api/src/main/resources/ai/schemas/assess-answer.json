@@ -54,6 +54,21 @@
     "nextQuestionText": {
       "type": "STRING",
       "nullable": true
+    },
+    "questionBasis": {
+      "type": "STRING",
+      "description": "The archetype-level pattern this question comes from. No company-specific claims.",
+      "nullable": true
+    },
+    "questionProbes": {
+      "type": "STRING",
+      "description": "What this question is testing, in one short phrase.",
+      "nullable": true
+    },
+    "questionAskedBecause": {
+      "type": "STRING",
+      "description": "Why this candidate is being asked this, referring to what they have already said.",
+      "nullable": true
     }
   },
   "required": [

@@ -171,13 +171,15 @@ class SessionRepository(
         questionText: String,
         phase: TurnPhase,
         speechStatus: SpeechStatus,
+        provenanceJson: String?,
     ) {
         jdbcClient
             .sql(
                 """
                 insert into public.session_turns
-                       (session_id, user_id, turn_index, question_text, phase, question_audio_status)
-                values (:s, :u, :i, :q, cast(:phase as public.turn_phase), cast(:speech as public.speech_status))
+                       (session_id, user_id, turn_index, question_text, phase, question_audio_status, provenance)
+                values (:s, :u, :i, :q, cast(:phase as public.turn_phase), cast(:speech as public.speech_status),
+                        cast(:provenance as jsonb))
                 on conflict (session_id, turn_index) do nothing
                 """.trimIndent(),
             ).param("s", sessionId)
@@ -186,6 +188,7 @@ class SessionRepository(
             .param("q", questionText)
             .param("phase", phase.dbValue)
             .param("speech", speechStatus.dbValue)
+            .param("provenance", provenanceJson)
             .update()
     }
 
@@ -230,7 +233,7 @@ class SessionRepository(
                        question_audio_status::text as question_audio_status,
                        answer_transcript, answered_at,
                        intervention::text as intervention, intervention_note,
-                       phase::text as phase, delivery_note,
+                       phase::text as phase, delivery_note, provenance::text as provenance,
                        hint_requested_at, hint_text, hint_level::text as hint_level
                   from public.session_turns
                  where session_id = :s and user_id = :u and turn_index = :i
@@ -253,7 +256,7 @@ class SessionRepository(
                        question_audio_status::text as question_audio_status,
                        answer_transcript, answered_at,
                        intervention::text as intervention, intervention_note,
-                       phase::text as phase, delivery_note,
+                       phase::text as phase, delivery_note, provenance::text as provenance,
                        hint_requested_at, hint_text, hint_level::text as hint_level
                   from public.session_turns
                  where session_id = :s and user_id = :u
@@ -361,7 +364,7 @@ class SessionRepository(
                        question_audio_status::text as question_audio_status,
                        answer_transcript, answered_at,
                        intervention::text as intervention, intervention_note,
-                       phase::text as phase, delivery_note,
+                       phase::text as phase, delivery_note, provenance::text as provenance,
                        hint_requested_at, hint_text, hint_level::text as hint_level
                   from public.session_turns
                  where session_id = :s and user_id = :u
@@ -467,6 +470,7 @@ class SessionRepository(
             hintRequestedAt = rs.getTimestamp("hint_requested_at")?.toInstant(),
             hintText = rs.getString("hint_text"),
             hintLevel = rs.getString("hint_level"),
+            provenanceJson = rs.getString("provenance"),
         )
 }
 
@@ -507,6 +511,8 @@ data class TurnRow(
     val hintText: String? = null,
     /** How much that hint gave away, on the same scale as the interviewer's own help. */
     val hintLevel: String? = null,
+    /** Why this question was asked, as raw JSON. Null on turns recorded before provenance existed. */
+    val provenanceJson: String? = null,
 )
 
 data class ReadinessRow(

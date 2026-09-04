@@ -152,6 +152,74 @@
     },
     "assistedPerformance": {
       "type": "STRING"
+    },
+    "strengths": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "area": {
+            "type": "STRING",
+            "description": "The strength, named in a short phrase."
+          },
+          "evidenceQuote": {
+            "type": "STRING",
+            "description": "Verbatim from the candidate's transcript. Never paraphrased."
+          },
+          "turnIndex": {
+            "type": "INTEGER",
+            "nullable": true
+          },
+          "whyItMatters": {
+            "type": "STRING",
+            "description": "What this means for the role and level being interviewed for."
+          },
+          "whatToDo": {
+            "type": "STRING",
+            "description": "One concrete, specific action. Not generic advice."
+          }
+        },
+        "required": [
+          "area",
+          "evidenceQuote",
+          "whyItMatters",
+          "whatToDo"
+        ]
+      }
+    },
+    "developmentAreas": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "area": {
+            "type": "STRING",
+            "description": "The weakness, named in a short phrase."
+          },
+          "evidenceQuote": {
+            "type": "STRING",
+            "description": "Verbatim from the candidate's transcript. Never paraphrased."
+          },
+          "turnIndex": {
+            "type": "INTEGER",
+            "nullable": true
+          },
+          "whyItMatters": {
+            "type": "STRING",
+            "description": "What this means for the role and level being interviewed for."
+          },
+          "whatToDo": {
+            "type": "STRING",
+            "description": "One concrete, specific action. Not generic advice."
+          }
+        },
+        "required": [
+          "area",
+          "evidenceQuote",
+          "whyItMatters",
+          "whatToDo"
+        ]
+      }
     }
   },
   "required": [
@@ -163,6 +231,8 @@
     "practicePlan",
     "recommendedNextSession",
     "outcomeSimulation",
-    "assistedPerformance"
+    "assistedPerformance",
+    "strengths",
+    "developmentAreas"
   ]
 }

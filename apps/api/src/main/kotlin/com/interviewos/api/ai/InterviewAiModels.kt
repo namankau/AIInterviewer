@@ -131,6 +131,14 @@ data class ComposedRound(
 
 data class AskedQuestion(
     val text: String,
+    /**
+     * Why this question was asked, in the model's own words, captured now rather than
+     * reconstructed later. The engine sets the provenance *tier*; the model only
+     * describes the pattern it drew on, and is forbidden from citing sources.
+     */
+    val questionBasis: String? = null,
+    val questionProbes: String? = null,
+    val questionAskedBecause: String? = null,
 )
 
 /**
@@ -223,6 +231,16 @@ data class AnswerAssessment(
      */
     val deliveryObservation: String? = null,
     val nextQuestionText: String?,
+    /**
+     * Why the *next* question is being asked, captured as it is composed. Null on a
+     * concluding turn, which has no next question to justify.
+     *
+     * The engine sets the provenance tier; the model only describes the pattern it drew
+     * on and its reasoning about this candidate, and is forbidden from citing sources.
+     */
+    val questionBasis: String? = null,
+    val questionProbes: String? = null,
+    val questionAskedBecause: String? = null,
 )
 
 /**
@@ -319,7 +337,25 @@ data class ReportContent(
     val competencies: List<CompetencyScore>,
     val annotations: List<AnswerAnnotation>,
     val communication: CommunicationAnalysis,
+    /**
+     * What held up and what did not, each anchored to something the candidate said.
+     *
+     * Competency scores answer "how well"; these answer "at what, and what do I do about
+     * it" — which is the question a candidate actually leaves with. Both carry an
+     * evidence quote and both are dropped if that quote is not in the transcript.
+     */
+    val strengths: List<AssessedArea> = emptyList(),
+    val developmentAreas: List<AssessedArea> = emptyList(),
     val practicePlan: List<PracticePlanItem>,
     val recommendedNextSession: String,
     val outcomeSimulation: OutcomeSimulation,
+)
+
+/** One thing the candidate did well or badly, with the words that show it. */
+data class AssessedArea(
+    val area: String,
+    val evidenceQuote: String,
+    val turnIndex: Int? = null,
+    val whyItMatters: String,
+    val whatToDo: String,
 )

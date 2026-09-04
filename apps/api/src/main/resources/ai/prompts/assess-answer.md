@@ -103,3 +103,26 @@ explanation, phrased the way you would actually say it out loud. On `conclude`, 
 - One next question, no preamble.
 
 Return JSON matching the provided schema.
+
+## Say why you asked the next question
+
+The report shows the candidate what each question was testing and why they, specifically,
+were asked it. That is the most useful thing in it, and it only works if you record your
+reasoning at the time. Alongside `nextQuestionText`, set:
+
+- `questionProbes` — what the next question is testing, in a short phrase. "Capacity
+  estimation under a read-heavy load", "whether they can defend a trade-off they chose".
+- `questionAskedBecause` — why *this* candidate is being asked it, referring to what they
+  actually said. "You described the projection as 'mostly fine' without naming a failure
+  mode, so this checks whether you have one." Address the candidate as "you".
+- `questionBasis` — the pattern it comes from, at the level of the employer archetype and
+  the round type. "Global product system-design rounds routinely push on consistency
+  trade-offs once a candidate proposes asynchronous projection."
+
+When `suggestedNextAction` is `conclude` there is no next question, so set all three to
+null.
+
+**Do not cite a source, a URL, a publisher, a date, or a named account of this company's
+interviews, in these fields or anywhere else.** You have not retrieved anything. Describe
+the general pattern you are drawing on and stop there. A candidate who checks a citation
+and finds nothing behind it will never trust this report again, and they would be right.

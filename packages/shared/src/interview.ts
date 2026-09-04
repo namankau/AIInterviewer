@@ -186,6 +186,64 @@ export interface ReportPracticeItem {
   drill: string;
 }
 
+/**
+ * One thing the candidate did well or badly, with the words that show it.
+ *
+ * Competency scores say how well. These say at what, and what to do — which is what a
+ * candidate actually leaves with. Both are dropped server-side if the quote is not in
+ * the transcript.
+ */
+export interface ReportAssessedArea {
+  area: string;
+  evidenceQuote: string;
+  turnIndex: number | null;
+  whyItMatters: string;
+  whatToDo: string;
+}
+
+/** Where a real, retrievable document can be cited. Empty until there is a corpus. */
+export interface ProvenanceSource {
+  title: string;
+  publisher: string | null;
+  url: string | null;
+  year: number | null;
+}
+
+/**
+ * Why one question was asked, recorded when it was composed rather than reconstructed
+ * afterwards.
+ */
+export interface ReportQuestionSource {
+  turnIndex: number;
+  question: string;
+  phase: TurnPhase;
+  /** What it was testing. */
+  probes: string;
+  /** Why this candidate got it, referring to what they had already said. */
+  askedBecause: string;
+  /** The archetype-level pattern behind it. */
+  basis: string;
+  tier: "model_knowledge" | "published_source" | "community_reported";
+  /** What the tier means, in words shown to the candidate. */
+  tierDisclosure: string;
+  sources: ProvenanceSource[];
+}
+
+/**
+ * The provenance section of the report.
+ *
+ * `disclosure` is the load-bearing field and it is deliberately unflattering: today
+ * every question is `model_knowledge` with no sources, and saying so is the difference
+ * between a citation and a claim. Never render the entries without it.
+ */
+export interface ReportQuestionSources {
+  entries: ReportQuestionSource[];
+  employerRecognised: boolean;
+  archetypeLabel: string;
+  headline: string;
+  disclosure: string;
+}
+
 /** Always rendered as a simulation, never as a verdict. */
 export interface ReportOutcome {
   label: string;
@@ -225,6 +283,9 @@ export interface SessionReport {
   competencies: ReportCompetency[];
   annotations: ReportAnnotation[];
   communication: ReportCommunication;
+  strengths: ReportAssessedArea[];
+  developmentAreas: ReportAssessedArea[];
+  questionSources: ReportQuestionSources;
   practicePlan: ReportPracticeItem[];
   recommendedNextSession: string;
   outcomeSimulation: ReportOutcome;

@@ -76,3 +76,28 @@ knowing.
 
 The outcome simulation must reflect assisted performance, not the polished end state of
 each answer.
+
+## What held up, and what did not
+
+Competency scores say how well they did. `strengths` and `developmentAreas` say at what,
+and what to do about it — which is what the candidate actually leaves with.
+
+Give two to four of each. For every one:
+
+- `area` — name it in a short phrase. "Framing requirements before designing", not
+  "communication".
+- `evidenceQuote` — **verbatim from the transcript**, copied exactly, not paraphrased.
+  The same rule as competency scores: no quote, no entry. Set `turnIndex` to where it
+  came from.
+- `whyItMatters` — what this means specifically for this role at this level. A staff
+  candidate who cannot estimate load is a different problem from a junior who cannot.
+- `whatToDo` — one concrete action they could take this week. "Re-run the wallet design
+  and write the QPS estimate down before drawing anything" is useful. "Practise system
+  design" is not, and neither is "work on communication".
+
+Be honest about the weaknesses. A candidate who reads a soft report, walks into the real
+interview and fails learns that this product cannot be trusted. If the round exposed
+something serious, say it plainly and say what to do about it.
+
+Where a strength only appeared after a hint, say so in `whyItMatters` — it is still a
+strength, but a different one from doing it unaided.

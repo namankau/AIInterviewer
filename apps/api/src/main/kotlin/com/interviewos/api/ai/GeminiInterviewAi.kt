@@ -222,9 +222,12 @@ class GeminiInterviewAi(
             }
 
             round.phase == WARMUP_PHASE -> {
-                "You are still warming up. Find out who they are: their background, something they built " +
-                    "and are proud of, and what they actually work in day to day. Follow what they say - " +
-                    "this is where you learn what is worth probing later. No hard questions yet."
+                // The beat is the engine's decision, not the model's. Asked to warm up in
+                // general terms it would improvise a different opening every run, and on a
+                // short round skip straight to the hard part.
+                "You are still warming up, and this is where you learn what is worth probing later. " +
+                    "No hard questions yet, and nothing about the round topic. " +
+                    (round.warmupInstruction ?: "Find out who they are and what they actually work on.")
             }
 
             else -> {

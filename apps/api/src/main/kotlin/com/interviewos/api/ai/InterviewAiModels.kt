@@ -172,6 +172,12 @@ data class RoundContext(
     val minutesElapsed: Int,
     val minutesRemaining: Int,
     val durationMinutes: Int,
+    /**
+     * What the warm-up is asking about on this turn, already phrased as an instruction,
+     * or null once the round proper has started. The engine owns the opening sequence so
+     * that every candidate gets the same one.
+     */
+    val warmupInstruction: String?,
     /** Set out how the round will run before asking the first substantive question. */
     val briefTheCandidate: Boolean,
     /** The clock has run out. Close the interview off warmly on this turn. */

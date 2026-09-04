@@ -540,6 +540,7 @@ class InterviewService(
             minutesElapsed = minutesElapsed,
             minutesRemaining = minutesRemaining,
             durationMinutes = durationMinutes,
+            warmupInstruction = warmupFocus?.instruction,
             briefTheCandidate = briefTheCandidate,
             mustConclude = mustConclude,
         )

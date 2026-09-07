@@ -28,6 +28,31 @@ class SessionRepository(
             .query(Int::class.java)
             .single()
 
+    /**
+     * How much interviewing this product has actually done, across everyone.
+     *
+     * Counted from the rows rather than kept as a running total, for the same reason
+     * progress is derived rather than declared (CLAUDE.md): a counter that is incremented
+     * somewhere drifts from the thing it counts, and this one is shown to the public.
+     *
+     * Cheap enough to run per request at this size; if it stops being, it becomes a
+     * materialised view rather than a number someone remembers to bump.
+     */
+    fun usageCounts(): UsageCounts =
+        jdbcClient
+            .sql(
+                """
+                select
+                  (select count(*) from public.sessions where status = 'completed') as interviews,
+                  (select count(*) from public.session_reports)                     as reports
+                """.trimIndent(),
+            ).query { rs, _ ->
+                UsageCounts(
+                    interviewsCompleted = rs.getLong("interviews"),
+                    reportsGenerated = rs.getLong("reports"),
+                )
+            }.single()
+
     fun countPaidSessionCredits(userId: UUID): Int =
         jdbcClient
             .sql("select count(*) from public.payments where user_id = :u and status = 'paid'")

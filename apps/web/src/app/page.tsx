@@ -1,5 +1,8 @@
+import type { UsageCounts } from "@acemyinterview/shared";
 import type { Metadata } from "next";
 import Link from "next/link";
+
+import { fetchUsage } from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "AceMyInterview — mock interviews that push back",
@@ -19,12 +22,18 @@ export const metadata: Metadata = {
  * Server-rendered: organic search on "<employer> interview" is a primary acquisition
  * channel (PRD 11).
  */
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Server-rendered along with everything else here: organic search is a primary channel
+  // (PRD 11), and a number that appears only after hydration is a number crawlers and
+  // slow connections never see. Null when the API is unreachable — the page does not
+  // depend on it.
+  const usage = await fetchUsage();
+
   return (
     <div className="min-h-dvh">
       <SiteHeader />
       <main>
-        <Hero />
+        <Hero usage={usage} />
         <TranscriptSample />
         <Coverage />
         <ReportContents />
@@ -56,7 +65,7 @@ function SiteHeader() {
   );
 }
 
-function Hero() {
+function Hero({ usage }: { usage: UsageCounts | null }) {
   return (
     <section className="bg-grid border-b border-line">
       <div className="mx-auto grid max-w-6xl gap-12 px-6 py-20 lg:grid-cols-[1.15fr_1fr] lg:gap-16 lg:py-28">
@@ -81,11 +90,32 @@ function Hero() {
               Every round free while we build. Full report included, no card.
             </span>
           </div>
+
+          <UsageLine usage={usage} />
         </div>
 
         <SpecPanel />
       </div>
     </section>
+  );
+}
+
+/**
+ * What the product has actually done.
+ *
+ * Shown only once there is something worth showing. "3 interviews completed" is worse
+ * than no number at all — a counter is only social proof above a threshold, and below it
+ * an honest silence beats a small brag.
+ */
+function UsageLine({ usage }: { usage: UsageCounts | null }) {
+  const MEANINGFUL = 25;
+  if (!usage || usage.interviewsCompleted < MEANINGFUL) return null;
+
+  return (
+    <p className="font-mono text-caption text-ink-subtle">
+      {usage.interviewsCompleted.toLocaleString()} interviews sat ·{" "}
+      {usage.reportsGenerated.toLocaleString()} reports written
+    </p>
   );
 }
 

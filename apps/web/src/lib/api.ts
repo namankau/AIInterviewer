@@ -11,6 +11,7 @@ import type {
   StartSessionRequest,
   SubmitAnswerResponse,
   TurnView,
+  UsageCounts,
 } from "@acemyinterview/shared";
 
 import { env } from "@/lib/env";
@@ -92,6 +93,27 @@ async function apiSend<T>(
 /** `GET /api/v1/me` — the same endpoint the mobile apps will call. */
 export function fetchMe(options: ApiGetOptions): Promise<MeResponse> {
   return apiGet<MeResponse>("/api/v1/me", options);
+}
+
+/**
+ * The public usage counters. No token: this is two aggregate integers, read by the
+ * landing page before anyone has signed in.
+ *
+ * Returns null rather than throwing. A counter is decoration; a landing page that fails
+ * to render because a statistic did not load would be a poor trade.
+ */
+export async function fetchUsage(signal?: AbortSignal): Promise<UsageCounts | null> {
+  try {
+    const response = await fetch(`${env.apiBaseUrl}/api/v1/usage`, {
+      headers: { Accept: "application/json" },
+      signal,
+      next: { revalidate: 300 },
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as UsageCounts;
+  } catch {
+    return null;
+  }
 }
 
 export function fetchEntitlement(options: ApiGetOptions): Promise<EntitlementView> {

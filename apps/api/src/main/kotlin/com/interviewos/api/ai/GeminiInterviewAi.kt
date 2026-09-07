@@ -4,6 +4,7 @@ import com.interviewos.api.common.ContentTypes
 import org.springframework.core.io.ClassPathResource
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import tools.jackson.databind.JsonNode
@@ -159,6 +160,19 @@ class GeminiInterviewAi(
 
         val (node, usage) = generateJson(properties.reasoningModel, listOf(textPart(prompt)), schema("offer-hint"), Thinking.IN_THE_ROOM)
         return AiResult(objectMapper.treeToValue(node, OfferedHint::class.java), usage)
+    }
+
+    override fun extractQuestions(source: SourceDocument): AiResult<ExtractedQuestions> {
+        val prompt =
+            loadPrompt("extract-questions")
+                .replace("{{title}}", source.title ?: "(not given)")
+                .replace("{{publisher}}", source.publisher ?: "(not given)")
+                .replace("{{company}}", source.companyName ?: "(not given)")
+                .replace("{{url}}", source.url ?: "(uploaded document)")
+                .replace("{{content}}", source.content)
+
+        val (node, usage) = generateJson(properties.reasoningModel, listOf(textPart(prompt)), schema("extract-questions"))
+        return AiResult(objectMapper.treeToValue(node, ExtractedQuestions::class.java), usage)
     }
 
     override fun composeReport(
@@ -323,6 +337,22 @@ class GeminiInterviewAi(
                 .retrieve()
                 .body(JsonNode::class.java)
                 ?: throw AiUnavailableException("Gemini returned no body for $model.")
+        } catch (ex: HttpClientErrorException.TooManyRequests) {
+            // Worth telling apart from every other failure. A 429 here is usually the
+            // project's spend cap rather than request rate, and the two need completely
+            // different actions from whoever reads the log: one is "wait", the other is
+            // "go and raise the cap". Being told only that the model "failed" sends them
+            // looking for a bug that is not there.
+            val quota = ex.responseBodyAsString.contains("spending cap", ignoreCase = true)
+            throw AiUnavailableException(
+                if (quota) {
+                    "Gemini refused the request: the project has exceeded its spend cap. " +
+                        "Raise it at https://ai.studio/spend — this is billing, not a fault in the request."
+                } else {
+                    "Gemini is rate-limiting requests to $model."
+                },
+                ex,
+            )
         } catch (ex: RestClientException) {
             throw AiUnavailableException("Gemini request to $model failed.", ex)
         }

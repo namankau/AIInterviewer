@@ -362,3 +362,38 @@ data class AssessedArea(
     val whyItMatters: String,
     val whatToDo: String,
 )
+
+// ---------------------------------------------------------------------------
+// The curated source library (PRD 03, 04)
+// ---------------------------------------------------------------------------
+
+/** One document from the source library, as the extractor needs to see it. */
+data class SourceDocument(
+    val title: String?,
+    val publisher: String?,
+    val companyName: String?,
+    val url: String?,
+    /** Plain text. HTML is stripped before it gets here. */
+    val content: String,
+)
+
+/**
+ * What was read out of a source.
+ *
+ * [askedOn] is null far more often than not, and that is correct: the date is shown to
+ * candidates as evidence of how current a question is, so it is only ever taken from
+ * something the document actually stated.
+ */
+data class ExtractedQuestion(
+    val questionText: String,
+    val companyName: String? = null,
+    val roundType: String? = null,
+    val seniority: String? = null,
+    val roleFamily: String? = null,
+    val askedOn: java.time.LocalDate? = null,
+    val notes: String? = null,
+)
+
+data class ExtractedQuestions(
+    val questions: List<ExtractedQuestion> = emptyList(),
+)

@@ -91,6 +91,24 @@ data class QuestionProvenance(
                 sources = emptyList(),
             )
         }
+
+        /**
+         * Provenance for a question asked against real documents from the source library.
+         *
+         * The tier is still the engine's decision, not the model's — but here it can
+         * honestly be [ProvenanceTier.PUBLISHED_SOURCE], because [sources] holds documents
+         * somebody added, that were actually fetched, and that the candidate can open.
+         */
+        fun fromSources(
+            basis: String?,
+            probes: String?,
+            askedBecause: String?,
+            sources: List<ProvenanceSource>,
+        ): QuestionProvenance? {
+            if (sources.isEmpty()) return fromModel(basis, probes, askedBecause)
+            val base = fromModel(basis, probes, askedBecause) ?: return null
+            return base.copy(tier = ProvenanceTier.PUBLISHED_SOURCE, sources = sources)
+        }
     }
 }
 

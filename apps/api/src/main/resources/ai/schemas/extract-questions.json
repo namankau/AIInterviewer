@@ -1,0 +1,57 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "questions": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "questionText": {
+            "type": "STRING"
+          },
+          "companyName": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "roundType": {
+            "type": "STRING",
+            "nullable": true,
+            "enum": [
+              "technical_fundamentals",
+              "project_deep_dive",
+              "coding_practical",
+              "system_design",
+              "case_client_scenario",
+              "techno_managerial",
+              "behavioural_competency",
+              "hr_fit_closing"
+            ]
+          },
+          "seniority": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "roleFamily": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "askedOn": {
+            "type": "STRING",
+            "nullable": true,
+            "description": "YYYY-MM-DD, only if the document states it"
+          },
+          "notes": {
+            "type": "STRING",
+            "nullable": true
+          }
+        },
+        "required": [
+          "questionText"
+        ]
+      }
+    }
+  },
+  "required": [
+    "questions"
+  ]
+}

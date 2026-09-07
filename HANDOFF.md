@@ -1,280 +1,183 @@
-# Handoff — 3 September 2026
+# Handoff — 7 September 2026
+
+## Read this first
+
+**The Gemini project has hit its monthly spend cap.** Every model call now returns 429
+`RESOURCE_EXHAUSTED`. Raise it at https://ai.studio/spend — nothing else is wrong, and
+nothing in the code needs changing. Tonight's benchmarking and live runs used it up.
+
+Until it is raised: interviews will fail to start, reports will not compose, and the
+source library will not extract. The failure paths all behave correctly (sessions are
+marked `failed` rather than faked), and the 429 now says explicitly that it is billing
+rather than a bug — that was worth fixing when I hit it.
 
 ## Task
 
-Close the experience gap with **Layrs** (layrs.me), the competitor you pointed at.
-Research notes: `docs/competitor-layrs.md`. Plan: `tasks/task-003.md`.
+Six things you asked for. Four are merged into `develop`, one is a PR waiting on you, and
+two are not built.
 
-## The short version
+## What is merged
 
-Four branches, each verified and merged into `develop` separately, all green on CI.
-Then the whole thing driven through a **real Chromium** as a real signed-in candidate,
-against live Gemini and the hosted database.
+### The room no longer feels like dictating into a void
 
-**A turn went from ~24 seconds to 7.0.** That was the number the last handoff called the
-single biggest quality problem, and it is now the difference between a form that talks
-and something that behaves like a conversation.
+A real interviewer makes noises while you talk. Four short clips ("mm-hm", "right",
+"okay", "mm") now drop into pauses, and one longer one ("okay, let me think about that")
+plays the instant you stop, while the model is still reading your answer. That last one
+does the most work: it turns a dead gap into someone who heard you.
 
-## What Layrs actually is, and what I took
+Clips are rendered ahead of time and committed (`scripts/make-backchannel.mjs`). A
+backchannel that arrives after a round trip to a model is not a backchannel.
 
-A **voice-first AI tutor for engineers** — Bangalore, beta, ₹1,499/mo — that teaches
-system design and DSA through spoken lessons with a whiteboard-watching tutor. Mock
-interviews are a recent addition to that tutor, not the product. Full notes in
-`docs/competitor-layrs.md`; the four things worth copying were:
+The silence detector stops trusting its meter while a clip plays. Echo cancellation
+*should* keep our own voice out of the microphone, but "should" is not a basis for
+deciding that somebody has stopped speaking.
 
-1. Setup is one sentence, not a form.
-2. The room is real-time. Ours cost 24s a turn.
-3. Entering a round is gated on a working microphone.
-4. Help can be asked for, and it counts against you.
+### Text now waits for the voice
 
-All four are built. Two more of theirs are flagged for you below rather than built.
+The question is revealed in step with the audio reading it, paced by position in the clip
+since Gemini gives no word timings.
 
-**What I deliberately did not take:** their accent is a cyan→blue→violet gradient.
-`CLAUDE.md` names purple-to-blue gradients as a tell, so I took their warm paper ground,
-their hairlines and their serif display face, and kept our single blue accent.
+**The interesting part is what did not work.** I first gave the voice a 6-second head
+start. That made things worse, and the measurement is why:
 
-## What I built
+| | before | now |
+|---|---|---|
+| answer → next question, in writing | ~24s originally, ~7s last week | **3.6s** |
+| answer → voice ready | 17.7s | **14s** |
 
-### 003 — the interviewer's voice comes off the critical path
+Speech latency is the model's, not ours — about 5s for a sentence and 14s for a
+paragraph. I split questions into parallel per-sentence calls (`SpeechChunks`), which took
+17.7s to 14s and no further. So a short window would have put text on screen at 6s and had
+the voice read it out at 14s: exactly the mismatch you complained about. The room now
+waits for the voice and covers the wait honestly, falling back to written text only when
+speech genuinely failed.
 
-- `apps/api/.../interview/QuestionSpeech.kt` — speech is synthesised *after* the
-  transaction commits, on a named background executor
-  (`config/BackgroundWorkConfig.kt`). The question text returns the moment the
-  assessment produces it.
-- `session_turns.question_audio_status` (`20260902100000_async_question_speech.sql`) —
-  `pending` / `ready` / `unavailable`. A null path alone could not tell "still coming"
-  from "not coming", and a turn stuck on `pending` would have the room polling forever.
-- `GET /sessions/{id}/turns/{index}`, and `apps/web/src/lib/use-question-audio.ts`,
-  which collects the voice while the candidate is already reading.
-- The answer's audio and video now upload **alongside** the assessment rather than ahead
-  of it, so the candidate waits for the longer of the two rather than their sum.
+**This is the biggest thing still wrong with the room, and it is a vendor limit.** Getting
+the voice under ~5s needs either a faster TTS or the realtime path (`CLAUDE.md` lists
+LiveKit/Pipecat as undecided). That is a spend decision, so it is yours.
 
-**A silence bug nothing would have caught:** autoplay with sound is refused until the
-document has been interacted with, and arriving in the room is a navigation, not a
-gesture. The refusal was being swallowed, so the interviewer never spoke. It now
-surfaces a control and says why — and the device check below is the gesture that fixes
-it properly.
+### The interviewer stopped paying for thinking it was not using
 
-### 004 — a room you enter, that listens, and that helps if asked
+Measured against live Gemini, three runs each, on a real assessment:
 
-- `apps/web/src/components/device-check.tsx` — the antechamber. Device state, a level
-  meter that proves the microphone is live, what the round will do, then a way in. A
-  blocked mic closes the door rather than burning the one free interview.
-- `apps/web/src/lib/silence.ts` — the answer ends itself. Conservative on purpose:
-  nothing starts the clock until they have actually spoken, a pause for thought is not
-  an ending, and the button stays for anyone who wants it.
-- **Help you can ask for.** `POST /sessions/{id}/turns/{i}/hint`, a new prompt
-  (`ai/prompts/offer-hint.md`) that gives the smallest useful push and then judges how
-  much it gave away. One per question. The room says what asking costs *before* they
-  ask.
-- `hint_requested_at` / `hint_text` / `hint_level` are separate from `intervention`
-  (`20260903020000_asked_for_hint.sql`) — that column holds what the interviewer
-  supplied *in response to* an answer, and writing both to one place would let the
-  assessment of an answer overwrite the hint that shaped it. A turn is credited at
-  whichever help was more generous.
+| thinking budget | latency | still challenged a weak answer |
+|---|---|---|
+| unbounded | 7.1s | yes |
+| 256 | 3.0s | yes |
+| 0 | 1.8s | yes |
 
-### 005 — set the round up in one sentence
+Thinking was not buying quality. Every budget pushed back on *"it was mostly fine, nobody
+complained much"*, and the unbounded one was not the sharpest of them. So the calls you
+sit in silence waiting for — the question, the follow-up, a hint — no longer pay for it.
+The report keeps unbounded thinking: nobody is waiting on it, and it is what people came
+for.
 
-- `ai/prompts/compose-round.md` + `POST /api/v1/round-drafts`. "Infosys MR round next
-  Tuesday, 5 years Java backend, and I always fumble the escalation questions" becomes
-  company, role, level, round type, length and language.
-- **The draft is always shown back before anything starts**, with everything the model
-  filled in listed where the candidate can see it. They get one free round; a setup that
-  quietly guessed wrong would waste it.
-- The employer is resolved to an archetype **server-side, not by the model**. A model
-  that both guessed the company and described its process would be inventing exactly
-  what we must never invent — so it reads the sentence and nothing else.
-- Degrades to the plain form when the composer fails, and there is a way past it for
-  anyone who would rather just type.
+I also dropped the per-turn `summary`, `strengths` and `gaps` fields, which were written
+to the database on every turn and read by nothing.
 
-### 006 — an app shell, a catalogue, and a page set on paper
+### Dev indicators are off
 
-- Warm ground (`#fbf8f4`), hairlines at 8% rather than card borders, and headings set in
-  a **serif** against the sans interface. That face contrast is most of what separates an
-  editorial page from a dashboard.
-- `components/app-shell.tsx` — a left rail. Not applied to the interview room: a nav
-  beside a live interview is an invitation to leave it.
-- **`/rounds`** — the catalogue, server-rendered for organic search (PRD 11). Eight
-  rounds, each naming real employers and saying what an interviewer is *listening for*.
-  This is the page that makes the coverage argument: TCS NQT, Deloitte case rounds,
-  Booking.com competency rounds and the HR conversation about notice and relocation, none
-  of which Layrs touches.
+The "Static Route / prerendered at build time" card was Next's dev overlay. It only ever
+rendered in development, but development is where you look at the product, and a
+floating framework badge over a live interview reads as somebody's half-finished project.
 
-### The browser harness — `scripts/e2e/`
+### Counting
 
-Plus `scripts/test-user.mjs`, which mints a confirmed password account through the admin
-API so the app can be driven without a Google OAuth round trip. Sign-in is still
-Google-only for real candidates.
+`GET /api/v1/usage` — two aggregate integers, unauthenticated, rendered server-side into
+the landing page. Counted from the rows on every request rather than incremented
+somewhere, because a running total drifts from the thing it counts and this one is shown
+to strangers.
 
-## Verified, in a real browser
+The line only renders above 25 interviews. "3 interviews completed" is worse than no
+number at all.
 
-`scripts/e2e/interview.mjs` against merged `develop`, live Gemini, hosted database.
-Chromium was fed a real spoken answer (rendered by Gemini TTS) as its microphone, so the
-transcript came from actual speech.
+## What is waiting on you: PR #3, the source library
 
-| | |
-|---|---|
-| Composer read "Infosys project deep-dive next week. 6 years, payments and ledger systems." | Infosys · Senior Software Engineer · project deep-dive |
-| Composed in | 5.5 s |
-| Session created in | 5.2 s |
-| Device check, camera preview under consent | pass |
-| Question audio: signed URL, **decoded by the browser** | 21.0 s of speech |
-| Hint returned, and priced to the candidate | "recorded as needed refocusing" |
-| Answer ended on its own silence | 3.6 s after speech stopped |
-| **Turn latency, answer submitted → next question** | **7.0 s** (was ~24 s) |
+<https://github.com/namankau/AIInterviewer/pull/3>
 
-The interviewer's follow-up, unprompted, from the candidate's own words: *"That
-settlement pipeline sounds really interesting. Reconciling 400,000 transactions daily
-across three different processors is no small feat…"*
+**A PR rather than a merge because it introduces an admin role**, and `CLAUDE.md` requires
+that for anything touching permissions.
 
-The composer was also exercised on four sentences against live Gemini, including
-Hinglish (*"kal Zoho ka interview hai, DSA round, thoda nervous hoon"* → Zoho, coding,
-`hindi_english`) and an employer we do not know (Sagitec Solutions → correctly
-`inferred`, with the grounding note saying so).
+Somewhere to put documents and links about how named employers actually interview,
+re-read every 7 days, with extracted questions carrying the source they came from. A round
+for an employer we hold sources on is grounded in them, and its report cites documents the
+candidate can open. This is the other half of the provenance work from the last run — the
+`published_source` tier now has a way to be earned.
+
+**The part to review carefully is that it fetches URLs.** `CLAUDE.md` puts bulk scraping
+out of scope, so the line is enforced in code rather than promised:
+
+- Only URLs somebody explicitly added are fetched. Nothing is discovered.
+- **Links on a fetched page are never followed.** That one rule is the whole difference
+  between reading a document and crawling a site.
+- robots.txt is honoured per fetch, and a disallow is permanent.
+- A real User-Agent that says who we are, one request at a time.
+- `RobotsRules` errs towards *not* fetching. Nine tests cover the awkward cases.
+
+Set `ADMIN_EMAILS` to enable it. Unset denies everyone, which is the right default for a
+list that gates writes.
+
+## What I did NOT build
+
+Two of your six, and I would rather say so than half-do them:
+
+1. **Sign in with LinkedIn.** Still Google-only. Supabase supports `linkedin_oidc`; it
+   needs an app registered on LinkedIn and the client ID/secret in the Supabase dashboard,
+   which is yours to do — then the button is a small change.
+2. **Profile: resume, LinkedIn URL, photo, role, skills.** Not started. The `profiles`,
+   `resumes` and `skills` tables have existed since task 001 and are still empty of
+   behaviour.
+
+**Resume upload is the one I would do next, and it is not close.** Without it the project
+deep-dive round is generic, which is the difference you are selling. It has been the top
+item in two consecutive handoffs now.
 
 ## Assumptions I made
 
-- **A "loop" is your call, not mine** — see below. Everything I built stays inside the
-  existing one-session-one-round model.
-- **Hints are text, not speech.** Reusing the async speech machinery would have meant
-  another column, another poll and another endpoint, and a hint is something you re-read.
-  Worth revisiting.
-- **One hint per question**, idempotent — asking twice returns the same hint rather than
-  buying a second one. Otherwise a candidate could farm hints.
-- **A hint that cannot be produced does not fail the session**, unlike an assessment.
-  Nothing is being scored, so the round carries on.
-- **Silence ends an answer after 3.5 s, and never in its first 2 s.** Tuned by hand
-  against one voice. Real candidates pause longer under pressure than a rendered answer
-  does — see below.
-- **System serif for display type**, not a licensed face. A `next/font/google` fetch is a
-  build-time network dependency and a red-CI risk, and choosing a real face is a design
-  decision that belongs to you.
-- The composer defaults an unrecognised round type to `project_deep_dive`.
+- **Backchannel clips are committed as WAV** rather than synthesised per session. They
+  never change, there are seven, and they total a few tens of kilobytes.
+- **Company matching in the source library is exact, case aside.** Google's questions are
+  not evidence about Google Cloud India.
+- **Admin is an email allow-list in config**, not a role column. Write access to the
+  library changes what the product asserts about real companies, so it should not be
+  grantable through a bug in a profile endpoint.
+- **A 6-second voice grace became 25 seconds** once I had measured the speech latency. See
+  above — the short window was actively worse.
 
-## What I could NOT verify
+## What I could not verify
 
-- **Whether 7 seconds feels right.** It is three times better; it is not real-time.
-  Layrs sells continuous voice. Judging the gap is yours.
-- **Whether the silence threshold is right for a nervous human.** My test voice pauses
-  like a synthesiser. A real candidate mid-thought may well get cut off at 3.5 s, and
-  that would be a bad experience in exactly the moment that matters. **Watch this
-  first** when you use it.
-- **Whether the interviewer sounds like a person.** It said "Hi, good morning. My name is
-  Amit, and I'm a Technical Lead here" and the follow-ups were specific and sharp — but
-  that is my read, and `CLAUDE.md` says persona realism is yours.
-- **Visual design direction.** Screenshots are in the run, but the serif/paper decision
-  is a proposal, not a settled choice.
-- **Google sign-in through the harness** — it injects a session cookie instead.
-- **A whole round and its report.** The harness runs one turn. The report path is
-  unchanged from the last run but was not re-exercised end to end tonight.
-- **Anything about Layrs behind their login.** I read their public pages and the client
-  bundles behind their authenticated routes. I did not create an account or sign in.
+- **Source extraction against a live document.** Spend cap. The fetch, the robots check
+  and the admin gate were all verified; only the model call was not.
+- **The backchannel in a real browser.** The clips play through `Audio()` and the silence
+  detector pauses while they do, but I have not sat in a round and listened. The
+  browser-only failure mode to watch for is our own voice leaking into the microphone
+  despite echo cancellation — if answers stop ending themselves, that is why.
+- **Whether the 14-second wait for the voice actually feels acceptable.** I think it is
+  better than text-then-voice. You should judge it.
 
 ## Verification status
 
-| Check | 003 | 004 | 005 | 006 | 008 |
-|---|---|---|---|---|---|
-| `npm run typecheck / lint / test / build` | pass | pass | pass | pass | pass |
-| `./gradlew ktlintCheck test build` | pass | pass | pass | pass | pass |
-| CI run, both jobs | 33712963020 | 33715475254 | 33717058869 | 33734883939 | 33739562619 |
-
-Web tests 40, API tests 48. Every merge waited on `gh run watch`.
+| Check | Result |
+|---|---|
+| `npm run typecheck / lint / test / build` | pass — 47 tests |
+| `./gradlew ktlintCheck test build` | pass |
+| CI | green: 34148154481, 34148411886, 34149636393 |
+| Live turn latency, measured | 3.6s to question text, 14s to voice |
 
 ## Merge status
 
-All four merged into `develop`, each after CI was green on both jobs:
-
-- `feat/003-turn-latency` → `1a17495`
-- `feat/004-the-room` → `231bf42`
-- `feat/005-the-composer` → `c600916`
-- `feat/006-shell-and-catalogue` → `dc6ff32`
-- `feat/008-no-payment-gate` — every round free (added after the run; see above)
-
-`chore/007-browser-harness` (this file plus `scripts/e2e/`) is pushed and merged on the
-same gate. Two migrations were applied to the hosted database with `npm run db:push`:
-`20260902100000_async_question_speech` and `20260903020000_asked_for_hint`. Both are
-additive.
-
-Nothing was pushed to `main`.
-
-## Added after the run: no free-versus-paid gate
-
-You asked for every round to be free until there is a real paid system to gate behind.
-Done, and verified: a candidate with **two completed rounds started a third** — 201, not
-402.
-
-It is a config property rather than deleted code. `interviewos.entitlement.free-rounds`
-is absent, which means unlimited; `EntitlementProperties` defaults it to null and
-`application.yml` carries the commented line that brings it back. `Entitlement.kt` still
-does the arithmetic and its tests still cover both sides, so restoring the gate is one
-line of YAML, not a rewrite.
-
-Two things worth knowing:
-
-- **The one-at-a-time rule stays.** It is not commercial — two live sessions would race
-  each other's turns — so `session_in_progress` still blocks.
-- **`EntitlementView.remainingFree` is now `number | null`,** where null means there is
-  no limit. Reading null as "none left" would have put a paywall notice on a product
-  with no paywall, so the dashboard branches on it explicitly.
-
-Copy that promised a gate is gone: the landing page now says *"Every round is free right
-now… When there is something worth charging for, we will say so before we charge for
-it."* And **`CLAUDE.md` is updated** — its settled-decisions list said "one complete mock
-interview, then paid", which the next autonomous run would have read as a bug to fix.
-
-## The two things I did not build, because they are yours to decide
-
-**1. Loops — their best idea, and our biggest gap.**
-
-A loop is a whole onsite: several rounds against one company at one level, with a real
-onsite date, a days-left countdown, readiness tracked against it, and a **committee
-debrief that reads every round together**. It is how interviews actually happen, and a
-per-round product will always feel like a fragment beside it.
-
-It collides head-on with a settled rule. `CLAUDE.md`: *"Interview context is chosen per
-session, not stored as a persistent target list… no setup step that asks them to declare
-targets in advance. Do not build a 'my targets' entity."* A loop is a persistent entity
-with a company and a date on it.
-
-There is a reading that fits — a loop is a *plan over sessions*, created ad hoc, each
-round still scoped to one company and one role, progress still derived — but that is a
-reinterpretation of an explicit rule, it is easily 800+ lines, and it changes the
-information architecture. **I stopped rather than decide it in an unattended run.** If
-you want it, the committee debrief is the part worth building first: it is the only
-thing here that no competitor's per-round feedback can match.
-
-**2. Showing what we checked.**
-
-Layrs runs about a minute of live research on a company's real loop and **shows the
-source URLs**. When it fails: *"We only draft loops we can verify, so we won't hand you a
-made-up one"*, with an opt-in to a generic FAANG-style loop.
-
-We already refuse to fabricate — `ArchetypeResolver` reports `recognised` or `inferred`
-and the note says which. What we do not do is *show our working*. Their version is more
-convincing than ours despite ours being no less honest. Closing that means retrieval with
-provenance, which is PRD §03/§04 territory and a real piece of work.
+- `fix/011-room-presence` → merged into `develop` (`6b6a998`)
+- `feat/012-usage-counters` → merged into `develop` (`93fde95`)
+- `feat/013-source-library` → **PR #3**, open, CI green
 
 ## Suggested next task
 
-**Resume upload and parsing.** It is still the largest hole. The project deep-dive round
-is our strongest differentiator and it currently runs on company, role and round type
-alone — the interviewer asks about "your recent work" instead of about the settlement
-pipeline on page one of the CV. The Gemini seam and the prompt already exist; there is no
-endpoint and no UI.
-
-Ahead of that, one thing from the last handoff is **still not fixed**: deleting a user
-removes their rows but leaves their audio and video in storage.
-`ObjectStorage.deleteByPrefix` exists and nothing calls it. `CLAUDE.md` requires deletion
-to actually delete. It is small, and it has now survived two runs.
+Resume upload and parsing. Third time of asking.
 
 ## Open questions for you
 
-1. **Loops: yes, no, or a narrower version?** This is the one that changes the roadmap.
-2. **Is 3.5 s of silence too short to end an answer?** My only test voice was synthetic.
-3. **Nothing limits model spend now that rounds are unlimited.** A round is roughly two
-   Gemini calls per turn plus one for the report, and anyone signed in can run as many as
-   they like. That is the right trade while you are gathering feedback, but it is worth a
-   ceiling — per day, or per account — before the link goes anywhere public.
-4. **When pricing does arrive, their "Interview Sprint" is the shape to beat** — ₹3,999
-   for 3 months, prepaid, no auto-renew, built around a 6–10 week job hunt. That matches
-   how candidates actually buy far better than a subscription does.
+1. **Raise the Gemini spend cap**, or the product is down.
+2. **Is 14 seconds of "let me think about that" acceptable?** If not, the realtime voice
+   vendor decision comes forward, and that commits real spend.
+3. **Nothing caps model spend per account.** Rounds are unlimited and free. That is right
+   for now, but it wants a ceiling before the link goes anywhere public.

@@ -4,21 +4,6 @@
     "transcript": {
       "type": "STRING"
     },
-    "summary": {
-      "type": "STRING"
-    },
-    "strengths": {
-      "type": "ARRAY",
-      "items": {
-        "type": "STRING"
-      }
-    },
-    "gaps": {
-      "type": "ARRAY",
-      "items": {
-        "type": "STRING"
-      }
-    },
     "suggestedNextAction": {
       "type": "STRING",
       "enum": [
@@ -73,9 +58,6 @@
   },
   "required": [
     "transcript",
-    "summary",
-    "strengths",
-    "gaps",
     "suggestedNextAction",
     "intervention"
   ]

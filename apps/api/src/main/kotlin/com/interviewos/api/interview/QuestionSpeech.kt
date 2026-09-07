@@ -2,6 +2,9 @@ package com.interviewos.api.interview
 
 import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.InterviewAi
+import com.interviewos.api.ai.SpeechChunks
+import com.interviewos.api.ai.SpokenAudio
+import com.interviewos.api.ai.WavAudio
 import com.interviewos.api.storage.ObjectStorage
 import com.interviewos.api.storage.ObjectStorageException
 import com.interviewos.api.storage.StorageProperties
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 
 /** Whether a question's voice is still rendering, ready to play, or never coming. */
 enum class SpeechStatus(
@@ -76,9 +80,9 @@ class QuestionSpeech(
     private fun renderNow(request: SpeechRequest) {
         val path =
             try {
-                val spoken = interviewAi.synthesizeSpeech(request.text, request.language)
+                val spoken = speak(request.text, request.language)
                 val objectPath = "${request.userId}/${request.sessionId}/turn-${request.turnIndex}-question.wav"
-                storage.upload(storageProperties.mediaBucket, objectPath, spoken.value.audio, spoken.value.mimeType)
+                storage.upload(storageProperties.mediaBucket, objectPath, spoken.audio, spoken.mimeType)
                 objectPath
             } catch (e: AiUnavailableException) {
                 log.warn("Speech unavailable for session {} turn {}; the turn runs as text", request.sessionId, request.turnIndex, e)
@@ -102,6 +106,41 @@ class QuestionSpeech(
             // unaffected — the candidate still has the question in writing.
             log.error("Could not record speech state for session {} turn {}", request.sessionId, request.turnIndex, e)
         }
+    }
+
+    /**
+     * The question, spoken.
+     *
+     * Gemini's speech latency scales with the length of the text — 4.7s for a sentence
+     * against 14.5s for a paragraph, measured against the live API. A long question is
+     * therefore synthesised a sentence at a time, in parallel, and the clips are joined
+     * before anything is stored: the candidate waits for the slowest sentence rather than
+     * for their sum, and the room still gets one file.
+     *
+     * A single chunk takes the direct path, so the common case adds nothing.
+     */
+    private fun speak(
+        text: String,
+        language: String,
+    ): SpokenAudio {
+        val chunks = SpeechChunks.split(text)
+        if (chunks.size == 1) return interviewAi.synthesizeSpeech(text, language).value
+
+        val spoken =
+            chunks
+                .map { chunk ->
+                    CompletableFuture.supplyAsync({ interviewAi.synthesizeSpeech(chunk, language).value }, executor)
+                }.map { it.join() }
+
+        // Any chunk arriving as something other than WAV means the assumption behind
+        // joining them no longer holds, so the whole question is spoken in one call
+        // instead of stitching containers that may not match.
+        if (spoken.any { it.mimeType != "audio/wav" }) {
+            log.warn("Speech chunks came back as {}; falling back to one call", spoken.map { it.mimeType }.distinct())
+            return interviewAi.synthesizeSpeech(text, language).value
+        }
+
+        return SpokenAudio(WavAudio.join(spoken.map { it.audio }), "audio/wav")
     }
 }
 

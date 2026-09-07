@@ -12,10 +12,35 @@ import {
   requestHint,
   submitAnswer,
 } from "@/lib/api";
-import { initialSilenceState, observe, shouldEnd } from "@/lib/silence";
+import { initialSilenceState, observe, shouldEnd, SPEECH_LEVEL } from "@/lib/silence";
+import { revealedText } from "@/lib/spoken-text";
 import { useAccessToken } from "@/lib/use-access-token";
+import { useBackchannel } from "@/lib/use-backchannel";
 import { useInterviewCapture } from "@/lib/use-interview-capture";
 import { useQuestionAudio } from "@/lib/use-question-audio";
+
+/**
+ * How long the voice gets to arrive before the question goes up in writing anyway.
+ *
+ * Deliberately long, and that is the interesting decision here. Measured end to end
+ * against live Gemini, the next question's *text* is ready about 4s after an answer and
+ * its *voice* about 14s. Speech latency is the model's, not ours: it is roughly 5s for a
+ * sentence and 14s for a paragraph, and splitting a question into parallel calls (see
+ * SpeechChunks) took it from 17.7s to 14s and no further.
+ *
+ * A short window therefore did the opposite of what it was for. The text would go up at
+ * 6s, the voice would arrive at 14s and read out something already on screen — exactly
+ * the mismatch this was meant to fix.
+ *
+ * So the room waits, and covers the wait honestly: the interviewer says "let me think
+ * about that" the moment the candidate stops, and the room shows it is thinking. A pause
+ * before a question, with an audible acknowledgement in it, is what a real interviewer
+ * does. Text arriving ten seconds before the voice is not.
+ *
+ * This falls back rather than hanging: speech that genuinely failed comes back
+ * `unavailable` and the question is shown immediately.
+ */
+const VOICE_GRACE_MS = 25_000;
 
 type Phase =
   | "loading"
@@ -60,6 +85,48 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   const withVideo = session?.consentVideo === true;
   const capture = useInterviewCapture({ withVideo });
   const questionAudio = useQuestionAudio({ sessionId, turn, accessToken });
+  const backchannel = useBackchannel({ enabled: phase === "answering" || phase === "submitting" });
+
+  /*
+   * The question appears as it is spoken, not before it.
+   *
+   * Reading a question, waiting, and then being read it back is worse than either alone:
+   * it breaks the sense that anyone is talking to you, and it invites an answer to a
+   * question the interviewer has not finished asking.
+   *
+   * But syncing unconditionally would be worse still. Speech takes a few seconds to
+   * render, and holding the text until it lands would leave the candidate looking at an
+   * empty room — so the voice only gets to lead if it arrives promptly. Past that, the
+   * question goes up in writing and stays up, which is the behaviour this replaced.
+   */
+  const questionText = turn?.questionText ?? "";
+  const turnIndex = turn?.turnIndex ?? null;
+
+  // Both of these carry the turn they belong to, and a mismatch reads as "not yet"
+  // during the same render. Clearing them in an effect instead would show one frame of
+  // the previous question's progress against the new question's text.
+  const [progress, setProgress] = useState({ turnIndex: -1, currentTime: 0, duration: 0 });
+  const [lateFor, setLateFor] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (turnIndex === null) return;
+    const timer = setTimeout(() => setLateFor(turnIndex), VOICE_GRACE_MS);
+    return () => clearTimeout(timer);
+  }, [turnIndex]);
+
+  const withinGrace = lateFor !== turnIndex;
+  /** The voice is still rendering and has not used up its head start. Hold the text. */
+  const awaitingVoice = questionAudio.status === "pending" && withinGrace;
+  const voiceLeads = questionAudio.status === "ready" && !!questionAudio.url && withinGrace;
+  const spoken = progress.turnIndex === turnIndex ? progress : { currentTime: 0, duration: 0 };
+
+  const visibleQuestion = awaitingVoice
+    ? ""
+    : voiceLeads
+      ? revealedText(questionText, spoken.currentTime, spoken.duration)
+      : // No voice is coming, or it took too long to wait for. Better an unsynced
+        // question than an empty room.
+        questionText;
 
   useEffect(() => {
     if (!accessToken) return;
@@ -100,6 +167,10 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
     setPhase("submitting");
     setError(null);
+    // Said the moment they stop, while the model is still reading the answer. This is
+    // the one that does the most work: it turns a dead ten-second gap into someone who
+    // heard you and is thinking about it.
+    backchannel.acknowledge();
     try {
       const result = await submitAnswer(
         accessToken,
@@ -125,14 +196,14 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         cause instanceof ApiRequestError ? cause.message : "That answer could not be submitted.",
       );
     }
-  }, [accessToken, capture, sessionId, turn]);
+  }, [accessToken, backchannel, capture, sessionId, turn]);
 
   // The meter and the submit callback are read through refs by the tick below. The
   // meter changes on every animation frame, and rebuilding the interval each time would
   // throw away the silence it has accumulated and mean an answer never ended itself.
-  const latest = useRef({ level: capture.level, finish: finishAnswer });
+  const latest = useRef({ level: capture.level, finish: finishAnswer, backchannel });
   useEffect(() => {
-    latest.current = { level: capture.level, finish: finishAnswer };
+    latest.current = { level: capture.level, finish: finishAnswer, backchannel };
   });
 
   // The answer timer and the silence that ends the answer run off one tick, so a reading
@@ -143,15 +214,29 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     let silence = initialSilenceState;
     let ended = false;
 
+    const TICK_MS = 200;
     const id = setInterval(() => {
       const now = Date.now();
       setElapsed(Math.floor((now - startedAt) / 1000));
+
+      if (latest.current.backchannel.speaking) {
+        // The interviewer is making a listening noise. Echo cancellation should keep it
+        // out of the microphone, but "should" is not a basis for deciding that someone
+        // has stopped talking — so the silence clock pauses rather than reading a meter
+        // that may be hearing us. Whatever silence had accrued is kept.
+        if (silence.silentSince !== null) {
+          silence = { ...silence, silentSince: silence.silentSince + TICK_MS };
+        }
+        return;
+      }
+
+      latest.current.backchannel.observe(latest.current.level, SPEECH_LEVEL);
       silence = observe(silence, latest.current.level, now);
       if (!ended && shouldEnd(silence, now, startedAt)) {
         ended = true;
         void latest.current.finish();
       }
-    }, 200);
+    }, TICK_MS);
 
     return () => clearInterval(id);
   }, [phase]);
@@ -160,9 +245,10 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     const started = await capture.start();
     if (started) {
       setElapsed(0);
+      backchannel.reset();
       setPhase("answering");
     }
-  }, [capture]);
+  }, [backchannel, capture]);
 
   const askForHint = useCallback(async () => {
     if (!accessToken || !turn || hintPending) return;
@@ -192,6 +278,44 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     setAudioBlocked(false);
     element.play().catch(() => setAudioBlocked(true));
   }, [phase, questionAudio.url]);
+
+  /*
+   * The question is revealed in step with the voice reading it, so `timeupdate` drives
+   * the text. It fires about four times a second, which is enough for a reveal that is
+   * meant to feel like speech rather than a typewriter.
+   *
+   * `ended` matters as much as the ticks: a browser that stops firing `timeupdate`
+   * slightly before the end would otherwise leave the last word or two permanently
+   * withheld.
+   */
+  useEffect(() => {
+    const element = audioRef.current;
+    if (!element) return;
+
+    const at = (currentTime: number, duration: number) =>
+      setProgress({ turnIndex: turnIndex ?? -1, currentTime, duration });
+    const sync = () => at(element.currentTime, element.duration);
+    // `ended` matters as much as the ticks: a browser that stops firing `timeupdate`
+    // just short of the end would otherwise withhold the last word for good.
+    const finish = () => at(element.duration || 1, element.duration || 1);
+
+    element.addEventListener("timeupdate", sync);
+    element.addEventListener("loadedmetadata", sync);
+    element.addEventListener("ended", finish);
+    return () => {
+      element.removeEventListener("timeupdate", sync);
+      element.removeEventListener("loadedmetadata", sync);
+      element.removeEventListener("ended", finish);
+    };
+  }, [questionAudio.url, turnIndex]);
+
+  const replayQuestion = useCallback(() => {
+    const element = audioRef.current;
+    if (!element) return;
+    element.currentTime = 0;
+    setAudioBlocked(false);
+    element.play().catch(() => setAudioBlocked(true));
+  }, []);
 
   async function leave() {
     capture.release();
@@ -271,11 +395,43 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
             </span>
           </div>
 
-          <p className="text-title text-balance text-ink">{turn?.questionText}</p>
+          {/*
+            * The question appears as it is spoken. `aria-live` is deliberately absent:
+            * a screen reader announcing every partial reveal would be unusable, and the
+            * full text is always present in the DOM for assistive technology below.
+            */}
+          <p className="text-title text-balance text-ink">
+            {awaitingVoice ? (
+              <span className="text-ink-subtle">Composing the next question…</span>
+            ) : (
+              <>
+                {visibleQuestion}
+                {visibleQuestion.length < questionText.length ? (
+                  <span aria-hidden className="animate-pulse text-ink-subtle">
+                    {" "}
+                    ▍
+                  </span>
+                ) : null}
+              </>
+            )}
+          </p>
+          {/*
+            * Assistive technology gets the whole question as soon as it exists, rather
+            * than being made to sit through a reveal paced for the ear.
+            */}
+          <p className="sr-only">{questionText}</p>
 
           {questionAudio.url ? (
             <div className="flex flex-col gap-2">
-              <audio ref={audioRef} src={questionAudio.url} controls className="w-full max-w-sm" />
+              {/* No `controls`: scrubbing an interviewer is not a thing you can do. */}
+              <audio ref={audioRef} src={questionAudio.url} className="hidden" />
+              <button
+                type="button"
+                onClick={replayQuestion}
+                className="self-start text-caption text-ink-muted underline-offset-4 hover:text-ink hover:underline"
+              >
+                {audioBlocked ? "Play the question" : "Say that again"}
+              </button>
               {audioBlocked ? (
                 <p className="text-caption text-ink-subtle">
                   Your browser held the audio back — press play, or just read the question and
@@ -285,7 +441,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
             </div>
           ) : questionAudio.status === "pending" ? (
             <p className="text-caption text-ink-subtle" role="status">
-              The interviewer is about to say this aloud. You can start answering now.
+              The interviewer is working out what to ask next.
             </p>
           ) : null}
         </div>

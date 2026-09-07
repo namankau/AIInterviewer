@@ -216,9 +216,12 @@ data class TurnTranscript(
  */
 data class AnswerAssessment(
     val transcript: String,
-    val summary: String,
-    val strengths: List<String>,
-    val gaps: List<String>,
+    /*
+     * There was a per-turn `summary`, `strengths` and `gaps` here. They were written to
+     * the assessment JSON on every turn and read by nothing: the report reasons over the
+     * transcript itself, not over these. They cost about 130 output tokens per turn on
+     * the one call the candidate sits waiting for, so they are gone.
+     */
     val suggestedNextAction: String,
     /** What the interviewer had to supply on this turn. See [Intervention]. */
     val intervention: String = Intervention.NONE.wireValue,

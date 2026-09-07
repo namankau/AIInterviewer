@@ -77,5 +77,38 @@ object WavAudio {
             }.toByteArray()
     }
 
+    /**
+     * The sample data inside [audio], with a RIFF header stripped if there is one.
+     *
+     * Speech leaves this boundary already wrapped, so joining two clips means unwrapping
+     * both, concatenating the samples and wrapping once — see [join].
+     */
+    fun samplesOf(audio: ByteArray): ByteArray = if (hasRiffHeader(audio)) audio.copyOfRange(HEADER_BYTES, audio.size) else audio
+
+    /**
+     * Concatenates WAV clips of the same format into one.
+     *
+     * Long questions are synthesised a sentence at a time and in parallel, because
+     * Gemini's speech latency scales with the length of the text — measured at 4.7s for a
+     * sentence against 14.5s for a paragraph. Joining the pieces back into a single clip
+     * keeps that entirely inside the speech worker: the room still receives one file and
+     * one URL, and knows nothing about how it was made.
+     */
+    fun join(
+        clips: List<ByteArray>,
+        sampleRate: Int = DEFAULT_SAMPLE_RATE,
+    ): ByteArray {
+        val samples = ByteArrayOutputStream()
+        clips.forEach { samples.write(samplesOf(it)) }
+        return wrap(samples.toByteArray(), sampleRate)
+    }
+
+    private fun hasRiffHeader(audio: ByteArray): Boolean =
+        audio.size >= HEADER_BYTES &&
+            audio[0] == 'R'.code.toByte() &&
+            audio[1] == 'I'.code.toByte() &&
+            audio[2] == 'F'.code.toByte() &&
+            audio[3] == 'F'.code.toByte()
+
     private val RATE = Regex("rate=(\\d+)")
 }

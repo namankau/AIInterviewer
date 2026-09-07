@@ -36,6 +36,9 @@ class SecurityConfig {
             .authorizeHttpRequests {
                 it.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 it.requestMatchers("/api/health", "/actuator/health", "/actuator/health/**").permitAll()
+                // Two aggregate integers with nothing personal in them, read by the
+                // public landing page before anyone has signed in.
+                it.requestMatchers(HttpMethod.GET, "/api/v1/usage").permitAll()
                 it.anyRequest().authenticated()
             }.oauth2ResourceServer { resourceServer ->
                 resourceServer.jwt { }

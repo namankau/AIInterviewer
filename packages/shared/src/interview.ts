@@ -1,5 +1,18 @@
 import type { RoundType } from "./domain.js";
 
+/**
+ * How much interviewing this product has done, across everyone.
+ *
+ * Aggregate only — two integers, nothing that identifies a candidate or an employer —
+ * which is what makes it safe to serve unauthenticated.
+ */
+export interface UsageCounts {
+  /** Rounds that reached `completed`. An abandoned session is not an interview. */
+  interviewsCompleted: number;
+  /** Reports actually composed. Lower than the rounds when someone never opened theirs. */
+  reportsGenerated: number;
+}
+
 /** Whether the candidate may start another interview, and why not if not. */
 export interface EntitlementView {
   allowed: boolean;

@@ -35,3 +35,6 @@ coverage/
 Thumbs.db
 .idea/
 .vscode/
+
+# Agent worktrees, created by tooling and never part of the project.
+.claude/worktrees/

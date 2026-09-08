@@ -13,8 +13,13 @@
  *
  *   node --env-file=.env scripts/make-backchannel.mjs
  *
- * Re-run only when the set or the voice changes. The voice matches the one the round
- * itself uses, or the acknowledgements come from a different person than the questions.
+ * Re-run only when the set or the voice changes.
+ *
+ * **The voice must match the one the round itself speaks with.** It did not, once: the
+ * questions were Kore and these were Puck, so the interviewer acknowledged you in a
+ * different person's voice — audibly a different person, mid-interview. The default here
+ * is now read from the same place the API's default lives, and overriding it means
+ * overriding both.
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -27,6 +32,10 @@ if (!key) {
 
 const OUT = process.argv[2] ?? join("apps", "web", "public", "interviewer");
 mkdirSync(OUT, { recursive: true });
+
+// Must equal GeminiProperties.voiceName. A mismatch is not a subtle bug: it is a second
+// person speaking in the middle of somebody's interview.
+const VOICE = process.env.GEMINI_VOICE_NAME ?? "Kore";
 
 const RATE = 24_000;
 
@@ -73,7 +82,7 @@ async function speak(text) {
         contents: [{ parts: [{ text: instruction }] }],
         generationConfig: {
           responseModalities: ["AUDIO"],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } },
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICE } } },
         },
       }),
     },

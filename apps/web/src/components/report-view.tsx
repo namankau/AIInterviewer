@@ -128,15 +128,15 @@ export function ReportView({ sessionId }: { sessionId: string }) {
         </dl>
       </Section>
 
-      {report.strengths.length > 0 ? (
+      {(report.strengths ?? []).length > 0 ? (
         <Section title="What held up" lead="With the words that show it.">
-          <AreaList areas={report.strengths} tone="positive" />
+          <AreaList areas={report.strengths ?? []} tone="positive" />
         </Section>
       ) : null}
 
-      {report.developmentAreas.length > 0 ? (
+      {(report.developmentAreas ?? []).length > 0 ? (
         <Section title="What did not" lead="Named plainly, because a soft report is a real rejection later.">
-          <AreaList areas={report.developmentAreas} tone="critical" />
+          <AreaList areas={report.developmentAreas ?? []} tone="critical" />
         </Section>
       ) : null}
 
@@ -295,8 +295,9 @@ function AreaList({
  * When a real corpus exists, `sources` fills in per question and the disclosure changes
  * with the tier. Nothing else here has to move.
  */
-function QuestionSources({ sources }: { sources: ReportQuestionSources }) {
-  if (sources.entries.length === 0) return null;
+function QuestionSources({ sources }: { sources: ReportQuestionSources | undefined }) {
+  // A report written before provenance existed has no sources section at all.
+  if (!sources || (sources.entries ?? []).length === 0) return null;
 
   return (
     <Section title="Why you were asked these" lead={sources.headline}>

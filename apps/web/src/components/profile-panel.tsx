@@ -33,6 +33,13 @@ export function ProfilePanel() {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<null | "resume" | "avatar" | "profile" | "skill">(null);
+  /**
+   * What just happened, so a save is visibly a save.
+   *
+   * Pressing Save and getting nothing back is indistinguishable from pressing Save and
+   * having it fail silently, and a candidate who cannot tell will fill the form in twice.
+   */
+  const [saved, setSaved] = useState<string | null>(null);
 
   const resumeInput = useRef<HTMLInputElement | null>(null);
   const avatarInput = useRef<HTMLInputElement | null>(null);
@@ -54,8 +61,10 @@ export function ProfilePanel() {
       if (!accessToken) return;
       setBusy(kind);
       setError(null);
+      setSaved(null);
       try {
         await work();
+        setSaved(DONE[kind]);
       } catch (cause) {
         setError(
           cause instanceof ApiRequestError ? cause.message : "That did not work. Please try again.",
@@ -66,6 +75,14 @@ export function ProfilePanel() {
     },
     [accessToken],
   );
+
+  // The confirmation clears itself. A "Saved" that stays on screen stops meaning
+  // "just now" and starts meaning nothing.
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(null), 4_000);
+    return () => clearTimeout(timer);
+  }, [saved]);
 
   const onResume = (file: File) =>
     run("resume", async () => {
@@ -208,9 +225,19 @@ export function ProfilePanel() {
         </div>
       </section>
 
+      {/*
+        * Both live at the bottom, both announced. `role="status"` rather than `alert`
+        * for the success case: a screen reader should mention it, not interrupt for it.
+        */}
       {error ? (
         <p role="alert" className="text-body text-danger">
           {error}
+        </p>
+      ) : null}
+
+      {saved && !error ? (
+        <p role="status" className="text-body text-positive">
+          {saved}
         </p>
       ) : null}
     </div>
@@ -352,10 +379,8 @@ function ProfileForm({
   onSave: (body: Record<string, string>) => void;
 }) {
   const [fields, setFields] = useState({
-    function: "",
     currentLevel: "",
     targetLevel: "",
-    location: "",
     linkedinUrl: "",
   });
 
@@ -375,17 +400,11 @@ function ProfileForm({
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Function" hint="Backend, data, QA, consulting…">
-          <input value={fields.function} onChange={set("function")} className={INPUT} maxLength={120} />
-        </Field>
         <Field label="Current level" hint="As your employer titles it.">
           <input value={fields.currentLevel} onChange={set("currentLevel")} className={INPUT} maxLength={60} />
         </Field>
         <Field label="Target level" hint="What you are interviewing for.">
           <input value={fields.targetLevel} onChange={set("targetLevel")} className={INPUT} maxLength={60} />
-        </Field>
-        <Field label="Location" hint="Where you are based.">
-          <input value={fields.location} onChange={set("location")} className={INPUT} maxLength={120} />
         </Field>
         <Field label="LinkedIn" hint="Optional. Stored, shown back to you, and not fetched.">
           <input
@@ -432,3 +451,11 @@ function Field({
     </label>
   );
 }
+
+/** What to say once each kind of change has actually landed. */
+const DONE: Record<"resume" | "avatar" | "profile" | "skill", string> = {
+  resume: "Resume saved and read.",
+  avatar: "Photo saved.",
+  profile: "Saved.",
+  skill: "Skills updated.",
+};

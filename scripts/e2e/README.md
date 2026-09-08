@@ -44,8 +44,14 @@ directory, so run it from wherever you want those to land.
 
 ## What it checks
 
-Composer → device check → room → hint → a spoken answer that ends on its own silence →
-the next question. It prints `TURN_LATENCY_SECONDS` and `SILENCE_STOP_SECONDS`, which are
+Composer → device check → room → hint → **the microphone opening on its own** when the
+interviewer stops speaking → a spoken answer that ends on its own silence → the next
+question.
+
+It asserts that neither an "Answer" nor a "Done answering" button exists. Both were
+removed because pressing something to start and stop talking is the tell that this is a
+form rather than a conversation, and nothing but a browser can check that the audio
+`ended` event and the live level meter actually hand the floor back and forth. It prints `TURN_LATENCY_SECONDS` and `SILENCE_STOP_SECONDS`, which are
 the two numbers worth watching: 7.0s and 3.6s-after-speech on 3 September 2026, against
 ~24s per turn before speech came off the critical path.
 

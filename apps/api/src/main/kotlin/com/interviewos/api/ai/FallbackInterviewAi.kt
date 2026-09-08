@@ -91,7 +91,10 @@ class FallbackInterviewAi(
         call: String,
         work: (InterviewAi) -> AiResult<T>,
     ): AiResult<T> {
-        val able = providers.filter { capability in it.capabilities }
+        val able =
+            providers.filter { capability in it.capabilities }.let {
+                if (capability in TRY_STRONGEST_FIRST) it.reversed() else it
+            }
         if (able.isEmpty()) {
             throw AiUnavailableException(
                 "No configured provider can do $call — it needs $capability.",
@@ -123,5 +126,21 @@ class FallbackInterviewAi(
             "Every configured provider failed for $call. Last error: ${last?.message}",
             last,
         )
+    }
+
+    private companion object {
+        /**
+         * Capabilities where the chain's usual order is the wrong one.
+         *
+         * Providers are configured cheapest-first, which is right for anything a
+         * candidate waits on many times in a round. Reading a resume is the opposite
+         * case: it happens once per candidate, nobody is timing it, and the result
+         * shapes every interview they ever sit here. A cheap model that misreads an
+         * employer costs far more than the call it saved.
+         *
+         * This does assume the configured order runs cheap to strong. It does, and
+         * `application.yml` says so where the order is set.
+         */
+        val TRY_STRONGEST_FIRST = setOf(AiCapability.DOCUMENT_UNDERSTANDING)
     }
 }

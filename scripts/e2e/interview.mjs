@@ -159,18 +159,38 @@ try {
   log("\n== the room ==");
   const question = page.locator("main p.text-title").first();
   await question.waitFor({ timeout: 30_000 });
-  const firstQuestion = (await question.textContent())?.trim() ?? "";
-  check("a question is shown", firstQuestion.length > 20, firstQuestion.slice(0, 90) + "…");
-  await shot(page, "room-question");
 
-  // The voice arrives after the text. That is the whole point of the change.
+  /*
+   * The text now waits for the voice rather than racing ahead of it, so the first thing
+   * on screen is "Composing the next question…" and the real question replaces it once
+   * there is a voice to read it. Asserting on whatever is showing at this instant would
+   * assert on the placeholder.
+   *
+   * `state: "attached"` matters: the audio element is deliberately hidden — an
+   * interviewer is not something you scrub — and the default `waitFor` waits for
+   * visibility, which will never come.
+   */
   const audioReady = await page
     .locator("audio")
     .first()
-    .waitFor({ timeout: 60_000 })
+    .waitFor({ state: "attached", timeout: 90_000 })
     .then(() => true)
     .catch(() => false);
-  check("the interviewer's voice arrives after the text", audioReady);
+  check("the interviewer's voice arrives", audioReady);
+
+  await page
+    .getByText(/composing the next question/i)
+    .waitFor({ state: "detached", timeout: 30_000 })
+    .catch(() => undefined);
+
+  const firstQuestion = (await question.textContent())?.trim() ?? "";
+  check(
+    "the question is shown once there is a voice for it",
+    firstQuestion.length > 20 && !/composing/i.test(firstQuestion),
+    firstQuestion.slice(0, 90) + "…",
+  );
+  await shot(page, "room-question");
+
   if (audioReady) {
     const src = await page.locator("audio").first().getAttribute("src");
     check("question audio is a signed URL", Boolean(src && src.startsWith("http")), (src ?? "").slice(0, 70) + "…");
@@ -197,17 +217,33 @@ try {
     await shot(page, "hint");
   }
 
-  log("\n== answering, and letting the silence end it ==");
-  await page.getByRole("button", { name: /^answer$/i }).click();
-  await page.getByText(/listening ·/i).waitFor({ timeout: 15_000 });
+  log("\n== the floor passes on its own, and the silence takes it back ==");
+  /*
+   * Nothing is clicked here, and that is the assertion. There is no "Answer" button and
+   * no "Done answering" button any more: the microphone opens when the interviewer stops
+   * speaking, and the answer ends when the candidate does. Both are browser behaviour --
+   * an audio `ended` event and a live level meter -- so a browser is the only thing that
+   * can check them.
+   */
+  const listening = page.getByText(/listening \u00b7/i);
+  const handedOver = await listening
+    .waitFor({ timeout: 90_000 })
+    .then(() => true)
+    .catch(() => false);
+  check("the microphone opens without being asked", handedOver);
   await shot(page, "answering");
 
+  check(
+    "there is no button to start answering",
+    (await page.getByRole("button", { name: /^answer$/i }).count()) === 0,
+  );
+  check(
+    "there is no button to finish answering",
+    (await page.getByRole("button", { name: /done answering/i }).count()) === 0,
+  );
+
   const answerStart = Date.now();
-  // One unambiguous marker. Matching on loose text hit two elements at once in the
-  // submitting phase, and strict mode rejected the wait -- which reads as a product
-  // failure and is not one.
-  const moved = await page
-    .getByRole("button", { name: /done answering/i })
+  const moved = await listening
     .waitFor({ state: "detached", timeout: 120_000 })
     .then(() => true)
     .catch(() => false);
@@ -222,6 +258,7 @@ try {
   const turnStart = Date.now();
   const nextQuestion = await question
     .filter({ hasNotText: firstQuestion })
+    .filter({ hasNotText: /composing/i })
     .waitFor({ timeout: 180_000 })
     .then(() => true)
     .catch(() => false);

@@ -2,7 +2,9 @@
   "type": "OBJECT",
   "properties": {
     "text": {
-      "type": "STRING"
+      "type": "STRING",
+      "description": "What the interviewer says out loud to open. A greeting and the invitation to introduce themselves, and nothing else.",
+      "maxLength": 220
     },
     "questionBasis": {
       "type": "STRING",

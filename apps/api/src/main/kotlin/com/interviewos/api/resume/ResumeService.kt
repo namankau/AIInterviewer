@@ -2,6 +2,7 @@ package com.interviewos.api.resume
 
 import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.InterviewAi
+import com.interviewos.api.ai.ParsedEmployment
 import com.interviewos.api.ai.ParsedResume
 import com.interviewos.api.ai.ResumeFile
 import com.interviewos.api.common.ApiException
@@ -264,14 +265,16 @@ data class CandidateBackground(
             appendLine("The candidate's own background, parsed from the resume they uploaded:")
             resume.headline?.takeIf { it.isNotBlank() }?.let { appendLine("Headline: $it") }
 
-            if (resume.employments.isNotEmpty()) {
+            val roles = mostRecentFirst(resume.employments)
+            if (roles.isNotEmpty()) {
                 appendLine()
-                appendLine("Roles:")
-                resume.employments.forEach { job ->
+                appendLine("Roles, most recent first:")
+                roles.forEachIndexed { index, job ->
                     append("- ${job.title ?: "role not stated"} at ${job.employer}")
                     val from = job.startDate?.toString()
                     val to = if (job.current) "present" else job.endDate?.toString()
                     if (from != null) append(" ($from to ${to ?: "unstated"})")
+                    if (index == 0) append("  <- CURRENT ROLE. Interview them about this one.")
                     appendLine()
                 }
             }
@@ -316,12 +319,38 @@ data class CandidateBackground(
             appendLine()
             appendLine(
                 "Use this to ground your questions in work they have actually done — a deep-dive into a " +
-                    "project they listed is far more revealing than a generic scenario. Two rules. Ask them " +
+                    "project they listed is far more revealing than a generic scenario. Three rules. Ask them " +
                     "to tell you about it rather than asserting it back at them: this came from parsing a " +
                     "document and may be wrong, and an interviewer who confidently misstates someone's own " +
-                    "career loses them immediately. And do not raise gaps or short stints unless the round " +
+                    "career loses them immediately. Do not raise gaps or short stints unless the round " +
                     "type makes that appropriate — in an HR or techno-managerial round it is fair, in a " +
-                    "system design round it is not.",
+                    "system design round it is not. And anchor on the role at the top of that list: it is " +
+                    "what they do now, it is what they remember in detail, and it is what the employer " +
+                    "asking about them cares about. Reaching past it to an older job reads as not having " +
+                    "read the resume. Earlier roles are worth raising only when the current one genuinely " +
+                    "does not cover what the round is testing, or when you are asking how their career got " +
+                    "from there to here.",
             )
         }
+
+    /**
+     * Roles newest first, because the order they arrive in is the order they happened to
+     * be laid out on the page and nothing more.
+     *
+     * This was a real bug, not a tidiness exercise: the list went to the model unsorted
+     * and unlabelled, so it picked whichever role looked most interesting and interviewed
+     * a candidate about a job they had left years earlier. Sorting is only half the fix —
+     * the first entry is also marked, because a model reading a bare list has no reason to
+     * assume the order means anything.
+     *
+     * `current` wins over dates, since a role marked current is current whatever its start
+     * date says. Undated roles sort last rather than first: an unknown date is not
+     * evidence of recency, and putting one at the top would reintroduce the bug.
+     */
+    private fun mostRecentFirst(employments: List<ParsedEmployment>): List<ParsedEmployment> =
+        employments.sortedWith(
+            compareByDescending<ParsedEmployment> { it.current }
+                .thenByDescending { it.endDate ?: if (it.current) LocalDate.MAX else LocalDate.MIN }
+                .thenByDescending { it.startDate ?: LocalDate.MIN },
+        )
 }

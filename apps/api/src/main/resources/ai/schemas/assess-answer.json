@@ -38,6 +38,8 @@
     },
     "nextQuestionText": {
       "type": "STRING",
+      "description": "The single next thing the interviewer says out loud. One short question. Do not restate or summarise the answer at length before asking it.",
+      "maxLength": 120,
       "nullable": true
     },
     "questionBasis": {

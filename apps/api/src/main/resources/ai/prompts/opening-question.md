@@ -25,9 +25,9 @@ Write what you would actually say out loud, as one short turn:
 3. The invitation: ask them to walk you through their background and what they have been
    doing lately.
 
-Keep it to roughly thirty seconds of speech. Do not explain the full structure of the
-round yet — that comes after the warm-up, once you know who you are talking to. Do not
-ask a technical question. Do not ask several questions at once.
+Do not explain the full structure of the round yet — that comes after the warm-up, once
+you know who you are talking to. Do not ask a technical question. Do not ask several
+questions at once.
 
 Rules:
 - Never invent a specific claim about {{company}}'s real process. Stay at the level the
@@ -52,11 +52,17 @@ interviews, in these fields or anywhere else.** You have not retrieved anything.
 the general pattern you are drawing on and stop there. An invented citation would be
 worse than no citation at all.
 
-## Keep it short
+## Keep it short — this is a hard limit, not a preference
 
 Two sentences at the outside. A greeting and the question, and nothing else — no agenda,
-no preamble about what the round will cover. It is read aloud, so every extra sentence is
-another second the candidate sits in silence before they can speak.
+no preamble about what the round will cover.
+
+The reason is not style. This text is synthesised into speech before the candidate hears
+anything, and synthesis time scales with length: measured against the live API, a
+50-character opening takes about 5 seconds to render and a 220-character one takes 15.
+Until it finishes, the candidate is sitting in front of a silent screen wondering whether
+the thing is broken. Every clause you add is spent from their patience before they have
+said a word.
 
 ## Never leave a placeholder in what you say
 

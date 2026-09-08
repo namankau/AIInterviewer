@@ -14,8 +14,31 @@ package com.interviewos.api.ai
  * The split is deliberately dull. It breaks on sentence endings only, and it merges
  * anything too short into its neighbour, because a chunk boundary mid-clause produces an
  * audible seam and a chunk of three words costs a whole request to save nothing.
+ *
+ * **It is also applied sparingly, because parallel requests have a tail.** Measured
+ * against the live API: a single call is stable — six runs of a 48-character question
+ * ranged 4.8s to 6.3s — but four concurrent calls produced a straggler at 11.0s against
+ * 5.1s for its siblings, and one two-chunk question had a chunk come back at 34.7s. The
+ * candidate waits for the slowest chunk, so fanning out a question that a single call
+ * would have spoken in six seconds is a bad trade. Only genuinely long text is split.
  */
 object SpeechChunks {
+    /**
+     * Below this many characters the whole thing is spoken in one call.
+     *
+     * Speech latency is roughly `2.3s + 0.06s per character` (48 chars 5.2s, 83 chars
+     * 6.1s, 220 chars 15.6s). Splitting turns that into the slowest of N calls plus the
+     * straggler risk above, which only pays once the single call is long enough to be
+     * clearly worse. At 120 characters — the ceiling the response schema now puts on a
+     * question — one call takes about 9s and two parallel halves take 6s to 11s, so
+     * splitting is a coin toss with a bad tail. At 220 it is 15.6s against 8s, and
+     * splitting clearly wins.
+     *
+     * Set just under the opening turn's 220-character ceiling, so the greeting is split
+     * and the mid-round questions that the candidate waits on repeatedly are not.
+     */
+    private const val MINIMUM_TEXT_TO_SPLIT = 200
+
     /**
      * Below this many characters a chunk is merged forward: the request overhead is not
      * worth it, and short fragments are where the joins start to sound wrong.
@@ -44,6 +67,7 @@ object SpeechChunks {
     fun split(text: String): List<String> {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return listOf(text)
+        if (trimmed.length < MINIMUM_TEXT_TO_SPLIT) return listOf(trimmed)
 
         val sentences = trimmed.split(SENTENCE_END).filter { it.isNotBlank() }
         if (sentences.size <= 1) return listOf(trimmed)

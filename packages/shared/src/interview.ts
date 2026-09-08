@@ -369,6 +369,14 @@ export interface ProfileDetails {
   resume: ResumeView | null;
   skills: SkillView[];
   avatarUrl: string | null;
+  /**
+   * What the candidate saved about themselves. These used to be absent, which made the
+   * profile write-only: everything typed into the form persisted and none of it ever came
+   * back, so it read as a save that had silently failed.
+   */
+  currentLevel: string | null;
+  targetLevel: string | null;
+  linkedinUrl: string | null;
 }
 
 export interface UpdateProfileRequest {

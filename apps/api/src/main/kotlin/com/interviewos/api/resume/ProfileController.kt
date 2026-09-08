@@ -166,10 +166,17 @@ class ProfileController(
             repository.avatarPath(userId)?.let {
                 runCatching { storage.createSignedUrl(storageProperties.resumeBucket, it, AVATAR_URL_SECONDS) }.getOrNull()
             }
+        val profile = repository.findProfile(userId)
         return ProfileDetails(
             resume = resumeService.current(userId),
             skills = repository.listSkills(userId),
             avatarUrl = avatar,
+            // Returned so the form can show what was saved. Without these the profile was
+            // write-only: everything the candidate entered persisted and none of it ever
+            // came back, which reads as the save having silently failed.
+            currentLevel = profile?.currentLevel,
+            targetLevel = profile?.targetLevel,
+            linkedinUrl = profile?.linkedinUrl,
         )
     }
 
@@ -225,4 +232,7 @@ data class ProfileDetails(
     val resume: ResumeView?,
     val skills: List<SkillRow>,
     val avatarUrl: String?,
+    val currentLevel: String?,
+    val targetLevel: String?,
+    val linkedinUrl: String?,
 )

@@ -3,6 +3,7 @@
 import type { MeResponse } from "@acemyinterview/shared";
 import { useEffect, useState } from "react";
 
+import { SignOutButton } from "@/components/sign-out-button";
 import { fetchMe } from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -18,7 +19,13 @@ const LANGUAGE_LABELS: Record<string, string> = {
 };
 
 /**
- * Reads the signed-in candidate from `GET /api/v1/me`.
+ * Who is signed in, at the foot of the rail, with the way out attached to it.
+ *
+ * It used to be two loose facts at the bottom of the dashboard and a Sign out button
+ * pinned to the bottom of an otherwise empty rail, a long way from anything — which is
+ * exactly how it read: orphaned. They are one thing. This is your account, and this is
+ * how you leave it, and putting them together is most of what stops the rail looking
+ * unfinished.
  *
  * Deliberately a client-side call to the versioned public API rather than a
  * server-rendered database read: the mobile apps will make exactly this request, and
@@ -59,34 +66,45 @@ export function AccountSummary() {
     return () => controller.abort();
   }, []);
 
-  if (state.status === "loading") {
-    return (
-      <p role="status" className="text-caption text-ink-muted">
-        Loading your profile…
-      </p>
-    );
-  }
-
-  if (state.status === "error") {
-    return (
-      <p role="alert" className="text-caption text-danger">
-        {state.message}
-      </p>
-    );
-  }
-
-  const { me } = state;
-
   return (
-    <dl className="flex flex-col gap-4 sm:flex-row sm:gap-10">
-      <div>
-        <dt className="text-caption text-ink-subtle">Signed in as</dt>
-        <dd className="text-body text-ink">{me.displayName ?? me.email}</dd>
+    <div className="flex flex-col gap-3 border-t border-line pt-4">
+      {state.status === "loading" ? (
+        <p role="status" className="text-caption text-ink-subtle">
+          Loading your profile…
+        </p>
+      ) : state.status === "error" ? (
+        <p role="alert" className="text-caption text-danger">
+          {state.message}
+        </p>
+      ) : (
+        <div className="flex items-center gap-2.5">
+          <span
+            aria-hidden
+            className="grid size-8 shrink-0 place-items-center rounded-full bg-accent-wash font-mono text-micro text-accent"
+          >
+            {initialsOf(state.me.displayName ?? state.me.email)}
+          </span>
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-caption text-ink">
+              {state.me.displayName ?? state.me.email}
+            </span>
+            <span className="truncate text-micro text-ink-subtle">
+              {LANGUAGE_LABELS[state.me.preferredLanguage] ?? state.me.preferredLanguage}
+            </span>
+          </span>
+        </div>
+      )}
+      {/* In a flex row so the button is its own width and sits on the rail's left edge. */}
+      <div className="flex">
+        <SignOutButton />
       </div>
-      <div>
-        <dt className="text-caption text-ink-subtle">Interview language</dt>
-        <dd className="text-body text-ink">{LANGUAGE_LABELS[me.preferredLanguage] ?? me.preferredLanguage}</dd>
-      </div>
-    </dl>
+    </div>
   );
+}
+
+/** Two letters, so the rail has a fixed anchor point whatever the name's length. */
+function initialsOf(name: string): string {
+  const parts = name.split(/[\s@._-]+/).filter(Boolean);
+  const letters = parts.length > 1 ? `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}` : (parts[0]?.slice(0, 2) ?? "");
+  return letters.toUpperCase();
 }

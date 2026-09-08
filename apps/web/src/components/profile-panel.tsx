@@ -1,7 +1,7 @@
 "use client";
 
 import type { ProfileDetails, ResumeView } from "@acemyinterview/shared";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -87,7 +87,11 @@ export function ProfilePanel() {
   const onResume = (file: File) =>
     run("resume", async () => {
       const resume = await uploadResume(accessToken!, file);
-      setDetails((current) => (current ? { ...current, resume } : { resume, skills: [], avatarUrl: null }));
+      setDetails((current) =>
+        current
+          ? { ...current, resume }
+          : { resume, skills: [], avatarUrl: null, currentLevel: null, targetLevel: null, linkedinUrl: null },
+      );
       // Detected skills land server-side, so the list is re-read rather than guessed at.
       setDetails(await fetchProfile({ accessToken: accessToken! }));
     });
@@ -145,6 +149,7 @@ export function ProfilePanel() {
       </section>
 
       <ProfileForm
+        details={details}
         disabled={busy !== null}
         onSave={(body) =>
           run("profile", async () => {
@@ -372,20 +377,44 @@ function SkillList({
 }
 
 function ProfileForm({
+  details,
   disabled,
   onSave,
 }: {
+  details: ProfileDetails | null;
   disabled: boolean;
   onSave: (body: Record<string, string>) => void;
 }) {
-  const [fields, setFields] = useState({
-    currentLevel: "",
-    targetLevel: "",
-    linkedinUrl: "",
-  });
+  /*
+   * What the server has, and what the candidate has typed over the top of it, kept apart.
+   *
+   * The obvious version — copy the saved values into state and re-copy them in an effect
+   * when they arrive — is wrong twice over. The profile is fetched after this mounts, so a
+   * single copy at mount shows the blank form forever, which is the bug this had. And
+   * re-copying inside an effect is a cascading render that React's own lint rejects.
+   *
+   * Holding only the edits and merging at render needs neither. Untouched fields follow
+   * the server; a field the candidate has started typing in is theirs and a late response
+   * cannot overwrite it underneath them.
+   *
+   * `currentLevel` falls back to the role the resume says they are in now. They told us
+   * that by uploading the document; asking them to type it again is asking twice.
+   */
+  const saved = useMemo(
+    () => ({
+      currentLevel: details?.currentLevel ?? currentRoleFrom(details) ?? "",
+      targetLevel: details?.targetLevel ?? "",
+      linkedinUrl: details?.linkedinUrl ?? "",
+    }),
+    [details],
+  );
+  const [edits, setEdits] = useState<Partial<typeof saved>>({});
+  const fields = { ...saved, ...edits };
 
-  const set = (key: keyof typeof fields) => (event: React.ChangeEvent<HTMLInputElement>) =>
-    setFields((current) => ({ ...current, [key]: event.target.value }));
+  const set = (key: keyof typeof saved) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = event.target;
+    setEdits((current) => ({ ...current, [key]: value }));
+  };
 
   return (
     <section aria-labelledby="details" className="flex flex-col gap-5">
@@ -421,13 +450,29 @@ function ProfileForm({
         <Button
           type="button"
           disabled={disabled}
-          onClick={() => onSave(Object.fromEntries(Object.entries(fields).filter(([, v]) => v.trim() !== "")))}
+          /*
+           * Blank fields are sent, not filtered out. The server reads absent as "leave it"
+           * and blank as "clear it", so dropping them here made a field impossible to
+           * empty once it had been filled in.
+           */
+          onClick={() => {
+            // Handing the fields back to the server's copy: the response is the truth now.
+            setEdits({});
+            onSave(Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v.trim()])));
+          }}
         >
           Save
         </Button>
       </div>
     </section>
   );
+}
+
+/** The role the resume says they are in now, which is what "current level" is asking for. */
+function currentRoleFrom(details: ProfileDetails | null): string | null {
+  const employments = details?.resume?.employments ?? [];
+  const current = employments.find((it) => it.current) ?? employments[0];
+  return current?.title ?? null;
 }
 
 const INPUT =

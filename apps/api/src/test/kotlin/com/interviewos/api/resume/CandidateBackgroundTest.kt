@@ -123,7 +123,73 @@ class CandidateBackgroundTest {
             ).asPrompt()
 
         assertTrue(prompt.contains("gap(s) between roles"))
-        assertTrue(prompt.contains("do not raise gaps or short stints unless the round type makes that appropriate"))
+        assertTrue(prompt.contains("Do not raise gaps or short stints unless the round type makes that appropriate"))
+    }
+
+    /**
+     * The bug this exists for. Roles reached the model in whatever order the PDF happened
+     * to be laid out in, with nothing saying which one was current — so it picked whichever
+     * looked most interesting and interviewed a candidate about a job they left in 2022.
+     */
+    @Test
+    fun `puts the current role first and says that it is the current one`() {
+        val prompt =
+            background(
+                employments =
+                    listOf(
+                        ParsedEmployment(
+                            "Infosys",
+                            "Engineer",
+                            null,
+                            LocalDate.parse("2019-07-01"),
+                            LocalDate.parse("2022-02-01"),
+                            false,
+                        ),
+                        ParsedEmployment("Razorpay", "Senior Engineer", null, LocalDate.parse("2022-03-01"), null, true),
+                    ),
+            ).asPrompt()
+
+        val razorpay = prompt.indexOf("Razorpay")
+        val infosys = prompt.indexOf("Infosys")
+        assertTrue(razorpay in 0..<infosys, "the current role has to come first, was Infosys then Razorpay")
+        assertTrue(
+            prompt.lineSequence().first { it.contains("Razorpay") }.contains("CURRENT ROLE"),
+            "sorting alone is not enough — a bare list gives the model no reason to think the order means anything",
+        )
+        assertTrue(prompt.contains("anchor on the role at the top of that list"))
+    }
+
+    /** Two finished roles and no current one: the one that ended last is still the recent one. */
+    @Test
+    fun `orders finished roles by when they ended`() {
+        val prompt =
+            background(
+                employments =
+                    listOf(
+                        ParsedEmployment("Acme", "Engineer", null, LocalDate.parse("2018-01-01"), LocalDate.parse("2020-01-01"), false),
+                        ParsedEmployment("Globex", "Engineer", null, LocalDate.parse("2020-02-01"), LocalDate.parse("2024-06-01"), false),
+                    ),
+            ).asPrompt()
+
+        assertTrue(prompt.indexOf("Globex") < prompt.indexOf("Acme"))
+    }
+
+    /**
+     * An undated role sorts last. An unknown date is not evidence of recency, and letting
+     * one float to the top would put the bug straight back.
+     */
+    @Test
+    fun `a role with no dates does not displace a dated current one`() {
+        val prompt =
+            background(
+                employments =
+                    listOf(
+                        ParsedEmployment("Mystery Corp", "Consultant", null, null, null, false),
+                        ParsedEmployment("Razorpay", "Senior Engineer", null, LocalDate.parse("2022-03-01"), null, true),
+                    ),
+            ).asPrompt()
+
+        assertTrue(prompt.indexOf("Razorpay") < prompt.indexOf("Mystery Corp"))
     }
 
     @Test

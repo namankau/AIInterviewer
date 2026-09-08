@@ -6,20 +6,47 @@ import kotlin.test.assertTrue
 
 class SpeechChunksTest {
     /**
-     * The regression this exists for. The commonest question in a round is a short
-     * reaction to the last answer followed by the real question, and a threshold tuned by
-     * feel merged the two back into one chunk — so the parallel synthesis that was meant
-     * to halve the wait did nothing at all on the majority of turns.
+     * This assertion used to be the opposite way round, and the reversal is deliberate.
+     *
+     * It was written when questions ran to 200 characters and splitting them was the only
+     * lever on the wait. Two things then changed. The response schema now caps a question
+     * at 120 characters, so the single call is no longer slow enough to be worth escaping;
+     * and measuring concurrency showed a real tail — four parallel calls returned a
+     * straggler at 11.0s against 5.1s for its siblings, and one chunk came back at 34.7s
+     * against a 5.5s median. The candidate waits for the slowest chunk.
+     *
+     * So a question this size is spoken in one call now: about 9 seconds, reliably,
+     * instead of somewhere between 6 and 35.
      */
     @Test
-    fun `a reaction followed by a question is split, not merged`() {
+    fun `a question short enough for one call is not fanned out`() {
         val chunks =
             SpeechChunks.split(
                 "That settlement pipeline sounds like a great place to start. Could you walk me " +
                     "through how that system actually works, and what your role was in building it?",
             )
 
-        assertEquals(2, chunks.size)
+        assertEquals(1, chunks.size)
+    }
+
+    /** Past the threshold the trade flips, and a long turn is still worth splitting. */
+    @Test
+    fun `a long opening turn is still split`() {
+        val opening =
+            "Hi there, thanks for joining me today. I'm one of the engineers on the platform " +
+                "team here. We've got about forty minutes, and this is the system design round " +
+                "for the senior backend role. Before we get into it, could you walk me through " +
+                "your background and what you've been working on lately?"
+
+        val chunks = SpeechChunks.split(opening)
+
+        assertTrue(opening.length >= 200, "the fixture has to be past the threshold to test it")
+        assertTrue(chunks.size > 1, "a turn this long is faster as parallel sentences")
+        assertEquals(
+            opening.split(Regex("\\s+")),
+            chunks.joinToString(" ").split(Regex("\\s+")),
+            "splitting must not drop a word",
+        )
     }
 
     @Test

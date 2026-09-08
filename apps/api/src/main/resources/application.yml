@@ -38,9 +38,39 @@ interviewos:
     # not browsers and are unaffected by CORS.
     allowed-origins: ${WEB_ALLOWED_ORIGINS:http://localhost:3000}
   gemini:
-    # One provider covers the whole loop — resume parsing, the interviewer's voice,
-    # understanding the spoken answer, and the report. No STT or TTS vendor.
+    # Gemini is the only provider that can hear a spoken answer or read a PDF, so it
+    # remains the backbone. What changed is that it is no longer the only thing tried.
     api-key: ${GEMINI_API_KEY:}
+
+  ai:
+    # The models to try, in order. Each is offered only the calls it can actually serve
+    # (see FallbackInterviewAi) -- a text-only model is never handed a recording of
+    # somebody's voice.
+    #
+    # Measured pricing per million tokens, September 2026:
+    #   gemini-2.5-flash-lite   $0.10 in / $0.40 out   multimodal
+    #   gemini-3.5-flash        $1.50 in / $9.00 out   multimodal
+    #   kimi-k2                 $0.55 in / $2.20 out   text only
+    #   deepseek-v4-flash       $0.14 in / $0.28 out   text only
+    #
+    # Flash-lite leads because it is 15x cheaper on input and 22x on output than the
+    # 3.5-flash this used to call for everything, and it can still hear an answer.
+    # 3.5-flash sits behind it for when the cheap model is not good enough or is down.
+    providers:
+      - name: gemini-lite
+        kind: gemini
+        model: ${GEMINI_PRIMARY_MODEL:gemini-2.5-flash-lite}
+      - name: gemini-flash
+        kind: gemini
+        model: ${GEMINI_FALLBACK_MODEL:gemini-3.5-flash}
+      # A third vendor, so a Google outage does not stop reports and hints as well as
+      # interviews. Text only: it can never take an answer assessment. Unset, it is
+      # skipped with a line in the log.
+      - name: ${FALLBACK_PROVIDER_NAME:kimi}
+        kind: openai
+        base-url: ${FALLBACK_PROVIDER_BASE_URL:https://api.moonshot.ai/v1}
+        model: ${FALLBACK_PROVIDER_MODEL:kimi-k2-0711-preview}
+        api-key: ${FALLBACK_PROVIDER_API_KEY:}
   # How many completed rounds a candidate gets before being asked to pay.
   #
   # Deliberately absent, which means unlimited. There is no paid tier to gate against

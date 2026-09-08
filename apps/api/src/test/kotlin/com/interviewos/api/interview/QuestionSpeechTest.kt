@@ -1,5 +1,6 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.ai.AiCapability
 import com.interviewos.api.ai.AiResult
 import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.AiUsage
@@ -158,6 +159,10 @@ private class FailingStorage : ObjectStorage {
 
 /** Only speech is exercised here; the rest of the port is not reached. */
 private abstract class StubAi : InterviewAi {
+    override val providerName: String = "stub"
+
+    override val capabilities: Set<AiCapability> = AiCapability.entries.toSet()
+
     override fun parseResume(file: ResumeFile): AiResult<ParsedResume> = unsupported()
 
     override fun composeRound(query: String): AiResult<ComposedRound> = unsupported()

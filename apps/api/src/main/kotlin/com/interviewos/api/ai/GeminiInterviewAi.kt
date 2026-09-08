@@ -22,22 +22,45 @@ import java.util.Base64
  * a live model. When the key is absent or a call fails, it raises
  * [AiUnavailableException] so callers can degrade honestly rather than fake a result.
  */
-@Component
 class GeminiInterviewAi(
     private val properties: GeminiProperties,
+    private val prompts: PromptLibrary,
     private val objectMapper: ObjectMapper,
     restClientBuilder: RestClient.Builder,
+    /**
+     * Which Gemini model this instance uses for reasoning.
+     *
+     * Passed in rather than read from configuration, so one fallback chain can hold
+     * several Gemini tiers — a cheap one first and a stronger one behind it, both able to
+     * hear a recording, which no text-only fallback can.
+     */
+    private val reasoningModel: String,
 ) : InterviewAi {
     private val restClient = restClientBuilder.build()
 
+    override val providerName: String = "gemini ($reasoningModel)"
+
+    /**
+     * Gemini is the only configured provider that can hear a recording or read a PDF, so
+     * it is the only possible home for answer assessment and resume parsing. A text-only
+     * fallback can take the rest.
+     */
+    override val capabilities: Set<AiCapability> =
+        setOf(
+            AiCapability.STRUCTURED_TEXT,
+            AiCapability.AUDIO_UNDERSTANDING,
+            AiCapability.DOCUMENT_UNDERSTANDING,
+            AiCapability.SPEECH_SYNTHESIS,
+        )
+
     override fun parseResume(file: ResumeFile): AiResult<ParsedResume> {
-        val prompt = loadPrompt("resume-parse")
+        val prompt = prompts.resumeParse()
         val parts =
             listOf(
                 textPart(prompt),
                 inlineDataPart(file.contentType, file.bytes),
             )
-        val (node, usage) = generateJson(properties.reasoningModel, parts, schema("resume-parse"))
+        val (node, usage) = generateJson(reasoningModel, parts, prompts.schema("resume-parse"))
         return AiResult(objectMapper.treeToValue(node, ParsedResume::class.java), usage)
     }
 
@@ -92,8 +115,8 @@ class GeminiInterviewAi(
         }
 
     override fun composeRound(query: String): AiResult<ComposedRound> {
-        val prompt = loadPrompt("compose-round").replace("{{query}}", query)
-        val (node, usage) = generateJson(properties.reasoningModel, listOf(textPart(prompt)), schema("compose-round"))
+        val prompt = prompts.composeRound(query)
+        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("compose-round"))
         return AiResult(objectMapper.treeToValue(node, ComposedRound::class.java), usage)
     }
 
@@ -101,12 +124,12 @@ class GeminiInterviewAi(
         brief: InterviewBrief,
         round: RoundContext,
     ): AiResult<AskedQuestion> {
-        val prompt = fillRound(fillBrief(loadPrompt("opening-question"), brief), round)
+        val prompt = prompts.openingQuestion(brief, round)
         val (node, usage) =
             generateJson(
-                properties.reasoningModel,
+                reasoningModel,
                 listOf(textPart(prompt)),
-                schema("opening-question"),
+                prompts.schema("opening-question"),
                 Thinking.IN_THE_ROOM,
             )
         return AiResult(objectMapper.treeToValue(node, AskedQuestion::class.java), usage)
@@ -120,14 +143,7 @@ class GeminiInterviewAi(
         answer: AnswerAudio,
         video: AnswerVideo?,
     ): AiResult<AnswerAssessment> {
-        val history =
-            priorTurns.joinToString("\n") { turn ->
-                "Q: ${turn.questionText}\nA: ${turn.answerTranscript ?: "(no answer captured)"}"
-            }
-        val prompt =
-            fillRound(fillBrief(loadPrompt("assess-answer"), brief), round)
-                .replace("{{currentQuestion}}", currentQuestion)
-                .replace("{{history}}", history.ifBlank { "(this is the first answer)" })
+        val prompt = prompts.assessAnswer(brief, round, priorTurns, currentQuestion)
 
         val parts =
             buildList {
@@ -139,7 +155,7 @@ class GeminiInterviewAi(
                     add(inlineDataPart(it.contentType, it.bytes))
                 }
             }
-        val (node, usage) = generateJson(properties.reasoningModel, parts, schema("assess-answer"), Thinking.IN_THE_ROOM)
+        val (node, usage) = generateJson(reasoningModel, parts, prompts.schema("assess-answer"), Thinking.IN_THE_ROOM)
         return AiResult(objectMapper.treeToValue(node, AnswerAssessment::class.java), usage)
     }
 
@@ -149,29 +165,14 @@ class GeminiInterviewAi(
         priorTurns: List<TurnTranscript>,
         currentQuestion: String,
     ): AiResult<OfferedHint> {
-        val history =
-            priorTurns.joinToString("\n") { turn ->
-                "Q: ${turn.questionText}\nA: ${turn.answerTranscript ?: "(no answer captured)"}"
-            }
-        val prompt =
-            fillRound(fillBrief(loadPrompt("offer-hint"), brief), round)
-                .replace("{{currentQuestion}}", currentQuestion)
-                .replace("{{history}}", history.ifBlank { "(nothing yet - this is the first question)" })
-
-        val (node, usage) = generateJson(properties.reasoningModel, listOf(textPart(prompt)), schema("offer-hint"), Thinking.IN_THE_ROOM)
+        val prompt = prompts.offerHint(brief, round, priorTurns, currentQuestion)
+        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("offer-hint"), Thinking.IN_THE_ROOM)
         return AiResult(objectMapper.treeToValue(node, OfferedHint::class.java), usage)
     }
 
     override fun extractQuestions(source: SourceDocument): AiResult<ExtractedQuestions> {
-        val prompt =
-            loadPrompt("extract-questions")
-                .replace("{{title}}", source.title ?: "(not given)")
-                .replace("{{publisher}}", source.publisher ?: "(not given)")
-                .replace("{{company}}", source.companyName ?: "(not given)")
-                .replace("{{url}}", source.url ?: "(uploaded document)")
-                .replace("{{content}}", source.content)
-
-        val (node, usage) = generateJson(properties.reasoningModel, listOf(textPart(prompt)), schema("extract-questions"))
+        val prompt = prompts.extractQuestions(source)
+        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("extract-questions"))
         return AiResult(objectMapper.treeToValue(node, ExtractedQuestions::class.java), usage)
     }
 
@@ -179,105 +180,9 @@ class GeminiInterviewAi(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,
     ): AiResult<ReportContent> {
-        val body =
-            transcript
-                .mapIndexed { index, turn ->
-                    buildString {
-                        append("Turn $index${if (turn.warmUp) " (warm-up)" else ""}\n")
-                        append("Q: ${turn.questionText}\n")
-                        append("A: ${turn.answerTranscript ?: "(no answer captured)"}")
-                        turn.deliveryNote?.let { append("\n[delivery observed: $it]") }
-                        // Marked inline so the model cannot praise an answer it was
-                        // handed without noticing that it handed it over.
-                        if (turn.intervention.isAssisted) {
-                            append("\n[interviewer intervened — ${turn.intervention.label.lowercase()}")
-                            turn.interventionNote?.let { append(": $it") }
-                            append("]")
-                        }
-                    }
-                }.joinToString("\n\n")
-        val prompt =
-            fillBrief(loadPrompt("report"), brief)
-                .replace("{{transcript}}", body)
-                .replace("{{assistance}}", assistanceContext(transcript))
-        val (node, usage) = generateJson(properties.reasoningModel, listOf(textPart(prompt)), schema("report"))
+        val prompt = prompts.report(brief, transcript)
+        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("report"))
         return AiResult(objectMapper.treeToValue(node, ReportContent::class.java), usage)
-    }
-
-    /**
-     * Fills in where the round is up to, and what that means the interviewer should be
-     * doing now. The pacing sentence is written here rather than left to the model,
-     * because a model asked to pace itself will neither warm up nor wrap up.
-     */
-    private fun fillRound(
-        template: String,
-        round: RoundContext,
-    ): String =
-        template
-            .replace("{{phase}}", round.phase)
-            .replace("{{minutesElapsed}}", round.minutesElapsed.toString())
-            .replace("{{minutesRemaining}}", round.minutesRemaining.toString())
-            .replace("{{durationMinutes}}", round.durationMinutes.toString())
-            .replace("{{pacing}}", pacingFor(round))
-
-    private fun pacingFor(round: RoundContext): String =
-        when {
-            round.mustConclude -> {
-                "The time is up. Close the interview off on this turn: thank them, tell them what happens " +
-                    "next, and set `suggestedNextAction` to `conclude`. Do not open a new line of questioning."
-            }
-
-            round.briefTheCandidate -> {
-                "The warm-up is over and you now know who you are talking to. Before your next question, " +
-                    "tell them how the rest of the round will run - that there are about " +
-                    "${round.minutesRemaining} minutes left, roughly what you will cover given this round " +
-                    "type, that you want them to think out loud, and that they can ask you to repeat or " +
-                    "clarify anything. Two or three sentences, spoken plainly. Then ask your first " +
-                    "substantive question in the same turn."
-            }
-
-            round.phase == CLOSING_PHASE -> {
-                "Only ${round.minutesRemaining} minutes remain. Do not open new ground. Finish the thread " +
-                    "you are on, or ask one last question you can get a complete answer to."
-            }
-
-            round.phase == WARMUP_PHASE -> {
-                // The beat is the engine's decision, not the model's. Asked to warm up in
-                // general terms it would improvise a different opening every run, and on a
-                // short round skip straight to the hard part.
-                "You are still warming up, and this is where you learn what is worth probing later. " +
-                    "No hard questions yet, and nothing about the round topic. " +
-                    (round.warmupInstruction ?: "Find out who they are and what they actually work on.")
-            }
-
-            else -> {
-                "You are in the main round with ${round.minutesRemaining} minutes left. Pace yourself so " +
-                    "the round finishes properly rather than being cut off mid-answer."
-            }
-        }
-
-    /**
-     * Counts of help given, so the model's narrative is built on the real numbers rather
-     * than its own impression of how the round went.
-     */
-    private fun assistanceContext(transcript: List<TurnTranscript>): String {
-        val answered = transcript.filter { it.answerTranscript != null }
-        if (answered.isEmpty()) return "No answers were recorded."
-
-        val assisted = answered.filter { it.intervention.isAssisted }
-        if (assisted.isEmpty()) {
-            return "The candidate answered all ${answered.size} questions without any help."
-        }
-
-        return buildString {
-            append("The candidate answered ${answered.size - assisted.size} of ${answered.size} unaided. ")
-            append("The interviewer stepped in on ${assisted.size}:\n")
-            assisted
-                .groupingBy { it.intervention }
-                .eachCount()
-                .forEach { (intervention, count) -> append("- ${intervention.label}: $count turn(s)\n") }
-            assisted.mapNotNull { it.interventionNote }.forEach { append("- what was given: $it\n") }
-        }
     }
 
     // ---------------------------------------------------------------------------
@@ -423,25 +328,6 @@ class GeminiInterviewAi(
                     "data" to Base64.getEncoder().encodeToString(bytes),
                 ),
         )
-
-    private fun fillBrief(
-        template: String,
-        brief: InterviewBrief,
-    ): String =
-        template
-            .replace("{{company}}", brief.company)
-            .replace("{{archetype}}", brief.archetype)
-            .replace("{{role}}", brief.role)
-            .replace("{{roundType}}", brief.roundType)
-            .replace("{{language}}", brief.language)
-            .replace("{{candidateFunction}}", brief.candidateFunction ?: "unspecified")
-            .replace("{{candidateLevel}}", brief.candidateLevel ?: "unspecified")
-            .replace("{{targetLevel}}", brief.targetLevel ?: "unspecified")
-            .replace("{{grounding}}", brief.grounding)
-
-    private fun loadPrompt(name: String): String = readResource("ai/prompts/$name.md")
-
-    private fun schema(name: String): JsonNode = objectMapper.readTree(readResource("ai/schemas/$name.json"))
 
     private fun readResource(path: String): String = ClassPathResource(path).inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
 }

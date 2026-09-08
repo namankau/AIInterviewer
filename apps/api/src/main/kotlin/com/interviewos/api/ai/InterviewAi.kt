@@ -10,6 +10,18 @@ package com.interviewos.api.ai
  * session whose model call fails becomes `failed`, never a fake pass (task 002, §5).
  */
 interface InterviewAi {
+    /**
+     * A name for logs and for the `model` recorded against a report, so it is always
+     * possible to tell which provider actually answered.
+     */
+    val providerName: String
+
+    /**
+     * What this provider can genuinely do. The fallback chain uses it to avoid handing a
+     * text-only model a recording of somebody's voice.
+     */
+    val capabilities: Set<AiCapability>
+
     fun parseResume(file: ResumeFile): AiResult<ParsedResume>
 
     /**
@@ -75,8 +87,16 @@ interface InterviewAi {
     ): AiResult<ReportContent>
 }
 
-/** Thrown when Gemini cannot be reached or returns something unusable. */
+/**
+ * Thrown when a provider cannot be reached or returns something unusable.
+ *
+ * [worthRetryingElsewhere] is the whole basis of the fallback chain. A quota refusal, an
+ * outage or a timeout is somebody else's problem and another provider may well succeed.
+ * A malformed request is *ours*, and will fail identically everywhere — retrying it down
+ * the chain would turn one fast error into three slow ones and bill for the privilege.
+ */
 class AiUnavailableException(
     message: String,
     cause: Throwable? = null,
+    val worthRetryingElsewhere: Boolean = true,
 ) : RuntimeException(message, cause)

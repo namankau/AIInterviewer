@@ -74,7 +74,8 @@ rather than restating requirements.
 | Backend | Spring Boot (Kotlin) | Chosen to match the owner's expertise; this is deliberate, do not propose migrating |
 | Database | PostgreSQL + pgvector | Single store for relational and vector workloads at this scale |
 | Platform | Supabase (auth, storage, Postgres) | Google OAuth via Supabase Auth |
-| AI provider | **Google Gemini** | `gemini-3.5-flash` for reasoning, audio understanding and scoring; `gemini-2.5-flash-preview-tts` for the interviewer's voice. Do not use Anthropic or OpenAI here. `gemini-2.5-pro` 404s for new keys |
+| AI provider | **Google Gemini, with fallbacks** | Gemini is the backbone: it is the only provider that can hear a spoken answer, read a PDF, or speak. Default reasoning model is now `gemini-2.5-flash-lite` (15x cheaper on input than `gemini-3.5-flash`, which sits behind it); `gemini-2.5-flash-preview-tts` for the voice. `gemini-2.5-pro` 404s for new keys |
+| Model fallbacks | Ordered chain, `interviewos.ai.providers` | Each provider is offered only the calls it can serve — **a text-only model is never handed a recording of a candidate's voice** (`FallbackInterviewAi`). A third vendor via the OpenAI *wire format* (Moonshot/Kimi, DeepSeek, Groq, OpenRouter) is supported for text-only calls; that is a format, not OpenAI the vendor. Still do not use Anthropic or OpenAI models here |
 | Voice (turn-based) | **Gemini alone — no voice vendor** | Browser `MediaRecorder` → upload → Gemini. Verified 2026-08-25: Gemini both speaks the question and understands the spoken answer, so no STT/TTS vendor is needed |
 | Voice (realtime) | LiveKit or Pipecat — still undecided | Only needed for barge-in and sub-second turn-taking. Not needed for the turn-based loop. Must have mature Android + iOS SDKs |
 | Payments | Razorpay | India-first, UPI. Stripe only if international demand appears |

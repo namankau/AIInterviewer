@@ -211,12 +211,33 @@ mood. Prose that sounds like a person who has sat on both sides of an interview 
 
 ## Product decisions (settled — implement, do not relitigate)
 
-- **Interview modality is voice, with camera on.** The candidate speaks their answers.
-  Camera is requested at session start and video is recorded. Body-language analysis is
-  a later moat, not MVP — capture it now, analyse it later.
+- **Interview modality is voice. Audio only — there is no camera.** The candidate speaks
+  their answers and nothing films them. This reverses the earlier "voice, with camera on,
+  capture it now and analyse it later" position, and the reversal is deliberate — **do not
+  "restore" the camera.**
+
+  Two reasons. The camera was the most expensive thing in the gap between a candidate's
+  last word and the next question: sending it to the model took the same answer from 3.49s
+  to 7.23s, because Gemini samples video at about a frame a second and a minute of it is
+  several times the size of the whole prompt. And once it was off that path, it was
+  personal data being collected and retained for a body-language feature that does not
+  exist, which is a cost with no matching benefit to the person paying it.
+
+  The capability is intact rather than deleted, because the moat may still be worth
+  building. `consentVideo` still exists end to end, the room and the device check still
+  open a camera when a session has it, and `interviewos.round-media.analyse-video-in-round`
+  still routes video to the model. Turning it back on means flipping that property *and*
+  putting the consent checkbox back in `new-interview-form.tsx`. Do not do one without the
+  other: analysing video nobody agreed to, or collecting video nothing analyses, are both
+  worse than either end state.
 - **Recording consent is a hard gate.** Explicit, specific consent before capture
-  starts, covering audio and video separately, stored with a timestamp. No consent, no
-  session. Account deletion removes the media objects, not just the rows.
+  starts, stored with a timestamp. No consent, no session. Account deletion removes the
+  media objects, not just the rows. Consent stays per-stream in the API so the camera can
+  return without a migration, but only audio is asked for today — and nothing may describe
+  how a candidate *looked* unless video actually reached the model, which
+  `RoundMediaProperties.presenceWasObserved` is the single answer to. Consent is not
+  observation: a report that says someone "maintained good eye contact" when nothing
+  watched them is fabricated evidence, the same failure as an invented quote.
 - **Every round is free, for now.** There is no paid tier and no limit: gating an
   unproven product turns away the people whose use of it is currently worth more than
   the model calls it saves. This is a deliberate change from the PRD's one-free-round

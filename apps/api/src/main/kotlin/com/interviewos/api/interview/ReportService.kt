@@ -26,6 +26,7 @@ class ReportService(
     private val repository: SessionRepository,
     private val interviewAi: InterviewAi,
     private val objectMapper: ObjectMapper,
+    private val roundMedia: RoundMediaProperties,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -98,7 +99,9 @@ class ReportService(
                 )
             }
 
-        val verified = withVerifiedEvidence(composed.value, turns).withoutUnseenPresence(session.consentVideo)
+        val verified =
+            withVerifiedEvidence(composed.value, turns)
+                .withoutUnseenPresence(roundMedia.presenceWasObserved(session.consentVideo))
         val payload = payloadOf(verified, session, roundType, archetype, turns, assistance)
 
         repository.saveReport(
@@ -127,13 +130,16 @@ class ReportService(
     private fun withEveryField(stored: Map<String, Any?>): Map<String, Any?> = stored + EMPTY_SECTIONS.filterKeys { it !in stored }
 
     /**
-     * Strips any claim about how the candidate looked when there was no camera. A model
+     * Strips any claim about how the candidate looked when nothing looked at them. A model
      * asked about presence will describe some anyway, and a report that says a candidate
      * "maintained good eye contact" in an audio-only round is fabricated evidence — the
      * same failure as an invented quote, in a different costume.
+     *
+     * [seen] is whether the camera reached the model, not whether the candidate agreed to
+     * it being recorded. Those came apart when video came off the round's critical path.
      */
-    private fun ReportContent.withoutUnseenPresence(hadVideo: Boolean): ReportContent =
-        if (hadVideo || communication.presence == null) {
+    private fun ReportContent.withoutUnseenPresence(seen: Boolean): ReportContent =
+        if (seen || communication.presence == null) {
             this
         } else {
             copy(communication = communication.copy(presence = null))

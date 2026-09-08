@@ -134,6 +134,33 @@ describe("NewInterviewForm", () => {
     expect(composeRound).not.toHaveBeenCalled();
   });
 
+  /**
+   * The round is audio only. Asking for a camera would be asking for personal data that
+   * nothing reads — the model is not sent video, and the report is not allowed to describe
+   * how anybody looked — so the question is not put.
+   */
+  it("does not ask for a camera, and never claims the candidate agreed to one", async () => {
+    composeRound.mockResolvedValue(draft);
+    startSession.mockResolvedValue({ id: "8b0d1e2f-3a4b-4c5d-9e6f-7a8b9c0d1e2f" });
+    render(<NewInterviewForm />);
+
+    await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys MR round");
+    await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+    await waitFor(() => expect(screen.getByDisplayValue("Infosys")).toBeInTheDocument());
+
+    expect(screen.queryByRole("checkbox", { name: /camera/i })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: /record my voice/i }));
+    await userEvent.click(screen.getByRole("button", { name: /begin interview/i }));
+
+    await waitFor(() =>
+      expect(startSession).toHaveBeenCalledWith(
+        "token",
+        expect.objectContaining({ consentAudio: true, consentVideo: false }),
+      ),
+    );
+  });
+
   it("will not start without consent to record the candidate's voice", async () => {
     render(<NewInterviewForm />);
     await userEvent.click(screen.getByRole("button", { name: /fill it in yourself/i }));

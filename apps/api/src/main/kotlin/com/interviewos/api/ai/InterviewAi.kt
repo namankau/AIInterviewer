@@ -60,6 +60,15 @@ interface InterviewAi {
         currentQuestion: String,
     ): AiResult<OfferedHint>
 
+    /**
+     * Pulls the interview questions a document actually reports out of it.
+     *
+     * Extraction, not generation: a source with nothing in it returns an empty list. The
+     * candidate is shown these next to a link to the page they came from, so a plausible
+     * question the model wrote itself would be a lie with a citation attached.
+     */
+    fun extractQuestions(source: SourceDocument): AiResult<ExtractedQuestions>
+
     fun composeReport(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,

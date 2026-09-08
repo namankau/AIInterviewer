@@ -8,6 +8,7 @@ import com.interviewos.api.ai.AnswerAudio
 import com.interviewos.api.ai.AnswerVideo
 import com.interviewos.api.ai.AskedQuestion
 import com.interviewos.api.ai.ComposedRound
+import com.interviewos.api.ai.ExtractedQuestions
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
 import com.interviewos.api.ai.OfferedHint
@@ -15,6 +16,7 @@ import com.interviewos.api.ai.ParsedResume
 import com.interviewos.api.ai.ReportContent
 import com.interviewos.api.ai.ResumeFile
 import com.interviewos.api.ai.RoundContext
+import com.interviewos.api.ai.SourceDocument
 import com.interviewos.api.ai.SpokenAudio
 import com.interviewos.api.ai.TurnTranscript
 import com.interviewos.api.storage.ObjectStorage
@@ -180,6 +182,8 @@ private abstract class StubAi : InterviewAi {
         priorTurns: List<TurnTranscript>,
         currentQuestion: String,
     ): AiResult<OfferedHint> = unsupported()
+
+    override fun extractQuestions(source: SourceDocument): AiResult<ExtractedQuestions> = unsupported()
 
     override fun composeReport(
         brief: InterviewBrief,

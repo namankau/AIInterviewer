@@ -9,6 +9,8 @@ import com.interviewos.api.ai.InterviewBrief
 import com.interviewos.api.ai.RoundContext
 import com.interviewos.api.ai.TurnTranscript
 import com.interviewos.api.common.ApiException
+import com.interviewos.api.sources.GroundedSources
+import com.interviewos.api.sources.SourceGrounding
 import com.interviewos.api.storage.ObjectStorage
 import com.interviewos.api.storage.ObjectStorageException
 import com.interviewos.api.storage.StorageProperties
@@ -47,6 +49,7 @@ class InterviewService(
     private val objectMapper: ObjectMapper,
     private val questionSpeech: QuestionSpeech,
     private val entitlementProperties: EntitlementProperties,
+    private val sourceGrounding: SourceGrounding,
     @Qualifier("interviewBackgroundExecutor") private val backgroundExecutor: TaskExecutor,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -169,7 +172,9 @@ class InterviewService(
                 durationMinutes = request.durationMinutes,
             )
 
-        val brief = briefFor(request.companyName.trim(), resolution, request.roleTitle.trim(), roundType, request.language)
+        val sources = groundingFor(request.companyName.trim(), roundType)
+        val brief =
+            briefFor(request.companyName.trim(), resolution, request.roleTitle.trim(), roundType, request.language, sources)
         val plan = InterviewPlan.opening(request.durationMinutes)
         val opening =
             try {
@@ -194,6 +199,7 @@ class InterviewService(
                     basis = opening.value.questionBasis,
                     probes = opening.value.questionProbes,
                     askedBecause = opening.value.questionAskedBecause,
+                    sources = sources,
                 ),
         )
         questionSpeech.render(SpeechRequest(userId, sessionId, 0, opening.value.text, request.language))
@@ -257,7 +263,8 @@ class InterviewService(
         val roundType = RoundType.fromDbValue(session.roundType)
         val resolution =
             ArchetypeResolution(Archetype.fromDbValue(session.archetype), confidenceOf(session.archetypeConfidence))
-        val brief = briefFor(session.companyName, resolution, session.roleTitle, roundType, session.language)
+        val sources = groundingFor(session.companyName, roundType)
+        val brief = briefFor(session.companyName, resolution, session.roleTitle, roundType, session.language, sources)
         val priorTurns =
             repository
                 .listTranscript(sessionId, userId)
@@ -333,6 +340,7 @@ class InterviewService(
                     basis = assessment.value.questionBasis,
                     probes = assessment.value.questionProbes,
                     askedBecause = assessment.value.questionAskedBecause,
+                    sources = sources,
                 ),
         )
         questionSpeech.render(SpeechRequest(userId, sessionId, nextIndex, nextText, session.language))
@@ -496,15 +504,29 @@ class InterviewService(
         return turnViewOf(turn)
     }
 
-    /** Why a question was asked, ready to store. See [QuestionProvenance.fromModel]. */
+    /**
+     * Why a question was asked, ready to store.
+     *
+     * [sources] are the documents that actually grounded this round, or null when the
+     * library held none. They decide the tier: real documents make it
+     * `published_source`, and their absence leaves it `model_knowledge` with the
+     * disclosure that goes with it. The model never gets a vote either way.
+     */
     private fun provenanceJson(
         basis: String?,
         probes: String?,
         askedBecause: String?,
-    ): String? =
-        QuestionProvenance
-            .fromModel(basis, probes, askedBecause)
+        sources: GroundedSources?,
+    ): String? {
+        val citations =
+            sources?.citations()?.map {
+                ProvenanceSource(title = it.title, publisher = it.publisher, url = it.url, year = it.year)
+            } ?: emptyList()
+
+        return QuestionProvenance
+            .fromSources(basis, probes, askedBecause, citations)
             ?.let { objectMapper.writeValueAsString(it) }
+    }
 
     fun list(userId: UUID): List<SessionSummary> = repository.listSessions(userId)
 
@@ -547,12 +569,36 @@ class InterviewService(
             }
         }
 
+    /**
+     * Real questions from the source library for this employer and round, or null when
+     * the library holds none — which is the common case and not a failure. Absence runs
+     * the round on archetype patterns and says so, exactly as before.
+     */
+    private fun groundingFor(
+        company: String,
+        roundType: RoundType,
+    ): GroundedSources? = sourceGrounding.forRound(company, roundType.dbValue)
+
+    /**
+     * Archetype patterns first, then anything real we actually hold.
+     *
+     * The order matters. The archetype text carries the standing rules about not
+     * inventing employer-specific detail, and those still govern everything after it —
+     * having real sources for one round does not licence invention around the edges of
+     * what they cover.
+     */
+    private fun groundingText(
+        resolution: ArchetypeResolution,
+        sources: GroundedSources?,
+    ): String = listOfNotNull(resolution.grounding, sources?.asPrompt()).joinToString(separator = "\n\n")
+
     private fun briefFor(
         company: String,
         resolution: ArchetypeResolution,
         role: String,
         roundType: RoundType,
         language: String,
+        sources: GroundedSources? = null,
     ) = InterviewBrief(
         company = company,
         archetype = resolution.archetype.label,
@@ -562,7 +608,7 @@ class InterviewService(
         candidateFunction = null,
         candidateLevel = null,
         targetLevel = null,
-        grounding = resolution.grounding,
+        grounding = groundingText(resolution, sources),
     )
 
     private fun TurnPlan.toContext() =

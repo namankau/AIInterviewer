@@ -52,6 +52,15 @@ interviewos:
   #
   # entitlement:
   #   free-rounds: 1
+  admin:
+    # Who may curate the source library. The library decides what the interviewer treats
+    # as fact about a named employer, so this is closer to write access to the product
+    # than to a user setting -- hence an explicit allow-list rather than a role column.
+    #
+    # An empty list denies everyone, which is the right default: a misconfigured
+    # deployment should lock the operator out, not let the internet in.
+    emails: ${ADMIN_EMAILS:}
+
   storage:
     # Service role bypasses RLS. Ownership is enforced by the API from the verified
     # token subject and by keying every object under `{userId}/`.

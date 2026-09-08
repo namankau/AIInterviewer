@@ -96,5 +96,33 @@ object QuestionText {
             "thank you for sharing",
             "okay, thanks",
             "ok, thanks",
+            // Apologies, which are their own problem.
+            //
+            // A candidate who says "I never mentioned MasterControl" is usually right that
+            // they never said it and wrong that it was invented — it came off their resume,
+            // which is a perfectly good reason for an interviewer to know it. What the model
+            // does is apologise and then ask the same question again, which is the worst
+            // available answer: the apology says it was wrong, the repeat says it was not,
+            // and the candidate can trust neither.
+            //
+            // Telling it to name the source instead did not stop the apologising. Measured
+            // over four runs of exactly that exchange, it opened with "My apologies" in four
+            // of four both before and after the instruction. So the apology is removed here
+            // and what remains is the sentence that does the work — "The resume I have lists
+            // MasterControl, and a validation workflow engine project there. Could you tell
+            // me about that project?"
+            //
+            // The cost is real and worth stating: an interviewer that genuinely did get
+            // something wrong now sounds like it is brushing past the correction rather than
+            // owning it. That is the better failure. Apologising and then repeating the
+            // question is not a softer version of the same thing — it teaches the candidate
+            // that pushing back achieves nothing, which is the opposite of what a real
+            // interview rewards.
+            "my apologies",
+            "apologies",
+            "i apologise",
+            "i apologize",
+            "sorry about that",
+            "sorry, ",
         )
 }

@@ -100,6 +100,51 @@ class QuestionTextTest {
         )
     }
 
+    /**
+     * The reported exchange. The candidate says they never mentioned MasterControl; it is
+     * on their resume, so the interviewer has every right to ask — but it apologised and
+     * then asked again, which says both that it was wrong and that it was not.
+     *
+     * What survives is the half that does the work: where the detail came from, and the
+     * question.
+     */
+    @Test
+    fun `drops a reflexive apology and keeps the explanation`() {
+        assertEquals(
+            "The resume I have lists MasterControl, and a validation workflow engine project " +
+                "there. Could you tell me about that project?",
+            QuestionText.withoutPreamble(
+                "My apologies. The resume I have lists MasterControl, and a validation workflow " +
+                    "engine project there. Could you tell me about that project?",
+            ),
+        )
+    }
+
+    @Test
+    fun `drops the other ways it says sorry`() {
+        assertEquals(
+            "Where did the requirement for two-phase commit come from?",
+            QuestionText.withoutPreamble(
+                "I apologise. Where did the requirement for two-phase commit come from?",
+            ),
+        )
+        assertEquals(
+            "What was your part in the migration itself?",
+            QuestionText.withoutPreamble("Sorry, that was my error. What was your part in the migration itself?"),
+        )
+    }
+
+    /**
+     * "Sorry" inside a sentence is not an apology for anything — it is how people ask you
+     * to repeat yourself, and cutting it would remove the question.
+     */
+    @Test
+    fun `does not cut a sorry that is part of the question`() {
+        val question = "Sorry, could you say that last part again?"
+
+        assertEquals(question, QuestionText.withoutPreamble(question))
+    }
+
     @Test
     fun `leaves an ordinary question alone`() {
         val question = "Walk me through the reconciliation engine."

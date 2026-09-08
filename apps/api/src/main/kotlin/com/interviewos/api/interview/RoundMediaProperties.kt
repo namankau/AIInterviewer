@@ -52,6 +52,18 @@ data class RoundMediaProperties(
             ?.takeIf { analyseVideoInRound }
             ?.let { AnswerVideo(it, contentType ?: DEFAULT_CONTENT_TYPE) }
 
+    /**
+     * Whether anything actually looked at the candidate, which is the only honest basis
+     * for letting a report say how they came across.
+     *
+     * Consent alone is not that basis, and reading it as though it were is a bug this had
+     * for exactly one commit: the camera stopped being sent to the model, and the report
+     * carried on allowing presence claims for anyone who had ticked the box. Nothing had
+     * seen them, so "maintained good eye contact" would have been invented — the same
+     * failure as a fabricated quote, wearing different clothes.
+     */
+    fun presenceWasObserved(consentVideo: Boolean): Boolean = consentVideo && analyseVideoInRound
+
     private companion object {
         /** What every browser we support records to; only a fallback if the part arrived unlabelled. */
         const val DEFAULT_CONTENT_TYPE = "video/webm"

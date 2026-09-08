@@ -176,7 +176,6 @@ function RoundSetup({
   const [durationMinutes, setDurationMinutes] = useState(draft.durationMinutes);
   const [language, setLanguage] = useState(draft.language);
   const [consentAudio, setConsentAudio] = useState(false);
-  const [consentVideo, setConsentVideo] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -196,7 +195,11 @@ function RoundSetup({
         roundType,
         language,
         consentAudio,
-        consentVideo,
+        // The round is audio-only, so there is nothing to consent to and nothing is
+        // asked for. The API still takes the flag, and the room, the device check and the
+        // report all still handle a camera — see RoundMediaProperties on the server for
+        // what turning it back on involves.
+        consentVideo: false,
         durationMinutes,
       });
       onStart(session.id);
@@ -343,20 +346,15 @@ function RoundSetup({
       <fieldset className="flex flex-col gap-4 rounded-lg border border-line bg-surface-raised p-5">
         <legend className="px-2 text-heading text-ink">Before we start</legend>
         <p className="text-caption text-ink-muted">
-          This interview is spoken. Nothing is recorded until you agree, and everything recorded is
-          private to your account — you can delete it at any time.
+          This interview is spoken, and audio only — no camera. Nothing is recorded until you
+          agree, and everything recorded is private to your account. You can delete it at any
+          time.
         </p>
         <Consent
           checked={consentAudio}
           onChange={setConsentAudio}
           title="Record my voice"
           detail="Required. Your answers are assessed from what you say."
-        />
-        <Consent
-          checked={consentVideo}
-          onChange={setConsentVideo}
-          title="Record my camera"
-          detail="Optional. Real interviews are on camera, and practising that way is most of the value."
         />
       </fieldset>
 

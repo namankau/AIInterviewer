@@ -2,7 +2,9 @@ package com.interviewos.api.interview
 
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * What the candidate waits for, and what they do not.
@@ -42,6 +44,29 @@ class RoundMediaPropertiesTest {
     fun `no recording is null whatever the setting says`() {
         assertNull(RoundMediaProperties(analyseVideoInRound = true).videoForRound(null, "video/webm"))
         assertNull(RoundMediaProperties().videoForRound(null, null))
+    }
+
+    /**
+     * The bug this pair exists for. When video came off the critical path, the report was
+     * still deciding whether a candidate could be described by whether they had *agreed*
+     * to be filmed — so anyone who ticked the box got body-language claims from a model
+     * that had been shown no video at all.
+     */
+    @Test
+    fun `consent alone is not grounds to describe how somebody looked`() {
+        assertFalse(
+            RoundMediaProperties().presenceWasObserved(consentVideo = true),
+            "nothing saw them, so nothing may say how they came across",
+        )
+    }
+
+    @Test
+    fun `presence is observed only when the camera was both consented to and analysed`() {
+        val analysing = RoundMediaProperties(analyseVideoInRound = true)
+
+        assertTrue(analysing.presenceWasObserved(consentVideo = true))
+        assertFalse(analysing.presenceWasObserved(consentVideo = false), "no consent, no camera, nothing seen")
+        assertFalse(RoundMediaProperties().presenceWasObserved(consentVideo = false))
     }
 
     @Test

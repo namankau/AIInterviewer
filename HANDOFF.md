@@ -1,89 +1,58 @@
-# Handoff — 2026-09-08
+# Handoff — 2026-09-08 (evening)
 
 ## Task
-Three faults reported from a real session: the pause between questions, questions about
-the wrong job, and the acknowledgement clips sounding like a different person.
+A round sat and reported on: no interviewer voice, flattering scores, a report with no way
+out, sign out in the wrong place, LinkedIn never populated, plus a request for live
+candidate transcription, round deletion, report retention, report charts, and an
+Internshala-style device check.
 
 ## What I built
 
-Measured the turn against the live API before changing anything, which redirected the
-whole fix. **The model call was never the bottleneck.**
-
-| stage | before | after |
-|---|---|---|
-| answer → question text | 4.7s | 3.5s |
-| question → speech | 15.6s | ~6s (see "could not verify") |
-| median question | 166 chars | 74 chars |
-
-- `ai/schemas/assess-answer.json` — `maxLength: 120` on `nextQuestionText`. Speech latency
-  scales with length (measured: 48 chars 5.2s, 83 chars 6.1s, 220 chars 15.6s) and the
-  interviewer was writing 166-character questions that restated the answer before asking
-  anything. **Prompting had failed at this four times**; a fifth attempt with an explicit
-  30-word budget moved the median from 133 to 141 characters. The schema moved it to 74,
-  and the model rephrases to fit rather than being truncated.
-- `ai/schemas/opening-question.json` — same, at 220.
-- `ai/prompts/opening-question.md` — removed a contradiction it had carried all along: it
-  asked for "roughly thirty seconds of speech" and "two sentences at the outside" in the
-  same breath. Thirty seconds of speech is ~26s of synthesis before the candidate hears
-  anything, which is the "stuck starting the interview" complaint.
-- `ai/prompts/assess-answer.md` — separated two rules it had been conflating. A verdict on
-  the answer ("That's a great overview") stays banned. Briefly pointing at what they said
-  ("You mentioned some lag at peak — how did you address that?") is now explicitly fine.
-- `ai/SpeechChunks.kt` — only text of 200+ characters is fanned out into parallel calls.
-  Concurrency has a tail: four parallel calls returned a straggler at 11.0s against 5.1s
-  for its siblings, and one chunk came back at 34.7s against a 5.5s median. The candidate
-  waits for the slowest chunk, so below 200 characters one call is faster *and* steadier.
-- `resume/ResumeService.kt` — roles sorted most-recent-first, current role marked
-  `<- CURRENT ROLE`, and the prompt told to anchor there. This is the wrong-job bug: the
-  list went to the model in page-layout order with nothing saying which job was current.
-- `scripts/make-backchannel.mjs` — renders bare, the same request shape
-  `GeminiInterviewAi.synthesizeSpeech` sends.
-
-## Assumptions I made
-
-- **A short restatement is good interviewing, not a defect.** Stripping "You mentioned
-  some lag at peak." from a 76-character question leaves "How did you address that?" with
-  a dangling "that". The length was the problem, not the pointer.
-- **Kept the schema field order.** Generating the question before the transcript showed no
-  latency gain (3.61s vs 4.70s was run-to-run noise) and would have the model ask before
-  it has listened. Not worth the quality risk.
-- Left video in the in-room model call rather than removing it — see below.
+- **Scoring is calibrated and it is measured.** `ai/prompts/report.md` carries an anchored
+  scale — 2/5 is the default for a competent ordinary answer, 5/5 is reserved. A transcript
+  written to be ordinary scored a median **70% before and 40% after**, three runs each
+  against the live API. Strong rounds are placed honestly through `outcomeSimulation`
+  rather than by inflating the number.
+- **LinkedIn is parsed from the resume** (`LinkedInUrl.kt`, + schema and prompt). It was
+  never extracted at all — the field could only ever be typed by hand, while sitting in the
+  contact line of the document already uploaded. Validated hard: the parser is a model
+  reading a PDF and returns "LinkedIn", personal sites and bare hostnames.
+- **The report is in the app shell**, so there is a way back that is not "read to the end".
+- **Sign out moved to the profile page**; the rail block is now the way in to it.
+- **A missing voice says so.** Previously the round silently became a text one.
 
 ## What I could NOT verify
 
-- **Speech, at all.** The TTS model has a **100 requests/day project quota** and I
-  exhausted it benchmarking. The 3.5s assess figure and the 74-character questions are
-  measured; the ~6s speech figure is computed from the length/latency curve, not observed
-  after the change. Re-run `node --env-file=.env scripts/e2e/interview.mjs` once it resets.
-- **The acknowledgement clips are still the old recordings.** The script is fixed; the
-  clips need re-rendering and that needs the quota:
-  `node --env-file=.env scripts/make-backchannel.mjs`. Until that runs, the voice still
-  mismatches.
-- Whether ~9.5s *feels* acceptable. It is half of what it was, but it is not a
-  conversation. Only you can judge that.
+- **Voice, again.** The speech quota (100/day) was exhausted when your round ran, which is
+  why the interviewer typed instead of speaking — I burned it benchmarking earlier the same
+  day. It is still exhausted; the backchannel clips therefore still need re-rendering:
+  `node --env-file=.env scripts/make-backchannel.mjs`.
+- **The reference video** (`WhatsApp Video 2026-09-08 at 10.01.03 PM.mp4`) could not be
+  decoded — the only ffmpeg on this machine is Playwright's minimal build, no H.264. Worked
+  from the screenshots instead.
 
 ## Verification status
-- typecheck / lint / tests / build: **pass**, both jobs, CI run `34228936441`.
-- Live API: assess 3.5s over 4 runs; questions 51, 72, 76, 132 chars (`maxLength` is a
-  strong steer, not a hard cap).
+- typecheck / lint / tests / build: **pass** both sides. CI green before each merge.
 
 ## Merge status
-- Merged into `develop` at `62afd7c`. Branch `fix/017-turn-latency` deleted local + remote.
+- Merged into `develop` at `d104ad5`. Earlier today: `f3b6736`, `0cb23fd`, `5578f45`,
+  `57bec1c`, `934fc58`.
 
 ## Suggested next task
-Take video off the answer's critical path. The browser posts audio *and* video in one
-multipart request, so the model call cannot start until a multi-megabyte upload finishes —
-on a home uplink that is seconds, every turn. `CLAUDE.md` says body-language analysis is
-"capture it now, analyse it later", so uploading it separately costs nothing that is
-currently used.
+Round deletion and 28-day report retention — **as a PR, not a merge.** `CLAUDE.md` routes
+anything touching data deletion to human review, and this touches storage objects as well
+as rows.
 
 ## Open questions for you
 
-1. **The 100/day speech quota is a launch blocker.** One question is one call, so the free
-   tier is roughly ten interviews a day across all users — and when it runs out, rounds
-   silently fall back to text with no voice. Needs a paid tier on the Google project
-   before the link goes anywhere public.
-2. **~9.5s is the floor without a realtime vendor.** The remaining levers are streaming
-   the assessment so speech starts ~1.5s earlier, and then LiveKit / Pipecat / Gemini
-   Live. The latter commits real spend and `CLAUDE.md` reserves it for you.
-3. `main` is ~54 commits behind `develop` and only you can advance it.
+1. **The speech quota is now the product's biggest constraint, not a nice-to-have.** One
+   question is one call against a 100/day project cap, so voice is off for part of every
+   day and the round degrades to text. Needs billing enabled on the Google project. This
+   has now broken a real round of yours.
+2. **Live candidate transcription** needs the chunked-upload pipeline discussed earlier
+   (recorder timeslice + an endpoint that accepts audio during the answer). It is the same
+   change that removes the remaining upload latency and lets the interviewer notice when
+   somebody has finished. Worth doing as one piece; say when.
+3. **Report charts and the Internshala-style device check** are both still open. The device
+   check exists (`device-check.tsx`) but is nothing like the reference.
+4. `main` is ~60 commits behind `develop` and only you can advance it.

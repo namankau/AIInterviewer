@@ -41,6 +41,7 @@ export function AppShell({
         <ul className="flex flex-wrap gap-x-5 gap-y-1 md:flex-col">
           <RailLink href="/dashboard" label="Home" />
           <RailLink href="/rounds" label="Rounds" />
+          <RailLink href="/profile" label="Profile" />
         </ul>
 
         <div className="md:mt-auto">

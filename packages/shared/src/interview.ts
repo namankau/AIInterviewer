@@ -1,4 +1,4 @@
-import type { RoundType } from "./domain.js";
+import type { ResumeParseStatus, RoundType } from "./domain.js";
 
 /**
  * How much interviewing this product has done, across everyone.
@@ -314,4 +314,72 @@ export interface ReadinessGroup {
   latestAverageScore: number | null;
   firstAverageScore: number | null;
   recurringWeaknesses: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Profile and resume (PRD 05)
+// ---------------------------------------------------------------------------
+
+export interface ResumeEmployment {
+  employer: string;
+  title: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  current: boolean;
+}
+
+export interface ResumeProject {
+  name: string;
+  description: string | null;
+  technologies: string[];
+}
+
+/**
+ * The resume as the candidate's own profile page shows it back to them.
+ *
+ * `lowConfidenceFields` is the important one: the parser names what it was unsure of
+ * rather than guessing, and the page has to surface that. A wrong employer silently
+ * degrades every future interview, and the candidate is the only one who can catch it.
+ */
+export interface ResumeView {
+  id: string;
+  filename: string;
+  status: ResumeParseStatus;
+  error: string | null;
+  uploadedAt: string | null;
+  headline: string | null;
+  employments: ResumeEmployment[];
+  projects: ResumeProject[];
+  detectedSkills: string[];
+  lowConfidenceFields: string[];
+  /** Derived from the dates by the server, never claimed by the resume. */
+  totalExperienceMonths: number | null;
+  gapCount: number;
+  shortTenureCount: number;
+}
+
+export interface SkillView {
+  name: string;
+  selfRatedConfidence: number | null;
+  detectedInResume: boolean;
+  flaggedAsWeak: boolean;
+}
+
+export interface ProfileDetails {
+  resume: ResumeView | null;
+  skills: SkillView[];
+  avatarUrl: string | null;
+}
+
+export interface UpdateProfileRequest {
+  function?: string;
+  currentLevel?: string;
+  targetLevel?: string;
+  location?: string;
+  headline?: string;
+  linkedinUrl?: string;
+  noticePeriodDays?: number;
+  workAuthorisationStatus?: string;
+  relocationIntent?: string;
+  peopleManagementScope?: string;
 }

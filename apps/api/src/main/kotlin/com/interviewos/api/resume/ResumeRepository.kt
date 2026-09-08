@@ -1,0 +1,341 @@
+package com.interviewos.api.resume
+
+import org.springframework.jdbc.core.simple.JdbcClient
+import org.springframework.stereotype.Repository
+import java.sql.ResultSet
+import java.time.Instant
+import java.util.UUID
+
+/**
+ * Resumes and the profile fields an interview is grounded in.
+ *
+ * **The resume an interview uses is the most recently parsed one**, derived rather than
+ * flagged. A `is_primary` column would let two rows claim to be current after a failed
+ * upload, and the candidate would have no way to see which one their round was using.
+ */
+@Repository
+class ResumeRepository(
+    private val jdbcClient: JdbcClient,
+) {
+    fun insertPending(
+        userId: UUID,
+        bucket: String,
+        path: String,
+        filename: String,
+        contentType: String?,
+        sizeBytes: Long,
+    ): UUID =
+        jdbcClient
+            .sql(
+                """
+                insert into public.resumes
+                       (user_id, storage_bucket, storage_path, original_filename, content_type, size_bytes, parse_status)
+                values (:u, :bucket, :path, :filename, :contentType, :size, 'processing')
+                returning id
+                """.trimIndent(),
+            ).param("u", userId)
+            .param("bucket", bucket)
+            .param("path", path)
+            .param("filename", filename)
+            .param("contentType", contentType)
+            .param("size", sizeBytes)
+            .query(UUID::class.java)
+            .single()
+
+    fun markParsed(
+        id: UUID,
+        userId: UUID,
+        payloadJson: String,
+    ) {
+        jdbcClient
+            .sql(
+                """
+                update public.resumes
+                   set parse_status = 'parsed', parsed_payload = cast(:payload as jsonb),
+                       parsed_at = now(), parse_error = null
+                 where id = :id and user_id = :u
+                """.trimIndent(),
+            ).param("payload", payloadJson)
+            .param("id", id)
+            .param("u", userId)
+            .update()
+    }
+
+    fun markFailed(
+        id: UUID,
+        userId: UUID,
+        error: String,
+    ) {
+        jdbcClient
+            .sql(
+                """
+                update public.resumes
+                   set parse_status = 'failed', parse_error = :error, parsed_at = null
+                 where id = :id and user_id = :u
+                """.trimIndent(),
+            ).param("error", error.take(500))
+            .param("id", id)
+            .param("u", userId)
+            .update()
+    }
+
+    /** The candidate's current resume, whatever state it is in. Null when they have none. */
+    fun findLatest(userId: UUID): ResumeRow? =
+        jdbcClient
+            .sql(
+                """
+                select id, original_filename, content_type, size_bytes,
+                       parse_status::text as parse_status, parse_error, parsed_payload::text as parsed_payload,
+                       uploaded_at, parsed_at, storage_bucket, storage_path
+                  from public.resumes
+                 where user_id = :u
+                 order by uploaded_at desc
+                 limit 1
+                """.trimIndent(),
+            ).param("u", userId)
+            .query { rs, _ -> mapResume(rs) }
+            .optional()
+            .orElse(null)
+
+    /**
+     * The resume an interview should be grounded in: the most recent one that actually
+     * parsed. A failed upload does not displace a working resume, which matters because
+     * the alternative is a round that silently loses its grounding.
+     */
+    fun findParsed(userId: UUID): ResumeRow? =
+        jdbcClient
+            .sql(
+                """
+                select id, original_filename, content_type, size_bytes,
+                       parse_status::text as parse_status, parse_error, parsed_payload::text as parsed_payload,
+                       uploaded_at, parsed_at, storage_bucket, storage_path
+                  from public.resumes
+                 where user_id = :u and parse_status = 'parsed'
+                 order by parsed_at desc
+                 limit 1
+                """.trimIndent(),
+            ).param("u", userId)
+            .query { rs, _ -> mapResume(rs) }
+            .optional()
+            .orElse(null)
+
+    fun delete(
+        id: UUID,
+        userId: UUID,
+    ): ResumeRow? {
+        val existing = findLatest(userId)?.takeIf { it.id == id } ?: return null
+        jdbcClient
+            .sql("delete from public.resumes where id = :id and user_id = :u")
+            .param("id", id)
+            .param("u", userId)
+            .update()
+        return existing
+    }
+
+    // -- profile ---------------------------------------------------------------
+
+    /**
+     * Writes the fields a candidate filled in themselves.
+     *
+     * Every column is coalesced against what is already stored, so a client that sends a
+     * partial profile updates what it sent rather than blanking the rest. Clearing a field
+     * is done by sending an empty string, which the service turns into an explicit null.
+     */
+    fun upsertProfile(
+        userId: UUID,
+        update: ProfileUpdate,
+    ) {
+        jdbcClient
+            .sql(
+                """
+                insert into public.profiles (
+                    user_id, function, current_level, target_level, location, headline,
+                    linkedin_url, notice_period_days, work_authorisation_status,
+                    relocation_intent, people_management_scope, total_experience_months
+                ) values (
+                    :u, :function, :currentLevel, :targetLevel, :location, :headline,
+                    :linkedin, :notice, :workAuth,
+                    cast(:relocation as public.relocation_intent), :peopleScope, :experience
+                )
+                on conflict (user_id) do update set
+                    function = coalesce(excluded.function, public.profiles.function),
+                    current_level = coalesce(excluded.current_level, public.profiles.current_level),
+                    target_level = coalesce(excluded.target_level, public.profiles.target_level),
+                    location = coalesce(excluded.location, public.profiles.location),
+                    headline = coalesce(excluded.headline, public.profiles.headline),
+                    linkedin_url = coalesce(excluded.linkedin_url, public.profiles.linkedin_url),
+                    notice_period_days = coalesce(excluded.notice_period_days, public.profiles.notice_period_days),
+                    work_authorisation_status =
+                        coalesce(excluded.work_authorisation_status, public.profiles.work_authorisation_status),
+                    relocation_intent = coalesce(excluded.relocation_intent, public.profiles.relocation_intent),
+                    people_management_scope =
+                        coalesce(excluded.people_management_scope, public.profiles.people_management_scope),
+                    total_experience_months =
+                        coalesce(excluded.total_experience_months, public.profiles.total_experience_months)
+                """.trimIndent(),
+            ).param("u", userId)
+            .param("function", update.function)
+            .param("currentLevel", update.currentLevel)
+            .param("targetLevel", update.targetLevel)
+            .param("location", update.location)
+            .param("headline", update.headline)
+            .param("linkedin", update.linkedinUrl)
+            .param("notice", update.noticePeriodDays)
+            .param("workAuth", update.workAuthorisationStatus)
+            .param("relocation", update.relocationIntent)
+            .param("peopleScope", update.peopleManagementScope)
+            .param("experience", update.totalExperienceMonths)
+            .update()
+    }
+
+    fun setAvatarPath(
+        userId: UUID,
+        path: String,
+    ) {
+        jdbcClient
+            .sql(
+                """
+                insert into public.profiles (user_id, avatar_path) values (:u, :path)
+                on conflict (user_id) do update set avatar_path = excluded.avatar_path
+                """.trimIndent(),
+            ).param("u", userId)
+            .param("path", path)
+            .update()
+    }
+
+    fun avatarPath(userId: UUID): String? =
+        jdbcClient
+            .sql("select avatar_path from public.profiles where user_id = :u")
+            .param("u", userId)
+            .query(String::class.java)
+            .optional()
+            .orElse(null)
+
+    // -- skills ----------------------------------------------------------------
+
+    /**
+     * Records what the resume evidenced, without touching what the candidate said about
+     * themselves. A skill they had already rated keeps its rating and simply gains
+     * `detected_in_resume`; re-uploading a resume must not silently reset their answers.
+     */
+    fun recordDetectedSkills(
+        userId: UUID,
+        names: List<String>,
+    ) {
+        names.forEach { name ->
+            jdbcClient
+                .sql(
+                    """
+                    insert into public.skills (user_id, name, detected_in_resume)
+                    values (:u, :name, true)
+                    on conflict (user_id, lower(name)) do update set detected_in_resume = true
+                    """.trimIndent(),
+                ).param("u", userId)
+                .param("name", name)
+                .update()
+        }
+    }
+
+    fun upsertSkill(
+        userId: UUID,
+        name: String,
+        confidence: Int?,
+        flaggedAsWeak: Boolean,
+    ) {
+        jdbcClient
+            .sql(
+                """
+                insert into public.skills (user_id, name, self_rated_confidence, flagged_as_weak)
+                values (:u, :name, :confidence, :weak)
+                on conflict (user_id, lower(name)) do update set
+                    self_rated_confidence = excluded.self_rated_confidence,
+                    flagged_as_weak = excluded.flagged_as_weak
+                """.trimIndent(),
+            ).param("u", userId)
+            .param("name", name)
+            .param("confidence", confidence)
+            .param("weak", flaggedAsWeak)
+            .update()
+    }
+
+    fun deleteSkill(
+        userId: UUID,
+        name: String,
+    ) {
+        jdbcClient
+            .sql("delete from public.skills where user_id = :u and lower(name) = lower(:name)")
+            .param("u", userId)
+            .param("name", name)
+            .update()
+    }
+
+    fun listSkills(userId: UUID): List<SkillRow> =
+        jdbcClient
+            .sql(
+                """
+                select name, self_rated_confidence, detected_in_resume, flagged_as_weak
+                  from public.skills
+                 where user_id = :u
+                 order by detected_in_resume desc, lower(name)
+                """.trimIndent(),
+            ).param("u", userId)
+            .query { rs, _ ->
+                SkillRow(
+                    name = rs.getString("name"),
+                    selfRatedConfidence = rs.getInt("self_rated_confidence").takeUnless { rs.wasNull() },
+                    detectedInResume = rs.getBoolean("detected_in_resume"),
+                    flaggedAsWeak = rs.getBoolean("flagged_as_weak"),
+                )
+            }.list()
+
+    private fun mapResume(rs: ResultSet) =
+        ResumeRow(
+            id = rs.getObject("id", UUID::class.java),
+            originalFilename = rs.getString("original_filename"),
+            contentType = rs.getString("content_type"),
+            sizeBytes = rs.getLong("size_bytes").takeUnless { rs.wasNull() },
+            parseStatus = rs.getString("parse_status"),
+            parseError = rs.getString("parse_error"),
+            parsedPayloadJson = rs.getString("parsed_payload"),
+            uploadedAt = rs.getTimestamp("uploaded_at")?.toInstant(),
+            parsedAt = rs.getTimestamp("parsed_at")?.toInstant(),
+            storageBucket = rs.getString("storage_bucket"),
+            storagePath = rs.getString("storage_path"),
+        )
+}
+
+data class ResumeRow(
+    val id: UUID,
+    val originalFilename: String,
+    val contentType: String?,
+    val sizeBytes: Long?,
+    val parseStatus: String,
+    val parseError: String?,
+    val parsedPayloadJson: String?,
+    val uploadedAt: Instant?,
+    val parsedAt: Instant?,
+    val storageBucket: String,
+    val storagePath: String,
+)
+
+data class SkillRow(
+    val name: String,
+    val selfRatedConfidence: Int?,
+    val detectedInResume: Boolean,
+    val flaggedAsWeak: Boolean,
+)
+
+/** Null means "leave this alone". The service turns an explicitly cleared field into null. */
+data class ProfileUpdate(
+    val function: String? = null,
+    val currentLevel: String? = null,
+    val targetLevel: String? = null,
+    val location: String? = null,
+    val headline: String? = null,
+    val linkedinUrl: String? = null,
+    val noticePeriodDays: Int? = null,
+    val workAuthorisationStatus: String? = null,
+    val relocationIntent: String? = null,
+    val peopleManagementScope: String? = null,
+    val totalExperienceMonths: Int? = null,
+)

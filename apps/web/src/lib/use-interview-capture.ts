@@ -122,7 +122,7 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
     audioRecorder.start();
     audioRecorderRef.current = audioRecorder;
 
-    if (withVideo && stream.getVideoTracks().length > 0) {
+    if (withVideo && RECORD_CAMERA && stream.getVideoTracks().length > 0) {
       const videoRecorder = new MediaRecorder(stream, recorderOptions(VIDEO_TYPES, SPEECH_BITRATE, CAMERA_BITRATE));
       videoRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) videoChunksRef.current.push(event.data);
@@ -194,6 +194,22 @@ const VIDEO_TYPES = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus",
  * it was delivered, and a quarter of what the browser picks on its own.
  */
 const SPEECH_BITRATE = 48_000;
+
+/**
+ * Whether the camera is *recorded*, as opposed to merely shown.
+ *
+ * It is shown and not recorded, and the distinction is the whole point. The camera is on
+ * so the candidate practises the thing they will actually do — sitting up, looking at a
+ * face, being seen — and that benefit is entirely local to their own screen. Nothing
+ * reads the video: it is not sent to the model (`RoundMediaProperties` on the server) and
+ * the report is forbidden from describing how anybody looked. Uploading it would be
+ * collecting and retaining somebody's face for a feature that does not exist.
+ *
+ * When body-language feedback is real and appears in the report, this flips to `true` and
+ * the consent copy in `new-interview-form.tsx` has to change in the same commit — it
+ * currently promises, in as many words, that nothing is uploaded.
+ */
+const RECORD_CAMERA = false;
 
 /**
  * The camera is recorded for a body-language analysis that does not exist yet — the

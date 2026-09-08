@@ -135,11 +135,11 @@ describe("NewInterviewForm", () => {
   });
 
   /**
-   * The round is audio only. Asking for a camera would be asking for personal data that
-   * nothing reads — the model is not sent video, and the report is not allowed to describe
-   * how anybody looked — so the question is not put.
+   * The camera is offered again, now that there is a face to look back. What it is *not*
+   * is a recording: nothing from it is uploaded, so the checkbox says so and the flag it
+   * sets means "open the camera", not "keep what it sees".
    */
-  it("does not ask for a camera, and never claims the candidate agreed to one", async () => {
+  it("offers the camera, and starts the round with it when it is asked for", async () => {
     composeRound.mockResolvedValue(draft);
     startSession.mockResolvedValue({ id: "8b0d1e2f-3a4b-4c5d-9e6f-7a8b9c0d1e2f" });
     render(<NewInterviewForm />);
@@ -148,7 +148,29 @@ describe("NewInterviewForm", () => {
     await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
     await waitFor(() => expect(screen.getByDisplayValue("Infosys")).toBeInTheDocument());
 
-    expect(screen.queryByRole("checkbox", { name: /camera/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/nothing from it is uploaded, recorded or scored/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: /record my voice/i }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /turn my camera on/i }));
+    await userEvent.click(screen.getByRole("button", { name: /begin interview/i }));
+
+    await waitFor(() =>
+      expect(startSession).toHaveBeenCalledWith(
+        "token",
+        expect.objectContaining({ consentAudio: true, consentVideo: true }),
+      ),
+    );
+  });
+
+  /** Voice is required and the camera is not, so declining it must still start a round. */
+  it("starts without the camera when it is left alone", async () => {
+    composeRound.mockResolvedValue(draft);
+    startSession.mockResolvedValue({ id: "8b0d1e2f-3a4b-4c5d-9e6f-7a8b9c0d1e2f" });
+    render(<NewInterviewForm />);
+
+    await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys MR round");
+    await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+    await waitFor(() => expect(screen.getByDisplayValue("Infosys")).toBeInTheDocument());
 
     await userEvent.click(screen.getByRole("checkbox", { name: /record my voice/i }));
     await userEvent.click(screen.getByRole("button", { name: /begin interview/i }));

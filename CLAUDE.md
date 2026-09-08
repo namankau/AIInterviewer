@@ -211,33 +211,39 @@ mood. Prose that sounds like a person who has sat on both sides of an interview 
 
 ## Product decisions (settled — implement, do not relitigate)
 
-- **Interview modality is voice. Audio only — there is no camera.** The candidate speaks
-  their answers and nothing films them. This reverses the earlier "voice, with camera on,
-  capture it now and analyse it later" position, and the reversal is deliberate — **do not
-  "restore" the camera.**
+- **Interview modality is voice. The candidate's camera is shown, never recorded.**
+  There is a drawn interviewer on screen (`interviewer-presence.tsx`), and the candidate
+  may optionally turn their own camera on to face it. Nothing from their camera leaves the
+  browser: it is not uploaded (`RECORD_CAMERA` in `use-interview-capture.ts`), not sent to
+  a model (`RoundMediaProperties` on the server), and the report may not describe how
+  anybody looked (`RoundMediaProperties.presenceWasObserved`).
 
-  Two reasons. The camera was the most expensive thing in the gap between a candidate's
-  last word and the next question: sending it to the model took the same answer from 3.49s
-  to 7.23s, because Gemini samples video at about a frame a second and a minute of it is
-  several times the size of the whole prompt. And once it was off that path, it was
-  personal data being collected and retained for a body-language feature that does not
-  exist, which is a cost with no matching benefit to the person paying it.
+  This replaces the earlier "camera on, capture it now and analyse it later" position, and
+  the reversal is deliberate — **do not restore video upload without restoring the feature
+  that reads it.** Two reasons. Sending video to the model was the most expensive thing in
+  the gap between a candidate's last word and the next question: 3.49s against 7.23s on the
+  same answer, because Gemini samples video at about a frame a second and a minute of it
+  is several times the size of the whole prompt. And once it was off that path, uploading
+  it meant retaining somebody's face for a feature that does not exist.
 
-  The capability is intact rather than deleted, because the moat may still be worth
-  building. `consentVideo` still exists end to end, the room and the device check still
-  open a camera when a session has it, and `interviewos.round-media.analyse-video-in-round`
-  still routes video to the model. Turning it back on means flipping that property *and*
-  putting the consent checkbox back in `new-interview-form.tsx`. Do not do one without the
-  other: analysing video nobody agreed to, or collecting video nothing analyses, are both
-  worse than either end state.
+  The camera stays on screen because it earns its place there without any of that: it is
+  how a candidate practises sitting up and looking at a face, and that benefit never leaves
+  their own machine. **The three switches move together or not at all.** Turning on
+  `RECORD_CAMERA` without body-language feedback in the report collects what nothing reads.
+  Turning on `analyse-video-in-round` puts 3.7s back on every turn. And the consent copy in
+  `new-interview-form.tsx` currently promises, in as many words, that nothing is uploaded —
+  so it changes in the same commit as `RECORD_CAMERA`, or the product is lying.
+
+  The interviewer is **drawn, not photoreal, and has no name.** A synthetic photoreal face
+  gets mistaken for a real person, and a candidate who believes there is a human here has
+  been lied to. A photoreal talking-head vendor is a live option but commits real spend, so
+  it is the owner's call.
 - **Recording consent is a hard gate.** Explicit, specific consent before capture
   starts, stored with a timestamp. No consent, no session. Account deletion removes the
-  media objects, not just the rows. Consent stays per-stream in the API so the camera can
-  return without a migration, but only audio is asked for today — and nothing may describe
-  how a candidate *looked* unless video actually reached the model, which
-  `RoundMediaProperties.presenceWasObserved` is the single answer to. Consent is not
-  observation: a report that says someone "maintained good eye contact" when nothing
-  watched them is fabricated evidence, the same failure as an invented quote.
+  media objects, not just the rows. `consentVideo` now means "open the camera", not "keep
+  what it sees" — the two came apart when video stopped being uploaded, and conflating
+  them again is how a report ends up claiming someone "maintained good eye contact" when
+  nothing watched them. That is fabricated evidence, the same failure as an invented quote.
 - **Every round is free, for now.** There is no paid tier and no limit: gating an
   unproven product turns away the people whose use of it is currently worth more than
   the model calls it saves. This is a deliberate change from the PRD's one-free-round

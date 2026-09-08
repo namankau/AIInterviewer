@@ -157,3 +157,78 @@
     border-color: var(--line);
   }
 }
+
+/*
+ * The interviewer's portrait (`interviewer-presence.tsx`).
+ *
+ * Small movements only. A figure that gestures while somebody is trying to think is a
+ * distraction, and the session screen is deliberately near-empty; the job here is to make
+ * the chair opposite look occupied, not to perform.
+ */
+@keyframes presence-talk {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  25% {
+    transform: scaleY(2.4);
+  }
+  40% {
+    transform: scaleY(1.35);
+  }
+  60% {
+    transform: scaleY(3);
+  }
+  80% {
+    transform: scaleY(1.7);
+  }
+}
+
+/* Breathing. Barely visible, and its absence is what makes a still figure look dead. */
+@keyframes presence-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(0.7px);
+  }
+}
+
+/* Eyes off to the side, the way people look away while they work something out. */
+@keyframes presence-consider {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  30%,
+  70% {
+    transform: translateX(-2.5px);
+  }
+}
+
+.presence-figure {
+  animation: presence-breathe 5.5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.presence-speaking .presence-mouth {
+  animation: presence-talk 0.62s ease-in-out infinite;
+  transform-origin: 60px 66px;
+}
+
+.presence-thinking .presence-eyes {
+  animation: presence-consider 3.2s ease-in-out infinite;
+}
+
+/*
+ * Someone who has turned motion down has done so for a reason, and none of this carries
+ * information that the text beside it does not already carry.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .presence-figure,
+  .presence-speaking .presence-mouth,
+  .presence-thinking .presence-eyes {
+    animation: none;
+  }
+}

@@ -15,6 +15,7 @@ import {
 import { initialSilenceState, observe, shouldEnd, SPEECH_LEVEL } from "@/lib/silence";
 import { revealedText } from "@/lib/spoken-text";
 import { useAccessToken } from "@/lib/use-access-token";
+import { InterviewerPresence, type PresenceState } from "@/components/interviewer-presence";
 import { useBackchannel } from "@/lib/use-backchannel";
 import { useInterviewCapture } from "@/lib/use-interview-capture";
 import { useQuestionAudio } from "@/lib/use-question-audio";
@@ -122,6 +123,21 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
   const withinGrace = lateFor !== turnIndex;
   /** The voice is still rendering and has not used up its head start. Hold the text. */
+  /*
+   * What the figure opposite is doing. "asking" with a voice still rendering is thinking
+   * rather than speaking — the candidate should not watch a mouth move in silence.
+   */
+  const presenceState: PresenceState =
+    phase === "answering"
+      ? "listening"
+      : phase === "submitting"
+        ? "thinking"
+        : phase === "asking"
+          ? questionAudio.status === "pending"
+            ? "thinking"
+            : "speaking"
+          : "waiting";
+
   const awaitingVoice = questionAudio.status === "pending" && withinGrace;
   const voiceLeads = questionAudio.status === "ready" && !!questionAudio.url && withinGrace;
   const spoken = progress.turnIndex === turnIndex ? progress : { currentTime: 0, duration: 0 };
@@ -427,15 +443,14 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-10 px-6 py-16">
         <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-3">
-            <SpeakingDot active={phase === "answering"} level={capture.level} />
-            <span className="text-caption text-ink-subtle" role="status">
-              {phase === "answering"
-                ? `Listening · ${formatDuration(elapsed)}`
-                : phase === "submitting"
-                  ? "Thinking about that…"
-                  : "Interviewer"}
-            </span>
+          <div className="flex items-center justify-between gap-4">
+            <InterviewerPresence state={presenceState} level={capture.level} />
+            {phase === "answering" ? (
+              <span className="flex items-center gap-2 font-mono text-caption text-ink-subtle">
+                <SpeakingDot active level={capture.level} />
+                {formatDuration(elapsed)}
+              </span>
+            ) : null}
           </div>
 
           {/*

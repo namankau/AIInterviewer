@@ -117,6 +117,31 @@ out of scope, so the line is enforced in code rather than promised:
 Set `ADMIN_EMAILS` to enable it. Unset denies everyone, which is the right default for a
 list that gates writes.
 
+## Added after the run: profile and resume (PR #4)
+
+<https://github.com/namankau/AIInterviewer/pull/4> — **stacked on #3, merge that first.**
+Not a code dependency: #3's migration is already applied to the hosted database, so
+basing this on `develop` would leave migration history with a hole in it and
+`supabase db push` refuses to run against that.
+
+`InterviewBrief.candidateFunction` and `candidateLevel` were **always null**. The tables
+have existed since task 001 with no behaviour attached, which is why the deep-dive round
+was generic.
+
+Upload a resume, it is parsed once, and two things reach the interviewer: the candidate's
+real projects, and tenure derived from the dates by `ResumeTimeline` rather than claimed
+by the text. Both framed as material to draw on, with two guards — ask about it rather
+than asserting it back (a parse may be wrong, and an interviewer that misstates somebody's
+career loses them), and do not raise gaps unless the round type makes that appropriate.
+
+`ResumeTimelineTest` is new. Its own docs claimed it was heavily tested and it had none,
+including the overlap case where somebody who contracted while employed would have been
+told they had twice the experience they have.
+
+**Parsing is unverified — the spend cap again.** Upload, storage, the failure path and the
+read path all work; a seeded parse read back as 85 months across two roles with the
+overlap handled. Only the model call does not run.
+
 ## What I did NOT build
 
 Two of your six, and I would rather say so than half-do them:
@@ -124,13 +149,9 @@ Two of your six, and I would rather say so than half-do them:
 1. **Sign in with LinkedIn.** Still Google-only. Supabase supports `linkedin_oidc`; it
    needs an app registered on LinkedIn and the client ID/secret in the Supabase dashboard,
    which is yours to do — then the button is a small change.
-2. **Profile: resume, LinkedIn URL, photo, role, skills.** Not started. The `profiles`,
-   `resumes` and `skills` tables have existed since task 001 and are still empty of
-   behaviour.
+2. ~~Profile and resume~~ — **built, see PR #4 above.**
 
-**Resume upload is the one I would do next, and it is not close.** Without it the project
-deep-dive round is generic, which is the difference you are selling. It has been the top
-item in two consecutive handoffs now.
+Only LinkedIn sign-in is still outstanding from your list.
 
 ## Assumptions I made
 
@@ -172,7 +193,9 @@ item in two consecutive handoffs now.
 
 ## Suggested next task
 
-Resume upload and parsing. Third time of asking.
+Raise the spend cap and re-run a full round end to end. Everything built over the last two
+sessions — the warm-up, provenance, the source library, the resume grounding — has been
+verified as far as the model boundary and no further.
 
 ## Open questions for you
 

@@ -205,7 +205,9 @@ class InterviewService(
             turnIndex = 0,
             questionText = opening.value.text,
             phase = plan.phase,
-            speechStatus = SpeechStatus.PENDING,
+            // Pending means "a voice is coming". Nothing is coming when the room
+            // speaks for itself, and saying otherwise leaves it polling for ever.
+            speechStatus = if (request.speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
             provenanceJson =
                 provenanceJson(
                     basis = opening.value.questionBasis,
@@ -214,7 +216,9 @@ class InterviewService(
                     sources = sources,
                 ),
         )
-        questionSpeech.render(SpeechRequest(userId, sessionId, 0, opening.value.text, request.language))
+        if (!request.speaksLocally) {
+            questionSpeech.render(SpeechRequest(userId, sessionId, 0, opening.value.text, request.language))
+        }
 
         return view(userId, sessionId)
     }
@@ -227,6 +231,8 @@ class InterviewService(
         audio: AnswerAudio,
         video: ByteArray?,
         videoContentType: String?,
+        /** The browser will read the next question out itself. See [StartSessionRequest]. */
+        speaksLocally: Boolean = false,
     ): SubmitAnswerResponse {
         val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
         if (session.status != "in_progress") {
@@ -363,7 +369,9 @@ class InterviewService(
             turnIndex = nextIndex,
             questionText = nextText,
             phase = plan.phase,
-            speechStatus = SpeechStatus.PENDING,
+            // Pending means "a voice is coming". Nothing is coming when the room
+            // speaks for itself, and saying otherwise leaves it polling for ever.
+            speechStatus = if (speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
             provenanceJson =
                 provenanceJson(
                     basis = assessment.value.questionBasis,
@@ -372,7 +380,11 @@ class InterviewService(
                     sources = sources,
                 ),
         )
-        questionSpeech.render(SpeechRequest(userId, sessionId, nextIndex, nextText, session.language))
+        // Nothing to synthesise when the room is going to say it: that call is the single
+        // most expensive thing in a turn and it would be thrown away.
+        if (!speaksLocally) {
+            questionSpeech.render(SpeechRequest(userId, sessionId, nextIndex, nextText, session.language))
+        }
 
         // The question goes back in writing straight away and its voice follows, which
         // the room asks for separately. A candidate ready to start talking should not be

@@ -79,6 +79,9 @@ class SessionController(
         @RequestParam turnIndex: Int,
         @RequestParam audio: MultipartFile,
         @RequestParam(required = false) video: MultipartFile?,
+        // See StartSessionRequest.speaksLocally. Sent per turn because it describes the
+        // browser answering this turn, not the session.
+        @RequestParam(required = false, defaultValue = "false") speaksLocally: Boolean,
     ): SubmitAnswerResponse {
         if (audio.isEmpty) {
             throw ApiException.badRequest("We did not receive any audio for that answer.", code = "empty_answer")
@@ -90,6 +93,7 @@ class SessionController(
             audio = AnswerAudio(audio.bytes, audio.contentType ?: "audio/webm"),
             video = video?.takeIf { !it.isEmpty }?.bytes,
             videoContentType = video?.contentType,
+            speaksLocally = speaksLocally,
         )
     }
 

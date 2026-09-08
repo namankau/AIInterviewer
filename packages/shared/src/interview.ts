@@ -119,6 +119,12 @@ export interface RoundDraft {
 }
 
 export interface StartSessionRequest {
+  /**
+   * This browser will read the questions out itself, so the server should not synthesise
+   * them. A browser with a modern neural voice speaks instantly and for nothing, against
+   * a model quota of a hundred calls a day.
+   */
+  speaksLocally?: boolean;
   companyName: string;
   roleTitle: string;
   roundType: RoundType;

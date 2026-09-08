@@ -13,6 +13,21 @@ import java.util.UUID
  */
 
 data class StartSessionRequest(
+    /**
+     * The client will read the questions out itself, so the server should not synthesise
+     * them.
+     *
+     * Modern browsers have a speech synthesiser with neural voices in it, and a client
+     * that has one does not need ours: it speaks instantly, for nothing, and can say
+     * exactly where in the sentence it has reached. Ours costs a call against a quota of a
+     * hundred a day — small enough that benchmarking it once has already turned a real
+     * candidate's round silent — and takes about six seconds a question.
+     *
+     * Per request rather than per session on purpose. It is a property of the browser in
+     * front of us, not of the interview: the same candidate may come back on a phone that
+     * has no usable voice, and that round should be spoken by the model as before.
+     */
+    val speaksLocally: Boolean = false,
     @field:NotBlank(message = "Name the company you are interviewing with.")
     @field:Size(max = 120)
     val companyName: String = "",

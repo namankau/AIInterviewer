@@ -2,10 +2,11 @@
 
 import type { RoundDraft, RoundType } from "@acemyinterview/shared";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ApiRequestError, composeRound, startSession } from "@/lib/api";
+import { loadVoices, pickVoice } from "@/lib/browser-speech";
 import { ROUND_CATALOGUE } from "@/lib/rounds";
 import { useAccessToken } from "@/lib/use-access-token";
 
@@ -177,6 +178,22 @@ function RoundSetup({
   const [language, setLanguage] = useState(draft.language);
   const [consentAudio, setConsentAudio] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
+  /*
+   * Whether this browser can read the questions out itself. Decided here because the
+   * session is created here, and the opening question is synthesised as part of creating
+   * it — by the time the room exists it is already too late to save the call.
+   */
+  const [speaksLocally, setSpeaksLocally] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void loadVoices().then((voices) => {
+      if (active) setSpeaksLocally(pickVoice(voices, language) !== null);
+    });
+    return () => {
+      active = false;
+    };
+  }, [language]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -191,6 +208,7 @@ function RoundSetup({
     setError(null);
     try {
       const session = await startSession(accessToken, {
+        speaksLocally,
         companyName: companyName.trim(),
         roleTitle: roleTitle.trim(),
         roundType,

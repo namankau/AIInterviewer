@@ -14,6 +14,8 @@ import {
 } from "@/lib/api";
 import { initialSilenceState, observe, shouldEnd, SPEECH_LEVEL } from "@/lib/silence";
 import { revealedText } from "@/lib/spoken-text";
+import { useBrowserVoice } from "@/lib/use-browser-voice";
+import { useLiveTranscript } from "@/lib/use-live-transcript";
 import { useAccessToken } from "@/lib/use-access-token";
 import { InterviewerPresence, type PresenceState } from "@/components/interviewer-presence";
 import { useBackchannel } from "@/lib/use-backchannel";
@@ -91,6 +93,15 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   // status meant a candidate who declined video was recorded anyway (PRD 12).
   const withVideo = session?.consentVideo === true;
   const capture = useInterviewCapture({ withVideo });
+  /*
+   * The interviewer speaks locally when the browser has a voice worth using: instantly,
+   * for nothing, and reporting where in the sentence it has reached — which is the sync
+   * the reveal has been approximating with a timer. The model's recording is the fallback,
+   * not the default. See use-browser-voice.ts.
+   */
+  const browserVoice = useBrowserVoice({ language: session?.language ?? "english" });
+  /* A mirror of what the candidate is saying. Never sent anywhere; see use-live-transcript.ts. */
+  const liveTranscript = useLiveTranscript({ language: session?.language ?? "english" });
   const questionAudio = useQuestionAudio({ sessionId, turn, accessToken });
   const backchannel = useBackchannel({ enabled: phase === "answering" || phase === "submitting" });
 
@@ -123,6 +134,8 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
   const withinGrace = lateFor !== turnIndex;
   /** The voice is still rendering and has not used up its head start. Hold the text. */
+  const speaksLocally = browserVoice.available;
+
   /*
    * What the figure opposite is doing. "asking" with a voice still rendering is thinking
    * rather than speaking — the candidate should not watch a mouth move in silence.
@@ -133,22 +146,35 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
       : phase === "submitting"
         ? "thinking"
         : phase === "asking"
-          ? questionAudio.status === "pending"
-            ? "thinking"
-            : "speaking"
+          ? speaksLocally
+            ? browserVoice.speaking
+              ? "speaking"
+              : "thinking"
+            : questionAudio.status === "pending"
+              ? "thinking"
+              : "speaking"
           : "waiting";
 
-  const awaitingVoice = questionAudio.status === "pending" && withinGrace;
+  const awaitingVoice = !speaksLocally && questionAudio.status === "pending" && withinGrace;
   const voiceLeads = questionAudio.status === "ready" && !!questionAudio.url && withinGrace;
   const spoken = progress.turnIndex === turnIndex ? progress : { currentTime: 0, duration: 0 };
 
-  const visibleQuestion = awaitingVoice
-    ? ""
-    : voiceLeads
-      ? revealedText(questionText, spoken.currentTime, spoken.duration)
-      : // No voice is coming, or it took too long to wait for. Better an unsynced
-        // question than an empty room.
-        questionText;
+  const visibleQuestion = speaksLocally
+    ? browserVoice.saying === questionText
+      ? questionText.slice(0, browserVoice.spokenChars)
+      : browserVoice.said === questionText
+        ? // Read to the end, or the utterance failed. Either way the question stands.
+          questionText
+        : // Asked for, not started. A word appearing before the voice reaches it is the
+          // thing this whole mechanism exists to prevent.
+          ""
+    : awaitingVoice
+      ? ""
+      : voiceLeads
+        ? revealedText(questionText, spoken.currentTime, spoken.duration)
+        : // No voice is coming, or it took too long to wait for. Better an unsynced
+          // question than an empty room.
+          questionText;
 
   useEffect(() => {
     if (!accessToken) return;
@@ -187,6 +213,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     const captured = await capture.stop();
     if (!captured) return;
 
+    liveTranscript.stop();
     setPhase("submitting");
     setError(null);
     // Said the moment they stop, while the model is still reading the answer. This is
@@ -200,6 +227,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         turn.turnIndex,
         captured.audio,
         captured.video,
+        speaksLocally,
       );
       if (result.sessionComplete || !result.nextTurn) {
         capture.release();
@@ -218,7 +246,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         cause instanceof ApiRequestError ? cause.message : "That answer could not be submitted.",
       );
     }
-  }, [accessToken, backchannel, capture, sessionId, turn]);
+  }, [accessToken, backchannel, capture, liveTranscript, sessionId, speaksLocally, turn]);
 
   // The meter and the submit callback are read through refs by the tick below. The
   // meter changes on every animation frame, and rebuilding the interval each time would
@@ -268,9 +296,12 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     if (started) {
       setElapsed(0);
       backchannel.reset();
+      // A clean slate per answer: the previous one's words must not appear under this one.
+      liveTranscript.reset();
+      liveTranscript.start();
       setPhase("answering");
     }
-  }, [backchannel, capture]);
+  }, [backchannel, capture, liveTranscript]);
 
   /*
    * The floor passes to the candidate on its own.
@@ -288,8 +319,20 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     handOver.current = beginAnswering;
   });
 
+  /*
+   * Read the question out locally, once per turn, and hand the floor over when the voice
+   * actually stops — which the browser tells us, rather than being inferred from a
+   * recording's duration or a reading-speed guess.
+   */
   useEffect(() => {
-    if (phase !== "asking") return;
+    if (phase !== "asking" || !speaksLocally || !questionText) return;
+    // Already reading it, or already read it. Neither is a reason to start again.
+    if (browserVoice.saying === questionText || browserVoice.said === questionText) return;
+    browserVoice.say(questionText, () => void handOver.current());
+  }, [browserVoice, phase, questionText, speaksLocally]);
+
+  useEffect(() => {
+    if (phase !== "asking" || speaksLocally) return;
 
     const element = audioRef.current;
     // A question with a voice hands over when the voice stops.
@@ -307,7 +350,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
     // Still rendering. This effect re-runs when that resolves.
     return undefined;
-  }, [phase, questionAudio.status, questionAudio.url]);
+  }, [phase, questionAudio.status, questionAudio.url, speaksLocally]);
 
   const askForHint = useCallback(async () => {
     if (!accessToken || !turn || hintPending) return;
@@ -514,6 +557,28 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
             </p>
           ) : null}
         </div>
+
+        {/*
+          * What the candidate is saying, as they say it.
+          *
+          * Speaking into a machine that shows no sign of hearing you is the least
+          * interview-like part of this, and the specific worry it removes is not knowing
+          * whether your words are arriving intact. It is explicitly a mirror: the report is
+          * built from the model's own transcription of the recording, not from this, and
+          * saying so matters because the two will sometimes disagree.
+          */}
+        {phase === "answering" && liveTranscript.supported ? (
+          <div className="flex flex-col gap-1.5 border-l-2 border-line pl-4">
+            <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+              What we are hearing
+            </p>
+            <p className="text-body text-ink-muted" aria-live="off">
+              {liveTranscript.text || (
+                <span className="text-ink-subtle">Listening — start whenever you are ready.</span>
+              )}
+            </p>
+          </div>
+        ) : null}
 
         {hint ? (
           <aside className="rounded-lg border border-line bg-accent-wash px-5 py-4">

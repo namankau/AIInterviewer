@@ -238,9 +238,13 @@ export function submitAnswer(
   turnIndex: number,
   audio: Blob,
   video: Blob | null,
+  speaksLocally = false,
 ): Promise<SubmitAnswerResponse> {
   const form = new FormData();
   form.append("turnIndex", String(turnIndex));
+  // Told per turn rather than per session: it describes this browser, and the same
+  // candidate may come back on a phone with no usable voice.
+  form.append("speaksLocally", String(speaksLocally));
   form.append("audio", audio, "answer.webm");
   if (video) {
     form.append("video", video, "answer-video.webm");

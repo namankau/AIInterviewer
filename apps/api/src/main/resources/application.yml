@@ -56,6 +56,11 @@ interviewos:
     # Flash-lite leads because it is 15x cheaper on input and 22x on output than the
     # 3.5-flash this used to call for everything, and it can still hear an answer.
     # 3.5-flash sits behind it for when the cheap model is not good enough or is down.
+    #
+    # ORDER MATTERS AND IS RELIED ON: cheapest first, strongest last. Resume parsing
+    # inverts it deliberately (FallbackInterviewAi.TRY_STRONGEST_FIRST) because it runs
+    # once per candidate, nobody is waiting on it, and a misread employer degrades every
+    # round they ever sit.
     providers:
       - name: gemini-lite
         kind: gemini

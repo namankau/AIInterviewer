@@ -9,12 +9,16 @@ import { fetchTurn } from "@/lib/api";
  * How often to ask whether the interviewer's voice has finished rendering, and how long
  * to keep asking.
  *
- * The interval is loose on purpose: the candidate already has the question in writing
- * and can start answering at any point, so this is catching up rather than blocking.
+ * The interval was loose when the candidate already had the question in writing and this
+ * was only catching up. It is not that any more: the room now waits for the voice before
+ * showing anything, so every 100ms of poll granularity is 100ms of the candidate looking
+ * at a blank screen. Tight enough to be invisible, still cheap — it is one small
+ * authenticated GET against our own API, not a model call.
+ *
  * The ceiling exists so a synthesis that dies without ever writing its state back — a
  * crashed worker, a lost database write — cannot leave a tab polling all evening.
  */
-const POLL_INTERVAL_MS = 1_200;
+const POLL_INTERVAL_MS = 400;
 const POLL_CEILING_MS = 45_000;
 
 export interface QuestionAudio {

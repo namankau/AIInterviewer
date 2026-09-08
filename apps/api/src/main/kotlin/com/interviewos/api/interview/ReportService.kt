@@ -36,7 +36,7 @@ class ReportService(
     ): Map<String, Any?> {
         repository.findReportJson(sessionId, userId)?.let {
             @Suppress("UNCHECKED_CAST")
-            return objectMapper.readValue(it, Map::class.java) as Map<String, Any?>
+            return withEveryField(objectMapper.readValue(it, Map::class.java) as Map<String, Any?>)
         }
 
         val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
@@ -111,6 +111,20 @@ class ReportService(
         )
         return payload
     }
+
+    /**
+     * Fills in fields a stored report predates.
+     *
+     * Reports are composed once and kept, so a report written before strengths,
+     * development areas or question provenance existed comes back without those keys and
+     * the reader crashes on the first `.length`. That is exactly what happened: an
+     * interview sat last week could not be opened at all after this week's release.
+     *
+     * Defaulting here rather than only in the browser means every client is fixed at
+     * once, including the mobile apps that do not exist yet — and it keeps the shape of
+     * the response a promise the API keeps rather than one each client has to re-check.
+     */
+    private fun withEveryField(stored: Map<String, Any?>): Map<String, Any?> = stored + EMPTY_SECTIONS.filterKeys { it !in stored }
 
     /**
      * Strips any claim about how the candidate looked when there was no camera. A model
@@ -349,6 +363,26 @@ class ReportService(
     }
 
     private companion object {
+        /**
+         * What an older stored report is missing, and what it should read as instead.
+         *
+         * An empty section renders as nothing, which is the honest answer: that report
+         * genuinely has no strengths list, because nothing analysed one at the time.
+         */
+        val EMPTY_SECTIONS: Map<String, Any?> =
+            mapOf(
+                "strengths" to emptyList<Any>(),
+                "developmentAreas" to emptyList<Any>(),
+                "questionSources" to
+                    mapOf(
+                        "entries" to emptyList<Any>(),
+                        "employerRecognised" to false,
+                        "archetypeLabel" to "",
+                        "headline" to "",
+                        "disclosure" to "",
+                    ),
+            )
+
         val WHITESPACE = Regex("\\s+")
 
         fun String.normaliseForMatch(): String =

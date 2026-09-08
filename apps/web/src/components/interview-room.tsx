@@ -42,6 +42,12 @@ import { useQuestionAudio } from "@/lib/use-question-audio";
  */
 const VOICE_GRACE_MS = 25_000;
 
+/**
+ * How long a candidate gets to read a question that has no voice, before the microphone
+ * opens. Long enough to read a couple of sentences without feeling rushed.
+ */
+const READING_TIME_MS = 4_000;
+
 type Phase =
   | "loading"
   | "checking"
@@ -249,6 +255,43 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
       setPhase("answering");
     }
   }, [backchannel, capture]);
+
+  /*
+   * The floor passes to the candidate on its own.
+   *
+   * A real interviewer stops talking and you answer; there is no moment where you press
+   * something first. So the microphone opens when the question finishes being spoken —
+   * or, when there is no voice to wait for, after a beat long enough to read it.
+   *
+   * `beginAnswering` is read through a ref rather than depended on: it changes identity
+   * whenever the capture hook re-renders, and re-running this effect would re-open the
+   * microphone mid-answer.
+   */
+  const handOver = useRef(beginAnswering);
+  useEffect(() => {
+    handOver.current = beginAnswering;
+  });
+
+  useEffect(() => {
+    if (phase !== "asking") return;
+
+    const element = audioRef.current;
+    // A question with a voice hands over when the voice stops.
+    if (questionAudio.status === "ready" && element) {
+      const start = () => void handOver.current();
+      element.addEventListener("ended", start, { once: true });
+      return () => element.removeEventListener("ended", start);
+    }
+
+    // No voice is coming, so the candidate is reading. Give them time to, then listen.
+    if (questionAudio.status === "unavailable") {
+      const timer = setTimeout(() => void handOver.current(), READING_TIME_MS);
+      return () => clearTimeout(timer);
+    }
+
+    // Still rendering. This effect re-runs when that resolves.
+    return undefined;
+  }, [phase, questionAudio.status, questionAudio.url]);
 
   const askForHint = useCallback(async () => {
     if (!accessToken || !turn || hintPending) return;
@@ -461,27 +504,17 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           </p>
         ) : null}
 
+        {/*
+          * No "Answer" button and no "Done answering" button.
+          *
+          * Both were the tell that this is a form rather than a conversation: nobody
+          * presses a key to begin speaking to a person, and nobody announces that they
+          * have finished. The room now opens the microphone as soon as the interviewer
+          * stops talking, and closes it when the candidate does — see the effects above
+          * and silence.ts. What is left here is the one control a real candidate would
+          * actually want, which is a way to ask for help.
+          */}
         <div className="flex flex-wrap items-center gap-4">
-          {phase === "asking" ? (
-            <button
-              type="button"
-              onClick={beginAnswering}
-              className="rounded-md bg-accent px-6 py-3 text-body font-medium text-accent-contrast hover:bg-accent-strong"
-            >
-              Answer
-            </button>
-          ) : null}
-
-          {phase === "answering" ? (
-            <button
-              type="button"
-              onClick={finishAnswer}
-              className="rounded-md border border-accent px-6 py-3 text-body font-medium text-accent hover:bg-surface-sunken"
-            >
-              Done answering
-            </button>
-          ) : null}
-
           {phase === "submitting" ? (
             <p role="status" className="text-body text-ink-muted">
               Listening to your answer…
@@ -502,7 +535,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
         <p className="text-caption text-ink-subtle">
           {phase === "answering"
-            ? "Stop talking and the interviewer moves on. Pausing to think is fine."
+            ? "Just start talking. Stop, and the interviewer moves on — pausing to think is fine."
             : "Asking for a nudge is allowed once per question, and the report records that you did."}
         </p>
 

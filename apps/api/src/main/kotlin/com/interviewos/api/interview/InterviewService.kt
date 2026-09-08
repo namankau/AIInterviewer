@@ -342,7 +342,12 @@ class InterviewService(
             return SubmitAnswerResponse(sessionComplete = true, turnsCompleted = answered, nextTurn = null)
         }
 
-        val nextText = assessment.value.nextQuestionText?.takeIf { it.isNotBlank() }
+        // Trimmed here rather than trusted to the prompt: three rounds of telling the
+        // model not to open with "That's a great overview" did not stop it.
+        val nextText =
+            assessment.value.nextQuestionText
+                ?.let { QuestionText.withoutPreamble(it) }
+                ?.takeIf { it.isNotBlank() }
         if (nextText == null) {
             repository.markSessionStatus(sessionId, userId, "completed")
             return SubmitAnswerResponse(sessionComplete = true, turnsCompleted = answered, nextTurn = null)

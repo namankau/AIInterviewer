@@ -71,7 +71,7 @@ function Hero({ usage }: { usage: UsageCounts | null }) {
       <div className="mx-auto grid max-w-6xl gap-12 px-6 py-20 lg:grid-cols-[1.15fr_1fr] lg:gap-16 lg:py-28">
         <div className="flex flex-col gap-7">
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-            Voice only · no camera · scored against what you actually said
+            Voice · a face across the table · scored against what you actually said
           </p>
           <h1 className="text-hero text-balance text-ink">A mock interview that interrupts you.</h1>
           <p className="max-w-xl text-body text-ink-muted">
@@ -122,7 +122,7 @@ function UsageLine({ usage }: { usage: UsageCounts | null }) {
 /** Reads as a spec sheet rather than a marketing card — this is a tool. */
 function SpecPanel() {
   const rows: Array<[string, string]> = [
-    ["Modality", "Spoken. Audio only, no camera."],
+    ["Modality", "Spoken. Your camera optional, never uploaded."],
     ["Adapts on", "Your previous answer"],
     ["Interrupts", "Rambling, unsupported claims"],
     ["Helps", "Hints, then records that it did"],

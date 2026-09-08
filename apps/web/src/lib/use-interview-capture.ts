@@ -115,7 +115,7 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
     videoChunksRef.current = [];
 
     const audioStream = new MediaStream(stream.getAudioTracks());
-    const audioRecorder = new MediaRecorder(audioStream, pickMimeType(AUDIO_TYPES));
+    const audioRecorder = new MediaRecorder(audioStream, recorderOptions(AUDIO_TYPES, SPEECH_BITRATE));
     audioRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) audioChunksRef.current.push(event.data);
     };
@@ -123,7 +123,7 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
     audioRecorderRef.current = audioRecorder;
 
     if (withVideo && stream.getVideoTracks().length > 0) {
-      const videoRecorder = new MediaRecorder(stream, pickMimeType(VIDEO_TYPES));
+      const videoRecorder = new MediaRecorder(stream, recorderOptions(VIDEO_TYPES, SPEECH_BITRATE, CAMERA_BITRATE));
       videoRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) videoChunksRef.current.push(event.data);
       };
@@ -189,11 +189,40 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
 const AUDIO_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
 const VIDEO_TYPES = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
 
-/** Safari and Chrome disagree on supported containers; take the first that works. */
-function pickMimeType(candidates: string[]): MediaRecorderOptions {
+/**
+ * Opus, mono, speech. Well above what the model needs to transcribe an answer or hear how
+ * it was delivered, and a quarter of what the browser picks on its own.
+ */
+const SPEECH_BITRATE = 48_000;
+
+/**
+ * The camera is recorded for a body-language analysis that does not exist yet — the
+ * product decision is to capture it now and analyse it later — so it only has to be good
+ * enough to read posture and eye contact from, later, and not good enough to look at.
+ *
+ * Left to itself Chromium encodes VP9 at roughly 4.4 MB per minute of answer, measured
+ * against its own capture device on a synthetic pattern that compresses better than a real
+ * person in a room. None of that is uploaded until the candidate stops talking, so on a
+ * 5 Mbps home uplink it is about seven seconds of the pause between their last word and
+ * the next question, before the model has been asked anything at all. At 300 kbps it is
+ * 1.6 MB per minute and under three seconds.
+ */
+const CAMERA_BITRATE = 300_000;
+
+/**
+ * Safari and Chrome disagree on supported containers; take the first that works.
+ *
+ * The bitrates are set explicitly because the default is chosen for watching, and nobody
+ * watches these. Every byte is one the candidate waits to upload.
+ */
+function recorderOptions(candidates: string[], audioBps: number, videoBps?: number): MediaRecorderOptions {
   if (typeof MediaRecorder === "undefined") return {};
   const supported = candidates.find((type) => MediaRecorder.isTypeSupported(type));
-  return supported ? { mimeType: supported } : {};
+  return {
+    ...(supported ? { mimeType: supported } : {}),
+    audioBitsPerSecond: audioBps,
+    ...(videoBps === undefined ? {} : { videoBitsPerSecond: videoBps }),
+  };
 }
 
 function finish(recorder: MediaRecorder, chunks: React.RefObject<Blob[]>): Promise<Blob> {

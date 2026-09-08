@@ -2,7 +2,6 @@ package com.interviewos.api.interview
 
 import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.AnswerAudio
-import com.interviewos.api.ai.AnswerVideo
 import com.interviewos.api.ai.Intervention
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
@@ -51,6 +50,7 @@ class InterviewService(
     private val objectMapper: ObjectMapper,
     private val questionSpeech: QuestionSpeech,
     private val entitlementProperties: EntitlementProperties,
+    private val roundMedia: RoundMediaProperties,
     private val sourceGrounding: SourceGrounding,
     private val resumeService: ResumeService,
     @Qualifier("interviewBackgroundExecutor") private val backgroundExecutor: TaskExecutor,
@@ -300,9 +300,12 @@ class InterviewService(
                     priorTurns = priorTurns,
                     currentQuestion = turn.questionText,
                     answer = audio,
-                    // Sent only when the candidate consented to the camera. Delivery is
-                    // then judged on how they actually came across, not on words alone.
-                    video = video?.let { AnswerVideo(it, videoContentType ?: "video/webm") },
+                    // Stored either way, and analysed only if the round is configured to.
+                    // A minute of camera is several times the size of the whole prompt and
+                    // roughly doubles the wait the candidate sits through, for one sentence
+                    // about body language that is not in the report yet. See
+                    // [RoundMediaProperties].
+                    video = roundMedia.videoForRound(video, videoContentType),
                 )
             } catch (e: AiUnavailableException) {
                 repository.markSessionStatus(sessionId, userId, "failed")

@@ -3,7 +3,8 @@
 import type { MeResponse } from "@acemyinterview/shared";
 import { useEffect, useState } from "react";
 
-import { SignOutButton } from "@/components/sign-out-button";
+import Link from "next/link";
+
 import { fetchMe } from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -19,13 +20,12 @@ const LANGUAGE_LABELS: Record<string, string> = {
 };
 
 /**
- * Who is signed in, at the foot of the rail, with the way out attached to it.
+ * Who is signed in, at the foot of the rail, as the way in to their profile.
  *
- * It used to be two loose facts at the bottom of the dashboard and a Sign out button
- * pinned to the bottom of an otherwise empty rail, a long way from anything — which is
- * exactly how it read: orphaned. They are one thing. This is your account, and this is
- * how you leave it, and putting them together is most of what stops the rail looking
- * unfinished.
+ * Signing out is not here. It is a thing you do rarely and cannot undo without typing a
+ * password again, and a control like that sitting permanently in the furniture is both
+ * clutter and a hazard. It lives on the profile page, which is where the rest of "this is
+ * my account" already lives, and this block is the link to it.
  *
  * Deliberately a client-side call to the versioned public API rather than a
  * server-rendered database read: the mobile apps will make exactly this request, and
@@ -67,7 +67,7 @@ export function AccountSummary() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-3 border-t border-line pt-4">
+    <div className="border-t border-line pt-4">
       {state.status === "loading" ? (
         <p role="status" className="text-caption text-ink-subtle">
           Loading your profile…
@@ -77,7 +77,10 @@ export function AccountSummary() {
           {state.message}
         </p>
       ) : (
-        <div className="flex items-center gap-2.5">
+        <Link
+          href="/profile"
+          className="-mx-2 flex items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-raised"
+        >
           <span
             aria-hidden
             className="grid size-8 shrink-0 place-items-center rounded-full bg-accent-wash font-mono text-micro text-accent"
@@ -92,12 +95,8 @@ export function AccountSummary() {
               {LANGUAGE_LABELS[state.me.preferredLanguage] ?? state.me.preferredLanguage}
             </span>
           </span>
-        </div>
+        </Link>
       )}
-      {/* In a flex row so the button is its own width and sits on the rail's left edge. */}
-      <div className="flex">
-        <SignOutButton />
-      </div>
     </div>
   );
 }

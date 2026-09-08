@@ -501,6 +501,17 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
             <p className="text-caption text-ink-subtle" role="status">
               The interviewer is working out what to ask next.
             </p>
+          ) : questionAudio.status === "unavailable" ? (
+            /*
+             * Said out loud, because the silent version is worse than the failure.
+             * A spoken interview that quietly turns into a text one reads as the product
+             * having been built that way — the candidate has no way to tell a broken voice
+             * from a missing feature, and assumes the second.
+             */
+            <p className="text-caption text-ink-muted" role="status">
+              The interviewer&rsquo;s voice is unavailable right now, so this round is in
+              writing. Everything else works the same — read the question and answer out loud.
+            </p>
           ) : null}
         </div>
 

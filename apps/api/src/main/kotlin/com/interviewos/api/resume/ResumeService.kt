@@ -105,6 +105,13 @@ class ResumeService(
         parsed.headline?.trim()?.takeIf { it.isNotBlank() }?.let {
             repository.upsertProfile(userId, ProfileUpdate(headline = it))
         }
+        // The resume almost always carries a LinkedIn URL in its contact line, so asking
+        // the candidate to type it in again is asking for something we were already given.
+        // Only a URL that really is a LinkedIn profile is kept: the field is shown back as
+        // theirs, and a mis-read one is worse than an empty one.
+        LinkedInUrl.parse(parsed.linkedinUrl)?.let {
+            repository.upsertProfile(userId, ProfileUpdate(linkedinUrl = it))
+        }
         // Experience is derived from the dates, never taken from a claim in the text.
         val summary = ResumeTimeline.summarise(parsed.employments, LocalDate.now())
         if (summary.totalExperienceMonths > 0) {

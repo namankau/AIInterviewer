@@ -1,206 +1,89 @@
-# Handoff — 7 September 2026
-
-## Read this first
-
-**The Gemini project has hit its monthly spend cap.** Every model call now returns 429
-`RESOURCE_EXHAUSTED`. Raise it at https://ai.studio/spend — nothing else is wrong, and
-nothing in the code needs changing. Tonight's benchmarking and live runs used it up.
-
-Until it is raised: interviews will fail to start, reports will not compose, and the
-source library will not extract. The failure paths all behave correctly (sessions are
-marked `failed` rather than faked), and the 429 now says explicitly that it is billing
-rather than a bug — that was worth fixing when I hit it.
+# Handoff — 2026-09-08
 
 ## Task
+Three faults reported from a real session: the pause between questions, questions about
+the wrong job, and the acknowledgement clips sounding like a different person.
 
-Six things you asked for. Four are merged into `develop`, one is a PR waiting on you, and
-two are not built.
+## What I built
 
-## What is merged
+Measured the turn against the live API before changing anything, which redirected the
+whole fix. **The model call was never the bottleneck.**
 
-### The room no longer feels like dictating into a void
-
-A real interviewer makes noises while you talk. Four short clips ("mm-hm", "right",
-"okay", "mm") now drop into pauses, and one longer one ("okay, let me think about that")
-plays the instant you stop, while the model is still reading your answer. That last one
-does the most work: it turns a dead gap into someone who heard you.
-
-Clips are rendered ahead of time and committed (`scripts/make-backchannel.mjs`). A
-backchannel that arrives after a round trip to a model is not a backchannel.
-
-The silence detector stops trusting its meter while a clip plays. Echo cancellation
-*should* keep our own voice out of the microphone, but "should" is not a basis for
-deciding that somebody has stopped speaking.
-
-### Text now waits for the voice
-
-The question is revealed in step with the audio reading it, paced by position in the clip
-since Gemini gives no word timings.
-
-**The interesting part is what did not work.** I first gave the voice a 6-second head
-start. That made things worse, and the measurement is why:
-
-| | before | now |
+| stage | before | after |
 |---|---|---|
-| answer → next question, in writing | ~24s originally, ~7s last week | **3.6s** |
-| answer → voice ready | 17.7s | **14s** |
+| answer → question text | 4.7s | 3.5s |
+| question → speech | 15.6s | ~6s (see "could not verify") |
+| median question | 166 chars | 74 chars |
 
-Speech latency is the model's, not ours — about 5s for a sentence and 14s for a
-paragraph. I split questions into parallel per-sentence calls (`SpeechChunks`), which took
-17.7s to 14s and no further. So a short window would have put text on screen at 6s and had
-the voice read it out at 14s: exactly the mismatch you complained about. The room now
-waits for the voice and covers the wait honestly, falling back to written text only when
-speech genuinely failed.
-
-**This is the biggest thing still wrong with the room, and it is a vendor limit.** Getting
-the voice under ~5s needs either a faster TTS or the realtime path (`CLAUDE.md` lists
-LiveKit/Pipecat as undecided). That is a spend decision, so it is yours.
-
-### The interviewer stopped paying for thinking it was not using
-
-Measured against live Gemini, three runs each, on a real assessment:
-
-| thinking budget | latency | still challenged a weak answer |
-|---|---|---|
-| unbounded | 7.1s | yes |
-| 256 | 3.0s | yes |
-| 0 | 1.8s | yes |
-
-Thinking was not buying quality. Every budget pushed back on *"it was mostly fine, nobody
-complained much"*, and the unbounded one was not the sharpest of them. So the calls you
-sit in silence waiting for — the question, the follow-up, a hint — no longer pay for it.
-The report keeps unbounded thinking: nobody is waiting on it, and it is what people came
-for.
-
-I also dropped the per-turn `summary`, `strengths` and `gaps` fields, which were written
-to the database on every turn and read by nothing.
-
-### Dev indicators are off
-
-The "Static Route / prerendered at build time" card was Next's dev overlay. It only ever
-rendered in development, but development is where you look at the product, and a
-floating framework badge over a live interview reads as somebody's half-finished project.
-
-### Counting
-
-`GET /api/v1/usage` — two aggregate integers, unauthenticated, rendered server-side into
-the landing page. Counted from the rows on every request rather than incremented
-somewhere, because a running total drifts from the thing it counts and this one is shown
-to strangers.
-
-The line only renders above 25 interviews. "3 interviews completed" is worse than no
-number at all.
-
-## What is waiting on you: PR #3, the source library
-
-<https://github.com/namankau/AIInterviewer/pull/3>
-
-**A PR rather than a merge because it introduces an admin role**, and `CLAUDE.md` requires
-that for anything touching permissions.
-
-Somewhere to put documents and links about how named employers actually interview,
-re-read every 7 days, with extracted questions carrying the source they came from. A round
-for an employer we hold sources on is grounded in them, and its report cites documents the
-candidate can open. This is the other half of the provenance work from the last run — the
-`published_source` tier now has a way to be earned.
-
-**The part to review carefully is that it fetches URLs.** `CLAUDE.md` puts bulk scraping
-out of scope, so the line is enforced in code rather than promised:
-
-- Only URLs somebody explicitly added are fetched. Nothing is discovered.
-- **Links on a fetched page are never followed.** That one rule is the whole difference
-  between reading a document and crawling a site.
-- robots.txt is honoured per fetch, and a disallow is permanent.
-- A real User-Agent that says who we are, one request at a time.
-- `RobotsRules` errs towards *not* fetching. Nine tests cover the awkward cases.
-
-Set `ADMIN_EMAILS` to enable it. Unset denies everyone, which is the right default for a
-list that gates writes.
-
-## Added after the run: profile and resume (PR #4)
-
-<https://github.com/namankau/AIInterviewer/pull/4> — **stacked on #3, merge that first.**
-Not a code dependency: #3's migration is already applied to the hosted database, so
-basing this on `develop` would leave migration history with a hole in it and
-`supabase db push` refuses to run against that.
-
-`InterviewBrief.candidateFunction` and `candidateLevel` were **always null**. The tables
-have existed since task 001 with no behaviour attached, which is why the deep-dive round
-was generic.
-
-Upload a resume, it is parsed once, and two things reach the interviewer: the candidate's
-real projects, and tenure derived from the dates by `ResumeTimeline` rather than claimed
-by the text. Both framed as material to draw on, with two guards — ask about it rather
-than asserting it back (a parse may be wrong, and an interviewer that misstates somebody's
-career loses them), and do not raise gaps unless the round type makes that appropriate.
-
-`ResumeTimelineTest` is new. Its own docs claimed it was heavily tested and it had none,
-including the overlap case where somebody who contracted while employed would have been
-told they had twice the experience they have.
-
-**Parsing is unverified — the spend cap again.** Upload, storage, the failure path and the
-read path all work; a seeded parse read back as 85 months across two roles with the
-overlap handled. Only the model call does not run.
-
-## What I did NOT build
-
-Two of your six, and I would rather say so than half-do them:
-
-1. **Sign in with LinkedIn.** Still Google-only. Supabase supports `linkedin_oidc`; it
-   needs an app registered on LinkedIn and the client ID/secret in the Supabase dashboard,
-   which is yours to do — then the button is a small change.
-2. ~~Profile and resume~~ — **built, see PR #4 above.**
-
-Only LinkedIn sign-in is still outstanding from your list.
+- `ai/schemas/assess-answer.json` — `maxLength: 120` on `nextQuestionText`. Speech latency
+  scales with length (measured: 48 chars 5.2s, 83 chars 6.1s, 220 chars 15.6s) and the
+  interviewer was writing 166-character questions that restated the answer before asking
+  anything. **Prompting had failed at this four times**; a fifth attempt with an explicit
+  30-word budget moved the median from 133 to 141 characters. The schema moved it to 74,
+  and the model rephrases to fit rather than being truncated.
+- `ai/schemas/opening-question.json` — same, at 220.
+- `ai/prompts/opening-question.md` — removed a contradiction it had carried all along: it
+  asked for "roughly thirty seconds of speech" and "two sentences at the outside" in the
+  same breath. Thirty seconds of speech is ~26s of synthesis before the candidate hears
+  anything, which is the "stuck starting the interview" complaint.
+- `ai/prompts/assess-answer.md` — separated two rules it had been conflating. A verdict on
+  the answer ("That's a great overview") stays banned. Briefly pointing at what they said
+  ("You mentioned some lag at peak — how did you address that?") is now explicitly fine.
+- `ai/SpeechChunks.kt` — only text of 200+ characters is fanned out into parallel calls.
+  Concurrency has a tail: four parallel calls returned a straggler at 11.0s against 5.1s
+  for its siblings, and one chunk came back at 34.7s against a 5.5s median. The candidate
+  waits for the slowest chunk, so below 200 characters one call is faster *and* steadier.
+- `resume/ResumeService.kt` — roles sorted most-recent-first, current role marked
+  `<- CURRENT ROLE`, and the prompt told to anchor there. This is the wrong-job bug: the
+  list went to the model in page-layout order with nothing saying which job was current.
+- `scripts/make-backchannel.mjs` — renders bare, the same request shape
+  `GeminiInterviewAi.synthesizeSpeech` sends.
 
 ## Assumptions I made
 
-- **Backchannel clips are committed as WAV** rather than synthesised per session. They
-  never change, there are seven, and they total a few tens of kilobytes.
-- **Company matching in the source library is exact, case aside.** Google's questions are
-  not evidence about Google Cloud India.
-- **Admin is an email allow-list in config**, not a role column. Write access to the
-  library changes what the product asserts about real companies, so it should not be
-  grantable through a bug in a profile endpoint.
-- **A 6-second voice grace became 25 seconds** once I had measured the speech latency. See
-  above — the short window was actively worse.
+- **A short restatement is good interviewing, not a defect.** Stripping "You mentioned
+  some lag at peak." from a 76-character question leaves "How did you address that?" with
+  a dangling "that". The length was the problem, not the pointer.
+- **Kept the schema field order.** Generating the question before the transcript showed no
+  latency gain (3.61s vs 4.70s was run-to-run noise) and would have the model ask before
+  it has listened. Not worth the quality risk.
+- Left video in the in-room model call rather than removing it — see below.
 
-## What I could not verify
+## What I could NOT verify
 
-- **Source extraction against a live document.** Spend cap. The fetch, the robots check
-  and the admin gate were all verified; only the model call was not.
-- **The backchannel in a real browser.** The clips play through `Audio()` and the silence
-  detector pauses while they do, but I have not sat in a round and listened. The
-  browser-only failure mode to watch for is our own voice leaking into the microphone
-  despite echo cancellation — if answers stop ending themselves, that is why.
-- **Whether the 14-second wait for the voice actually feels acceptable.** I think it is
-  better than text-then-voice. You should judge it.
+- **Speech, at all.** The TTS model has a **100 requests/day project quota** and I
+  exhausted it benchmarking. The 3.5s assess figure and the 74-character questions are
+  measured; the ~6s speech figure is computed from the length/latency curve, not observed
+  after the change. Re-run `node --env-file=.env scripts/e2e/interview.mjs` once it resets.
+- **The acknowledgement clips are still the old recordings.** The script is fixed; the
+  clips need re-rendering and that needs the quota:
+  `node --env-file=.env scripts/make-backchannel.mjs`. Until that runs, the voice still
+  mismatches.
+- Whether ~9.5s *feels* acceptable. It is half of what it was, but it is not a
+  conversation. Only you can judge that.
 
 ## Verification status
-
-| Check | Result |
-|---|---|
-| `npm run typecheck / lint / test / build` | pass — 47 tests |
-| `./gradlew ktlintCheck test build` | pass |
-| CI | green: 34148154481, 34148411886, 34149636393 |
-| Live turn latency, measured | 3.6s to question text, 14s to voice |
+- typecheck / lint / tests / build: **pass**, both jobs, CI run `34228936441`.
+- Live API: assess 3.5s over 4 runs; questions 51, 72, 76, 132 chars (`maxLength` is a
+  strong steer, not a hard cap).
 
 ## Merge status
-
-- `fix/011-room-presence` → merged into `develop` (`6b6a998`)
-- `feat/012-usage-counters` → merged into `develop` (`93fde95`)
-- `feat/013-source-library` → **PR #3**, open, CI green
+- Merged into `develop` at `62afd7c`. Branch `fix/017-turn-latency` deleted local + remote.
 
 ## Suggested next task
-
-Raise the spend cap and re-run a full round end to end. Everything built over the last two
-sessions — the warm-up, provenance, the source library, the resume grounding — has been
-verified as far as the model boundary and no further.
+Take video off the answer's critical path. The browser posts audio *and* video in one
+multipart request, so the model call cannot start until a multi-megabyte upload finishes —
+on a home uplink that is seconds, every turn. `CLAUDE.md` says body-language analysis is
+"capture it now, analyse it later", so uploading it separately costs nothing that is
+currently used.
 
 ## Open questions for you
 
-1. **Raise the Gemini spend cap**, or the product is down.
-2. **Is 14 seconds of "let me think about that" acceptable?** If not, the realtime voice
-   vendor decision comes forward, and that commits real spend.
-3. **Nothing caps model spend per account.** Rounds are unlimited and free. That is right
-   for now, but it wants a ceiling before the link goes anywhere public.
+1. **The 100/day speech quota is a launch blocker.** One question is one call, so the free
+   tier is roughly ten interviews a day across all users — and when it runs out, rounds
+   silently fall back to text with no voice. Needs a paid tier on the Google project
+   before the link goes anywhere public.
+2. **~9.5s is the floor without a realtime vendor.** The remaining levers are streaming
+   the assessment so speech starts ~1.5s earlier, and then LiveKit / Pipecat / Gemini
+   Live. The latter commits real spend and `CLAUDE.md` reserves it for you.
+3. `main` is ~54 commits behind `develop` and only you can advance it.

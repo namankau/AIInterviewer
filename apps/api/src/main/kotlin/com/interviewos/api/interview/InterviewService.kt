@@ -9,6 +9,8 @@ import com.interviewos.api.ai.InterviewBrief
 import com.interviewos.api.ai.RoundContext
 import com.interviewos.api.ai.TurnTranscript
 import com.interviewos.api.common.ApiException
+import com.interviewos.api.resume.CandidateBackground
+import com.interviewos.api.resume.ResumeService
 import com.interviewos.api.sources.GroundedSources
 import com.interviewos.api.sources.SourceGrounding
 import com.interviewos.api.storage.ObjectStorage
@@ -50,6 +52,7 @@ class InterviewService(
     private val questionSpeech: QuestionSpeech,
     private val entitlementProperties: EntitlementProperties,
     private val sourceGrounding: SourceGrounding,
+    private val resumeService: ResumeService,
     @Qualifier("interviewBackgroundExecutor") private val backgroundExecutor: TaskExecutor,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -173,8 +176,17 @@ class InterviewService(
             )
 
         val sources = groundingFor(request.companyName.trim(), roundType)
+        val background = resumeService.backgroundFor(userId)
         val brief =
-            briefFor(request.companyName.trim(), resolution, request.roleTitle.trim(), roundType, request.language, sources)
+            briefFor(
+                company = request.companyName.trim(),
+                resolution = resolution,
+                role = request.roleTitle.trim(),
+                roundType = roundType,
+                language = request.language,
+                sources = sources,
+                background = background,
+            )
         val plan = InterviewPlan.opening(request.durationMinutes)
         val opening =
             try {
@@ -264,7 +276,16 @@ class InterviewService(
         val resolution =
             ArchetypeResolution(Archetype.fromDbValue(session.archetype), confidenceOf(session.archetypeConfidence))
         val sources = groundingFor(session.companyName, roundType)
-        val brief = briefFor(session.companyName, resolution, session.roleTitle, roundType, session.language, sources)
+        val brief =
+            briefFor(
+                company = session.companyName,
+                resolution = resolution,
+                role = session.roleTitle,
+                roundType = roundType,
+                language = session.language,
+                sources = sources,
+                background = resumeService.backgroundFor(userId),
+            )
         val priorTurns =
             repository
                 .listTranscript(sessionId, userId)
@@ -590,7 +611,13 @@ class InterviewService(
     private fun groundingText(
         resolution: ArchetypeResolution,
         sources: GroundedSources?,
-    ): String = listOfNotNull(resolution.grounding, sources?.asPrompt()).joinToString(separator = "\n\n")
+        background: CandidateBackground?,
+    ): String =
+        listOfNotNull(
+            resolution.grounding,
+            sources?.asPrompt(),
+            background?.asPrompt(),
+        ).joinToString(separator = "\n\n")
 
     private fun briefFor(
         company: String,
@@ -599,16 +626,19 @@ class InterviewService(
         roundType: RoundType,
         language: String,
         sources: GroundedSources? = null,
+        background: CandidateBackground? = null,
     ) = InterviewBrief(
         company = company,
         archetype = resolution.archetype.label,
         role = role,
         roundType = "${roundType.label}. ${roundType.brief}",
         language = language,
-        candidateFunction = null,
-        candidateLevel = null,
+        // Null on every round until the resume existed, which is precisely why the
+        // project deep-dive had nothing of the candidate's own to dig into.
+        candidateFunction = background?.resume?.headline,
+        candidateLevel = background?.let { "${it.tenure.totalExperienceMonths / 12} years of experience" },
         targetLevel = null,
-        grounding = groundingText(resolution, sources),
+        grounding = groundingText(resolution, sources, background),
     )
 
     private fun TurnPlan.toContext() =

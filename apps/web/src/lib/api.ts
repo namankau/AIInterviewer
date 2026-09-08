@@ -3,6 +3,10 @@ import type {
   EntitlementView,
   HintView,
   MeResponse,
+  ProfileDetails,
+  ResumeView,
+  SkillView,
+  UpdateProfileRequest,
   ReadinessGroup,
   RoundDraft,
   SessionReport,
@@ -59,7 +63,7 @@ async function apiGet<T>(path: string, { accessToken, signal }: ApiGetOptions): 
 
 async function apiSend<T>(
   path: string,
-  method: "POST" | "PATCH",
+  method: "POST" | "PATCH" | "PUT" | "DELETE",
   accessToken: string,
   body?: unknown,
 ): Promise<T> {
@@ -114,6 +118,53 @@ export async function fetchUsage(signal?: AbortSignal): Promise<UsageCounts | nu
   } catch {
     return null;
   }
+}
+
+// -- profile and resume ------------------------------------------------------
+
+export function fetchProfile(options: ApiGetOptions): Promise<ProfileDetails> {
+  return apiGet<ProfileDetails>("/api/v1/me/profile", options);
+}
+
+export function updateProfile(
+  accessToken: string,
+  body: UpdateProfileRequest,
+): Promise<ProfileDetails> {
+  return apiSend<ProfileDetails>("/api/v1/me/profile", "PUT", accessToken, body);
+}
+
+export function upsertSkill(
+  accessToken: string,
+  body: { name: string; selfRatedConfidence?: number; flaggedAsWeak?: boolean },
+): Promise<SkillView[]> {
+  return apiSend<SkillView[]>("/api/v1/me/skills", "PUT", accessToken, body);
+}
+
+export async function deleteSkill(accessToken: string, name: string): Promise<void> {
+  await apiSend<void>(`/api/v1/me/skills/${encodeURIComponent(name)}`, "DELETE", accessToken);
+}
+
+/**
+ * Uploads and parses a resume.
+ *
+ * Slow on purpose: the parse happens inside this request rather than behind a status
+ * poll, because the candidate is waiting to find out whether we read their resume
+ * correctly and an answer they have to come back for is worse than a wait they can see.
+ */
+export function uploadResume(accessToken: string, file: File): Promise<ResumeView> {
+  const form = new FormData();
+  form.set("file", file);
+  return apiSend<ResumeView>("/api/v1/me/resume", "POST", accessToken, form);
+}
+
+export function uploadAvatar(accessToken: string, file: File): Promise<ProfileDetails> {
+  const form = new FormData();
+  form.set("file", file);
+  return apiSend<ProfileDetails>("/api/v1/me/avatar", "POST", accessToken, form);
+}
+
+export async function deleteResume(accessToken: string, id: string): Promise<void> {
+  await apiSend<void>(`/api/v1/me/resume/${id}`, "DELETE", accessToken);
 }
 
 export function fetchEntitlement(options: ApiGetOptions): Promise<EntitlementView> {

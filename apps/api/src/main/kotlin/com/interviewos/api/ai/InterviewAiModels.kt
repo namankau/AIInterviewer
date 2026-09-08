@@ -76,6 +76,8 @@ data class ParsedEducation(
 data class ParsedResume(
     val fullName: String?,
     val headline: String?,
+    /** As printed on the resume. Validated before it is stored — the model is not a URL parser. */
+    val linkedinUrl: String? = null,
     val employments: List<ParsedEmployment> = emptyList(),
     val projects: List<ParsedProject> = emptyList(),
     val education: List<ParsedEducation> = emptyList(),

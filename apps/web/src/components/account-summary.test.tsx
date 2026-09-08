@@ -48,16 +48,21 @@ describe("AccountSummary", () => {
   });
 
   /**
-   * Who you are and how you leave are one thing. Sign out used to be pinned to the bottom
-   * of an otherwise empty rail, a long way from anything, and read as an orphan.
+   * This assertion was the other way round one commit ago, and the reversal is deliberate.
+   * Sign out was moved onto the profile page: it is rare, it cannot be undone without a
+   * password, and a control like that living permanently in the navigation is both clutter
+   * and something to catch by accident. What is left here is the way *in* to the account.
    */
-  it("keeps the way out with the account it belongs to", async () => {
+  it("is a way in to the profile, and does not carry the way out", async () => {
     fetchMe.mockResolvedValue(me);
 
     render(<AccountSummary />);
 
-    expect(await screen.findByText("Test Candidate")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /test candidate/i })).toHaveAttribute(
+      "href",
+      "/profile",
+    );
+    expect(screen.queryByRole("button", { name: /sign out/i })).not.toBeInTheDocument();
   });
 
   it("announces that it is loading before the profile arrives", () => {

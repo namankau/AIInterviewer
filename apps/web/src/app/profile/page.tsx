@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { AppShell } from "@/components/app-shell";
 import { ProfilePanel } from "@/components/profile-panel";
+import { SignOutButton } from "@/components/sign-out-button";
 
 export const metadata: Metadata = { title: "Your profile" };
 
@@ -25,6 +26,25 @@ export default function ProfilePage() {
         </header>
 
         <ProfilePanel />
+
+        {/*
+          * Signing out lives here rather than in the rail. It is rare, it cannot be undone
+          * without a password, and a control like that sitting permanently beside the
+          * navigation is both clutter and something to hit by accident. This is the page
+          * that is already about "my account", so this is where leaving it belongs.
+          */}
+        <section aria-labelledby="session" className="flex flex-col gap-3 border-t border-line pt-8">
+          <h2 id="session" className="text-heading text-ink">
+            This browser
+          </h2>
+          <p className="max-w-prose text-caption text-ink-subtle">
+            Signing out clears your session on this device only. Your resume, rounds and reports
+            are untouched and are here when you come back.
+          </p>
+          <div className="flex pt-1">
+            <SignOutButton />
+          </div>
+        </section>
       </div>
     </AppShell>
   );

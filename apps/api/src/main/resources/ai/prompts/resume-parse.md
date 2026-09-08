@@ -45,6 +45,12 @@ heading you expect.
   page for an interview, so look for it properly.
 - A "Summary", "Profile" or "About" paragraph at the top is the `headline`. If there is
   none, use their current title. Do not write one yourself.
+- **The contact line at the very top usually holds a LinkedIn URL**, and it is easy to
+  miss because it sits above the first heading rather than under one. It may be written in
+  full (`https://www.linkedin.com/in/priya-sharma`), without the scheme
+  (`linkedin.com/in/priya-sharma`), or hidden behind the word "LinkedIn" as a hyperlink —
+  in which case take the link target, not the word. Put it in `linkedinUrl` exactly as
+  printed, and leave it null rather than guessing a profile from their name.
 - Skills appear both in a skills list and scattered through the bullets. Take both.
 
 ## Rules

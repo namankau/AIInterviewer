@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { AccountSummary } from "@/components/account-summary";
 import { AppShell } from "@/components/app-shell";
 import { DashboardPanel } from "@/components/dashboard-panel";
 
@@ -14,10 +13,7 @@ export const metadata: Metadata = { title: "Home" };
 export default function DashboardPage() {
   return (
     <AppShell>
-      <div className="flex max-w-3xl flex-col gap-14">
-        <DashboardPanel />
-        <AccountSummary />
-      </div>
+      <DashboardPanel />
     </AppShell>
   );
 }

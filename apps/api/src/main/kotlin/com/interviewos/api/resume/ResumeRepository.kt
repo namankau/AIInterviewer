@@ -203,6 +203,33 @@ class ResumeRepository(
             .update()
     }
 
+    /**
+     * The profile as the candidate last saved it.
+     *
+     * There was no read here at all, only [upsertProfile] and [avatarPath], so everything
+     * written through the profile form went in and never came back: the candidate typed
+     * their LinkedIn, saved it, and the field was blank again on the next visit. It was
+     * stored correctly the whole time. Nothing ever asked for it.
+     */
+    fun findProfile(userId: UUID): ProfileRow? =
+        jdbcClient
+            .sql(
+                """
+                select current_level, target_level, linkedin_url, headline
+                from public.profiles
+                where user_id = :u
+                """.trimIndent(),
+            ).param("u", userId)
+            .query { rs, _ ->
+                ProfileRow(
+                    currentLevel = rs.getString("current_level"),
+                    targetLevel = rs.getString("target_level"),
+                    linkedinUrl = rs.getString("linkedin_url"),
+                    headline = rs.getString("headline"),
+                )
+            }.optional()
+            .orElse(null)
+
     fun avatarPath(userId: UUID): String? =
         jdbcClient
             .sql("select avatar_path from public.profiles where user_id = :u")
@@ -323,6 +350,14 @@ data class SkillRow(
     val selfRatedConfidence: Int?,
     val detectedInResume: Boolean,
     val flaggedAsWeak: Boolean,
+)
+
+/** What the candidate told us about themselves, as opposed to what the resume said. */
+data class ProfileRow(
+    val currentLevel: String?,
+    val targetLevel: String?,
+    val linkedinUrl: String?,
+    val headline: String?,
 )
 
 /** Null means "leave this alone". The service turns an explicitly cleared field into null. */

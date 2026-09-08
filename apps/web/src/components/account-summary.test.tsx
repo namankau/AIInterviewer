@@ -6,6 +6,7 @@ import { AccountSummary } from "./account-summary";
 
 const fetchMe = vi.hoisted(() => vi.fn());
 const getSession = vi.hoisted(() => vi.fn());
+const signOut = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api", () => ({
   fetchMe,
@@ -13,8 +14,12 @@ vi.mock("@/lib/api", () => ({
 }));
 
 vi.mock("@/lib/supabase/client", () => ({
-  createSupabaseBrowserClient: () => ({ auth: { getSession } }),
+  createSupabaseBrowserClient: () => ({ auth: { getSession, signOut } }),
 }));
+
+// The way out now lives inside this block rather than floating at the foot of an empty
+// rail, so this component has a router dependency it did not have before.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
 
 const me: MeResponse = {
   id: "6f1b7f4c-2b2a-4c3e-9a51-0a5f4f2f2a11",
@@ -40,6 +45,19 @@ describe("AccountSummary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getSession.mockResolvedValue({ data: { session: { access_token: "token-abc" } } });
+  });
+
+  /**
+   * Who you are and how you leave are one thing. Sign out used to be pinned to the bottom
+   * of an otherwise empty rail, a long way from anything, and read as an orphan.
+   */
+  it("keeps the way out with the account it belongs to", async () => {
+    fetchMe.mockResolvedValue(me);
+
+    render(<AccountSummary />);
+
+    expect(await screen.findByText("Test Candidate")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
   });
 
   it("announces that it is loading before the profile arrives", () => {

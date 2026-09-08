@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 export default function RoundsPage() {
   return (
     <AppShell breadcrumb="rounds">
-      <div className="flex max-w-3xl flex-col gap-12">
+      <div className="flex max-w-4xl flex-col gap-12">
         <header className="flex flex-col gap-4">
           <h1 className="text-display text-balance text-ink">The rounds.</h1>
           <p className="max-w-xl text-body text-ink-muted">

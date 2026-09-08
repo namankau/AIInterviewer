@@ -183,7 +183,7 @@ class ResumeService(
             detectedSkills = parsed?.detectedSkills ?: emptyList(),
             // Surfaced so the candidate can correct us before a round is built on it.
             // A wrong employer silently degrades every future interview.
-            lowConfidenceFields = parsed?.lowConfidenceFields ?: emptyList(),
+            lowConfidenceFields = ResumeFlags.worthShowing(parsed?.lowConfidenceFields ?: emptyList()),
             totalExperienceMonths = summary?.totalExperienceMonths,
             gapCount = summary?.gaps?.size ?: 0,
             shortTenureCount = summary?.shortTenures?.size ?: 0,

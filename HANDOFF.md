@@ -1,58 +1,71 @@
-# Handoff — 2026-09-08 (evening)
+# Handoff — 2026-09-09
 
 ## Task
-A round sat and reported on: no interviewer voice, flattering scores, a report with no way
-out, sign out in the wrong place, LinkedIn never populated, plus a request for live
-candidate transcription, round deletion, report retention, report charts, and an
-Internshala-style device check.
+Four items from the owner: live transcription of the candidate, round deletion plus report
+retention, report visualisations, and an Internshala-style entry flow. Plus the interviewer
+apologising for a question it was right to ask, and a question about speech cost.
 
 ## What I built
 
-- **Scoring is calibrated and it is measured.** `ai/prompts/report.md` carries an anchored
-  scale — 2/5 is the default for a competent ordinary answer, 5/5 is reserved. A transcript
-  written to be ordinary scored a median **70% before and 40% after**, three runs each
-  against the live API. Strong rounds are placed honestly through `outcomeSimulation`
-  rather than by inflating the number.
-- **LinkedIn is parsed from the resume** (`LinkedInUrl.kt`, + schema and prompt). It was
-  never extracted at all — the field could only ever be typed by hand, while sitting in the
-  contact line of the document already uploaded. Validated hard: the parser is a model
-  reading a PDF and returns "LinkedIn", personal sites and bare hostnames.
-- **The report is in the app shell**, so there is a way back that is not "read to the end".
-- **Sign out moved to the profile page**; the rail block is now the way in to it.
-- **A missing voice says so.** Previously the round silently became a text one.
+- **The browser speaks the questions** (`lib/browser-speech.ts`, `use-browser-voice.ts`).
+  Answering the cost question: a modern browser voice is free, has no quota, starts in tens
+  of milliseconds instead of six seconds, and reports a `boundary` event per word — so the
+  text now follows the voice exactly rather than being paced against a recording's
+  duration. `pickVoice` ranks what is available and only prefers local when the voice is a
+  modern one. `speaksLocally` rides on the request and the server skips synthesis entirely.
+- **Live transcript** (`use-live-transcript.ts`) — the candidate sees their words as they
+  speak. Explicitly a mirror: it never reaches the server and nothing is scored against it.
+- **Round deletion and 28-day retention** (`RoundDeletion.kt`, migration
+  `20260908230000`). Deleting removes the session row; expiry keeps the row and clears the
+  evidence, because history here is derived from completed sessions and dropping the row
+  would rewrite how much practice somebody had done. Both purge storage by
+  `{userId}/{sessionId}` prefix.
+- **A pre-flight that actually tries the devices** (`device-check.tsx`) — staged checks
+  that gate on each other, including speaking a line through the browser voice so the
+  candidate hears the interviewer before the round. Only a blocked microphone stops entry.
+- **The report's score, drawn as a scale** (`report-charts.tsx`) — named zones with the
+  candidate's band marked, never a bar that is mostly empty. 40% is now an ordinary round,
+  and a doughnut that is 60% empty would undo the recalibration in the first second.
+- **Scoring recalibrated** (`ai/prompts/report.md`) — measured: the same ordinary
+  transcript went from a median 70% to 40% over three runs each.
+- **A challenged question is explained, not apologised for** (`QuestionText.kt`).
+
+## Assumptions I made
+- Agents ran sequentially, not in parallel: worktree isolation is refused in this repo
+  (git resolves those paths outside the worktree), so concurrent agents would share one
+  working tree and collide on git state and Gradle/Next build locks.
+- The Internshala reference was applied to the interview entry flow only, not the whole
+  app. Moving the whole app is a change to the documented design direction and is the
+  owner's call — see Open questions.
 
 ## What I could NOT verify
-
-- **Voice, again.** The speech quota (100/day) was exhausted when your round ran, which is
-  why the interviewer typed instead of speaking — I burned it benchmarking earlier the same
-  day. It is still exhausted; the backchannel clips therefore still need re-rendering:
-  `node --env-file=.env scripts/make-backchannel.mjs`.
-- **The reference video** (`WhatsApp Video 2026-09-08 at 10.01.03 PM.mp4`) could not be
-  decoded — the only ffmpeg on this machine is Playwright's minimal build, no H.264. Worked
-  from the screenshots instead.
+- **Whether the browser voices exist on the owner's machine.** Chrome under Playwright
+  never initialises its TTS controller, so `getVoices()` returned 0 in every configuration
+  tried. The code detects at runtime and falls back; one real round settles it.
+- **The reference video** could not be decoded — the only ffmpeg here is Playwright's
+  minimal build, no H.264. Worked from the screenshots.
+- Voice quality, and whether the pacing feels right — owner's call per CLAUDE.md.
 
 ## Verification status
-- typecheck / lint / tests / build: **pass** both sides. CI green before each merge.
+- typecheck / lint / tests / build: **pass**. 103 frontend tests, backend green.
+- CI green before every merge.
 
 ## Merge status
-- Merged into `develop` at `d104ad5`. Earlier today: `f3b6736`, `0cb23fd`, `5578f45`,
-  `57bec1c`, `934fc58`.
+- All merged into `develop`: `6559a05` (visuals), `389d415` (capture comments), `ac7a304`
+  (device check), `0ab060e` (deletion), `b604ece` (challenged question), `241e3cd`
+  (browser speech).
+- **Migration `20260908230000` applied to the linked project.** It was merged unapplied
+  and broke the dashboard until caught — see the new ground rule 1.
 
 ## Suggested next task
-Round deletion and 28-day report retention — **as a PR, not a merge.** `CLAUDE.md` routes
-anything touching data deletion to human review, and this touches storage objects as well
-as rows.
+Confirm the browser voice works on a real machine, then decide whether the whole app moves
+to the Internshala register.
 
 ## Open questions for you
-
-1. **The speech quota is now the product's biggest constraint, not a nice-to-have.** One
-   question is one call against a 100/day project cap, so voice is off for part of every
-   day and the round degrades to text. Needs billing enabled on the Google project. This
-   has now broken a real round of yours.
-2. **Live candidate transcription** needs the chunked-upload pipeline discussed earlier
-   (recorder timeslice + an endpoint that accepts audio during the answer). It is the same
-   change that removes the remaining upload latency and lets the interviewer notice when
-   somebody has finished. Worth doing as one piece; say when.
-3. **Report charts and the Internshala-style device check** are both still open. The device
-   check exists (`device-check.tsx`) but is nothing like the reference.
-4. `main` is ~60 commits behind `develop` and only you can advance it.
+1. **The Gemini speech quota is 100/day** and has already turned a real round silent. The
+   browser voice sidesteps it where a voice exists; billing on the Google project is still
+   the only fix where one does not.
+2. **Design direction.** "Boring" has been said three times, and CLAUDE.md codifies the
+   opposite. Say the word and I will change the documented direction deliberately rather
+   than let it drift.
+3. `main` is ~70 commits behind `develop` and only you can advance it.

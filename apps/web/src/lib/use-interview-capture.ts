@@ -18,8 +18,11 @@ interface UseInterviewCaptureOptions {
 /**
  * Microphone and camera capture for one interview.
  *
- * Audio and video are recorded separately from the same device stream: the answer is
- * assessed from clean audio, while the video is stored for body-language analysis later.
+ * The answer is recorded as clean audio and assessed from that. **The camera is opened but
+ * not recorded** — see [RECORD_CAMERA] — so nothing from it leaves the browser. It is on
+ * so the candidate practises being looked at, facing the drawn interviewer, and that
+ * benefit never leaves their own machine.
+ *
  * Recording only ever starts after [start] is called, which the session screen does only
  * once consent has been recorded server-side.
  */
@@ -212,9 +215,16 @@ const SPEECH_BITRATE = 48_000;
 const RECORD_CAMERA = false;
 
 /**
- * The camera is recorded for a body-language analysis that does not exist yet — the
- * product decision is to capture it now and analyse it later — so it only has to be good
- * enough to read posture and eye contact from, later, and not good enough to look at.
+ * The bitrate the camera would be recorded at, if it were recorded. It is not; see
+ * [RECORD_CAMERA]. Kept because the number was measured and would otherwise be worked out
+ * again from scratch the day body-language feedback arrives.
+ *
+ * The camera would be recorded for a body-language analysis that does not exist yet — the
+ * product decision was to capture it now and analyse it later, and that decision has since
+ * been reversed: nothing is uploaded, because collecting somebody's face for a feature
+ * that does not exist is a cost with no matching benefit to the person paying it. If it
+ * comes back it only has to be good enough to read posture and eye contact from, later,
+ * and not good enough to look at.
  *
  * Left to itself Chromium encodes VP9 at roughly 4.4 MB per minute of answer, measured
  * against its own capture device on a synthetic pattern that compresses better than a real

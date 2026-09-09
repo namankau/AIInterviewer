@@ -9,7 +9,9 @@ import type {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { CompetencyBars, OverallScore } from "@/components/report-charts";
 import { ApiRequestError, fetchReport } from "@/lib/api";
+import { cn } from "@/lib/cn";
 import { useAccessToken } from "@/lib/use-access-token";
 
 /**
@@ -95,6 +97,29 @@ export function ReportView({ sessionId }: { sessionId: string }) {
     );
   }
 
+  return <ReportDocument report={report} />;
+}
+
+/**
+ * The report as pure markup over a report it is handed.
+ *
+ * Split from the fetching for the same reason the dashboard was: a page reachable only by
+ * signing in, sitting a full round and waiting for a model to write about it is a page
+ * nobody ever looks at twice, and the visuals on it have to be looked at to be judged.
+ *
+ * Every array is read through `?? []`. Reports are composed once and stored, so a report
+ * written before a section existed comes back without its key — which is not theoretical:
+ * an interview sat one week could not be opened at all the next, because the reader hit
+ * `.length` on a field that had just been added. The server backfills the shape it knows
+ * about (`ReportService.withEveryField`), and this is the belt to that pair of braces.
+ */
+export function ReportDocument({ report }: { report: SessionReport }) {
+  const competencies = report.competencies ?? [];
+  const annotations = report.annotations ?? [];
+  const practicePlan = report.practicePlan ?? [];
+  const strengths = report.strengths ?? [];
+  const developmentAreas = report.developmentAreas ?? [];
+
   return (
     <article className="flex flex-col gap-16">
       <header className="flex flex-col gap-4 border-b border-line pb-10">
@@ -109,39 +134,54 @@ export function ReportView({ sessionId }: { sessionId: string }) {
         </p>
       </header>
 
+      {/*
+        * The anchor, and the first thing under the headline. It is deliberately not in a
+        * panel: the three bordered blocks further down are asides, and this is the page's
+        * own voice, so it sits on the sheet at the size the number deserves.
+        */}
+      <OverallScore competencies={competencies} />
+
       {report.assistance ? <AssistancePanel assistance={report.assistance} /> : null}
 
       <Section title="Competencies" lead="Each score is anchored to something you actually said.">
-        {report.competencies.length === 0 ? (
+        {competencies.length === 0 ? (
           <p className="text-body text-ink-muted">
             No competency could be scored against evidence from this transcript. That usually means
             the answers were too brief to assess fairly.
           </p>
         ) : (
-          <ul className="flex flex-col gap-8">
-            {report.competencies.map((item) => (
-              <li key={item.competency} className="flex flex-col gap-3">
-                <div className="flex items-baseline justify-between gap-4">
-                  <h3 className="text-heading text-ink">{item.competency}</h3>
-                  <span className="shrink-0 font-mono text-caption text-ink-muted">
-                    {item.score}/{item.maxScore}
-                  </span>
-                </div>
-                <ScoreBar score={item.score} max={item.maxScore} competency={item.competency} />
-                <p className="max-w-prose text-body text-ink-muted">{item.rationale}</p>
-                <blockquote className="border-l-2 border-accent pl-4 text-body text-ink italic">
-                  &ldquo;{item.evidenceQuote}&rdquo;
-                </blockquote>
-              </li>
-            ))}
-          </ul>
+          <>
+            <CompetencyBars competencies={competencies} />
+
+            <ul className="flex flex-col gap-8 border-t border-line pt-8">
+              {competencies.map((item) => (
+                <li key={item.competency} className="flex flex-col gap-3">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <h3 className="text-heading text-ink">{item.competency}</h3>
+                    <span className="shrink-0 font-mono text-caption tabular-nums text-ink-muted">
+                      {item.score}/{item.maxScore}
+                    </span>
+                  </div>
+                  {/*
+                    * No bar here. The chart above compares all of them against the same
+                    * datum, which is the only way the comparison is worth anything; a
+                    * second copy of one bar in isolation would say less and claim more.
+                    */}
+                  <p className="max-w-prose text-body text-ink-muted">{item.rationale}</p>
+                  <blockquote className="border-l-2 border-accent pl-4 text-body text-ink italic">
+                    &ldquo;{item.evidenceQuote}&rdquo;
+                  </blockquote>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </Section>
 
-      {report.annotations.length > 0 ? (
+      {annotations.length > 0 ? (
         <Section title="Answer by answer" lead="What a real interviewer would have made of each one.">
           <ul className="flex flex-col gap-10">
-            {report.annotations.map((note) => (
+            {annotations.map((note) => (
               <li key={note.turnIndex} className="flex flex-col gap-3">
                 <p className="text-body font-medium text-ink">{note.question}</p>
                 <dl className="grid gap-3 sm:grid-cols-2">
@@ -166,24 +206,14 @@ export function ReportView({ sessionId }: { sessionId: string }) {
         </dl>
       </Section>
 
-      {(report.strengths ?? []).length > 0 ? (
-        <Section title="What held up" lead="With the words that show it.">
-          <AreaList areas={report.strengths ?? []} tone="positive" />
-        </Section>
-      ) : null}
-
-      {(report.developmentAreas ?? []).length > 0 ? (
-        <Section title="What did not" lead="Named plainly, because a soft report is a real rejection later.">
-          <AreaList areas={report.developmentAreas ?? []} tone="critical" />
-        </Section>
-      ) : null}
+      <AssessedAreas strengths={strengths} developmentAreas={developmentAreas} />
 
       <QuestionSources sources={report.questionSources} />
 
-      {report.practicePlan.length > 0 ? (
+      {practicePlan.length > 0 ? (
         <Section title="What to work on" lead="Before the next attempt, in this order.">
           <ol className="flex flex-col gap-6">
-            {report.practicePlan.map((item, index) => (
+            {practicePlan.map((item, index) => (
               <li key={item.focus} className="flex gap-4">
                 <span className="pt-0.5 font-mono text-caption text-ink-subtle">
                   {String(index + 1).padStart(2, "0")}
@@ -237,6 +267,8 @@ export function ReportView({ sessionId }: { sessionId: string }) {
  */
 function AssistancePanel({ assistance }: { assistance: ReportAssistance }) {
   const unaided = assistance.assistedAnswers === 0;
+  const breakdown = assistance.breakdown ?? [];
+  const moments = assistance.moments ?? [];
 
   return (
     <section
@@ -250,9 +282,9 @@ function AssistancePanel({ assistance }: { assistance: ReportAssistance }) {
         <p className="text-caption text-ink-subtle">{assistance.headline}</p>
       </div>
 
-      {assistance.breakdown.length > 0 ? (
+      {breakdown.length > 0 ? (
         <ul className="flex flex-wrap gap-x-6 gap-y-2">
-          {assistance.breakdown.map((item) => (
+          {breakdown.map((item) => (
             <li key={item.label} className="text-caption text-ink-muted">
               {item.label}
               <span className="pl-2 font-mono text-ink-subtle">×{item.count}</span>
@@ -265,9 +297,9 @@ function AssistancePanel({ assistance }: { assistance: ReportAssistance }) {
         <p className="max-w-prose text-body text-ink-muted">{assistance.narrative}</p>
       ) : null}
 
-      {assistance.moments.length > 0 ? (
+      {moments.length > 0 ? (
         <ul className="flex flex-col gap-1.5 border-t border-line pt-4">
-          {assistance.moments.map((moment) => (
+          {moments.map((moment) => (
             <li key={moment} className="text-caption text-ink-subtle">
               — {moment}
             </li>
@@ -279,45 +311,105 @@ function AssistancePanel({ assistance }: { assistance: ReportAssistance }) {
 }
 
 /**
- * A strength or a weakness: what it was, the words that show it, why it matters at this
+ * What held up and what did not, beside each other rather than forty lines apart.
+ *
+ * They used to be two sections in sequence, which meant the strengths were read, then
+ * scrolled past, then the weaknesses were read on their own — and a page of weaknesses
+ * with the good news off screen is a harsher report than the one that was written. Set
+ * side by side they read as the single assessment they are, and the two column rules do
+ * the telling apart without either list having to shout.
+ *
+ * Both columns are rendered whenever either has anything in it, empty one included. An
+ * absent column would silently turn a split into a verdict — a candidate seeing only the
+ * right-hand list has no way to know whether the left was empty or was never drawn.
+ */
+function AssessedAreas({
+  strengths,
+  developmentAreas,
+}: {
+  strengths: ReportAssessedArea[];
+  developmentAreas: ReportAssessedArea[];
+}) {
+  if (strengths.length === 0 && developmentAreas.length === 0) return null;
+
+  return (
+    <Section
+      title="What held up, and what did not"
+      lead="Named plainly, because a soft report is a real rejection later."
+    >
+      <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
+        <AreaColumn
+          heading="What held up"
+          tone="positive"
+          areas={strengths}
+          empty="Nothing in this round could be quoted as a strength. That is a finding about the round, not about you — a short answer leaves nothing to point at."
+        />
+        <AreaColumn
+          heading="What did not"
+          tone="critical"
+          areas={developmentAreas}
+          empty="Nothing in this round was weak enough to name against a quote."
+        />
+      </div>
+    </Section>
+  );
+}
+
+/**
+ * One side of the split: what it was, the words that show it, why it matters at this
  * level, and one thing to do. The quote is the load-bearing part — anything without one
  * was dropped server-side before it reached here.
  */
-function AreaList({
-  areas,
+function AreaColumn({
+  heading,
   tone,
+  areas,
+  empty,
 }: {
-  areas: ReportAssessedArea[];
+  heading: string;
   tone: "positive" | "critical";
+  areas: ReportAssessedArea[];
+  empty: string;
 }) {
+  const rule = tone === "positive" ? "border-positive" : "border-danger";
+
   return (
-    <ul className="flex flex-col divide-y divide-line border-y border-line">
-      {areas.map((item) => (
-        <li key={item.area} className="flex flex-col gap-3 py-6">
-          <div className="flex flex-wrap items-baseline gap-3">
-            <h3 className="text-heading text-ink">{item.area}</h3>
-            {item.turnIndex !== null ? (
-              <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-                question {item.turnIndex + 1}
-              </span>
-            ) : null}
-          </div>
+    <section aria-label={heading} className="flex flex-col gap-5">
+      <div className={cn("flex items-baseline justify-between gap-3 border-t-2 pt-3", rule)}>
+        <h3 className="text-heading text-ink">{heading}</h3>
+        <span className="shrink-0 font-mono text-micro tracking-widest text-ink-subtle uppercase">
+          {areas.length} {areas.length === 1 ? "thing" : "things"}
+        </span>
+      </div>
 
-          <blockquote
-            className={`border-l-2 pl-4 text-body italic ${
-              tone === "positive" ? "border-positive text-ink-muted" : "border-danger text-ink-muted"
-            }`}
-          >
-            &ldquo;{item.evidenceQuote}&rdquo;
-          </blockquote>
+      {areas.length === 0 ? (
+        <p className="max-w-prose text-body text-ink-muted">{empty}</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-line">
+          {areas.map((item) => (
+            <li key={item.area} className="flex flex-col gap-3 py-5 first:pt-0 last:pb-0">
+              <div className="flex flex-wrap items-baseline gap-3">
+                <h4 className="text-body font-medium text-ink">{item.area}</h4>
+                {item.turnIndex !== null ? (
+                  <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+                    question {item.turnIndex + 1}
+                  </span>
+                ) : null}
+              </div>
 
-          <dl className="grid gap-3 sm:grid-cols-2">
-            <Note term="Why it matters" detail={item.whyItMatters} />
-            <Note term="What to do" detail={item.whatToDo} />
-          </dl>
-        </li>
-      ))}
-    </ul>
+              <blockquote className={cn("border-l-2 pl-4 text-body text-ink-muted italic", rule)}>
+                &ldquo;{item.evidenceQuote}&rdquo;
+              </blockquote>
+
+              <dl className="flex flex-col gap-3">
+                <Note term="Why it matters" detail={item.whyItMatters} />
+                <Note term="What to do" detail={item.whatToDo} />
+              </dl>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -335,7 +427,8 @@ function AreaList({
  */
 function QuestionSources({ sources }: { sources: ReportQuestionSources | undefined }) {
   // A report written before provenance existed has no sources section at all.
-  if (!sources || (sources.entries ?? []).length === 0) return null;
+  const entries = sources?.entries ?? [];
+  if (!sources || entries.length === 0) return null;
 
   return (
     <Section title="Why you were asked these" lead={sources.headline}>
@@ -344,7 +437,7 @@ function QuestionSources({ sources }: { sources: ReportQuestionSources | undefin
       </p>
 
       <ol className="flex flex-col divide-y divide-line border-y border-line">
-        {sources.entries.map((entry) => (
+        {entries.map((entry) => (
           <li key={entry.turnIndex} className="flex flex-col gap-3 py-6">
             <div className="flex flex-wrap items-baseline gap-3">
               <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
@@ -372,7 +465,7 @@ function QuestionSources({ sources }: { sources: ReportQuestionSources | undefin
               <p className="max-w-prose text-caption text-ink-subtle">{entry.tierDisclosure}</p>
             </div>
 
-            {entry.sources.length > 0 ? (
+            {(entry.sources ?? []).length > 0 ? (
               <ul className="flex flex-col gap-1 pl-4">
                 {entry.sources.map((source) => (
                   <li key={`${source.title}-${source.url ?? ""}`} className="text-caption text-ink-muted">
@@ -427,22 +520,6 @@ function Note({ term, detail }: { term: string; detail: string | null }) {
     <div className="flex flex-col gap-1">
       <dt className="text-caption text-ink-subtle">{term}</dt>
       <dd className="text-body text-ink-muted">{detail}</dd>
-    </div>
-  );
-}
-
-function ScoreBar({ score, max, competency }: { score: number; max: number; competency: string }) {
-  const percent = max > 0 ? Math.round((score / max) * 100) : 0;
-  return (
-    <div
-      role="meter"
-      aria-valuenow={score}
-      aria-valuemin={0}
-      aria-valuemax={max}
-      aria-label={`${competency}: ${score} out of ${max}`}
-      className="h-1 w-full overflow-hidden rounded-full bg-surface-sunken"
-    >
-      <div className="h-full rounded-full bg-accent" style={{ width: `${percent}%` }} />
     </div>
   );
 }

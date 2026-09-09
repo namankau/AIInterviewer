@@ -1,5 +1,6 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.ai.AiSpendContext
 import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.AnswerAudio
 import com.interviewos.api.ai.Intervention
@@ -191,7 +192,9 @@ class InterviewService(
         val plan = InterviewPlan.opening(request.durationMinutes)
         val opening =
             try {
-                interviewAi.composeOpeningQuestion(brief, plan.toContext())
+                AiSpendContext.of(userId, sessionId) {
+                    interviewAi.composeOpeningQuestion(brief, plan.toContext())
+                }
             } catch (e: AiUnavailableException) {
                 repository.markSessionStatus(sessionId, userId, "failed")
                 log.warn("Opening question failed for session {}", sessionId, e)
@@ -301,19 +304,21 @@ class InterviewService(
 
         val assessment =
             try {
-                interviewAi.assessAnswer(
-                    brief = brief,
-                    round = plan.toContext(),
-                    priorTurns = priorTurns,
-                    currentQuestion = turn.questionText,
-                    answer = audio,
-                    // Stored either way, and analysed only if the round is configured to.
-                    // A minute of camera is several times the size of the whole prompt and
-                    // roughly doubles the wait the candidate sits through, for one sentence
-                    // about body language that is not in the report yet. See
-                    // [RoundMediaProperties].
-                    video = roundMedia.videoForRound(video, videoContentType),
-                )
+                AiSpendContext.of(userId, sessionId) {
+                    interviewAi.assessAnswer(
+                        brief = brief,
+                        round = plan.toContext(),
+                        priorTurns = priorTurns,
+                        currentQuestion = turn.questionText,
+                        answer = audio,
+                        // Stored either way, and analysed only if the round is configured to.
+                        // A minute of camera is several times the size of the whole prompt and
+                        // roughly doubles the wait the candidate sits through, for one sentence
+                        // about body language that is not in the report yet. See
+                        // [RoundMediaProperties].
+                        video = roundMedia.videoForRound(video, videoContentType),
+                    )
+                }
             } catch (e: AiUnavailableException) {
                 repository.markSessionStatus(sessionId, userId, "failed")
                 log.warn("Answer assessment failed for session {} turn {}", sessionId, turnIndex, e)
@@ -463,7 +468,9 @@ class InterviewService(
 
         val offered =
             try {
-                interviewAi.offerHint(brief, plan.toContext(), priorTurns, turn.questionText)
+                AiSpendContext.of(userId, sessionId) {
+                    interviewAi.offerHint(brief, plan.toContext(), priorTurns, turn.questionText)
+                }
             } catch (e: AiUnavailableException) {
                 log.warn("Hint unavailable for session {} turn {}", sessionId, turnIndex, e)
                 throw ApiException.upstreamUnavailable(

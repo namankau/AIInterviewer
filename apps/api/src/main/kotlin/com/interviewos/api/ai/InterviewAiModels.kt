@@ -10,17 +10,46 @@ import java.time.LocalDate
  * and it is mocked at this boundary in tests. No test calls a live model (CLAUDE.md).
  */
 
-/** Token usage for a single model call. Per-session cost is what decides pricing. */
+/**
+ * Token usage for a single model call. Per-session cost is what decides pricing.
+ *
+ * @param promptTokens every input token, of any modality, as the provider counted them
+ * @param outputTokens what the model actually said
+ * @param thoughtTokens what it spent reasoning before saying it. **Billed at the output
+ *   rate and reported separately**, so a reader who takes [outputTokens] as the bill
+ *   undercounts. Measured: `gemini-3.5-flash` spent ~1,600 thinking tokens composing a
+ *   report whose visible output was ~1,600 — half that call's output bill was invisible.
+ * @param audioTokens the part of [promptTokens] carrying sound, priced higher than text
+ * @param cachedTokens the part of [promptTokens] served from a context cache, priced far
+ *   lower. Zero unless the provider reports it, which it only does once a stable prefix
+ *   is long enough to be cached at all.
+ */
 data class AiUsage(
     val model: String,
     val promptTokens: Int,
     val outputTokens: Int,
+    val thoughtTokens: Int = 0,
+    val audioTokens: Int = 0,
+    val cachedTokens: Int = 0,
 ) {
+    /**
+     * Input tokens billed at the text rate: whatever is left once the parts with their
+     * own price have been taken out. Floored at zero — a provider whose counts do not
+     * reconcile must not produce a negative bill.
+     */
+    val textTokens: Int get() = (promptTokens - audioTokens - cachedTokens).coerceAtLeast(0)
+
+    /** Everything charged at the output rate, thinking included. */
+    val billedOutputTokens: Int get() = outputTokens + thoughtTokens
+
     operator fun plus(other: AiUsage): AiUsage =
         AiUsage(
             model = if (model == other.model) model else "mixed",
             promptTokens = promptTokens + other.promptTokens,
             outputTokens = outputTokens + other.outputTokens,
+            thoughtTokens = thoughtTokens + other.thoughtTokens,
+            audioTokens = audioTokens + other.audioTokens,
+            cachedTokens = cachedTokens + other.cachedTokens,
         )
 
     companion object {

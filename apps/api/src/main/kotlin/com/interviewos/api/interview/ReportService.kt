@@ -1,5 +1,6 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.ai.AiSpendContext
 import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.Intervention
 import com.interviewos.api.ai.InterviewAi
@@ -97,21 +98,23 @@ class ReportService(
 
         val composed =
             try {
-                interviewAi.composeReport(
-                    brief,
-                    turns.map {
-                        TurnTranscript(
-                            questionText = it.questionText,
-                            answerTranscript = it.answerTranscript,
-                            intervention = Intervention.parse(it.intervention),
-                            interventionNote = it.interventionNote,
-                            // Marked so the model does not score "tell me about yourself"
-                            // as though it were evidence of system-design ability.
-                            warmUp = TurnPhase.fromDbValue(it.phase) == TurnPhase.WARMUP,
-                            deliveryNote = it.deliveryNote,
-                        )
-                    },
-                )
+                AiSpendContext.of(userId, sessionId) {
+                    interviewAi.composeReport(
+                        brief,
+                        turns.map {
+                            TurnTranscript(
+                                questionText = it.questionText,
+                                answerTranscript = it.answerTranscript,
+                                intervention = Intervention.parse(it.intervention),
+                                interventionNote = it.interventionNote,
+                                // Marked so the model does not score "tell me about yourself"
+                                // as though it were evidence of system-design ability.
+                                warmUp = TurnPhase.fromDbValue(it.phase) == TurnPhase.WARMUP,
+                                deliveryNote = it.deliveryNote,
+                            )
+                        },
+                    )
+                }
             } catch (e: AiUnavailableException) {
                 log.warn("Report composition failed for session {}", sessionId, e)
                 throw ApiException.upstreamUnavailable(

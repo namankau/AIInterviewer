@@ -113,6 +113,19 @@ export interface SpokenHandle {
 }
 
 /**
+ * How long to wait for the voice to actually begin before giving up on it.
+ *
+ * Generous, because starting is not instant on every machine and cutting off a voice that
+ * was about to speak is worse than a short wait. Short enough that a candidate does not
+ * sit in front of a blank question wondering whether the round has begun — which is
+ * exactly what happened, for three minutes, with no timeout here at all.
+ */
+const START_TIMEOUT_MS = 3_000;
+
+/** How long a started voice may go without a `boundary` before the text is shown whole. */
+const BOUNDARY_GRACE_MS = 1_200;
+
+/**
  * Speaks [text], reporting how far through it the voice has actually got.
  *
  * `onProgress` is given the number of characters spoken so far, straight from the
@@ -148,18 +161,66 @@ export function speak({
   }
   utterance.rate = rate;
 
-  utterance.onboundary = (event) => onProgress?.(event.charIndex);
+  let started = false;
+  let sawBoundary = false;
+  let done = false;
+  const timers: number[] = [];
+  const clearTimers = () => {
+    for (const timer of timers) window.clearTimeout(timer);
+    timers.length = 0;
+  };
+
+  /** Exactly one end, whoever gets there first. */
+  const finish = (reason: "finished" | "failed") => {
+    if (done) return;
+    done = true;
+    clearTimers();
+    onEnd?.(reason);
+  };
+
+  utterance.onstart = () => {
+    started = true;
+    // Some voices — Chrome's network ones especially — speak the whole utterance without
+    // ever firing `boundary`. The reveal is driven by those events, so the question would
+    // stay invisible for as long as it is being read aloud. Show it whole instead: an
+    // unsynchronised question beats a blank room with a voice talking over it.
+    timers.push(
+      window.setTimeout(() => {
+        if (!sawBoundary) onProgress?.(text.length);
+      }, BOUNDARY_GRACE_MS),
+    );
+  };
+  utterance.onboundary = (event) => {
+    sawBoundary = true;
+    onProgress?.(event.charIndex);
+  };
   utterance.onend = () => {
     onProgress?.(text.length);
-    onEnd?.("finished");
+    finish("finished");
   };
   // A refusal is not worth surfacing to the candidate; it means fall back to the model's
   // recording, and the caller decides that.
-  utterance.onerror = () => onEnd?.("failed");
+  utterance.onerror = () => finish("failed");
 
   synthesis.speak(utterance);
+
+  // An utterance can be dropped without ever reporting start, end or error — a tab that
+  // was in the background, the autoplay policy, or Chrome's own queue losing it. Nothing
+  // above fires in that case, and the room hands the floor over on `onEnd`, so without
+  // this the candidate waits for a question that is never spoken and never appears, in
+  // front of a microphone that never opens. Treating silence as failure costs a question
+  // read on screen instead of aloud; not treating it as failure costs the round.
+  timers.push(
+    window.setTimeout(() => {
+      if (!started) finish("failed");
+    }, START_TIMEOUT_MS),
+  );
+
   return {
     cancel: () => {
+      done = true;
+      clearTimers();
+      utterance.onstart = null;
       utterance.onend = null;
       utterance.onerror = null;
       utterance.onboundary = null;

@@ -30,6 +30,13 @@ import org.slf4j.LoggerFactory
  */
 class FallbackInterviewAi(
     private val providers: List<InterviewAi>,
+    /**
+     * Where each answered call is written down. This is the only place in the codebase
+     * that sees both the usage a call cost *and* whether it was served by the cheap
+     * provider or the expensive one behind it, so it is the only place the two can be
+     * recorded together.
+     */
+    private val recorder: AiSpendRecorder = AiSpendRecorder.NONE,
 ) : InterviewAi {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -106,9 +113,11 @@ class FallbackInterviewAi(
         for ((index, provider) in able.withIndex()) {
             try {
                 val result = work(provider)
-                if (index > 0) {
-                    log.info("{} was served by {} after {} failed", call, provider.providerName, able[index - 1].providerName)
+                val fellBackFrom = if (index > 0) able[index - 1].providerName else null
+                if (fellBackFrom != null) {
+                    log.info("{} was served by {} after {} failed", call, provider.providerName, fellBackFrom)
                 }
+                write(call, provider, result.usage, fellBackFrom)
                 return result
             } catch (e: AiUnavailableException) {
                 if (!e.worthRetryingElsewhere) throw e
@@ -126,6 +135,43 @@ class FallbackInterviewAi(
             "Every configured provider failed for $call. Last error: ${last?.message}",
             last,
         )
+    }
+
+    /**
+     * Writes down what the call cost, and never lets that be the reason a round fails.
+     *
+     * Bookkeeping is not worth an interview. A candidate mid-round must not lose their
+     * turn because a ledger insert deadlocked, so every failure here is swallowed with a
+     * line in the log — the money is already spent whether or not the row lands.
+     *
+     * **The recorded figure is a lower bound when [fellBackFrom] is set.** A provider that
+     * refused on quota was not billed and cost nothing, but one that answered with
+     * unusable JSON was billed in full and its usage died with the exception. So a
+     * fall-through costs *at least* what is written here, and the field naming it is the
+     * flag to go and look.
+     */
+    private fun write(
+        call: String,
+        provider: InterviewAi,
+        usage: AiUsage,
+        fellBackFrom: String?,
+    ) {
+        try {
+            val attribution = AiSpendContext.current()
+            recorder.record(
+                AiCallRecord(
+                    call = call,
+                    provider = provider.providerName,
+                    usage = usage,
+                    fellBackFrom = fellBackFrom,
+                    microUsd = AiPrices.microUsd(usage),
+                    userId = attribution?.userId,
+                    sessionId = attribution?.sessionId,
+                ),
+            )
+        } catch (e: RuntimeException) {
+            log.warn("Could not record what {} on {} cost", call, provider.providerName, e)
+        }
     }
 
     private companion object {

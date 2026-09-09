@@ -262,6 +262,21 @@ class GeminiInterviewAi(
             throw AiUnavailableException("Gemini request to $model failed.", ex)
         }
 
+    /**
+     * Everything Gemini reports about what a call cost, not just the two obvious numbers.
+     *
+     * `candidatesTokenCount` is what the model said. `thoughtsTokenCount` is what it spent
+     * getting there, it is billed at the same output rate, and it is reported in a
+     * separate field — so reading only the first undercounts the bill on any call with
+     * thinking left on. It undercounted this one: the report runs unbounded by design, and
+     * `gemini-3.5-flash` was measured spending roughly as many tokens thinking as
+     * answering. The recorded cost of every report written by that model is about half
+     * what it actually was.
+     *
+     * Audio is pulled out of the prompt count because it is priced separately (3x text on
+     * flash-lite), and cached input because it is priced far lower. Both arrive as a
+     * per-modality breakdown that is simply absent on calls that have neither.
+     */
     private fun usageOf(
         response: JsonNode,
         model: String,
@@ -271,8 +286,22 @@ class GeminiInterviewAi(
             model = model,
             promptTokens = usage.path("promptTokenCount").asInt(0),
             outputTokens = usage.path("candidatesTokenCount").asInt(0),
+            thoughtTokens = usage.path("thoughtsTokenCount").asInt(0),
+            audioTokens = modalityTokens(usage.path("promptTokensDetails"), "AUDIO"),
+            cachedTokens = usage.path("cachedContentTokenCount").asInt(0),
         )
     }
+
+    private fun modalityTokens(
+        details: JsonNode,
+        modality: String,
+    ): Int =
+        details
+            .takeIf { it.isArray }
+            ?.firstOrNull { it.path("modality").asString() == modality }
+            ?.path("tokenCount")
+            ?.asInt(0)
+            ?: 0
 
     /**
      * How long the model may think before answering.

@@ -1,5 +1,6 @@
 package com.interviewos.api.resume
 
+import com.interviewos.api.ai.AiSpendContext
 import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.ParsedEmployment
@@ -80,7 +81,9 @@ class ResumeService(
 
         val parsed =
             try {
-                interviewAi.parseResume(ResumeFile(file.bytes, file.contentType, file.filename)).value
+                AiSpendContext.of(userId, null) {
+                    interviewAi.parseResume(ResumeFile(file.bytes, file.contentType, file.filename)).value
+                }
             } catch (e: AiUnavailableException) {
                 log.warn("Could not parse resume {} for {}", id, userId, e)
                 repository.markFailed(id, userId, e.message ?: "The parser was unavailable.")

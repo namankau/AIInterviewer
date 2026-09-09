@@ -1,5 +1,6 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.ai.AiSpendContext
 import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.SpeechChunks
@@ -80,7 +81,7 @@ class QuestionSpeech(
     private fun renderNow(request: SpeechRequest) {
         val path =
             try {
-                val spoken = speak(request.text, request.language)
+                val spoken = speak(request)
                 val objectPath = "${request.userId}/${request.sessionId}/turn-${request.turnIndex}-question.wav"
                 storage.upload(storageProperties.mediaBucket, objectPath, spoken.audio, spoken.mimeType)
                 objectPath
@@ -119,17 +120,23 @@ class QuestionSpeech(
      *
      * A single chunk takes the direct path, so the common case adds nothing.
      */
-    private fun speak(
-        text: String,
-        language: String,
-    ): SpokenAudio {
+    private fun speak(request: SpeechRequest): SpokenAudio {
+        val text = request.text
+        val language = request.language
         val chunks = SpeechChunks.split(text)
-        if (chunks.size == 1) return interviewAi.synthesizeSpeech(text, language).value
+        // Attribution is re-established per call rather than inherited. This method is
+        // already on a background thread, and the parallel path below puts each chunk on
+        // a different one again, so nothing survives from the request that started it.
+        // Speech is the single most expensive thing in a round, and spend that cannot be
+        // traced to a session is the exact gap this ledger exists to close.
+        val attributed = { block: () -> SpokenAudio -> AiSpendContext.of(request.userId, request.sessionId, block) }
+
+        if (chunks.size == 1) return attributed { interviewAi.synthesizeSpeech(text, language).value }
 
         val spoken =
             chunks
                 .map { chunk ->
-                    CompletableFuture.supplyAsync({ interviewAi.synthesizeSpeech(chunk, language).value }, executor)
+                    CompletableFuture.supplyAsync({ attributed { interviewAi.synthesizeSpeech(chunk, language).value } }, executor)
                 }.map { it.join() }
 
         // Any chunk arriving as something other than WAV means the assumption behind
@@ -137,7 +144,7 @@ class QuestionSpeech(
         // instead of stitching containers that may not match.
         if (spoken.any { it.mimeType != "audio/wav" }) {
             log.warn("Speech chunks came back as {}; falling back to one call", spoken.map { it.mimeType }.distinct())
-            return interviewAi.synthesizeSpeech(text, language).value
+            return attributed { interviewAi.synthesizeSpeech(text, language).value }
         }
 
         return SpokenAudio(WavAudio.join(spoken.map { it.audio }), "audio/wav")

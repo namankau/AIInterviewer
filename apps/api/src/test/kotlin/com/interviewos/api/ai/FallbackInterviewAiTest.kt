@@ -3,6 +3,7 @@ package com.interviewos.api.ai
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -151,6 +152,98 @@ class FallbackInterviewAiTest {
 
         assertTrue(AiCapability.AUDIO_UNDERSTANDING in chain.capabilities)
         assertTrue(chain.providerName.contains("kimi") && chain.providerName.contains("gemini"))
+    }
+
+    // -- the spend ledger -----------------------------------------------------
+    //
+    // The chain is the only place that sees both what a call cost and which provider
+    // answered, so it is the only place the two can be recorded together. Everything
+    // below exists because a fall-through used to be invisible: the configuration says
+    // cheapest-first, the code reads as though it runs on the cheap model, and the bill
+    // said otherwise with nothing in between to explain it.
+
+    @Test
+    fun `every answered call is written down`() {
+        val records = mutableListOf<AiCallRecord>()
+
+        FallbackInterviewAi(listOf(FakeAi("gemini-lite", MULTIMODAL)), records::add)
+            .composeRound("Infosys MR round")
+
+        assertEquals(1, records.size)
+        assertEquals("composeRound", records.single().call)
+        assertEquals("gemini-lite", records.single().provider)
+    }
+
+    /** The field the whole ledger exists for. */
+    @Test
+    fun `a call served by the first provider records no fallback`() {
+        val records = mutableListOf<AiCallRecord>()
+
+        FallbackInterviewAi(listOf(FakeAi("gemini-lite", MULTIMODAL)), records::add)
+            .composeRound("Infosys MR round")
+
+        assertNull(records.single().fellBackFrom)
+    }
+
+    @Test
+    fun `a call served by the model behind it records what it fell back from`() {
+        val records = mutableListOf<AiCallRecord>()
+        val chain =
+            FallbackInterviewAi(
+                listOf(
+                    FakeAi("gemini-lite", MULTIMODAL, fails = AiUnavailableException("rate limited")),
+                    FakeAi("gemini-flash", MULTIMODAL),
+                ),
+                records::add,
+            )
+
+        chain.composeRound("Infosys MR round")
+
+        assertEquals("gemini-flash", records.single().provider)
+        assertEquals("gemini-lite", records.single().fellBackFrom)
+    }
+
+    /** A provider that never answered was never billed, so it is never recorded. */
+    @Test
+    fun `nothing is recorded when every provider fails`() {
+        val records = mutableListOf<AiCallRecord>()
+        val chain =
+            FallbackInterviewAi(
+                listOf(FakeAi("gemini-lite", MULTIMODAL, fails = AiUnavailableException("down"))),
+                records::add,
+            )
+
+        assertFailsWith<AiUnavailableException> { chain.composeRound("Infosys MR round") }
+
+        assertTrue(records.isEmpty())
+    }
+
+    /**
+     * Bookkeeping is not worth an interview. The money is spent whether or not the row
+     * lands, so a candidate mid-round must never lose their turn to a failing ledger.
+     */
+    @Test
+    fun `a ledger that cannot write does not fail the round`() {
+        val chain =
+            FallbackInterviewAi(
+                listOf(FakeAi("gemini-lite", MULTIMODAL)),
+                { throw IllegalStateException("connection pool exhausted") },
+            )
+
+        val result = chain.composeRound("Infosys MR round")
+
+        assertEquals("gemini-lite", result.usage.model)
+    }
+
+    @Test
+    fun `the call recorded is the one that was asked for`() {
+        val records = mutableListOf<AiCallRecord>()
+        val chain = FallbackInterviewAi(listOf(FakeAi("gemini-lite", MULTIMODAL)), records::add)
+
+        chain.assessAnswer(brief, round, emptyList(), "Why sharding?", audio, null)
+        chain.composeReport(brief, emptyList())
+
+        assertEquals(listOf("assessAnswer", "composeReport"), records.map { it.call })
     }
 
     private companion object {

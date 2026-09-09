@@ -51,6 +51,7 @@ class AiProviderConfig {
         prompts: PromptLibrary,
         objectMapper: ObjectMapper,
         restClientBuilder: RestClient.Builder,
+        recorder: AiSpendRecorder,
     ): InterviewAi {
         val configured =
             properties.providers.mapNotNull { provider ->
@@ -99,7 +100,7 @@ class AiProviderConfig {
                 )
             }
 
-        val ai = FallbackInterviewAi(chain)
+        val ai = FallbackInterviewAi(chain, recorder)
         log.info("Interview AI will try, in order: {}", ai.providerName)
         warnAboutSingleMultimodalProvider(chain)
         return ai

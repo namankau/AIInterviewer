@@ -24,6 +24,7 @@ export function ReportView({ sessionId }: { sessionId: string }) {
   const accessToken = useAccessToken();
   const [report, setReport] = useState<SessionReport | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expired, setExpired] = useState<string | null>(null);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -33,6 +34,14 @@ export function ReportView({ sessionId }: { sessionId: string }) {
       .then((loaded) => active && setReport(loaded))
       .catch((cause) => {
         if (!active) return;
+        // A report past its retention window is not a failure, and rendering it in red
+        // as one would tell the candidate something had gone wrong at the moment the
+        // product did exactly what it said it would. The API marks it out with its own
+        // code so this page does not have to read the message to know the difference.
+        if (cause instanceof ApiRequestError && cause.code === "report_expired") {
+          setExpired(cause.message);
+          return;
+        }
         setError(cause instanceof ApiRequestError ? cause.message : "This report could not be loaded.");
       });
 
@@ -40,6 +49,35 @@ export function ReportView({ sessionId }: { sessionId: string }) {
       active = false;
     };
   }, [accessToken, sessionId]);
+
+  if (expired) {
+    return (
+      <section aria-labelledby="expired" className="flex flex-col items-start gap-5">
+        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+          No longer held
+        </p>
+        <h1 id="expired" className="max-w-2xl text-display text-balance text-ink">
+          This report has expired.
+        </h1>
+        <p className="max-w-prose text-body text-ink-muted">{expired}</p>
+        <p className="max-w-prose text-body text-ink-muted">
+          The round itself is still in your history. Sitting the same round again is the closest
+          thing to reading it back — and a second attempt tells you more than the first one did.
+        </p>
+        <div className="flex flex-wrap items-center gap-5 pt-1">
+          <Link
+            href="/interview/new"
+            className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
+          >
+            Sit this round again
+          </Link>
+          <Link href="/dashboard" className="text-body text-ink-muted underline-offset-4 hover:underline">
+            Back to your interviews
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   if (error) {
     return (

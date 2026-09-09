@@ -7,6 +7,7 @@ import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -31,6 +32,7 @@ class SessionController(
     private val interviewService: InterviewService,
     private val reportService: ReportService,
     private val readinessService: ReadinessService,
+    private val roundDeletion: RoundDeletion,
 ) {
     @GetMapping("/entitlement")
     fun entitlement(
@@ -125,6 +127,26 @@ class SessionController(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
     ) = interviewService.abandon(callerOf(jwt), id)
+
+    /**
+     * Deletes one of the caller's own rounds, and everything under it: the turns, the
+     * report, and the recordings in storage.
+     *
+     * Irreversible, and there is no soft-delete behind it. A candidate asking for their
+     * interview to be destroyed is entitled to have it destroyed rather than hidden, and a
+     * row marked `deleted = true` is not a deletion — it is the same personal data with a
+     * flag on it. The confirmation that this is what they meant belongs in the client,
+     * before the request is sent.
+     *
+     * Like every other route here, the owner comes from the verified token. A session
+     * belonging to somebody else is a 404.
+     */
+    @DeleteMapping("/sessions/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun delete(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable id: UUID,
+    ) = roundDeletion.delete(callerOf(jwt), id)
 
     @GetMapping("/sessions/{id}/report")
     fun report(

@@ -50,6 +50,7 @@ class InterviewService(
     private val objectMapper: ObjectMapper,
     private val questionSpeech: QuestionSpeech,
     private val entitlementProperties: EntitlementProperties,
+    private val retentionProperties: RetentionProperties,
     private val roundMedia: RoundMediaProperties,
     private val sourceGrounding: SourceGrounding,
     private val resumeService: ResumeService,
@@ -569,7 +570,38 @@ class InterviewService(
             ?.let { objectMapper.writeValueAsString(it) }
     }
 
-    fun list(userId: UUID): List<SessionSummary> = repository.listSessions(userId)
+    /**
+     * A candidate's past rounds, with the retention rule already applied to each.
+     *
+     * The expiry date is computed here rather than in the browser, and the window itself
+     * is sent along on every row, because how long a report is kept is server policy — one
+     * property in `application.yml`. A client that hardcoded "28 days" into a sentence
+     * would keep saying it on the day somebody changed the property, and the client that
+     * matters most is the mobile app that does not exist yet and cannot be edited in the
+     * same release.
+     */
+    fun list(userId: UUID): List<SessionSummary> =
+        repository.listSessions(userId).map { row ->
+            SessionSummary(
+                id = row.id,
+                companyName = row.companyName,
+                roleTitle = row.roleTitle,
+                roundType = row.roundType,
+                status = row.status,
+                startedAt = row.startedAt,
+                endedAt = row.endedAt,
+                hasReport = row.hasReport,
+                reportExpired = row.reportExpiredAt != null,
+                // Null once it has expired: there is no future date to show for a report
+                // that has already gone, and a client rendering one would be promising
+                // something that is not there.
+                reportExpiresAt =
+                    row.retentionFrom
+                        ?.takeIf { row.reportExpiredAt == null }
+                        ?.let { retentionProperties.expiresAt(it) },
+                reportRetentionDays = retentionProperties.days,
+            )
+        }
 
     /**
      * A turn as the room sees it.

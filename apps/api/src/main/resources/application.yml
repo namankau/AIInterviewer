@@ -87,6 +87,28 @@ interviewos:
   #
   # entitlement:
   #   free-rounds: 1
+  retention:
+    # How long a round's report, transcript and recordings are kept before being cleared.
+    #
+    # Four weeks is the longest window over which the report is still doing its job: a
+    # candidate reads it, works on what it said, and sits another round, and an interview
+    # process itself runs its screen, loop and decision inside about a month. Past that it
+    # is a recording of a rehearsal for an interview that already happened.
+    #
+    # The session row survives the sweep; the evidence behind it does not. Progress in this
+    # product is derived from completed sessions, so deleting the row would tell a
+    # candidate four weeks later that they had never sat the round.
+    #
+    # This number is also the sentence the dashboard shows them -- it rides out on every
+    # SessionSummary rather than being written into the browser, so changing it here
+    # changes what they are told.
+    #
+    # Written out rather than read from an env placeholder: it is a product decision, not
+    # a per-deployment one, and it belongs where somebody reading the policy will find it.
+    # A deployment that does need to differ can still set
+    # INTERVIEWOS_RETENTION_REPORTSKEPTFOR, which outranks this file.
+    reports-kept-for: 28d
+
   admin:
     # Who may curate the source library. The library decides what the interviewer treats
     # as fact about a named employer, so this is closer to write access to the product

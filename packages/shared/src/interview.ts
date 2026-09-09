@@ -157,6 +157,18 @@ export interface SubmitAnswerResponse {
   nextTurn: TurnView | null;
 }
 
+/**
+ * One past round, as the candidate's history lists it.
+ *
+ * The retention fields are here so a client never has to guess what a "Read report" link
+ * will do. `reportExpired` means the report, the transcript and the recordings have been
+ * cleared and are not coming back — do not render the link, because following it is the
+ * broken page these fields exist to prevent. `reportExpiresAt` is when that will happen,
+ * so the candidate can be warned before it does rather than after. And
+ * `reportRetentionDays` is the rule itself, sent rather than written into the browser:
+ * it is one property on the server, and a client that hardcodes the number will still be
+ * saying it on the day somebody changes it.
+ */
 export interface SessionSummary {
   id: string;
   companyName: string;
@@ -166,6 +178,12 @@ export interface SessionSummary {
   startedAt: string | null;
   endedAt: string | null;
   hasReport: boolean;
+  /** Cleared by retention. There is nothing left to open, and nothing to recompose from. */
+  reportExpired: boolean;
+  /** ISO-8601 instant. Null once the round has been cleared. */
+  reportExpiresAt: string | null;
+  /** How long a report is kept, in days. */
+  reportRetentionDays: number;
 }
 
 // ---------------------------------------------------------------------------

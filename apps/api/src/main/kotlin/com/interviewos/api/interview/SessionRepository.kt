@@ -126,7 +126,7 @@ class SessionRepository(
                 """
                 select id, company_name, company_archetype::text as archetype, role_title,
                        round_type::text as round_type, language::text as language,
-                       status::text as status, started_at, ended_at,
+                       status::text as status, started_at, ended_at, report_expired_at,
                        (consent_video_at is not null) as consent_video, duration_minutes,
                        coalesce(archetype_confidence, 'inferred') as archetype_confidence
                   from public.sessions
@@ -138,12 +138,21 @@ class SessionRepository(
             .optional()
             .orElse(null)
 
-    fun listSessions(userId: UUID): List<SessionSummary> =
+    /**
+     * A candidate's rounds, newest first.
+     *
+     * Returns rows rather than the API shape because when a round's report expires is
+     * policy, not data — it is [RetentionProperties] applied to `retention_from`, and the
+     * service does that arithmetic. The database's job here is to say when the round
+     * happened and whether it has already been cleared.
+     */
+    fun listSessions(userId: UUID): List<SessionListRow> =
         jdbcClient
             .sql(
                 """
                 select s.id, s.company_name, s.role_title, s.round_type::text as round_type,
-                       s.status::text as status, s.started_at, s.ended_at,
+                       s.status::text as status, s.started_at, s.ended_at, s.report_expired_at,
+                       coalesce(s.ended_at, s.created_at) as retention_from,
                        (r.id is not null) as has_report
                   from public.sessions s
                   left join public.session_reports r on r.session_id = s.id
@@ -152,7 +161,7 @@ class SessionRepository(
                 """.trimIndent(),
             ).param("u", userId)
             .query { rs, _ ->
-                SessionSummary(
+                SessionListRow(
                     id = rs.getObject("id", UUID::class.java),
                     companyName = rs.getString("company_name"),
                     roleTitle = rs.getString("role_title"),
@@ -160,6 +169,8 @@ class SessionRepository(
                     status = rs.getString("status"),
                     startedAt = rs.getTimestamp("started_at")?.toInstant(),
                     endedAt = rs.getTimestamp("ended_at")?.toInstant(),
+                    retentionFrom = rs.getTimestamp("retention_from")?.toInstant(),
+                    reportExpiredAt = rs.getTimestamp("report_expired_at")?.toInstant(),
                     hasReport = rs.getBoolean("has_report"),
                 )
             }.list()
@@ -182,6 +193,103 @@ class SessionRepository(
             .param("u", userId)
             .update()
     }
+
+    // -- deletion and retention -----------------------------------------------
+
+    /**
+     * Removes one round entirely, and says whether there was one to remove.
+     *
+     * One statement, because `session_turns` and `session_reports` both cascade from
+     * `public.sessions` — the transcript and the report go with the row, enforced by the
+     * database rather than by three deletes here remembering to stay in step. That is the
+     * point: a fourth child table added later inherits this deletion for free if it
+     * declares its foreign key the way the other two do, and fails loudly if it does not.
+     *
+     * The `user_id` predicate is the entire authorisation check. A caller asking for
+     * somebody else's session gets `false` and, above this, a 404 — which is the same
+     * answer they get for a session that never existed, and deliberately so.
+     *
+     * Returns false rather than throwing so the caller can decide; it also makes a second
+     * delete of the same round idempotent rather than a 500.
+     */
+    fun deleteSession(
+        sessionId: UUID,
+        userId: UUID,
+    ): Boolean =
+        jdbcClient
+            .sql("delete from public.sessions where id = :id and user_id = :u")
+            .param("id", sessionId)
+            .param("u", userId)
+            .update() > 0
+
+    /**
+     * Rounds old enough to be cleared, oldest first.
+     *
+     * Deliberately not scoped by user — this is the only query in this class that is not,
+     * and it is the retention sweep rather than anything serving a request. It returns
+     * the owner alongside the id because every write and every storage key that follows is
+     * scoped by both.
+     */
+    fun listRoundsDueForExpiry(
+        endedBefore: Instant,
+        limit: Int,
+    ): List<ExpiringRound> =
+        jdbcClient
+            .sql(
+                """
+                select id, user_id
+                  from public.sessions
+                 where report_expired_at is null
+                   and coalesce(ended_at, created_at) < :cutoff
+                 order by coalesce(ended_at, created_at)
+                 limit :limit
+                """.trimIndent(),
+            ).param("cutoff", java.sql.Timestamp.from(endedBefore))
+            .param("limit", limit)
+            .query { rs, _ ->
+                ExpiringRound(
+                    sessionId = rs.getObject("id", UUID::class.java),
+                    userId = rs.getObject("user_id", UUID::class.java),
+                )
+            }.list()
+
+    /**
+     * Clears one round's report and transcript and stamps it as expired, keeping the
+     * session row.
+     *
+     * **One statement, and it has to be.** Half of this — the report deleted, the turns
+     * still there — is the state in which [ReportService] would compose a *brand new*
+     * report from the surviving transcript the next time the candidate opened it: a model
+     * call producing a different report from the one they remember, silently, out of data
+     * that was supposed to be gone. Postgres runs data-modifying CTEs exactly once and to
+     * completion, in one snapshot, so the three writes here cannot come apart. That is
+     * also why this is not three calls behind an `@Transactional` service method — the
+     * caller is in the same bean, and a self-invocation never reaches the proxy that would
+     * have opened the transaction.
+     *
+     * The `update` is the primary query rather than a third CTE so its row count is the
+     * return value: false means no such round belongs to that user, and the deletes above
+     * it matched nothing either, both being scoped the same way.
+     */
+    fun expireRound(
+        sessionId: UUID,
+        userId: UUID,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                with cleared_report as (
+                    delete from public.session_reports where session_id = :s and user_id = :u
+                ), cleared_turns as (
+                    delete from public.session_turns where session_id = :s and user_id = :u
+                )
+                update public.sessions
+                   set report_expired_at = now()
+                 where id = :s and user_id = :u
+                """.trimIndent(),
+            ).param("s", sessionId)
+            .param("u", userId)
+            .update() > 0
 
     // -- turns ----------------------------------------------------------------
 
@@ -478,6 +586,7 @@ class SessionRepository(
             endedAt = rs.getTimestamp("ended_at")?.toInstant(),
             consentVideo = rs.getBoolean("consent_video"),
             durationMinutes = rs.getInt("duration_minutes"),
+            reportExpiredAt = rs.getTimestamp("report_expired_at")?.toInstant(),
         )
 
     private fun mapTurn(rs: ResultSet) =
@@ -514,6 +623,37 @@ data class SessionRow(
     val consentVideo: Boolean,
     /** How long this round was scheduled to run. The clock, not a counter, ends it. */
     val durationMinutes: Int,
+    /**
+     * When retention cleared this round's report, transcript and recordings. Null means
+     * nothing has been cleared — which is different from there being no report yet.
+     */
+    val reportExpiredAt: Instant? = null,
+)
+
+/**
+ * One row of a candidate's history, before retention policy has been applied to it.
+ *
+ * [retentionFrom] is when the round finished, falling back to when it was created for one
+ * that never did. [ReportService] and [InterviewService] turn it into an expiry date;
+ * nothing in this class knows how long a report is kept.
+ */
+data class SessionListRow(
+    val id: UUID,
+    val companyName: String,
+    val roleTitle: String,
+    val roundType: String,
+    val status: String,
+    val startedAt: Instant?,
+    val endedAt: Instant?,
+    val retentionFrom: Instant?,
+    val reportExpiredAt: Instant?,
+    val hasReport: Boolean,
+)
+
+/** A round the retention sweep has found, and the candidate whose data it is. */
+data class ExpiringRound(
+    val sessionId: UUID,
+    val userId: UUID,
 )
 
 data class TurnRow(

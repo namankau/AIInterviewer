@@ -231,6 +231,17 @@ export function abandonSession(accessToken: string, id: string): Promise<void> {
   return apiSend<void>(`/api/v1/sessions/${id}/abandon`, "POST", accessToken);
 }
 
+/**
+ * Deletes one past round: the transcript, the report and the recordings.
+ *
+ * Irreversible, and there is nothing behind it to restore from — confirm before calling
+ * it. The server takes the owner from the token, so a round that is not the caller's
+ * comes back as a 404 rather than a refusal.
+ */
+export async function deleteSession(accessToken: string, id: string): Promise<void> {
+  await apiSend<void>(`/api/v1/sessions/${id}`, "DELETE", accessToken);
+}
+
 /** Uploads one spoken answer, plus video when the candidate consented to it. */
 export function submitAnswer(
   accessToken: string,

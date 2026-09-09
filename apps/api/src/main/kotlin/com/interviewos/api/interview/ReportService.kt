@@ -27,6 +27,7 @@ class ReportService(
     private val interviewAi: InterviewAi,
     private val objectMapper: ObjectMapper,
     private val roundMedia: RoundMediaProperties,
+    private val retention: RetentionProperties,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -41,6 +42,25 @@ class ReportService(
         }
 
         val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
+
+        // Checked before anything else about the round, and it is the reason retention
+        // stamps the session instead of only deleting rows. Reaching this line means there
+        // is no stored report; without the stamp, an expired round would be
+        // indistinguishable from one nobody has opened yet, and the code below would
+        // cheerfully compose a fresh report — a model call, producing a different report
+        // from the one the candidate remembers, from a transcript that no longer exists.
+        // Retention clears the turns as well, so in practice it would fail on
+        // `empty_transcript` and tell them their interview had no answers in it. Neither
+        // of those is an acceptable thing to say to somebody whose data we deleted on
+        // purpose after telling them we would.
+        if (session.reportExpiredAt != null) {
+            throw ApiException.gone(
+                "This report was kept for ${retention.days} days after the round and has now been deleted, " +
+                    "along with the transcript and the recording. Nothing of it is recoverable.",
+                code = "report_expired",
+            )
+        }
+
         if (session.status != "completed") {
             throw ApiException.conflict(
                 "This interview is not finished, so there is nothing to report yet.",

@@ -29,6 +29,20 @@ class ApiException(
             code: String = "conflict",
         ) = ApiException(HttpStatus.CONFLICT, code, message)
 
+        /**
+         * The resource existed and has been deleted on purpose, permanently.
+         *
+         * Distinct from [notFound], and the distinction is the whole message: a candidate
+         * whose report has passed its retention window is not looking at a broken link or
+         * a typo, they are looking at something we deleted because we said we would. A 404
+         * there would read as a bug in the product at the exact moment it is behaving
+         * correctly.
+         */
+        fun gone(
+            message: String,
+            code: String = "gone",
+        ) = ApiException(HttpStatus.GONE, code, message)
+
         fun paymentRequired(message: String) = ApiException(HttpStatus.PAYMENT_REQUIRED, "payment_required", message)
 
         fun unprocessable(

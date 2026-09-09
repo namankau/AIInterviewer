@@ -169,6 +169,18 @@ data class EntitlementView(
     val remainingFree: Int?,
 )
 
+/**
+ * One past round, as the candidate's history lists it.
+ *
+ * The three retention fields exist so a client never has to guess what a "Read report"
+ * link will do. [reportExpired] means the report, the transcript and the recordings have
+ * been cleared and are not coming back — the link must not be rendered, because following
+ * it is the broken page this whole shape exists to prevent. [reportExpiresAt] is when that
+ * will happen, so a candidate can be warned before it does rather than after.
+ * [reportRetentionDays] is the rule itself, sent rather than hardcoded in the browser: it
+ * is one property on the server, and the client that will most struggle to keep up with a
+ * change to it is the mobile app that ships on its own release cycle.
+ */
 data class SessionSummary(
     val id: UUID,
     val companyName: String,
@@ -178,6 +190,12 @@ data class SessionSummary(
     val startedAt: Instant?,
     val endedAt: Instant?,
     val hasReport: Boolean,
+    /** Cleared by retention. There is nothing left to open, and nothing to recompose from. */
+    val reportExpired: Boolean = false,
+    /** When this round will be cleared. Null once it has been. */
+    val reportExpiresAt: Instant? = null,
+    /** How long a report is kept, in days. The server is the authority on the number. */
+    val reportRetentionDays: Int = 0,
 )
 
 /**

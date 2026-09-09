@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { pickVoice, rank } from "./browser-speech";
+import { pickVoice, rank, speak } from "./browser-speech";
 
 /**
  * Choosing the voice is the whole decision here: a modern neural voice is worth using
@@ -78,5 +78,116 @@ describe("pickVoice", () => {
   it("returns nothing when the browser has nothing usable", () => {
     expect(pickVoice([], "english")).toBeNull();
     expect(pickVoice([voice("Google Deutsch", "de-DE"), voice("Zarvox", "en-US")], "english")).toBeNull();
+  });
+});
+
+/**
+ * What happens when the synthesiser does not behave.
+ *
+ * These exist because of a real round. The room reveals the question from `boundary`
+ * events and hands the candidate the microphone from `onEnd`, so an utterance that
+ * reports nothing leaves a blank question on screen and a microphone that never opens.
+ * That is not a degraded round, it is a round that cannot start, and it ran for three
+ * minutes before the candidate gave up on it.
+ */
+class FakeUtterance {
+  voice: SpeechSynthesisVoice | null = null;
+  lang = "";
+  rate = 1;
+  onstart: (() => void) | null = null;
+  onend: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  onboundary: ((event: { charIndex: number }) => void) | null = null;
+  constructor(public text: string) {}
+}
+
+describe("speak", () => {
+  const QUESTION = "Tell me about a system you designed.";
+  let uttered: FakeUtterance[];
+
+  /** The utterance handed to the synthesiser, or a failure that says so plainly. */
+  const spoken = (): FakeUtterance => {
+    const utterance = uttered[0];
+    if (!utterance) throw new Error("speak() never reached the synthesiser");
+    return utterance;
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    uttered = [];
+    vi.stubGlobal("SpeechSynthesisUtterance", FakeUtterance);
+    vi.stubGlobal("speechSynthesis", {
+      cancel: vi.fn(),
+      speak: (utterance: FakeUtterance) => uttered.push(utterance),
+      getVoices: () => [],
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    window.speechSynthesis = globalThis.speechSynthesis;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  /** The bug: no start, no end, no error. Nothing above ever fires. */
+  it("gives up on an utterance the browser silently drops", () => {
+    const onEnd = vi.fn();
+    speak({ text: QUESTION, voice: null, onEnd });
+
+    expect(onEnd).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(3_000);
+
+    expect(onEnd).toHaveBeenCalledExactlyOnceWith("failed");
+  });
+
+  /**
+   * Chrome's network voices speak without ever firing `boundary`. The question must not
+   * stay invisible for as long as it is being read aloud.
+   */
+  it("shows the question whole when a voice speaks without reporting words", () => {
+    const onProgress = vi.fn();
+    const handle = speak({ text: QUESTION, voice: null, onProgress });
+    spoken().onstart?.();
+
+    vi.advanceTimersByTime(1_200);
+
+    expect(onProgress).toHaveBeenCalledWith(QUESTION.length);
+    handle.cancel();
+  });
+
+  it("leaves a voice that does report words to drive the reveal itself", () => {
+    const onProgress = vi.fn();
+    speak({ text: QUESTION, voice: null, onProgress });
+    spoken().onstart?.();
+    spoken().onboundary?.({ charIndex: 8 });
+
+    vi.advanceTimersByTime(1_200);
+
+    expect(onProgress).toHaveBeenCalledWith(8);
+    expect(onProgress).not.toHaveBeenCalledWith(QUESTION.length);
+  });
+
+  /** A voice that started must never then be declared failed by the start watchdog. */
+  it("does not end a second time once the voice has finished", () => {
+    const onEnd = vi.fn();
+    speak({ text: QUESTION, voice: null, onEnd });
+    spoken().onstart?.();
+    spoken().onend?.();
+
+    vi.advanceTimersByTime(10_000);
+
+    expect(onEnd).toHaveBeenCalledExactlyOnceWith("finished");
+  });
+
+  /** Leaving the room mid-question must not fire a watchdog at the next screen. */
+  it("stops watching once cancelled", () => {
+    const onEnd = vi.fn();
+    speak({ text: QUESTION, voice: null, onEnd }).cancel();
+
+    vi.advanceTimersByTime(10_000);
+
+    expect(onEnd).not.toHaveBeenCalled();
   });
 });

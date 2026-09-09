@@ -50,6 +50,16 @@ rather than restating requirements.
 
    **Open a PR instead of merging** when the change touches auth, payments, data
    deletion, permissions, or anything listed under "Things that need a human".
+
+   **A migration is not merged until it is applied.** CI does not run migrations — it
+   compiles and tests against no database at all — so a schema change passes every gate
+   green and still breaks `develop` the moment the owner reloads. This has happened: the
+   round-deletion migration added `sessions.report_expired_at`, the dashboard query began
+   selecting it, CI went green on both jobs, and the dashboard was broken from the merge
+   until somebody noticed. Check with `npm run supabase -- migration list --linked` — a
+   row with an empty `remote` is a migration that exists only on your machine — and run
+   `npm run db:push` as part of the same merge, not as a follow-up somebody has to
+   remember.
 2. **Leave a `HANDOFF.md` at repo root at the end of every autonomous run.** See the
    template at the bottom of this file. This is the human's morning read.
 3. **Never commit secrets.** No API keys, tokens, connection strings, or `.env`

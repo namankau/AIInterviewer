@@ -117,6 +117,20 @@ object InterviewPlan {
     private const val CLOSING_MINUTES = 4
 
     /**
+     * The closing phase, as a share of a very short round.
+     *
+     * A five-minute round would otherwise be closing from its first minute — four of its
+     * five minutes count as "nearly over" — so it would open, warm up, and wrap up
+     * without ever asking anything substantive. That makes the shortest round useless for
+     * exactly what it is for: checking that a room actually works.
+     *
+     * Capped at a third, so a short round is a miniature of a real one rather than an
+     * opening and an ending with nothing in between. Unchanged at 20 minutes and above,
+     * where a third is already wider than the four minutes.
+     */
+    private fun closingMinutesFor(durationMinutes: Int): Int = minOf(CLOSING_MINUTES, (durationMinutes / 3).coerceAtLeast(1))
+
+    /**
      * A ceiling, not a target — the clock ends the round. It exists so a pathological
      * session cannot run up an unbounded model bill.
      */
@@ -142,7 +156,7 @@ object InterviewPlan {
         val phase =
             when {
                 warmingUp -> TurnPhase.WARMUP
-                remaining <= CLOSING_MINUTES -> TurnPhase.CLOSING
+                remaining <= closingMinutesFor(durationMinutes) -> TurnPhase.CLOSING
                 else -> TurnPhase.MAIN
             }
 

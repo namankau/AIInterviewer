@@ -344,6 +344,7 @@ function RoundSetup({
             onChange={(event) => setDurationMinutes(Number(event.target.value))}
             className={INPUT}
           >
+            <option value={5}>5 minutes — just testing the room</option>
             <option value={20}>20 minutes — a short round</option>
             <option value={30}>30 minutes</option>
             <option value={40}>40 minutes — a typical round</option>

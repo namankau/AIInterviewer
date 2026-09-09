@@ -125,4 +125,53 @@ class InterviewPlanTest {
 
         assertTrue(focus.instruction.isNotBlank())
     }
+
+    /**
+     * The five-minute round exists so the owner can check a room works without sitting a
+     * real one. A fixed four-minute closing phase would put it in wrap-up from its first
+     * minute, so it would open, warm up and close having asked nothing — useless for the
+     * one job it has.
+     */
+    @Test
+    fun `a five-minute round still has a middle`() {
+        val plan =
+            InterviewPlan.forTurn(
+                turnIndex = 3,
+                answeredTurns = 3,
+                startedAt = startedAt,
+                durationMinutes = 5,
+                now = startedAt.plus(Duration.ofMinutes(3)),
+            )
+
+        assertEquals(TurnPhase.MAIN, plan.phase, "three minutes into a five-minute round is not the wrap-up")
+    }
+
+    @Test
+    fun `a five-minute round still closes before the clock runs out`() {
+        val plan =
+            InterviewPlan.forTurn(
+                turnIndex = 4,
+                answeredTurns = 4,
+                startedAt = startedAt,
+                durationMinutes = 5,
+                now = startedAt.plus(Duration.ofMinutes(4)),
+            )
+
+        assertEquals(TurnPhase.CLOSING, plan.phase, "the last minute is still the wrap-up")
+    }
+
+    /** Scaling the closing phase must not move it for the rounds people actually sit. */
+    @Test
+    fun `the closing phase is unchanged for a real round`() {
+        assertEquals(
+            TurnPhase.MAIN,
+            planAfter(answeredTurns = 5, minutesElapsed = 35).phase,
+            "five minutes left in a forty-minute round is still the main round",
+        )
+        assertEquals(
+            TurnPhase.CLOSING,
+            planAfter(answeredTurns = 5, minutesElapsed = 36).phase,
+            "four minutes left in a forty-minute round is the wrap-up, as before",
+        )
+    }
 }

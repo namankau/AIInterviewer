@@ -47,7 +47,7 @@ data class StartSessionRequest(
      * How long the round should run. Real loops are time-boxed and so is this one — the
      * clock is what ends the interview, not a turn counter.
      */
-    @field:Min(10)
+    @field:Min(5)
     @field:Max(120)
     val durationMinutes: Int = 40,
 )

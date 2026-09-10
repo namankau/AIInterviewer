@@ -260,6 +260,11 @@ export interface SubmitAnswerResponse {
   sessionComplete: boolean;
   turnsCompleted: number;
   nextTurn: TurnView | null;
+  /**
+   * The last thing the interviewer says, when this answer ended the round. Null
+   * otherwise. The room speaks it before showing the completion screen.
+   */
+  closingRemark?: string | null;
 }
 
 /**

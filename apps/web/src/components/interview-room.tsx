@@ -15,13 +15,12 @@ import {
   saveBoard,
   submitAnswer,
 } from "@/lib/api";
-import { initialSilenceState, observe, shouldEnd, SPEECH_LEVEL } from "@/lib/silence";
+import { initialSilenceState, observe, shouldEnd } from "@/lib/silence";
 import { revealedText } from "@/lib/spoken-text";
 import { useBrowserVoice } from "@/lib/use-browser-voice";
 import { useLiveTranscript } from "@/lib/use-live-transcript";
 import { useAccessToken } from "@/lib/use-access-token";
 import { InterviewerPresence, type PresenceState } from "@/components/interviewer-presence";
-import { useBackchannel } from "@/lib/use-backchannel";
 import { useInterviewCapture } from "@/lib/use-interview-capture";
 import { useQuestionAudio } from "@/lib/use-question-audio";
 
@@ -66,6 +65,8 @@ type Phase =
   | "asking"
   | "answering"
   | "submitting"
+  /** The interviewer is saying goodbye. A round ends with somebody saying it has. */
+  | "closing"
   | "complete"
   | "error";
 
@@ -112,7 +113,6 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   /* A mirror of what the candidate is saying. Never sent anywhere; see use-live-transcript.ts. */
   const liveTranscript = useLiveTranscript({ language: session?.language ?? "english" });
   const questionAudio = useQuestionAudio({ sessionId, turn, accessToken });
-  const backchannel = useBackchannel({ enabled: phase === "answering" || phase === "submitting" });
 
   /*
    * The question appears as it is spoken, not before it.
@@ -134,6 +134,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   // the previous question's progress against the new question's text.
   const [progress, setProgress] = useState({ turnIndex: -1, currentTime: 0, duration: 0 });
   const [lateFor, setLateFor] = useState<number | null>(null);
+  const [closingRemark, setClosingRemark] = useState<string | null>(null);
 
   useEffect(() => {
     if (turnIndex === null) return;
@@ -225,10 +226,6 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     liveTranscript.stop();
     setPhase("submitting");
     setError(null);
-    // Said the moment they stop, while the model is still reading the answer. This is
-    // the one that does the most work: it turns a dead ten-second gap into someone who
-    // heard you and is thinking about it.
-    backchannel.acknowledge();
     try {
       const result = await submitAnswer(
         accessToken,
@@ -240,6 +237,27 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
       );
       if (result.sessionComplete || !result.nextTurn) {
         capture.release();
+        /*
+         * A round ends with somebody saying it has.
+         *
+         * It used to end by the page changing: the candidate gave an answer and the room
+         * replaced itself, with no goodbye and no way to tell a finished interview from a
+         * crashed one. The remark is spoken first, and only when it has been said does
+         * the completion screen appear.
+         *
+         * With no voice available the text still shows, and `onDone` fires from the
+         * speech watchdog, so the screen is never held by a voice that is not coming.
+         */
+        if (result.closingRemark) {
+          setClosingRemark(result.closingRemark);
+          setPhase("closing");
+          if (speaksLocally) {
+            browserVoice.say(result.closingRemark, () => setPhase("complete"));
+          } else {
+            window.setTimeout(() => setPhase("complete"), READING_TIME_MS * 2);
+          }
+          return;
+        }
         setPhase("complete");
         return;
       }
@@ -255,14 +273,14 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         cause instanceof ApiRequestError ? cause.message : "That answer could not be submitted.",
       );
     }
-  }, [accessToken, backchannel, capture, liveTranscript, sessionId, speaksLocally, turn]);
+  }, [accessToken, browserVoice, capture, liveTranscript, sessionId, speaksLocally, turn]);
 
   // The meter and the submit callback are read through refs by the tick below. The
   // meter changes on every animation frame, and rebuilding the interval each time would
   // throw away the silence it has accumulated and mean an answer never ended itself.
-  const latest = useRef({ level: capture.level, finish: finishAnswer, backchannel });
+  const latest = useRef({ level: capture.level, finish: finishAnswer });
   useEffect(() => {
-    latest.current = { level: capture.level, finish: finishAnswer, backchannel };
+    latest.current = { level: capture.level, finish: finishAnswer };
   });
 
   // The answer timer and the silence that ends the answer run off one tick, so a reading
@@ -278,18 +296,6 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
       const now = Date.now();
       setElapsed(Math.floor((now - startedAt) / 1000));
 
-      if (latest.current.backchannel.speaking) {
-        // The interviewer is making a listening noise. Echo cancellation should keep it
-        // out of the microphone, but "should" is not a basis for deciding that someone
-        // has stopped talking — so the silence clock pauses rather than reading a meter
-        // that may be hearing us. Whatever silence had accrued is kept.
-        if (silence.silentSince !== null) {
-          silence = { ...silence, silentSince: silence.silentSince + TICK_MS };
-        }
-        return;
-      }
-
-      latest.current.backchannel.observe(latest.current.level, SPEECH_LEVEL);
       silence = observe(silence, latest.current.level, now);
       if (!ended && shouldEnd(silence, now, startedAt)) {
         ended = true;
@@ -304,13 +310,12 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     const started = await capture.start();
     if (started) {
       setElapsed(0);
-      backchannel.reset();
       // A clean slate per answer: the previous one's words must not appear under this one.
       liveTranscript.reset();
       liveTranscript.start();
       setPhase("answering");
     }
-  }, [backchannel, capture, liveTranscript]);
+  }, [capture, liveTranscript]);
 
   /*
    * The floor passes to the candidate on its own.
@@ -502,6 +507,17 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
   if (phase === "error" && !session) {
     return <Centered role="alert">{error}</Centered>;
+  }
+
+  if (phase === "closing") {
+    return (
+      <Centered>
+        <div className="flex max-w-md flex-col items-center gap-6 text-center">
+          <InterviewerPresence state={browserVoice.speaking ? "speaking" : "waiting"} level={0} />
+          <p className="text-title text-balance text-ink">{closingRemark}</p>
+        </div>
+      </Centered>
+    );
   }
 
   if (phase === "complete") {

@@ -376,7 +376,12 @@ class InterviewService(
         val shouldConclude = plan.mustConclude || nextAction == "conclude"
         if (shouldConclude) {
             repository.markSessionStatus(sessionId, userId, "completed")
-            return SubmitAnswerResponse(sessionComplete = true, turnsCompleted = answered, nextTurn = null)
+            return SubmitAnswerResponse(
+                sessionComplete = true,
+                turnsCompleted = answered,
+                nextTurn = null,
+                closingRemark = ClosingRemark.forRound(ranOutOfTime = plan.mustConclude),
+            )
         }
 
         // Trimmed here rather than trusted to the prompt: three rounds of telling the
@@ -386,8 +391,16 @@ class InterviewService(
                 ?.let { QuestionText.withoutPreamble(it) }
                 ?.takeIf { it.isNotBlank() }
         if (nextText == null) {
+            // The model had nothing left to ask. That is a conclusion too, and it gets the
+            // same goodbye — the candidate cannot tell this apart from a planned ending,
+            // and should not have to.
             repository.markSessionStatus(sessionId, userId, "completed")
-            return SubmitAnswerResponse(sessionComplete = true, turnsCompleted = answered, nextTurn = null)
+            return SubmitAnswerResponse(
+                sessionComplete = true,
+                turnsCompleted = answered,
+                nextTurn = null,
+                closingRemark = ClosingRemark.forRound(ranOutOfTime = false),
+            )
         }
 
         val nextIndex = turnIndex + 1

@@ -1,98 +1,111 @@
-# Handoff — 2026-09-09
+# Handoff — 10 September 2026
 
 ## Task
-"How would you save on AI cost here" — an interview was costing ₹50–100 against a target
-of ₹5–10 for a 40-minute round. The owner asked specifically about running a local
-transcriber (Whisper) to bring it down.
+Eight items from the owner after sitting a round, plus three decisions taken by them
+overnight. Plan: `tasks/task-030-rounds-and-room.md`.
 
-## What I found
+You chose **"both rooms, rougher"**, so items 1, 2, 3 and 5 were to be left. Items 2, 3
+and 5 turned out to be small enough to finish anyway, so they are in.
 
-**It is not a token-efficiency problem, and Whisper is not the lever.** Measured, not
-estimated — from `session_reports`, `session_turns`, and live calls to both models:
+## What works when you open it
 
-| | |
-|---|---|
-| Report call, `gemini-2.5-flash-lite` | 4,192 prompt / 3,049 output → **₹0.14** |
-| Same call, `gemini-3.5-flash` | 15× input, 22× output, **~1,700 tokens of thinking** → ₹3.11 |
-| Of 3 stored reports | **2 were served by `gemini-3.5-flash`** |
+Start a round and pick **Coding and practical problem solving** or **System or solution
+design**. Both now open into a real workspace. A **5 minute** length is in the dropdown —
+that is what it is for.
 
-The provider chain is ordered cheapest-first and reads as though a round runs on
-flash-lite. It was not. Modelled over 30 turns, the same 40-minute round is **₹8.02 on
-flash-lite and ₹39–74 on the model behind it** — which is exactly the ₹50–100 observed,
-and 15 of 22 sessions being abandoned puts a further 4.4× on spend per *completed*
-interview.
-
-Tested directly, three runs each on the same prompt and schema: flash-lite returned valid
-JSON 3/3 in half the latency. The fall-through was not buying quality. It was invisible.
-
-Where ₹8.02 actually goes, and what each lever is worth:
-
-| share | | lever |
+| # | Item | State |
 |---|---|---|
-| 71.1% | interviewer speech (Gemini TTS) | browser voice → ₹0 (shipped); local Piper/Kokoro for the fallback |
-| 9.7% | static prompt resent every turn | ₹0.59 if cached — needs the prompt reordered |
-| 6.4% | the candidate's audio | **₹0.51 — this is what local Whisper saves** |
-| 5.8% | transcript history | — |
-| 5.3% + 1.8% | assessment output, report | — |
+| 5 | Five-minute round | **Done** |
+| 2 | Fillers ("Okay, let me think about that") | **Done** — removed entirely |
+| 3 | Round ends abruptly | **Done** — it says goodbye out loud first |
+| 8 | System design room | **Done** — case, scale chips, phase rail, canvas |
+| 6 | DSA round shape | **Done** — opens by asking you to read the problem aloud |
+| 7 | Editor and compiler | **Editor yes. Python runs. Java does not — see below** |
+| 1 | Setup latency | **Partly** — one model call instead of two on these rounds, unmeasured |
+| 4 | Question bank with sources | **Not started** |
 
 ## What I built
-- **`ai_calls`** (migration `20260909120000`) — one row per answered model call: provider,
-  model, tokens, cost in micro-USD, and **`fell_back_from`**, the field the table exists
-  for. Written in its own transaction (`REQUIRES_NEW`): a call is billed whether or not
-  the turn survives, and abandoned turns are the expensive ones.
-- **`AiPrices`** — published prices, and an unpriced model costed at the *dearest* tier
-  rather than zero, because "free" is how the expensive model stayed hidden.
-- **`AiUsage`** gains thinking, audio and cached tokens. Thinking is billed at the output
-  rate and reported in its own field, so the previous code undercounted every report
-  written by `gemini-3.5-flash` by roughly half.
-- **Attribution** (`AiSpendContext`) re-established per speech call — synthesis runs on a
-  background thread and fans chunks out to more of them, so nothing survives the hops.
 
-### Reading it
-```sql
--- What one round cost, by call.
-select call, model, fell_back_from, sum(micro_usd)/1e6 as usd
-from ai_calls where session_id = '<id>' group by 1,2,3 order by usd desc;
+- **`RoundWorkspace.kt`** — a DSA round composes a problem, a design round composes a
+  case, once, at the start, stored on the session. The opening line is templated *from*
+  it rather than asked of the model: one call, not two, on the path you already said was
+  too slow.
+- **`dsa-workspace.tsx`** — problem left, CodeMirror middle, cases underneath. No submit
+  to a judge, no score, no tick parade: a passing case is reported as a passing case and
+  what it *meant* is the interviewer's to say at the debrief.
+- **`design-workspace.tsx`** — Excalidraw board, case panel with the scale constraints as
+  chips, a phase rail (Requirements → High-level → Deep dive → Wrap) that paces without
+  gating. The board saves as you draw, debounced, so a reload does not lose it.
+- **`browser-python.ts`** — Python runs in your browser via Pyodide.
+- **`ClosingRemark.kt`** — the last thing the interviewer says.
+- **Backchannel deleted** — hook, generator script and four clips.
 
--- The question this was built to answer: how often is the dear model serving?
-select model, fell_back_from is not null as fell_back, count(*), sum(micro_usd)/1e6 as usd
-from ai_calls where occurred_at > now() - interval '7 days' group by 1,2 order by usd desc;
-```
+## Decisions I made without you
 
-## Assumptions I made
-- 30 turns in a 40-minute round, from a measured ~80s per turn. The longest real session
-  on record is 16 turns, so this is deliberately pessimistic.
-- ₹88/USD, and 25 audio tokens per second (published). Speech at ~14 chars/second.
-- Prices as published on 2026-09-09. They go stale; `AiPrices` is where they live.
+- **Piston does not exist as a free hosted service any more.** You picked it; its public
+  API went whitelist-only on 15 February 2026 and answers `/execute` with a 401. Wandbox,
+  the obvious substitute, was returning `Failed to get uid` from its own sandbox when I
+  tested it at 03:00. So **Python runs in the browser** (free, no quota, no round trip,
+  and your code never leaves the machine — which for a place people try things they would
+  not push is a better answer than the original plan). **Java still needs a server
+  runner** and the room says so rather than offering a button that fails.
+  To turn Java on: `docker run -d -p 2000:2000 ghcr.io/engineer-man/piston`, then
+  `CODE_RUNNER_ENABLED=true CODE_RUNNER_BASE_URL=http://localhost:2000/api/v2`. The API is
+  already built against Piston precisely so this is a URL and nothing else.
+- **The backchannel went entirely** rather than being re-recorded. Its original
+  justification — that speaking into this felt like a void — is now served by the live
+  transcript, without a second voice that never matched the first.
+- **The closing line is written in code, not generated.** It is the one line where an
+  unlucky generation is least recoverable, and it must not praise a round the report is
+  about to score at 40%. There is a test that holds it to that.
+- **I did not scrape anything.** Item 4's question bank is agreed as `model_knowledge`,
+  labelled honestly. Nothing was taken from Glassdoor, LeetCode or AmbitionBox.
 
 ## What I could NOT verify
-- **Why flash-lite was stepped over.** It answers the report call correctly and fast, so
-  the fall-through is not a capability problem — most likely free-tier rate limiting. The
-  ledger will now say. I deliberately changed no routing: rerouting before it can answer
-  would be guessing, and guessing is what produced the invisible bill.
-- **Whether flash-lite handles a real spoken answer as well.** Downloading a stored
-  recording to test was blocked by the sandbox; one real round settles it.
-- Nothing in this change alters behaviour — no call is rerouted, retried or reworded.
+
+- **Nobody has sat a round in either new room.** Typecheck, lint, 117 tests and the build
+  are green, and CI is green, but that is not the same as a person talking to it. The
+  first real DSA round is the test: whether the model's starter program actually runs,
+  and whether its test cases pipe in cleanly, is the part most likely to be wrong.
+- **Whether the composed problems are any good** — difficulty, variety, whether the
+  120-second read is right. That is your judgement, per CLAUDE.md.
+- **Pyodide's first load** is about 10MB from a CDN. It is fetched when the room opens
+  rather than on first Run, but I have not timed it on your connection.
 
 ## Verification status
-- ktlintCheck / test / build: **pass**. 195 backend tests, 0 failures.
-- CI green on run `34347994993` before merging.
-- RLS proved closed by inserting a probe row and reading it back as an anon client
-  (0 rows to the client, 1 to the service role). Probe removed.
+- typecheck / lint / tests / build: **pass**. 117 web tests, backend green.
+- CI green before every merge. Both migrations applied to the linked project.
 
 ## Merge status
-- Merged into `develop` at `a73e295`. **Migration `20260909120000` applied** and verified.
+All merged into `develop`:
+- `c52cb44` five-minute round · `c50c733` workspace composition · `14ec220` both rooms ·
+  `41d175a` + `b9a2133` two build fixes · `4e141a2` closing and fillers.
+
+Two failures worth knowing about, because both passed locally and failed on CI:
+1. **Two copies of React.** Excalidraw depends on `@radix-ui/*` whose peer ranges stop at
+   18, so npm put React 18 at the root beside apps/web's 19. It surfaced as "Objects are
+   not valid as a React child" in seventeen unrelated tests. Fixed by pinning React at the
+   workspace root. `overrides` did not work — the peer was being auto-installed.
+2. **A Windows-only lockfile.** Regenerating `package-lock.json` from scratch on Windows
+   dropped every non-Windows native binary (npm/cli#4828); CI could not start vitest.
+   Fixed by restoring the lockfile and letting `npm install` update it in place.
+   **Do not delete `package-lock.json` on this machine.**
+
+## New dependencies
+`@uiw/react-codemirror`, `@codemirror/lang-python`, `@codemirror/lang-java`,
+`@excalidraw/excalidraw`. All MIT. Excalidraw brings a chain with moderate/high advisories
+(`nanoid`, `lodash-es` via `mermaid-to-excalidraw`) — worth a look, not urgent, and
+separate from the pre-existing `critical` Next.js advisory that was already there.
 
 ## Suggested next task
-Sit one real round, then run the second query above. If `fell_back` is true for most
-calls, the fix is quota on the Google project, not code — and it is worth ~₹31 a round.
+Sit a five-minute DSA round and a five-minute design round. Then item 4, which is the
+largest thing left and the one you care most about.
 
 ## Open questions for you
-1. **Local TTS is the only remaining lever worth real money** (71% of what is left), and
-   it commits infrastructure — CLAUDE.md reserves voice-vendor choices for you. Piper is
-   tiny and CPU-only; Kokoro-82M sounds markedly better for a little more. Say which and
-   I will wire it behind the browser voice.
-2. **Local Whisper saves ₹0.51 a round** and costs you delivery assessment (pace,
-   hesitation, recovery under pressure) which the report currently uses. I would not.
-3. Still open from before: the Gemini speech quota (100/day), the design direction, and
-   `main` being ~70 commits behind `develop`.
+1. **Item 4 needs a conversation.** Your actual complaint — "most questions are asked
+   from the project only" — is a prompt problem I can fix without any bank at all. The
+   bank is a separate, larger build. Do you want the cheap fix first?
+2. **Round narrowing, Natasha, and the CLAUDE.md rewrite are still undone.** You decided
+   all three; I ran out of night at the rooms. They are written up in
+   `tasks/task-030-rounds-and-room.md` and are a short session.
+3. `main` is still ~80 commits behind `develop` and only you can advance it.

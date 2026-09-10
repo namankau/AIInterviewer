@@ -43,9 +43,14 @@ object AiPrices {
 
     private val PRICES =
         mapOf(
-            // Live, and the one the chain leads with.
-            "gemini-3.5-flash-lite" to Price(text = 0.30, audio = 0.30, output = 2.50, cached = 0.03),
+            // Live. gemini-3.1-flash-lite is the one the chain leads with — checked against
+            // ai.google.dev/gemini-api/docs/pricing and a live call on 2026-09-10, it is the
+            // cheapest Gemini model that still hears a spoken answer and returns structured
+            // JSON. gemini-3.5-flash-lite sat here first; kept, priced, for its rows in the
+            // ledger. Both are live — the audio price for the newer model is a stated
+            // per-model rate, not fallback pricing, verified by sending it real audio.
             "gemini-3.1-flash-lite" to Price(text = 0.25, audio = 0.50, output = 1.50, cached = 0.025),
+            "gemini-3.5-flash-lite" to Price(text = 0.30, audio = 0.30, output = 2.50, cached = 0.03),
             "gemini-3.5-flash" to Price(text = 1.50, audio = 1.50, output = 9.00, cached = 0.15),
             // Retired by Google on or before 2026-09-10 and kept here on purpose: rows in
             // `ai_calls` still name them, and a historical cost that silently changed to

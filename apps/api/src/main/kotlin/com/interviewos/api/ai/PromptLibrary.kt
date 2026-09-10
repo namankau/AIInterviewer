@@ -136,6 +136,7 @@ class PromptLibrary(
             .replace("{{archetype}}", brief.archetype)
             .replace("{{role}}", brief.role)
             .replace("{{roundType}}", brief.roundType)
+            .replace("{{roundCovers}}", brief.roundCovers)
             .replace("{{language}}", brief.language)
             .replace("{{candidateFunction}}", brief.candidateFunction ?: "unspecified")
             .replace("{{candidateLevel}}", brief.candidateLevel ?: "unspecified")

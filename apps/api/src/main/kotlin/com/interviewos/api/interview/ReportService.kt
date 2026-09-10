@@ -85,6 +85,11 @@ class ReportService(
                 archetype = archetype.label,
                 role = session.roleTitle,
                 roundType = "${roundType.label}. ${roundType.brief}",
+                // What the round was meant to get across. The report reads it to judge
+                // coverage — an interview that never left one topic is a fact about the
+                // round, and the candidate should not be marked down for ground the
+                // interviewer never took them to.
+                roundCovers = roundType.covers.joinToString("\n") { "- $it" },
                 language = session.language,
                 candidateFunction = null,
                 candidateLevel = null,

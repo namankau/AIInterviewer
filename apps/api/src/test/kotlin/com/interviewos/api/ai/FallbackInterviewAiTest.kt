@@ -20,6 +20,7 @@ class FallbackInterviewAiTest {
             archetype = "Service-based IT firm",
             role = "Senior Backend Engineer",
             roundType = "Project deep-dive",
+            roundCovers = "- what they personally decided",
             language = "english",
             candidateFunction = null,
             candidateLevel = null,

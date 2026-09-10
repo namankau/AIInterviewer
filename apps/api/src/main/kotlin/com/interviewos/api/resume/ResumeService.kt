@@ -251,6 +251,34 @@ data class ProjectView(
 )
 
 /**
+ * What the resume is *for* in a given round.
+ *
+ * This distinction exists because getting it wrong produced a real complaint: every round
+ * was being interrogated as though it were a project deep-dive. The candidate's CV was
+ * described to the model as the best available material for any question, so the
+ * interviewer circled their most recent project and never left it — in a system design
+ * round, where the case on screen was supposed to be the subject.
+ */
+enum class ResumeUse {
+    /** The CV **is** the material. Interrogating what they actually did is the round. */
+    SYLLABUS,
+
+    /**
+     * The CV says who is in the room, and the round's own material is what gets
+     * discussed. Use it to pitch the difficulty and to pick vocabulary they will know —
+     * not to choose the subject.
+     */
+    CONTEXT,
+
+    /**
+     * The CV supplies situations worth asking about, but the competency list decides what
+     * is asked. "Tell me about a time" needs somewhere to point; it does not need the
+     * whole round to be about one project.
+     */
+    SITUATIONS,
+}
+
+/**
  * The candidate's real work, as the interviewer needs to see it.
  *
  * This is what the project deep-dive round has been missing: without it the interviewer
@@ -270,7 +298,7 @@ data class CandidateBackground(
      * mis-parsed date then becomes the interviewer confidently contradicting the
      * candidate about their own career.
      */
-    fun asPrompt(): String =
+    fun asPrompt(resumeUse: ResumeUse): String =
         buildString {
             appendLine("The candidate's own background, parsed from the resume they uploaded:")
             resume.headline?.takeIf { it.isNotBlank() }?.let { appendLine("Headline: $it") }
@@ -284,7 +312,10 @@ data class CandidateBackground(
                     val from = job.startDate?.toString()
                     val to = if (job.current) "present" else job.endDate?.toString()
                     if (from != null) append(" ($from to ${to ?: "unstated"})")
-                    if (index == 0) append("  <- CURRENT ROLE. Interview them about this one.")
+                    // Marked, not prescribed. "Interview them about this one" is what this
+                    // used to say, and it turned every round into a project deep-dive; which
+                    // role matters is decided by the usage rule below, per round.
+                    if (index == 0) append("  <- most recent")
                     appendLine()
                 }
             }
@@ -327,20 +358,57 @@ data class CandidateBackground(
             }
 
             appendLine()
+            appendLine(usageRule(resumeUse))
+            appendLine()
             appendLine(
-                "Use this to ground your questions in work they have actually done — a deep-dive into a " +
-                    "project they listed is far more revealing than a generic scenario. Three rules. Ask them " +
-                    "to tell you about it rather than asserting it back at them: this came from parsing a " +
-                    "document and may be wrong, and an interviewer who confidently misstates someone's own " +
-                    "career loses them immediately. Do not raise gaps or short stints unless the round " +
-                    "type makes that appropriate — in an HR or techno-managerial round it is fair, in a " +
-                    "system design round it is not. And anchor on the role at the top of that list: it is " +
-                    "what they do now, it is what they remember in detail, and it is what the employer " +
-                    "asking about them cares about. Reaching past it to an older job reads as not having " +
-                    "read the resume. Earlier roles are worth raising only when the current one genuinely " +
-                    "does not cover what the round is testing, or when you are asking how their career got " +
-                    "from there to here.",
+                "Two rules whichever round this is. Ask them to tell you about it rather than asserting " +
+                    "it back at them: this came from parsing a document and may be wrong, and an " +
+                    "interviewer who confidently misstates someone's own career loses them immediately. " +
+                    "Do not raise gaps or short stints unless the round type makes that appropriate — " +
+                    "in an HR or techno-managerial round it is fair, in a system design round it is not.",
             )
+        }
+
+    /**
+     * What this round is supposed to do with the CV.
+     *
+     * The single most important paragraph in the whole prompt for the complaint it fixes.
+     * It used to say, for every round alike, that "a deep-dive into a project they listed
+     * is far more revealing than a generic scenario", and then to anchor on the most
+     * recent role. Both were written to fix a real bug — the interviewer had been asking
+     * about a job the candidate left years ago — and together they overshot into the
+     * opposite failure: every round became a project deep-dive, and a system design round
+     * spent itself on the candidate's last project instead of the case on their screen.
+     */
+    private fun usageRule(resumeUse: ResumeUse): String =
+        when (resumeUse) {
+            ResumeUse.SYLLABUS -> {
+                "**This round is about this work.** Dig into what they actually did — a deep-dive into a " +
+                    "project they listed is far more revealing here than any invented scenario. Anchor on " +
+                    "the role at the top of the list: it is what they do now, what they remember in detail, " +
+                    "and what the employer cares about. Reaching past it to an older job reads as not having " +
+                    "read the resume, unless the current role genuinely does not cover what you need or you " +
+                    "are asking how their career got from there to here."
+            }
+
+            ResumeUse.CONTEXT -> {
+                "**This round is not about their CV.** The material for this round is the problem or case " +
+                    "in front of them, and that is what you ask about. Use their background only to pitch " +
+                    "the difficulty and to reach for words they will already know — a candidate who has run " +
+                    "Kafka can be asked about consumer failure directly rather than led to it. Referring to " +
+                    "their experience once, to make a question concrete, is good. Turning the round into a " +
+                    "tour of their projects is the failure this note exists to prevent: they came to be " +
+                    "interviewed on this problem, and an interviewer who keeps returning to the CV never " +
+                    "finds out whether they can do the thing being tested."
+            }
+
+            ResumeUse.SITUATIONS -> {
+                "**Their CV is where to point, not what to ask.** What gets asked is decided by the ground " +
+                    "this round has to cover; their background supplies the situations to ask it about, so " +
+                    "\"tell me about a time\" has somewhere to land. One project can support one or two " +
+                    "questions. If a third is heading to the same project, the round has narrowed and you " +
+                    "should move to different ground — or to a different part of their career."
+            }
         }
 
     /**

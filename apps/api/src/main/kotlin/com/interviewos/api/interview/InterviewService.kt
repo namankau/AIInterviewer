@@ -12,6 +12,7 @@ import com.interviewos.api.ai.TurnTranscript
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.resume.CandidateBackground
 import com.interviewos.api.resume.ResumeService
+import com.interviewos.api.resume.ResumeUse
 import com.interviewos.api.sources.GroundedSources
 import com.interviewos.api.sources.SourceGrounding
 import com.interviewos.api.storage.ObjectStorage
@@ -738,11 +739,12 @@ class InterviewService(
         resolution: ArchetypeResolution,
         sources: GroundedSources?,
         background: CandidateBackground?,
+        resumeUse: ResumeUse,
     ): String =
         listOfNotNull(
             resolution.grounding,
             sources?.asPrompt(),
-            background?.asPrompt(),
+            background?.asPrompt(resumeUse),
         ).joinToString(separator = "\n\n")
 
     private fun briefFor(
@@ -758,13 +760,14 @@ class InterviewService(
         archetype = resolution.archetype.label,
         role = role,
         roundType = "${roundType.label}. ${roundType.brief}",
+        roundCovers = roundType.covers.joinToString("\n") { "- $it" },
         language = language,
         // Null on every round until the resume existed, which is precisely why the
         // project deep-dive had nothing of the candidate's own to dig into.
         candidateFunction = background?.resume?.headline,
         candidateLevel = background?.let { "${it.tenure.totalExperienceMonths / 12} years of experience" },
         targetLevel = null,
-        grounding = groundingText(resolution, sources, background),
+        grounding = groundingText(resolution, sources, background, roundType.resumeUse),
     )
 
     private fun TurnPlan.toContext() =

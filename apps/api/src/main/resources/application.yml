@@ -53,9 +53,16 @@ interviewos:
     #   kimi-k2                 $0.55 in / $2.20 out   text only
     #   deepseek-v4-flash       $0.14 in / $0.28 out   text only
     #
-    # Flash-lite leads because it is 15x cheaper on input and 22x on output than the
-    # 3.5-flash this used to call for everything, and it can still hear an answer.
-    # 3.5-flash sits behind it for when the cheap model is not good enough or is down.
+    # Flash-lite leads because it is 5x cheaper on input and 3.6x on output than the
+    # 3.5-flash behind it, and it can still hear an answer. 3.5-flash sits behind it for
+    # when the cheap model is not good enough or is down.
+    #
+    # **Check this model still exists before assuming the chain is cheap.** It led with
+    # `gemini-2.5-flash-lite` until Google retired that model — and `gemini-2.5-flash`
+    # with it — some time on 2026-09-10. Nothing broke loudly: every call 404'd on the
+    # primary and was quietly served by the model behind it at five times the price. The
+    # ledger is what makes that visible now; `fell_back_from` on every row means the model
+    # named here is gone.
     #
     # ORDER MATTERS AND IS RELIED ON: cheapest first, strongest last. Resume parsing
     # inverts it deliberately (FallbackInterviewAi.TRY_STRONGEST_FIRST) because it runs
@@ -64,7 +71,7 @@ interviewos:
     providers:
       - name: gemini-lite
         kind: gemini
-        model: ${GEMINI_PRIMARY_MODEL:gemini-2.5-flash-lite}
+        model: ${GEMINI_PRIMARY_MODEL:gemini-3.5-flash-lite}
       - name: gemini-flash
         kind: gemini
         model: ${GEMINI_FALLBACK_MODEL:gemini-3.5-flash}

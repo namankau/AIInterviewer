@@ -82,6 +82,111 @@ export interface SessionView {
   /** A ceiling on exchanges, not a target — the clock is what ends the round. */
   maxTurns: number;
   currentTurn: TurnView | null;
+  /**
+   * The material this round is conducted around, composed once when it started.
+   *
+   * Null for a round that is only a conversation, and null too when composition failed.
+   * The client renders the plain spoken room in both cases — a DSA round with an empty
+   * editor and no problem in it is worse than one held entirely out loud.
+   */
+  workspace: RoundWorkspace | null;
+  /** What the candidate has drawn or written so far, so a reload does not lose it. */
+  board: BoardState | null;
+}
+
+/** The material a round runs on. Discriminated on `kind`; more rounds may grow one. */
+export type RoundWorkspace = ProblemWorkspace | CaseWorkspace;
+
+export interface ProblemWorkspace {
+  kind: "dsa";
+  problem: CodingProblem;
+}
+
+export interface CaseWorkspace {
+  kind: "system_design";
+  case: DesignCase;
+}
+
+/**
+ * A coding problem, and enough scaffolding to run it.
+ *
+ * `starterPython` and `starterJava` are complete runnable programs, not fragments: they
+ * read one case from stdin in the shape `stdinFormat` describes and print only the
+ * answer. That is what lets a test case be piped in verbatim without a harness per
+ * problem — and what makes a malformed one degrade to an editor with no Run rather than
+ * a broken round.
+ */
+export interface CodingProblem {
+  title: string;
+  topic: string;
+  difficulty: "easy" | "medium" | "hard";
+  statement: string;
+  examples: ProblemExample[];
+  constraints: string[];
+  starterPython: string;
+  starterJava: string;
+  stdinFormat: string;
+  testCases: ProblemTestCase[];
+}
+
+export interface ProblemExample {
+  input: string;
+  output: string;
+  explanation?: string | null;
+}
+
+export interface ProblemTestCase {
+  input: string;
+  expected: string;
+}
+
+/**
+ * A system design case.
+ *
+ * `deepDiveOptions` is the interviewer's, and the room must not render it: handing
+ * someone the deep dives in advance turns a round that tests scoping into one that
+ * tests reading.
+ */
+export interface DesignCase {
+  title: string;
+  summary: string;
+  constraints: string[];
+  openingPrompt: string;
+  deepDiveOptions: string[];
+}
+
+/** Whatever the candidate produced. Shaped by the round, opaque to the server. */
+export interface BoardState {
+  kind: "dsa" | "system_design";
+  /** DSA: the source they last had in the editor, per language. */
+  sources?: Record<string, string>;
+  language?: string;
+  /** System design: the Excalidraw scene, as its own elements array. */
+  elements?: unknown[];
+  appState?: Record<string, unknown>;
+}
+
+/** A request to run the candidate's code against one input. */
+export interface RunCodeRequest {
+  source: string;
+  language: "python" | "java";
+  stdin: string;
+}
+
+/**
+ * What running it produced.
+ *
+ * `available` false means nothing ran — no runner is configured, or it refused — and
+ * `message` says so in words meant for the candidate. It is never an error: a round
+ * whose compiler is missing carries on out loud, which is what is being assessed.
+ */
+export interface CodeRunResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+  timedOut: boolean;
+  available: boolean;
+  message: string | null;
 }
 
 /** One line of intent, as the candidate typed it. */

@@ -1,15 +1,18 @@
 "use client";
 
-import type { HintView, SessionView, TurnView } from "@acemyinterview/shared";
+import type { BoardState, HintView, SessionView, TurnView } from "@acemyinterview/shared";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { DesignWorkspace } from "@/components/design-workspace";
 import { DeviceCheck } from "@/components/device-check";
+import { DsaWorkspace } from "@/components/dsa-workspace";
 import {
   ApiRequestError,
   abandonSession,
   fetchSession,
   requestHint,
+  saveBoard,
   submitAnswer,
 } from "@/lib/api";
 import { initialSilenceState, observe, shouldEnd, SPEECH_LEVEL } from "@/lib/silence";
@@ -44,6 +47,12 @@ import { useQuestionAudio } from "@/lib/use-question-audio";
  * `unavailable` and the question is shown immediately.
  */
 const VOICE_GRACE_MS = 25_000;
+
+/** How long the board sits still before it is saved. One second of drawing, at most, is lost. */
+const BOARD_SAVE_MS = 1_000;
+
+/** How often the design rail re-checks which phase the round is in. */
+const ROUND_CLOCK_TICK_MS = 10_000;
 
 /**
  * How long a candidate gets to read a question that has no voice, before the microphone
@@ -419,6 +428,66 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     element.play().catch(() => setAudioBlocked(true));
   }, []);
 
+  /*
+   * The board, saved as they work.
+   *
+   * Debounced because Excalidraw fires on every pointer move and a PUT per stroke would
+   * be absurd. Failures are swallowed on purpose: a save that missed is replaced by the
+   * next one a second later, and interrupting somebody mid-design to tell them about a
+   * transient network blip would cost far more than it saved.
+   */
+  const boardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestBoard = useRef<BoardState | null>(null);
+  useEffect(() => () => { if (boardTimer.current) clearTimeout(boardTimer.current); }, []);
+
+  const onBoardChange = useCallback(
+    (next: BoardState) => {
+      latestBoard.current = next;
+      if (!accessToken || boardTimer.current) return;
+      boardTimer.current = setTimeout(() => {
+        boardTimer.current = null;
+        const board = latestBoard.current;
+        if (board) void saveBoard(accessToken, sessionId, board).catch(() => undefined);
+      }, BOARD_SAVE_MS);
+    },
+    [accessToken, sessionId],
+  );
+
+  const workspace = session?.workspace ?? null;
+
+  /*
+   * Minutes into the round, for the design rail. Advisory only — it paces the candidate,
+   * it does not gate anything.
+   *
+   * Ticked from an effect rather than read during render: the clock is not a pure
+   * function of props, and the React compiler is right to say so. Starting at zero is
+   * correct rather than a compromise — a round that has just begun is in Requirements.
+   */
+  const [minutesElapsed, setMinutesElapsed] = useState(0);
+  const startedAt = session?.startedAt ?? null;
+  useEffect(() => {
+    if (!startedAt) return;
+    const start = new Date(startedAt).getTime();
+    const timer = setInterval(
+      () => setMinutesElapsed(Math.max(0, Math.floor((Date.now() - start) / 60_000))),
+      ROUND_CLOCK_TICK_MS,
+    );
+    return () => clearInterval(timer);
+  }, [startedAt]);
+
+  const workspaceNode =
+    workspace === null ? null : workspace.kind === "dsa" ? (
+      <DsaWorkspace problem={workspace.problem} board={session?.board ?? null} onBoardChange={onBoardChange} />
+    ) : (
+      <DesignWorkspace
+        designCase={workspace.case}
+        board={session?.board ?? null}
+        minutesElapsed={minutesElapsed}
+        durationMinutes={session?.durationMinutes ?? 45}
+        onBoardChange={onBoardChange}
+      />
+    );
+
   async function leave() {
     capture.release();
     if (accessToken) {
@@ -484,7 +553,16 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-10 px-6 py-16">
+      <div className={workspace ? "flex min-h-0 flex-1 flex-col lg:flex-row" : "contents"}>
+        {workspace ? <div className="min-h-0 flex-1 border-line lg:border-r">{workspaceNode}</div> : null}
+
+      <main
+        className={
+          workspace
+            ? "flex w-full shrink-0 flex-col gap-6 overflow-y-auto px-6 py-8 lg:w-[24rem]"
+            : "mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-10 px-6 py-16"
+        }
+      >
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between gap-4">
             <InterviewerPresence state={presenceState} level={capture.level} />
@@ -636,6 +714,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           </p>
         ) : null}
       </main>
+      </div>
 
       {withVideo ? (
         <video

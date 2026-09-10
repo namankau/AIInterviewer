@@ -54,6 +54,16 @@ class OpenAiCompatibleInterviewAi(
     override fun composeRound(query: String): AiResult<ComposedRound> =
         complete(prompts.composeRound(query), "compose-round", ComposedRound::class.java)
 
+    override fun composeProblem(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): AiResult<ComposedProblem> = complete(prompts.composeProblem(brief, durationMinutes), "compose-problem", ComposedProblem::class.java)
+
+    override fun composeCase(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): AiResult<ComposedCase> = complete(prompts.composeCase(brief, durationMinutes), "compose-case", ComposedCase::class.java)
+
     override fun composeOpeningQuestion(
         brief: InterviewBrief,
         round: RoundContext,

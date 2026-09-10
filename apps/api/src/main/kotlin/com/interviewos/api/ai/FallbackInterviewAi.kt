@@ -59,6 +59,16 @@ class FallbackInterviewAi(
     override fun composeRound(query: String): AiResult<ComposedRound> =
         attempt(AiCapability.STRUCTURED_TEXT, "composeRound") { it.composeRound(query) }
 
+    override fun composeProblem(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): AiResult<ComposedProblem> = attempt(AiCapability.STRUCTURED_TEXT, "composeProblem") { it.composeProblem(brief, durationMinutes) }
+
+    override fun composeCase(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): AiResult<ComposedCase> = attempt(AiCapability.STRUCTURED_TEXT, "composeCase") { it.composeCase(brief, durationMinutes) }
+
     override fun composeOpeningQuestion(
         brief: InterviewBrief,
         round: RoundContext,

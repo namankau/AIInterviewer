@@ -281,6 +281,37 @@ class FallbackInterviewAiTest {
         override fun composeRound(query: String) =
             answer(ComposedRound("", "", "", "project_deep_dive", null, "english", "", emptyList(), "low"))
 
+        override fun composeProblem(
+            brief: InterviewBrief,
+            durationMinutes: Int,
+        ) = answer(
+            ComposedProblem(
+                title = "Two Sum",
+                topic = "hash map",
+                difficulty = "easy",
+                statement = "Find two numbers that add to a target.",
+                examples = emptyList(),
+                constraints = emptyList(),
+                starterPython = "print(0)",
+                starterJava = "class Main {}",
+                stdinFormat = "one line",
+                testCases = emptyList(),
+            ),
+        )
+
+        override fun composeCase(
+            brief: InterviewBrief,
+            durationMinutes: Int,
+        ) = answer(
+            ComposedCase(
+                title = "Design a feed",
+                summary = "Fan-out is the tension.",
+                constraints = emptyList(),
+                openingPrompt = "What must it do?",
+                deepDiveOptions = emptyList(),
+            ),
+        )
+
         override fun composeOpeningQuestion(
             brief: InterviewBrief,
             round: RoundContext,

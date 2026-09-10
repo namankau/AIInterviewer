@@ -120,6 +120,24 @@ class GeminiInterviewAi(
         return AiResult(objectMapper.treeToValue(node, ComposedRound::class.java), usage)
     }
 
+    override fun composeProblem(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): AiResult<ComposedProblem> {
+        val prompt = prompts.composeProblem(brief, durationMinutes)
+        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("compose-problem"))
+        return AiResult(objectMapper.treeToValue(node, ComposedProblem::class.java), usage)
+    }
+
+    override fun composeCase(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): AiResult<ComposedCase> {
+        val prompt = prompts.composeCase(brief, durationMinutes)
+        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("compose-case"))
+        return AiResult(objectMapper.treeToValue(node, ComposedCase::class.java), usage)
+    }
+
     override fun composeOpeningQuestion(
         brief: InterviewBrief,
         round: RoundContext,

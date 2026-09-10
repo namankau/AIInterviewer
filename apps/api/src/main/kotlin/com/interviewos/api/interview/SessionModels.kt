@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
+import tools.jackson.databind.JsonNode
 import java.time.Instant
 import java.util.UUID
 
@@ -104,6 +105,33 @@ data class SessionView(
     /** A ceiling on exchanges, not a target. The clock ends the round. */
     val maxTurns: Int,
     val currentTurn: TurnView?,
+    /**
+     * The problem or case this round is conducted around, composed once at the start.
+     *
+     * Null for every round that is only a conversation, and null too when composition
+     * failed — the client renders the plain spoken room in both cases rather than an
+     * empty editor, because a DSA round with no problem in it is worse than a DSA round
+     * held entirely out loud.
+     */
+    val workspace: JsonNode? = null,
+    /** What the candidate has drawn or written so far, so a reload does not lose it. */
+    val board: JsonNode? = null,
+)
+
+/**
+ * A request to run the candidate's code against one input.
+ *
+ * [stdin] is the test case, written exactly as the problem's `stdinFormat` describes, so
+ * the starter program can read it without a per-problem harness on our side.
+ */
+data class RunCodeRequest(
+    @field:NotBlank(message = "There is no code to run.")
+    @field:Size(max = 40_000)
+    val source: String = "",
+    @field:NotBlank
+    val language: String = "python",
+    @field:Size(max = 10_000)
+    val stdin: String = "",
 )
 
 /** What the candidate typed into the composer. */

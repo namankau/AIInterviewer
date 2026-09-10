@@ -1,0 +1,31 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "title": {
+      "type": "STRING",
+      "description": "The case, as one imperative line. \"Design fraud detection\", \"Design AI-powered product search\".",
+      "maxLength": 70
+    },
+    "summary": {
+      "type": "STRING",
+      "description": "What makes this system hard, in one or two short sentences. The tension, not the feature list.",
+      "maxLength": 180
+    },
+    "constraints": {
+      "type": "ARRAY",
+      "description": "Three scale or latency facts that bound the design, each short enough to sit in a chip. \"500M txns/day\", \"p99 < 200ms end-to-end\", \"0.05% fraud rate\".",
+      "items": { "type": "STRING", "maxLength": 40 }
+    },
+    "openingPrompt": {
+      "type": "STRING",
+      "description": "The single thing the interviewer says to open the round, out loud, after greeting them. Ends by handing over — asking what the system has to do, not telling them.",
+      "maxLength": 220
+    },
+    "deepDiveOptions": {
+      "type": "ARRAY",
+      "description": "Three areas worth an eventual deep dive on this case, for the interviewer to pick from later. Not shown to the candidate.",
+      "items": { "type": "STRING", "maxLength": 80 }
+    }
+  },
+  "required": ["title", "summary", "constraints", "openingPrompt", "deepDiveOptions"]
+}

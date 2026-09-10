@@ -1,0 +1,80 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "title": {
+      "type": "STRING",
+      "description": "The problem's name, as it would appear at the top of a page.",
+      "maxLength": 80
+    },
+    "topic": {
+      "type": "STRING",
+      "description": "The technique the problem is really about: two pointers, monotonic stack, topological sort.",
+      "maxLength": 60
+    },
+    "difficulty": { "type": "STRING", "enum": ["easy", "medium", "hard"] },
+    "statement": {
+      "type": "STRING",
+      "description": "The problem, stated the way an interviewer would write it on a shared doc. Plain prose, no markdown headings."
+    },
+    "examples": {
+      "type": "ARRAY",
+      "description": "Two or three worked examples.",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "input": { "type": "STRING" },
+          "output": { "type": "STRING" },
+          "explanation": { "type": "STRING", "nullable": true }
+        },
+        "required": ["input", "output"]
+      }
+    },
+    "constraints": {
+      "type": "ARRAY",
+      "description": "The bounds, one per line, as they would appear under CONSTRAINTS.",
+      "items": { "type": "STRING" }
+    },
+    "starterPython": {
+      "type": "STRING",
+      "description": "A COMPLETE runnable Python 3 program. It must read the test input from standard input in exactly the format of `stdinFormat`, call the candidate's solution, and print only the answer. Leave the solution body as a clearly marked stub the candidate fills in. It must run without error before they touch it, printing nothing useful."
+    },
+    "starterJava": {
+      "type": "STRING",
+      "description": "The same complete runnable program in Java, in a single public class named Main with a main method. Same stdin format, same printed answer, same clearly marked stub."
+    },
+    "stdinFormat": {
+      "type": "STRING",
+      "description": "How one test case is laid out on standard input, described in one sentence so the harness and the tests agree."
+    },
+    "testCases": {
+      "type": "ARRAY",
+      "description": "Four cases. The first two must be the worked examples above. Include at least one edge case.",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "input": {
+            "type": "STRING",
+            "description": "Written exactly as stdinFormat describes, ready to be piped into the program verbatim."
+          },
+          "expected": {
+            "type": "STRING",
+            "description": "Exactly what the program should print for that input, trimmed."
+          }
+        },
+        "required": ["input", "expected"]
+      }
+    }
+  },
+  "required": [
+    "title",
+    "topic",
+    "difficulty",
+    "statement",
+    "examples",
+    "constraints",
+    "starterPython",
+    "starterJava",
+    "stdinFormat",
+    "testCases"
+  ]
+}

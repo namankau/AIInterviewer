@@ -8,6 +8,8 @@ import com.interviewos.api.ai.AnswerAssessment
 import com.interviewos.api.ai.AnswerAudio
 import com.interviewos.api.ai.AnswerVideo
 import com.interviewos.api.ai.AskedQuestion
+import com.interviewos.api.ai.ComposedCase
+import com.interviewos.api.ai.ComposedProblem
 import com.interviewos.api.ai.ComposedRound
 import com.interviewos.api.ai.ExtractedQuestions
 import com.interviewos.api.ai.InterviewAi
@@ -194,6 +196,16 @@ private abstract class StubAi : InterviewAi {
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,
     ): AiResult<ReportContent> = unsupported()
+
+    override fun composeProblem(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): AiResult<ComposedProblem> = unsupported()
+
+    override fun composeCase(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): AiResult<ComposedCase> = unsupported()
 
     private fun unsupported(): Nothing = throw UnsupportedOperationException("not part of this test")
 }

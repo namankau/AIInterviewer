@@ -45,6 +45,8 @@ const session: SessionView = {
   turnsCompleted: 0,
   maxTurns: 8,
   currentTurn: null,
+  workspace: null,
+  board: null,
 };
 
 function capture(overrides: Partial<Capture> = {}): Capture {

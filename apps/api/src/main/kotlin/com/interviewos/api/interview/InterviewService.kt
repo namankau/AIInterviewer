@@ -3,6 +3,7 @@ package com.interviewos.api.interview
 import com.interviewos.api.ai.AiSpendContext
 import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.AnswerAudio
+import com.interviewos.api.ai.AskedQuestion
 import com.interviewos.api.ai.Intervention
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
@@ -23,6 +24,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.task.TaskExecutor
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 import java.time.Instant
@@ -55,6 +57,8 @@ class InterviewService(
     private val roundMedia: RoundMediaProperties,
     private val sourceGrounding: SourceGrounding,
     private val resumeService: ResumeService,
+    private val roundWorkspaceComposer: RoundWorkspaceComposer,
+    private val codeRunner: CodeRunner,
     @Qualifier("interviewBackgroundExecutor") private val backgroundExecutor: TaskExecutor,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -190,11 +194,29 @@ class InterviewService(
                 background = background,
             )
         val plan = InterviewPlan.opening(request.durationMinutes)
+
+        // A DSA or design round is conducted around material — a problem, or a case — and
+        // its opening is templated from that rather than asked of the model separately.
+        // One call, not two, on the path the candidate is already waiting on.
+        val workspace =
+            AiSpendContext.of(userId, sessionId) {
+                roundWorkspaceComposer.compose(brief, roundType, request.durationMinutes)
+            }
+        workspace?.let { repository.setWorkspace(sessionId, userId, it.json) }
+
         val opening =
-            try {
-                AiSpendContext.of(userId, sessionId) {
-                    interviewAi.composeOpeningQuestion(brief, plan.toContext())
-                }
+            workspace?.let {
+                AskedQuestion(
+                    text = it.openingQuestion,
+                    questionBasis = it.basis,
+                    questionProbes = it.probes,
+                    questionAskedBecause = it.askedBecause,
+                )
+            } ?: try {
+                AiSpendContext
+                    .of(userId, sessionId) {
+                        interviewAi.composeOpeningQuestion(brief, plan.toContext())
+                    }.value
             } catch (e: AiUnavailableException) {
                 repository.markSessionStatus(sessionId, userId, "failed")
                 log.warn("Opening question failed for session {}", sessionId, e)
@@ -207,21 +229,21 @@ class InterviewService(
             sessionId = sessionId,
             userId = userId,
             turnIndex = 0,
-            questionText = opening.value.text,
+            questionText = opening.text,
             phase = plan.phase,
             // Pending means "a voice is coming". Nothing is coming when the room
             // speaks for itself, and saying otherwise leaves it polling for ever.
             speechStatus = if (request.speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
             provenanceJson =
                 provenanceJson(
-                    basis = opening.value.questionBasis,
-                    probes = opening.value.questionProbes,
-                    askedBecause = opening.value.questionAskedBecause,
+                    basis = opening.questionBasis,
+                    probes = opening.questionProbes,
+                    askedBecause = opening.questionAskedBecause,
                     sources = sources,
                 ),
         )
         if (!request.speaksLocally) {
-            questionSpeech.render(SpeechRequest(userId, sessionId, 0, opening.value.text, request.language))
+            questionSpeech.render(SpeechRequest(userId, sessionId, 0, opening.text, request.language))
         }
 
         return view(userId, sessionId)
@@ -496,6 +518,36 @@ class InterviewService(
         }
     }
 
+    /**
+     * Runs the candidate's code for a session they own.
+     *
+     * Ownership is the whole authorisation story: without the session check this is an
+     * open code-execution endpoint. The round's state is deliberately not consulted
+     * beyond that — someone re-running their solution after the clock stopped, while they
+     * wait for the report, is doing something reasonable.
+     */
+    fun runCode(
+        userId: UUID,
+        sessionId: UUID,
+        request: RunCodeRequest,
+    ): CodeRunResult {
+        repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
+        val language =
+            CodeLanguage.parse(request.language)
+                ?: throw ApiException.badRequest("This round takes Python or Java.")
+        return codeRunner.run(language, request.source, request.stdin)
+    }
+
+    /** Stores the board, so a reload does not lose twenty minutes of drawing. */
+    fun saveBoard(
+        userId: UUID,
+        sessionId: UUID,
+        board: JsonNode,
+    ) {
+        repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
+        repository.setBoard(sessionId, userId, objectMapper.writeValueAsString(board))
+    }
+
     fun view(
         userId: UUID,
         sessionId: UUID,
@@ -527,6 +579,8 @@ class InterviewService(
             scheduledEndAt = session.startedAt?.plus(Duration.ofMinutes(session.durationMinutes.toLong())),
             turnsCompleted = repository.countAnsweredTurns(sessionId, userId),
             maxTurns = InterviewPlan.MAX_TURNS,
+            workspace = session.workspace?.let(objectMapper::readTree),
+            board = session.board?.let(objectMapper::readTree),
             currentTurn =
                 latest
                     ?.takeIf { it.answeredAt == null }

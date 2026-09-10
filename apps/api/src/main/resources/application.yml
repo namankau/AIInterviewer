@@ -76,6 +76,22 @@ interviewos:
         base-url: ${FALLBACK_PROVIDER_BASE_URL:https://api.moonshot.ai/v1}
         model: ${FALLBACK_PROVIDER_MODEL:kimi-k2-0711-preview}
         api-key: ${FALLBACK_PROVIDER_API_KEY:}
+  # Server-side code execution, for languages a browser cannot run. Off by default.
+  #
+  # Python runs in the candidate's own browser (Pyodide) and needs nothing here. Java
+  # cannot, so it needs a Piston instance — and there is no free hosted one: the public
+  # API went whitelist-only in February 2026 and answers 401.
+  #
+  # To turn Java on:  docker run -d -p 2000:2000 ghcr.io/engineer-man/piston
+  #                   CODE_RUNNER_ENABLED=true CODE_RUNNER_BASE_URL=http://localhost:2000/api/v2
+  #
+  # With a runner configured, the candidate's source and its input leave our servers when
+  # they press Run. Nothing else goes with it, and the room says so.
+  code-runner:
+    enabled: ${CODE_RUNNER_ENABLED:false}
+    base-url: ${CODE_RUNNER_BASE_URL:https://emkc.org/api/v2/piston}
+    run-timeout-millis: 5000
+    compile-timeout-millis: 10000
   # How many completed rounds a candidate gets before being asked to pay.
   #
   # Deliberately absent, which means unlimited. There is no paid tier to gate against

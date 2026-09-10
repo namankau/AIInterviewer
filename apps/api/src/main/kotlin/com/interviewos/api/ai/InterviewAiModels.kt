@@ -160,6 +160,56 @@ data class ComposedRound(
     val confidence: String,
 )
 
+/**
+ * The coding problem a DSA round is conducted around, composed once when the round starts.
+ *
+ * [starterPython] and [starterJava] are **complete runnable programs**, not fragments.
+ * They read one case from standard input in the shape [stdinFormat] describes and print
+ * only the answer, so a test case can be piped in verbatim and its output compared. That
+ * is what makes Run work without us writing a harness per problem — and it is also the
+ * part most likely to come back wrong, which is why the round degrades to an editor with
+ * no Run rather than failing when it does.
+ */
+data class ComposedProblem(
+    val title: String,
+    val topic: String,
+    val difficulty: String,
+    val statement: String,
+    val examples: List<ProblemExample>,
+    val constraints: List<String>,
+    val starterPython: String,
+    val starterJava: String,
+    val stdinFormat: String,
+    val testCases: List<ProblemTestCase>,
+)
+
+data class ProblemExample(
+    val input: String,
+    val output: String,
+    val explanation: String? = null,
+)
+
+data class ProblemTestCase(
+    val input: String,
+    val expected: String,
+)
+
+/**
+ * The case a system design round is conducted around.
+ *
+ * [constraints] are the three numbers that force the design's central tension, short
+ * enough to sit in a chip on screen. [deepDiveOptions] are for the interviewer and are
+ * never shown to the candidate — handing someone the deep dives in advance turns a round
+ * that tests scoping into a round that tests reading.
+ */
+data class ComposedCase(
+    val title: String,
+    val summary: String,
+    val constraints: List<String>,
+    val openingPrompt: String,
+    val deepDiveOptions: List<String>,
+)
+
 data class AskedQuestion(
     val text: String,
     /**

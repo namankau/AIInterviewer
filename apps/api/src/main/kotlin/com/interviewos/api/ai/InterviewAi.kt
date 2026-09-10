@@ -40,6 +40,22 @@ interface InterviewAi {
         language: String,
     ): AiResult<SpokenAudio>
 
+    /**
+     * The coding problem a DSA round runs on. Composed once, at the start, and then fixed
+     * — a candidate is not handed a different problem halfway through, and one
+     * regenerated on a page reload would be exactly that.
+     */
+    fun composeProblem(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): AiResult<ComposedProblem>
+
+    /** The case a system design round runs on. Composed once, like [composeProblem]. */
+    fun composeCase(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): AiResult<ComposedCase>
+
     fun composeOpeningQuestion(
         brief: InterviewBrief,
         round: RoundContext,

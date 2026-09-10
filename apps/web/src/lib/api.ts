@@ -1,5 +1,6 @@
 import type {
   ApiError,
+  CodeRunResult,
   EntitlementView,
   HintView,
   MeResponse,
@@ -9,6 +10,7 @@ import type {
   UpdateProfileRequest,
   ReadinessGroup,
   RoundDraft,
+  RunCodeRequest,
   SessionReport,
   SessionSummary,
   SessionView,
@@ -225,6 +227,27 @@ export function requestHint(
     "POST",
     accessToken,
   );
+}
+
+/**
+ * Stores what the candidate has on the board — the code they wrote, or the design they
+ * drew — so a reload does not lose it (PRD 06).
+ *
+ * Called repeatedly while they work, so it is deliberately quiet: a failed save is not
+ * worth interrupting somebody mid-thought over, and the next one will carry the same
+ * state anyway.
+ */
+export function saveBoard(accessToken: string, id: string, board: unknown): Promise<void> {
+  return apiSend<void>(`/api/v1/sessions/${id}/board`, "PUT", accessToken, board);
+}
+
+/** Runs the candidate's code for a round they own. Java only; Python runs in the browser. */
+export function runCode(
+  accessToken: string,
+  id: string,
+  request: RunCodeRequest,
+): Promise<CodeRunResult> {
+  return apiSend<CodeRunResult>(`/api/v1/sessions/${id}/run`, "POST", accessToken, request);
 }
 
 export function abandonSession(accessToken: string, id: string): Promise<void> {

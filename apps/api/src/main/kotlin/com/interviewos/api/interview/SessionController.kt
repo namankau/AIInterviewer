@@ -11,12 +11,14 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
+import tools.jackson.databind.JsonNode
 import java.util.UUID
 
 /**
@@ -147,6 +149,35 @@ class SessionController(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
     ) = roundDeletion.delete(callerOf(jwt), id)
+
+    /**
+     * Runs the candidate's code against one input and hands back what it printed.
+     *
+     * Scoped to a session the caller owns, because that is what makes it theirs to run —
+     * without it this is an open code-execution endpoint on the public internet.
+     *
+     * Never fails the request when the runner does. A busy or absent runner comes back as
+     * a result saying so, and the round carries on out loud, which is what the candidate
+     * is assessed on anyway.
+     */
+    @PostMapping("/sessions/{id}/run")
+    fun runCode(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: RunCodeRequest,
+    ): CodeRunResult = interviewService.runCode(callerOf(jwt), id, request)
+
+    /**
+     * Stores what the candidate has on the board — the design they drew, or the code they
+     * wrote — so a reload does not lose it (PRD 06).
+     */
+    @PutMapping("/sessions/{id}/board")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun saveBoard(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable id: UUID,
+        @RequestBody board: JsonNode,
+    ) = interviewService.saveBoard(callerOf(jwt), id, board)
 
     @GetMapping("/sessions/{id}/report")
     fun report(

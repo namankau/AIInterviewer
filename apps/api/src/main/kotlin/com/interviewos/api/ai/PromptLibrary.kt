@@ -22,6 +22,16 @@ class PromptLibrary(
 ) {
     fun composeRound(query: String): String = loadPrompt("compose-round").replace("{{query}}", query)
 
+    fun composeProblem(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): String = fillBrief(loadPrompt("compose-problem"), brief).replace("{{durationMinutes}}", durationMinutes.toString())
+
+    fun composeCase(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): String = fillBrief(loadPrompt("compose-case"), brief).replace("{{durationMinutes}}", durationMinutes.toString())
+
     fun openingQuestion(
         brief: InterviewBrief,
         round: RoundContext,

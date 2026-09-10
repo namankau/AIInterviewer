@@ -128,7 +128,8 @@ class SessionRepository(
                        round_type::text as round_type, language::text as language,
                        status::text as status, started_at, ended_at, report_expired_at,
                        (consent_video_at is not null) as consent_video, duration_minutes,
-                       coalesce(archetype_confidence, 'inferred') as archetype_confidence
+                       coalesce(archetype_confidence, 'inferred') as archetype_confidence,
+                       workspace::text as workspace, board::text as board
                   from public.sessions
                  where id = :id and user_id = :u
                 """.trimIndent(),
@@ -189,6 +190,47 @@ class SessionRepository(
                  where id = :id and user_id = :u
                 """.trimIndent(),
             ).param("status", status)
+            .param("id", sessionId)
+            .param("u", userId)
+            .update()
+    }
+
+    /**
+     * Stores the material this round is conducted around, composed once at the start.
+     *
+     * Separate from `insertSession` because composing it needs the session to exist: the
+     * model call is attributed to the session in the spend ledger, and a call made before
+     * the row existed would be a call nobody can account for.
+     */
+    fun setWorkspace(
+        sessionId: UUID,
+        userId: UUID,
+        workspaceJson: String,
+    ) {
+        jdbcClient
+            .sql("update public.sessions set workspace = cast(:w as jsonb) where id = :id and user_id = :u")
+            .param("w", workspaceJson)
+            .param("id", sessionId)
+            .param("u", userId)
+            .update()
+    }
+
+    /**
+     * Stores what the candidate produced on the board — the design they drew, or the code
+     * they wrote.
+     *
+     * Written repeatedly as they work, so it survives a reload. PRD 06 is explicit that
+     * nothing about a session may be lost to a refresh, and a design somebody spent
+     * twenty minutes drawing is the most expensive thing in the room to lose.
+     */
+    fun setBoard(
+        sessionId: UUID,
+        userId: UUID,
+        boardJson: String,
+    ) {
+        jdbcClient
+            .sql("update public.sessions set board = cast(:b as jsonb) where id = :id and user_id = :u")
+            .param("b", boardJson)
             .param("id", sessionId)
             .param("u", userId)
             .update()
@@ -587,6 +629,8 @@ class SessionRepository(
             consentVideo = rs.getBoolean("consent_video"),
             durationMinutes = rs.getInt("duration_minutes"),
             reportExpiredAt = rs.getTimestamp("report_expired_at")?.toInstant(),
+            workspace = rs.getString("workspace"),
+            board = rs.getString("board"),
         )
 
     private fun mapTurn(rs: ResultSet) =
@@ -628,6 +672,10 @@ data class SessionRow(
      * nothing has been cleared — which is different from there being no report yet.
      */
     val reportExpiredAt: Instant? = null,
+    /** The problem or case this round runs on, as raw JSON. Null for a plain conversation. */
+    val workspace: String? = null,
+    /** What the candidate drew or wrote, as raw JSON. Null until they touch the board. */
+    val board: String? = null,
 )
 
 /**

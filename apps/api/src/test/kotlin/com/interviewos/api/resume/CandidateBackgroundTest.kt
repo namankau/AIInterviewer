@@ -52,7 +52,7 @@ class CandidateBackgroundTest {
                             domain = "payments",
                         ),
                     ),
-            ).asPrompt()
+            ).asPrompt(ResumeUse.SYLLABUS)
 
         assertTrue(prompt.contains("Append-only settlement ledger"))
         assertTrue(prompt.contains("Kotlin"))
@@ -74,7 +74,7 @@ class CandidateBackgroundTest {
                             false,
                         ),
                     ),
-            ).asPrompt()
+            ).asPrompt(ResumeUse.SYLLABUS)
 
         assertTrue(prompt.contains("computed by us, not claimed by the resume"))
         assertTrue(prompt.contains("7 years"), "2019-07 to 2026-09 is about seven years")
@@ -88,7 +88,7 @@ class CandidateBackgroundTest {
      */
     @Test
     fun `tells the interviewer to ask rather than assert`() {
-        val prompt = background().asPrompt()
+        val prompt = background().asPrompt(ResumeUse.SYLLABUS)
 
         assertTrue(prompt.contains("Ask them to tell you about it rather than asserting it back"))
         assertTrue(prompt.contains("may be wrong"))
@@ -96,7 +96,7 @@ class CandidateBackgroundTest {
 
     @Test
     fun `passes on what the parser was unsure of, and says not to state it as fact`() {
-        val prompt = background(lowConfidence = listOf("employments[1].title")).asPrompt()
+        val prompt = background(lowConfidence = listOf("employments[1].title")).asPrompt(ResumeUse.SYLLABUS)
 
         assertTrue(prompt.contains("employments[1].title"))
         assertTrue(prompt.contains("Do not state them back as fact"))
@@ -104,7 +104,7 @@ class CandidateBackgroundTest {
 
     @Test
     fun `says nothing about uncertainty when the parse was clean`() {
-        assertFalse(background().asPrompt().contains("We were unsure"))
+        assertFalse(background().asPrompt(ResumeUse.SYLLABUS).contains("We were unsure"))
     }
 
     /**
@@ -120,7 +120,7 @@ class CandidateBackgroundTest {
                         ParsedEmployment("Acme", "Engineer", null, LocalDate.parse("2020-01-01"), LocalDate.parse("2021-01-01"), false),
                         ParsedEmployment("Globex", "Engineer", null, LocalDate.parse("2021-10-01"), LocalDate.parse("2023-01-01"), false),
                     ),
-            ).asPrompt()
+            ).asPrompt(ResumeUse.SYLLABUS)
 
         assertTrue(prompt.contains("gap(s) between roles"))
         assertTrue(prompt.contains("Do not raise gaps or short stints unless the round type makes that appropriate"))
@@ -147,16 +147,51 @@ class CandidateBackgroundTest {
                         ),
                         ParsedEmployment("Razorpay", "Senior Engineer", null, LocalDate.parse("2022-03-01"), null, true),
                     ),
-            ).asPrompt()
+            ).asPrompt(ResumeUse.SYLLABUS)
 
         val razorpay = prompt.indexOf("Razorpay")
         val infosys = prompt.indexOf("Infosys")
         assertTrue(razorpay in 0..<infosys, "the current role has to come first, was Infosys then Razorpay")
         assertTrue(
-            prompt.lineSequence().first { it.contains("Razorpay") }.contains("CURRENT ROLE"),
+            prompt.lineSequence().first { it.contains("Razorpay") }.contains("most recent"),
             "sorting alone is not enough — a bare list gives the model no reason to think the order means anything",
         )
-        assertTrue(prompt.contains("anchor on the role at the top of that list"))
+        assertTrue(prompt.contains("Anchor on the role at the top of the list"))
+    }
+
+    /**
+     * The complaint this whole distinction exists for.
+     *
+     * The guidance above — dig into their projects, anchor on the current role — was
+     * written to fix a real bug and was then applied to every round alike. The result was
+     * that a system design round spent itself touring the candidate's last project
+     * instead of the case on their screen. What the CV is *for* now depends on the round.
+     */
+    @Test
+    fun `a round whose subject is not the CV is told so`() {
+        val employments =
+            listOf(ParsedEmployment("Razorpay", "Senior Engineer", null, LocalDate.parse("2022-03-01"), null, true))
+
+        val deepDive = background(employments = employments).asPrompt(ResumeUse.SYLLABUS)
+        val design = background(employments = employments).asPrompt(ResumeUse.CONTEXT)
+
+        assertTrue(deepDive.contains("This round is about this work"))
+        assertTrue(design.contains("This round is not about their CV"))
+        assertFalse(
+            design.contains("Anchor on the role at the top of the list"),
+            "anchoring on the current role is right for a deep-dive and wrong for a design round",
+        )
+    }
+
+    /** Whatever the round, the CV is still described as parsed and possibly wrong. */
+    @Test
+    fun `every round is warned the parse may be wrong`() {
+        for (use in ResumeUse.entries) {
+            val prompt = background().asPrompt(use)
+
+            assertTrue(prompt.contains("may be wrong"), "$use must not assert a parsed CV as fact")
+            assertTrue(prompt.contains("Ask them to tell you about it rather than asserting it back"))
+        }
     }
 
     /** Two finished roles and no current one: the one that ended last is still the recent one. */
@@ -169,7 +204,7 @@ class CandidateBackgroundTest {
                         ParsedEmployment("Acme", "Engineer", null, LocalDate.parse("2018-01-01"), LocalDate.parse("2020-01-01"), false),
                         ParsedEmployment("Globex", "Engineer", null, LocalDate.parse("2020-02-01"), LocalDate.parse("2024-06-01"), false),
                     ),
-            ).asPrompt()
+            ).asPrompt(ResumeUse.SYLLABUS)
 
         assertTrue(prompt.indexOf("Globex") < prompt.indexOf("Acme"))
     }
@@ -187,14 +222,14 @@ class CandidateBackgroundTest {
                         ParsedEmployment("Mystery Corp", "Consultant", null, null, null, false),
                         ParsedEmployment("Razorpay", "Senior Engineer", null, LocalDate.parse("2022-03-01"), null, true),
                     ),
-            ).asPrompt()
+            ).asPrompt(ResumeUse.SYLLABUS)
 
         assertTrue(prompt.indexOf("Razorpay") < prompt.indexOf("Mystery Corp"))
     }
 
     @Test
     fun `an empty resume still produces something usable rather than failing`() {
-        val prompt = background(headline = null).asPrompt()
+        val prompt = background(headline = null).asPrompt(ResumeUse.SYLLABUS)
 
         assertTrue(prompt.isNotBlank())
         assertFalse(prompt.contains("Projects they list"))

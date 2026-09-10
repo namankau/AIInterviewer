@@ -125,6 +125,14 @@ data class InterviewBrief(
     val archetype: String,
     val role: String,
     val roundType: String,
+    /**
+     * The ground this round has to get across, one per line.
+     *
+     * Here so the interviewer always has somewhere to go next that is not deeper into the
+     * last answer. Without it a round narrows to whatever the candidate first mentioned
+     * and stays there.
+     */
+    val roundCovers: String,
     val language: String,
     val candidateFunction: String?,
     val candidateLevel: String?,

@@ -1,6 +1,7 @@
 package com.interviewos.api.ai
 
 import com.interviewos.api.common.ContentTypes
+import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
@@ -36,6 +37,7 @@ class GeminiInterviewAi(
      */
     private val reasoningModel: String,
 ) : InterviewAi {
+    private val log = LoggerFactory.getLogger(javaClass)
     private val restClient = restClientBuilder.build()
 
     override val providerName: String = "gemini ($reasoningModel)"
@@ -276,6 +278,19 @@ class GeminiInterviewAi(
                 },
                 ex,
             )
+        } catch (ex: HttpClientErrorException.NotFound) {
+            // A retired model, almost always. It is worth shouting about because it does
+            // not look like a fault: the chain simply serves every call from whatever sits
+            // behind it, which is the expensive model, and the product carries on working
+            // while the bill quietly multiplies. That happened — `gemini-2.5-flash-lite`
+            // was retired overnight and nothing surfaced until somebody read the ledger.
+            log.error(
+                "Model {} does not exist. If it was retired, every call is now being served by the " +
+                    "next provider in the chain at its price — change interviewos.ai.providers.",
+                model,
+                ex,
+            )
+            throw AiUnavailableException("Gemini model $model is not available.", ex)
         } catch (ex: RestClientException) {
             throw AiUnavailableException("Gemini request to $model failed.", ex)
         }
@@ -340,10 +355,28 @@ class GeminiInterviewAi(
      * The report is left unbounded deliberately: nobody is waiting on it in real time,
      * it reasons over a whole transcript rather than one answer, and it is the thing
      * they came for.
+     *
+     * **It is 128 rather than 0, and that is not a preference.** `gemini-3.5-flash-lite`
+     * rejects a budget of zero outright — HTTP 400, `INVALID_ARGUMENT` — so the setting
+     * that made the old model fast would have made the new one fail on every turn of every
+     * round. And a 400 is indistinguishable from an outage to the fallback chain, so each
+     * of those failures would have been quietly re-served by `gemini-3.5-flash` at five
+     * times the price. Re-measured on the live API when the model changed:
+     *
+     * | model                 | budget | result                    |
+     * |-----------------------|--------|---------------------------|
+     * | gemini-3.5-flash-lite | 0      | **400, every time**       |
+     * | gemini-3.5-flash-lite | 128    | 1.5s, ~230 thought tokens |
+     * | gemini-3.5-flash      | 0      | 1.0s                      |
+     * | gemini-3.5-flash      | 128    | 2.7s                      |
+     *
+     * 128 is the value that works on every model in the chain, and at 1.5s it is quicker
+     * than the 1.8s the zero budget bought on the model this replaced. The floor is the
+     * model's, not ours: it spends about 230 tokens whatever the number says.
      */
     private object Thinking {
         /** Anything the candidate waits on mid-round: the question, the follow-up, a hint. */
-        const val IN_THE_ROOM = 0
+        const val IN_THE_ROOM = 128
     }
 
     private fun requireConfigured() {

@@ -186,6 +186,13 @@ data class SubmitAnswerResponse(
     val sessionComplete: Boolean,
     val turnsCompleted: Int,
     val nextTurn: TurnView?,
+    /**
+     * The last thing the interviewer says, when this answer ended the round.
+     *
+     * Null on every other turn. The room speaks it before it shows the completion screen,
+     * so a round ends with somebody saying it has rather than with the page changing.
+     */
+    val closingRemark: String? = null,
 )
 
 /** Whether the candidate may start another interview, and why not if not. */

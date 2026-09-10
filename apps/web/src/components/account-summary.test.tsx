@@ -1,4 +1,4 @@
-import type { MeResponse } from "@interviewos/shared";
+import type { MeResponse } from "@acemyinterview/shared";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -6,6 +6,7 @@ import { AccountSummary } from "./account-summary";
 
 const fetchMe = vi.hoisted(() => vi.fn());
 const getSession = vi.hoisted(() => vi.fn());
+const signOut = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api", () => ({
   fetchMe,
@@ -13,8 +14,12 @@ vi.mock("@/lib/api", () => ({
 }));
 
 vi.mock("@/lib/supabase/client", () => ({
-  createSupabaseBrowserClient: () => ({ auth: { getSession } }),
+  createSupabaseBrowserClient: () => ({ auth: { getSession, signOut } }),
 }));
+
+// The way out now lives inside this block rather than floating at the foot of an empty
+// rail, so this component has a router dependency it did not have before.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
 
 const me: MeResponse = {
   id: "6f1b7f4c-2b2a-4c3e-9a51-0a5f4f2f2a11",
@@ -40,6 +45,24 @@ describe("AccountSummary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getSession.mockResolvedValue({ data: { session: { access_token: "token-abc" } } });
+  });
+
+  /**
+   * This assertion was the other way round one commit ago, and the reversal is deliberate.
+   * Sign out was moved onto the profile page: it is rare, it cannot be undone without a
+   * password, and a control like that living permanently in the navigation is both clutter
+   * and something to catch by accident. What is left here is the way *in* to the account.
+   */
+  it("is a way in to the profile, and does not carry the way out", async () => {
+    fetchMe.mockResolvedValue(me);
+
+    render(<AccountSummary />);
+
+    expect(await screen.findByRole("link", { name: /test candidate/i })).toHaveAttribute(
+      "href",
+      "/profile",
+    );
+    expect(screen.queryByRole("button", { name: /sign out/i })).not.toBeInTheDocument();
   });
 
   it("announces that it is loading before the profile arrives", () => {

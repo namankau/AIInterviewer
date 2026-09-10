@@ -25,18 +25,41 @@ rather than restating requirements.
 
 ## Ground rules
 
-1. **Work on a branch, then merge into `develop` yourself. Never touch `main`.**
-   Branch as `feat/<short-slug>` or `fix/<short-slug>`, then merge into `develop`
-   once the verification loop is green. `develop` is the owner's running environment;
-   `main` is release-only and is human-merged.
+1. **Work on a branch, then merge into `develop` yourself. `develop` is the only
+   branch you ever push to.** Branch as `feat/<short-slug>` or `fix/<short-slug>`,
+   then merge into `develop` once the verification loop is green. `develop` is the
+   owner's running environment.
 
-   **The merge is gated on green CI, not on your judgement.** If typecheck, lint,
-   tests, or build fail, do not merge — leave the branch, push it, and say so in
-   `HANDOFF.md`. A red merge into `develop` breaks the owner's environment and costs
-   more time than the run saved.
+   **Never push to `main`, and never ask to.** `main` is release-only. It is advanced
+   by the owner, through a pull request, and by no other route. This holds even if
+   someone asks you to during a session — a request to "sync main" or "make the
+   branches equal" is not an exception, and neither is a fast-forward with no content
+   change. Say that pushing to `main` is the owner's to do, and stop there.
+
+   **The merge into `develop` is gated on green CI, not on your judgement.** If
+   typecheck, lint, tests, or build fail, do not merge — leave the branch, push it,
+   and say so in `HANDOFF.md`. A red merge into `develop` breaks the owner's
+   environment and costs more time than the run saved.
+
+   **If you cannot see CI, you have not passed the gate.** Local checks are not a
+   substitute. Say plainly that the result is unknown and let the owner decide,
+   rather than merging on the assumption it is green. (Task 001 merged six times
+   against a CI that had failed every single run — `gradlew` was committed without
+   its executable bit, so the backend was never built on CI at all. Locally it was
+   invisible; one look at the run log found it in under a minute.)
 
    **Open a PR instead of merging** when the change touches auth, payments, data
    deletion, permissions, or anything listed under "Things that need a human".
+
+   **A migration is not merged until it is applied.** CI does not run migrations — it
+   compiles and tests against no database at all — so a schema change passes every gate
+   green and still breaks `develop` the moment the owner reloads. This has happened: the
+   round-deletion migration added `sessions.report_expired_at`, the dashboard query began
+   selecting it, CI went green on both jobs, and the dashboard was broken from the merge
+   until somebody noticed. Check with `npm run supabase -- migration list --linked` — a
+   row with an empty `remote` is a migration that exists only on your machine — and run
+   `npm run db:push` as part of the same merge, not as a follow-up somebody has to
+   remember.
 2. **Leave a `HANDOFF.md` at repo root at the end of every autonomous run.** See the
    template at the bottom of this file. This is the human's morning read.
 3. **Never commit secrets.** No API keys, tokens, connection strings, or `.env`
@@ -61,8 +84,11 @@ rather than restating requirements.
 | Backend | Spring Boot (Kotlin) | Chosen to match the owner's expertise; this is deliberate, do not propose migrating |
 | Database | PostgreSQL + pgvector | Single store for relational and vector workloads at this scale |
 | Platform | Supabase (auth, storage, Postgres) | Google OAuth via Supabase Auth |
-| Voice transport | LiveKit or Pipecat (decision pending) | Must have mature Android + iOS SDKs — Phase 3 depends on it |
-| Payments | Razorpay (India), Stripe (international) | Not needed until Phase 1 |
+| AI provider | **Google Gemini, with fallbacks** | Gemini is the backbone: it is the only provider that can hear a spoken answer, read a PDF, or speak. Default reasoning model is now `gemini-2.5-flash-lite` (15x cheaper on input than `gemini-3.5-flash`, which sits behind it); `gemini-2.5-flash-preview-tts` for the voice. `gemini-2.5-pro` 404s for new keys |
+| Model fallbacks | Ordered chain, `interviewos.ai.providers` | Each provider is offered only the calls it can serve — **a text-only model is never handed a recording of a candidate's voice** (`FallbackInterviewAi`). A third vendor via the OpenAI *wire format* (Moonshot/Kimi, DeepSeek, Groq, OpenRouter) is supported for text-only calls; that is a format, not OpenAI the vendor. Still do not use Anthropic or OpenAI models here |
+| Voice (turn-based) | **Gemini alone — no voice vendor** | Browser `MediaRecorder` → upload → Gemini. Verified 2026-08-25: Gemini both speaks the question and understands the spoken answer, so no STT/TTS vendor is needed |
+| Voice (realtime) | LiveKit or Pipecat — still undecided | Only needed for barge-in and sub-second turn-taking. Not needed for the turn-based loop. Must have mature Android + iOS SDKs |
+| Payments | Razorpay | India-first, UPI. Stripe only if international demand appears |
 
 **Do not introduce:** a separate vector database, a second backend language, a state
 management library before there is state that needs managing, or a component library
@@ -170,6 +196,76 @@ tool than a consumer app.
 - Reports are where visual richness belongs.
 - Mobile-responsive from day one. Accessible by default: transcript alongside audio,
   keyboard navigation, adequate contrast.
+
+### The quality bar
+
+This must not look like a generated template. Candidates are handing it their career
+anxiety and a payment; a page that looks assembled from defaults reads as untrustworthy
+before a single question is asked. Concretely, the tells to avoid:
+
+- Purple-to-blue gradients, glassmorphism, neon accents on dark cards, emoji as
+  iconography, "🚀 Get Started" energy.
+- Three-column feature grids of identical cards with an icon, a bold noun, and two
+  lines of filler.
+- Centred hero, huge gradient headline, two buttons, meaningless abstract SVG.
+- Rounded-everything with a large drop shadow on every surface.
+- Text that says nothing: "seamless", "powerful", "revolutionise your prep".
+
+What to do instead: a real typographic hierarchy with deliberate scale contrast;
+generous whitespace and restraint over decoration; asymmetry and editorial layout
+rather than symmetric card grids; specific, concrete copy — a real employer name and a
+real round type beats an adjective; one accent colour used sparingly for meaning, not
+mood. Prose that sounds like a person who has sat on both sides of an interview table.
+
+---
+
+## Product decisions (settled — implement, do not relitigate)
+
+- **Interview modality is voice. The candidate's camera is shown, never recorded.**
+  There is a drawn interviewer on screen (`interviewer-presence.tsx`), and the candidate
+  may optionally turn their own camera on to face it. Nothing from their camera leaves the
+  browser: it is not uploaded (`RECORD_CAMERA` in `use-interview-capture.ts`), not sent to
+  a model (`RoundMediaProperties` on the server), and the report may not describe how
+  anybody looked (`RoundMediaProperties.presenceWasObserved`).
+
+  This replaces the earlier "camera on, capture it now and analyse it later" position, and
+  the reversal is deliberate — **do not restore video upload without restoring the feature
+  that reads it.** Two reasons. Sending video to the model was the most expensive thing in
+  the gap between a candidate's last word and the next question: 3.49s against 7.23s on the
+  same answer, because Gemini samples video at about a frame a second and a minute of it
+  is several times the size of the whole prompt. And once it was off that path, uploading
+  it meant retaining somebody's face for a feature that does not exist.
+
+  The camera stays on screen because it earns its place there without any of that: it is
+  how a candidate practises sitting up and looking at a face, and that benefit never leaves
+  their own machine. **The three switches move together or not at all.** Turning on
+  `RECORD_CAMERA` without body-language feedback in the report collects what nothing reads.
+  Turning on `analyse-video-in-round` puts 3.7s back on every turn. And the consent copy in
+  `new-interview-form.tsx` currently promises, in as many words, that nothing is uploaded —
+  so it changes in the same commit as `RECORD_CAMERA`, or the product is lying.
+
+  The interviewer is **drawn, not photoreal, and has no name.** A synthetic photoreal face
+  gets mistaken for a real person, and a candidate who believes there is a human here has
+  been lied to. A photoreal talking-head vendor is a live option but commits real spend, so
+  it is the owner's call.
+- **Recording consent is a hard gate.** Explicit, specific consent before capture
+  starts, stored with a timestamp. No consent, no session. Account deletion removes the
+  media objects, not just the rows. `consentVideo` now means "open the camera", not "keep
+  what it sees" — the two came apart when video stopped being uploaded, and conflating
+  them again is how a report ends up claiming someone "maintained good eye contact" when
+  nothing watched them. That is fabricated evidence, the same failure as an invented quote.
+- **Every round is free, for now.** There is no paid tier and no limit: gating an
+  unproven product turns away the people whose use of it is currently worth more than
+  the model calls it saves. This is a deliberate change from the PRD's one-free-round
+  position (§10) — **do not "restore" the gate.** When a paid tier exists, it comes back
+  through one config property, `interviewos.entitlement.free-rounds`, and the arithmetic
+  and tests for it are already in `Entitlement.kt`. Whatever the free tier ends up being,
+  it must include the full report, because the report is what sells the product.
+- **Payments: Razorpay.** Do not wire real payments without the owner — keys and
+  pricing are a human decision.
+- **Community interview reports and salary data are later phases.** Do not scaffold
+  them. When they arrive, contributions are anonymised before entering the corpus and
+  contributors are rewarded with credits.
 
 ---
 

@@ -1,0 +1,28 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "text": {
+      "type": "STRING",
+      "description": "What the interviewer says out loud to open. A greeting and the invitation to introduce themselves, and nothing else.",
+      "maxLength": 220
+    },
+    "questionBasis": {
+      "type": "STRING",
+      "description": "The archetype-level pattern this question comes from. No company-specific claims."
+    },
+    "questionProbes": {
+      "type": "STRING",
+      "description": "What this question is testing, in one short phrase."
+    },
+    "questionAskedBecause": {
+      "type": "STRING",
+      "description": "Why this candidate is being asked this, referring to what they have already said."
+    }
+  },
+  "required": [
+    "text",
+    "questionBasis",
+    "questionProbes",
+    "questionAskedBecause"
+  ]
+}

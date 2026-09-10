@@ -1,6 +1,6 @@
 spring:
   application:
-    name: interviewos-api
+    name: acemyinterview-api
   datasource:
     # The schema is owned by the Supabase CLI (supabase/migrations), not by this app.
     # The API reads and writes rows; it never runs DDL.
@@ -37,3 +37,117 @@ interviewos:
     # Browser origins allowed to call the versioned public API. Mobile clients are
     # not browsers and are unaffected by CORS.
     allowed-origins: ${WEB_ALLOWED_ORIGINS:http://localhost:3000}
+  gemini:
+    # Gemini is the only provider that can hear a spoken answer or read a PDF, so it
+    # remains the backbone. What changed is that it is no longer the only thing tried.
+    api-key: ${GEMINI_API_KEY:}
+
+  ai:
+    # The models to try, in order. Each is offered only the calls it can actually serve
+    # (see FallbackInterviewAi) -- a text-only model is never handed a recording of
+    # somebody's voice.
+    #
+    # Measured pricing per million tokens, September 2026:
+    #   gemini-2.5-flash-lite   $0.10 in / $0.40 out   multimodal
+    #   gemini-3.5-flash        $1.50 in / $9.00 out   multimodal
+    #   kimi-k2                 $0.55 in / $2.20 out   text only
+    #   deepseek-v4-flash       $0.14 in / $0.28 out   text only
+    #
+    # Flash-lite leads because it is 5x cheaper on input and 3.6x on output than the
+    # 3.5-flash behind it, and it can still hear an answer. 3.5-flash sits behind it for
+    # when the cheap model is not good enough or is down.
+    #
+    # **Check this model still exists before assuming the chain is cheap.** It led with
+    # `gemini-2.5-flash-lite` until Google retired that model — and `gemini-2.5-flash`
+    # with it — some time on 2026-09-10. Nothing broke loudly: every call 404'd on the
+    # primary and was quietly served by the model behind it at five times the price. The
+    # ledger is what makes that visible now; `fell_back_from` on every row means the model
+    # named here is gone.
+    #
+    # ORDER MATTERS AND IS RELIED ON: cheapest first, strongest last. Resume parsing
+    # inverts it deliberately (FallbackInterviewAi.TRY_STRONGEST_FIRST) because it runs
+    # once per candidate, nobody is waiting on it, and a misread employer degrades every
+    # round they ever sit.
+    providers:
+      - name: gemini-lite
+        kind: gemini
+        model: ${GEMINI_PRIMARY_MODEL:gemini-3.5-flash-lite}
+      - name: gemini-flash
+        kind: gemini
+        model: ${GEMINI_FALLBACK_MODEL:gemini-3.5-flash}
+      # A third vendor, so a Google outage does not stop reports and hints as well as
+      # interviews. Text only: it can never take an answer assessment. Unset, it is
+      # skipped with a line in the log.
+      - name: ${FALLBACK_PROVIDER_NAME:kimi}
+        kind: openai
+        base-url: ${FALLBACK_PROVIDER_BASE_URL:https://api.moonshot.ai/v1}
+        model: ${FALLBACK_PROVIDER_MODEL:kimi-k2-0711-preview}
+        api-key: ${FALLBACK_PROVIDER_API_KEY:}
+  # Server-side code execution, for languages a browser cannot run. Off by default.
+  #
+  # Python runs in the candidate's own browser (Pyodide) and needs nothing here. Java
+  # cannot, so it needs a Piston instance — and there is no free hosted one: the public
+  # API went whitelist-only in February 2026 and answers 401.
+  #
+  # To turn Java on:  docker run -d -p 2000:2000 ghcr.io/engineer-man/piston
+  #                   CODE_RUNNER_ENABLED=true CODE_RUNNER_BASE_URL=http://localhost:2000/api/v2
+  #
+  # With a runner configured, the candidate's source and its input leave our servers when
+  # they press Run. Nothing else goes with it, and the room says so.
+  code-runner:
+    enabled: ${CODE_RUNNER_ENABLED:false}
+    base-url: ${CODE_RUNNER_BASE_URL:https://emkc.org/api/v2/piston}
+    run-timeout-millis: 5000
+    compile-timeout-millis: 10000
+  # How many completed rounds a candidate gets before being asked to pay.
+  #
+  # Deliberately absent, which means unlimited. There is no paid tier to gate against
+  # yet, and a limit on an unproven product turns away the people whose use of it is
+  # currently worth more than the model calls it saves.
+  #
+  # To bring the gate back, uncomment both lines. Nothing else changes -- the arithmetic
+  # in Entitlement and the tests over it already cover both sides.
+  #
+  # entitlement:
+  #   free-rounds: 1
+  retention:
+    # How long a round's report, transcript and recordings are kept before being cleared.
+    #
+    # Four weeks is the longest window over which the report is still doing its job: a
+    # candidate reads it, works on what it said, and sits another round, and an interview
+    # process itself runs its screen, loop and decision inside about a month. Past that it
+    # is a recording of a rehearsal for an interview that already happened.
+    #
+    # The session row survives the sweep; the evidence behind it does not. Progress in this
+    # product is derived from completed sessions, so deleting the row would tell a
+    # candidate four weeks later that they had never sat the round.
+    #
+    # This number is also the sentence the dashboard shows them -- it rides out on every
+    # SessionSummary rather than being written into the browser, so changing it here
+    # changes what they are told.
+    #
+    # Written out rather than read from an env placeholder: it is a product decision, not
+    # a per-deployment one, and it belongs where somebody reading the policy will find it.
+    # A deployment that does need to differ can still set
+    # INTERVIEWOS_RETENTION_REPORTSKEPTFOR, which outranks this file.
+    reports-kept-for: 28d
+
+  admin:
+    # Who may curate the source library. The library decides what the interviewer treats
+    # as fact about a named employer, so this is closer to write access to the product
+    # than to a user setting -- hence an explicit allow-list rather than a role column.
+    #
+    # An empty list denies everyone, which is the right default: a misconfigured
+    # deployment should lock the operator out, not let the internet in.
+    emails: ${ADMIN_EMAILS:}
+
+  storage:
+    # Service role bypasses RLS. Ownership is enforced by the API from the verified
+    # token subject and by keying every object under `{userId}/`.
+    supabase-url: ${SUPABASE_URL}
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+
+spring.servlet.multipart:
+  # Interview answers arrive as audio and video blobs; resumes as PDF or DOCX.
+  max-file-size: 40MB
+  max-request-size: 60MB

@@ -1,7 +1,9 @@
 "use client";
 
-import type { MeResponse } from "@interviewos/shared";
+import type { MeResponse } from "@acemyinterview/shared";
 import { useEffect, useState } from "react";
+
+import Link from "next/link";
 
 import { fetchMe } from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -18,7 +20,12 @@ const LANGUAGE_LABELS: Record<string, string> = {
 };
 
 /**
- * Reads the signed-in candidate from `GET /api/v1/me`.
+ * Who is signed in, at the foot of the rail, as the way in to their profile.
+ *
+ * Signing out is not here. It is a thing you do rarely and cannot undo without typing a
+ * password again, and a control like that sitting permanently in the furniture is both
+ * clutter and a hazard. It lives on the profile page, which is where the rest of "this is
+ * my account" already lives, and this block is the link to it.
  *
  * Deliberately a client-side call to the versioned public API rather than a
  * server-rendered database read: the mobile apps will make exactly this request, and
@@ -59,34 +66,44 @@ export function AccountSummary() {
     return () => controller.abort();
   }, []);
 
-  if (state.status === "loading") {
-    return (
-      <p role="status" className="text-caption text-ink-muted">
-        Loading your profile…
-      </p>
-    );
-  }
-
-  if (state.status === "error") {
-    return (
-      <p role="alert" className="text-caption text-danger">
-        {state.message}
-      </p>
-    );
-  }
-
-  const { me } = state;
-
   return (
-    <dl className="flex flex-col gap-4 sm:flex-row sm:gap-10">
-      <div>
-        <dt className="text-caption text-ink-subtle">Signed in as</dt>
-        <dd className="text-body text-ink">{me.displayName ?? me.email}</dd>
-      </div>
-      <div>
-        <dt className="text-caption text-ink-subtle">Interview language</dt>
-        <dd className="text-body text-ink">{LANGUAGE_LABELS[me.preferredLanguage] ?? me.preferredLanguage}</dd>
-      </div>
-    </dl>
+    <div className="border-t border-line pt-4">
+      {state.status === "loading" ? (
+        <p role="status" className="text-caption text-ink-subtle">
+          Loading your profile…
+        </p>
+      ) : state.status === "error" ? (
+        <p role="alert" className="text-caption text-danger">
+          {state.message}
+        </p>
+      ) : (
+        <Link
+          href="/profile"
+          className="-mx-2 flex items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-raised"
+        >
+          <span
+            aria-hidden
+            className="grid size-8 shrink-0 place-items-center rounded-full bg-accent-wash font-mono text-micro text-accent"
+          >
+            {initialsOf(state.me.displayName ?? state.me.email)}
+          </span>
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-caption text-ink">
+              {state.me.displayName ?? state.me.email}
+            </span>
+            <span className="truncate text-micro text-ink-subtle">
+              {LANGUAGE_LABELS[state.me.preferredLanguage] ?? state.me.preferredLanguage}
+            </span>
+          </span>
+        </Link>
+      )}
+    </div>
   );
+}
+
+/** Two letters, so the rail has a fixed anchor point whatever the name's length. */
+function initialsOf(name: string): string {
+  const parts = name.split(/[\s@._-]+/).filter(Boolean);
+  const letters = parts.length > 1 ? `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}` : (parts[0]?.slice(0, 2) ?? "");
+  return letters.toUpperCase();
 }

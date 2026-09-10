@@ -1,0 +1,132 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "fullName": {
+      "type": "STRING",
+      "nullable": true
+    },
+    "headline": {
+      "type": "STRING",
+      "nullable": true
+    },
+    "linkedinUrl": {
+      "type": "STRING",
+      "description": "The candidate's LinkedIn profile URL exactly as printed on the resume, or null if there is none.",
+      "nullable": true
+    },
+    "employments": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "employer": {
+            "type": "STRING"
+          },
+          "title": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "level": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "startDate": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "endDate": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "current": {
+            "type": "BOOLEAN"
+          }
+        },
+        "required": [
+          "employer",
+          "current"
+        ]
+      }
+    },
+    "projects": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "name": {
+            "type": "STRING"
+          },
+          "description": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "technologies": {
+            "type": "ARRAY",
+            "items": {
+              "type": "STRING"
+            }
+          },
+          "domain": {
+            "type": "STRING",
+            "nullable": true
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
+    },
+    "education": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "institution": {
+            "type": "STRING"
+          },
+          "qualification": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "field": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "endYear": {
+            "type": "INTEGER",
+            "nullable": true
+          }
+        },
+        "required": [
+          "institution"
+        ]
+      }
+    },
+    "certifications": {
+      "type": "ARRAY",
+      "items": {
+        "type": "STRING"
+      }
+    },
+    "detectedSkills": {
+      "type": "ARRAY",
+      "items": {
+        "type": "STRING"
+      }
+    },
+    "lowConfidenceFields": {
+      "type": "ARRAY",
+      "items": {
+        "type": "STRING"
+      }
+    }
+  },
+  "required": [
+    "employments",
+    "projects",
+    "education",
+    "certifications",
+    "detectedSkills",
+    "lowConfidenceFields"
+  ]
+}

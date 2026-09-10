@@ -3,39 +3,55 @@
 /*
  * Design tokens.
  *
- * The user is a nervous candidate preparing for something that affects their
- * livelihood, so this reads as a tool rather than a consumer app: one restrained
- * accent, generous spacing, and type doing most of the work. Reports are where
- * visual richness belongs — not here.
+ * The reference is a serious engineering tool — a terminal, a good CI dashboard, a
+ * well-set technical book — not a SaaS landing page. Ink on paper in light, a dark
+ * console in dark. One accent, used for meaning and never for mood.
+ *
+ * The user is a nervous candidate whose livelihood is on the line. Decoration reads as
+ * a company with nothing to show; restraint reads as one that does this for a living.
  */
 
 :root {
-  --surface: #fbfbf9;
+  /*
+   * Paper, not white. A page with a little warmth in it reads as something printed and
+   * considered; #ffffff reads as a default nobody chose. The ramp is four steps so a
+   * panel can sit on the page without a border and still be legible as a separate thing.
+   */
+  --surface: #fbf8f4;
   --surface-raised: #ffffff;
-  --surface-sunken: #f3f3ef;
-  --ink: #16181d;
-  --ink-muted: #5a6069;
-  --ink-subtle: #878d96;
-  --line: #e3e2dd;
-  --accent: #1f4b7a;
-  --accent-strong: #163a60;
+  --surface-sunken: #f2ede5;
+  --ink: #14151a;
+  --ink-muted: #56544f;
+  --ink-subtle: #8a877f;
+  /* Hairlines, not borders. A rule in a printed table is thinner than a card edge. */
+  --line: #14151a14;
+  --line-strong: #14151a2e;
+  --accent: #1c4f7c;
+  --accent-strong: #143a5c;
   --accent-contrast: #ffffff;
+  --accent-wash: #eef3f8;
   --danger: #9b2c2c;
+  --positive: #1f6b45;
+  --grid: rgba(18, 20, 26, 0.045);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface: #101215;
-    --surface-raised: #171a1f;
-    --surface-sunken: #0b0d10;
-    --ink: #eceded;
-    --ink-muted: #9ba1a9;
-    --ink-subtle: #6f757d;
-    --line: #262a31;
-    --accent: #7fa9d6;
-    --accent-strong: #9dc0e5;
-    --accent-contrast: #0f1216;
+    --surface: #0b0c10;
+    --surface-raised: #14161c;
+    --surface-sunken: #101218;
+    --ink: #edeae5;
+    --ink-muted: #9a978f;
+    --ink-subtle: #6a675f;
+    --line: #edeae514;
+    --line-strong: #edeae52e;
+    --accent: #6ea8dc;
+    --accent-strong: #92c0e8;
+    --accent-contrast: #0b0d11;
+    --accent-wash: #121b25;
     --danger: #e08585;
+    --positive: #6cc296;
+    --grid: rgba(232, 234, 237, 0.05);
   }
 }
 
@@ -47,28 +63,46 @@
   --color-ink-muted: var(--ink-muted);
   --color-ink-subtle: var(--ink-subtle);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-contrast: var(--accent-contrast);
+  --color-accent-wash: var(--accent-wash);
   --color-danger: var(--danger);
+  --color-positive: var(--positive);
 
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
+  --font-mono:
+    ui-monospace, "JetBrains Mono", "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
+  /*
+   * Headings are set in a serif against a sans interface. That single contrast is most
+   * of what separates an editorial page from a dashboard, and it costs nothing: these
+   * are faces every machine already has. A licensed display face would be better still,
+   * but choosing one is the owner's call, not an autonomous run's.
+   */
+  --font-display: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
 
-  /* A short scale. Anything not on it is a decision someone should have to justify. */
-  --text-display: 2.75rem;
-  --text-display--line-height: 1.1;
-  --text-display--letter-spacing: -0.02em;
-  --text-title: 1.75rem;
-  --text-title--line-height: 1.2;
+  /* A short scale. Anything off it should have to justify itself. */
+  --text-hero: clamp(2.5rem, 6vw, 4.25rem);
+  --text-hero--line-height: 1.02;
+  --text-hero--letter-spacing: -0.02em;
+  --text-display: clamp(2rem, 4vw, 2.9rem);
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: -0.015em;
+  --text-title: 1.7rem;
+  --text-title--line-height: 1.18;
   --text-title--letter-spacing: -0.01em;
-  --text-heading: 1.125rem;
+  --text-heading: 1.0625rem;
   --text-heading--line-height: 1.4;
+  --text-heading--letter-spacing: -0.005em;
   --text-body: 1rem;
   --text-body--line-height: 1.65;
   --text-caption: 0.8125rem;
   --text-caption--line-height: 1.5;
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.4;
+  --text-micro--letter-spacing: 0.08em;
 }
 
 @layer base {
@@ -81,11 +115,120 @@
     color: var(--ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
-  /* Visible keyboard focus everywhere, without also ringing on mouse clicks. */
+  /*
+   * The three display sizes are the serif. Applying it here rather than at every call
+   * site means a heading cannot accidentally be set in the interface face.
+   */
+  .text-hero,
+  .text-display,
+  .text-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+  }
+
+  /* Tabular figures everywhere numbers are compared down a column. */
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /*
+   * Engineering-drawing grid. Structural, not decorative — it sits behind content to
+   * give the page a measured feel, and is faint enough to read as paper texture.
+   */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: 72px 72px;
+  }
+
+  /* A hairline that reads as a rule in a printed table, not a card border. */
+  .rule {
+    border-color: var(--line);
+  }
+}
+
+/*
+ * The interviewer's portrait (`interviewer-presence.tsx`).
+ *
+ * Small movements only. A figure that gestures while somebody is trying to think is a
+ * distraction, and the session screen is deliberately near-empty; the job here is to make
+ * the chair opposite look occupied, not to perform.
+ */
+@keyframes presence-talk {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  25% {
+    transform: scaleY(2.4);
+  }
+  40% {
+    transform: scaleY(1.35);
+  }
+  60% {
+    transform: scaleY(3);
+  }
+  80% {
+    transform: scaleY(1.7);
+  }
+}
+
+/* Breathing. Barely visible, and its absence is what makes a still figure look dead. */
+@keyframes presence-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(0.7px);
+  }
+}
+
+/* Eyes off to the side, the way people look away while they work something out. */
+@keyframes presence-consider {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  30%,
+  70% {
+    transform: translateX(-2.5px);
+  }
+}
+
+.presence-figure {
+  animation: presence-breathe 5.5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.presence-speaking .presence-mouth {
+  animation: presence-talk 0.62s ease-in-out infinite;
+  transform-origin: 60px 66px;
+}
+
+.presence-thinking .presence-eyes {
+  animation: presence-consider 3.2s ease-in-out infinite;
+}
+
+/*
+ * Someone who has turned motion down has done so for a reason, and none of this carries
+ * information that the text beside it does not already carry.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .presence-figure,
+  .presence-speaking .presence-mouth,
+  .presence-thinking .presence-eyes {
+    animation: none;
   }
 }

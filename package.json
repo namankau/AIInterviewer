@@ -1,5 +1,5 @@
 {
-  "name": "interviewos",
+  "name": "acemyinterview",
   "version": "0.1.0",
   "private": true,
   "description": "Voice-first AI mock interview platform (see docs/InterviewOS_PRD_v1.1.pdf)",
@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "dev": "node --env-file=.env scripts/dev.mjs",
-    "dev:web": "npm run dev --workspace @interviewos/web",
+    "dev:web": "npm run dev --workspace @acemyinterview/web",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
@@ -29,6 +29,20 @@
     "node": ">=20.12"
   },
   "devDependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "supabase": "^2.115.0"
+  },
+  "//overrides": [
+    "One React, everywhere. Excalidraw depends on @radix-ui/* whose peer ranges still",
+    "stop at React 18, so npm installed a second React at the root to satisfy them —",
+    "and two copies of React in one tree break reconciliation. It surfaced as",
+    "'Objects are not valid as a React child' across seventeen unrelated tests, green",
+    "locally and red under `npm ci`, because only a clean install produces the broken",
+    "layout. Radix works with React 19; the peer range is stale, not a real bound."
+  ],
+  "overrides": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   }
 }

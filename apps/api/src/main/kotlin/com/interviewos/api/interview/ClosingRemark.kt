@@ -28,8 +28,19 @@ object ClosingRemark {
      *   deciding it was done. Worth distinguishing: a candidate cut off mid-thought knows
      *   they were, and pretending otherwise reads as not having noticed.
      */
-    fun forRound(ranOutOfTime: Boolean): String =
-        if (ranOutOfTime) {
+    fun forRound(
+        ranOutOfTime: Boolean,
+        /**
+         * The candidate pressed Submit. Said as an acknowledgement rather than as the
+         * interviewer's own decision — it was theirs, and a goodbye that pretends otherwise
+         * reads as the machine not having noticed what they just did.
+         */
+        endedByCandidate: Boolean = false,
+    ): String =
+        if (endedByCandidate) {
+            "Understood — we'll stop there. Thanks for talking it through with me — " +
+                "give me a moment and your feedback will be ready."
+        } else if (ranOutOfTime) {
             "That's us out of time, so I'll stop you there. Thanks for talking it through with me — " +
                 "give me a moment and your feedback will be ready."
         } else {

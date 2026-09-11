@@ -52,11 +52,11 @@ export function DsaWorkspace({
   const [pythonReady, setPythonReady] = useState<boolean | null>(null);
 
   // Ten megabytes of interpreter, fetched when the room opens rather than when Run is
-  // first pressed. The candidate should wait on their own code, not on a download.
+  // first pressed — and loaded inside a worker, so fetching it never freezes the room.
   useEffect(() => {
     let live = true;
-    void loadPython().then((python) => {
-      if (live) setPythonReady(python !== null);
+    void loadPython().then((ready) => {
+      if (live) setPythonReady(ready);
     });
     return () => {
       live = false;
@@ -99,7 +99,10 @@ export function DsaWorkspace({
         caseIndex: selectedCase,
         stdout: outcome.stdout,
         stderr: outcome.stderr,
-        passed: outcome.available && !outcome.stderr ? matchesExpected(outcome.stdout, testCase.expected) : null,
+        passed:
+          outcome.available && !outcome.timedOut && !outcome.stderr
+            ? matchesExpected(outcome.stdout, testCase.expected)
+            : null,
         message: outcome.message,
       });
     } finally {

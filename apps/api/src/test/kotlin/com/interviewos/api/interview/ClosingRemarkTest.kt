@@ -39,11 +39,29 @@ class ClosingRemarkTest {
     fun `passes no judgement on the round`() {
         val praise = listOf("great", "well done", "good job", "excellent", "impressive", "strong", "nailed")
 
-        for (ranOutOfTime in listOf(true, false)) {
-            val remark = ClosingRemark.forRound(ranOutOfTime).lowercase()
+        val remarks =
+            listOf(
+                ClosingRemark.forRound(ranOutOfTime = true),
+                ClosingRemark.forRound(ranOutOfTime = false),
+                ClosingRemark.forRound(ranOutOfTime = false, endedByCandidate = true),
+            )
+        for (remark in remarks.map { it.lowercase() }) {
             for (word in praise) {
                 assertTrue(!remark.contains(word), "the closing must not grade the round, but said '$word': $remark")
             }
         }
+    }
+
+    /**
+     * A candidate who pressed Submit ended the round themselves. The goodbye acknowledges
+     * that, rather than claiming the interviewer decided it was done or that time ran out.
+     */
+    @Test
+    fun `acknowledges a round the candidate chose to end`() {
+        val remark = ClosingRemark.forRound(ranOutOfTime = false, endedByCandidate = true)
+
+        assertTrue(remark.contains("stop there"), remark)
+        assertTrue(!remark.contains("out of time"), "they were not cut off: $remark")
+        assertTrue(!remark.contains("everything I wanted"), "it was their decision, not the interviewer's: $remark")
     }
 }

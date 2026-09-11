@@ -11,6 +11,7 @@ import {
   ApiRequestError,
   abandonSession,
   fetchSession,
+  finishSession,
   requestHint,
   saveBoard,
   submitAnswer,
@@ -218,7 +219,30 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     }
   }, [capture.stream, phase]);
 
-  const finishAnswer = useCallback(async () => {
+  /*
+   * The round has ended — by the clock, by the interviewer, or by the candidate pressing
+   * Submit. However it ended, it ends the same way: somebody says so, then the screen
+   * changes.
+   */
+  const closeRound = useCallback(
+    (closing: string | null) => {
+      capture.release();
+      if (closing) {
+        setClosingRemark(closing);
+        setPhase("closing");
+        if (speaksLocally) {
+          browserVoice.say(closing, () => setPhase("complete"));
+        } else {
+          window.setTimeout(() => setPhase("complete"), READING_TIME_MS * 2);
+        }
+        return;
+      }
+      setPhase("complete");
+    },
+    [browserVoice, capture, speaksLocally],
+  );
+
+  const finishAnswer = useCallback(async (endRound = false) => {
     if (!accessToken || !turn) return;
     const captured = await capture.stop();
     if (!captured) return;
@@ -234,9 +258,9 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         captured.audio,
         captured.video,
         speaksLocally,
+        endRound,
       );
       if (result.sessionComplete || !result.nextTurn) {
-        capture.release();
         /*
          * A round ends with somebody saying it has.
          *
@@ -248,17 +272,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
          * With no voice available the text still shows, and `onDone` fires from the
          * speech watchdog, so the screen is never held by a voice that is not coming.
          */
-        if (result.closingRemark) {
-          setClosingRemark(result.closingRemark);
-          setPhase("closing");
-          if (speaksLocally) {
-            browserVoice.say(result.closingRemark, () => setPhase("complete"));
-          } else {
-            window.setTimeout(() => setPhase("complete"), READING_TIME_MS * 2);
-          }
-          return;
-        }
-        setPhase("complete");
+        closeRound(result.closingRemark ?? null);
         return;
       }
       setHint(null);
@@ -273,7 +287,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         cause instanceof ApiRequestError ? cause.message : "That answer could not be submitted.",
       );
     }
-  }, [accessToken, browserVoice, capture, liveTranscript, sessionId, speaksLocally, turn]);
+  }, [accessToken, capture, closeRound, liveTranscript, sessionId, speaksLocally, turn]);
 
   // The meter and the submit callback are read through refs by the tick below. The
   // meter changes on every animation frame, and rebuilding the interval each time would
@@ -493,7 +507,44 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
       />
     );
 
+  /*
+   * Two ways out, and they are not the same thing.
+   *
+   * Submit completes the round: whatever has been answered is assessed and the report is
+   * written, exactly as if the clock had run out. Pressed mid-answer, the answer being
+   * given is submitted as the last one rather than thrown away.
+   *
+   * Leave forfeits it: no report, and it is not counted as practice. That is a real loss,
+   * so it is confirmed rather than one stray click away.
+   */
+  const answeredSoFar = session?.turnsCompleted ?? 0;
+  const canSubmit =
+    (phase === "answering" || ((phase === "asking" || phase === "error") && answeredSoFar > 0)) && !!accessToken;
+
+  async function submitAndFinish() {
+    if (!accessToken) return;
+    if (phase === "answering") {
+      await finishAnswer(true);
+      return;
+    }
+    setPhase("submitting");
+    setError(null);
+    browserVoice.cancel();
+    try {
+      const result = await finishSession(accessToken, sessionId);
+      closeRound(result.closingRemark ?? null);
+    } catch (cause) {
+      setPhase("error");
+      setError(cause instanceof ApiRequestError ? cause.message : "The interview could not be submitted.");
+    }
+  }
+
   async function leave() {
+    const confirmed = window.confirm(
+      "Leave this interview?\n\nIt will be counted as forfeited: nothing you have said is assessed " +
+        "and there will be no report. To end early and still get your report, use Submit instead.",
+    );
+    if (!confirmed) return;
     capture.release();
     if (accessToken) {
       await abandonSession(accessToken, sessionId).catch(() => undefined);
@@ -561,10 +612,23 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           <RoundClock endsAt={session?.scheduledEndAt ?? null} phase={turn?.phase} />
           <button
             type="button"
-            onClick={leave}
+            onClick={() => void submitAndFinish()}
+            disabled={!canSubmit}
+            title={
+              canSubmit
+                ? "End the round now and get your report"
+                : "Answer at least one question before submitting"
+            }
+            className="rounded-md bg-accent px-3 py-1.5 text-caption font-medium text-accent-contrast transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Submit and finish
+          </button>
+          <button
+            type="button"
+            onClick={() => void leave()}
             className="text-caption text-ink-muted underline-offset-4 hover:text-ink hover:underline"
           >
-            Leave interview
+            Leave (forfeit)
           </button>
         </div>
       </header>

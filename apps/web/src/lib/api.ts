@@ -250,6 +250,14 @@ export function runCode(
   return apiSend<CodeRunResult>(`/api/v1/sessions/${id}/run`, "POST", accessToken, request);
 }
 
+/**
+ * Ends the round now and completes it, so the report is written from what has been
+ * answered so far. The opposite of [abandonSession], which forfeits it.
+ */
+export function finishSession(accessToken: string, id: string): Promise<SubmitAnswerResponse> {
+  return apiSend<SubmitAnswerResponse>(`/api/v1/sessions/${id}/finish`, "POST", accessToken);
+}
+
 export function abandonSession(accessToken: string, id: string): Promise<void> {
   return apiSend<void>(`/api/v1/sessions/${id}/abandon`, "POST", accessToken);
 }
@@ -273,9 +281,12 @@ export function submitAnswer(
   audio: Blob,
   video: Blob | null,
   speaksLocally = false,
+  /** Submit pressed mid-answer: assess this answer as the last one and end the round. */
+  endRound = false,
 ): Promise<SubmitAnswerResponse> {
   const form = new FormData();
   form.append("turnIndex", String(turnIndex));
+  form.append("endRound", String(endRound));
   // Told per turn rather than per session: it describes this browser, and the same
   // candidate may come back on a phone with no usable voice.
   form.append("speaksLocally", String(speaksLocally));

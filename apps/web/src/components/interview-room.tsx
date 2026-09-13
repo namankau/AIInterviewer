@@ -7,9 +7,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DesignWorkspace } from "@/components/design-workspace";
 import { DeviceCheck } from "@/components/device-check";
 import { DsaWorkspace } from "@/components/dsa-workspace";
+import { RoundClock, formatDuration } from "@/components/round-clock";
 import {
   ApiRequestError,
   abandonSession,
+  beginSession,
   fetchSession,
   finishSession,
   requestHint,
@@ -59,6 +61,24 @@ const ROUND_CLOCK_TICK_MS = 10_000;
  * opens. Long enough to read a couple of sentences without feeling rushed.
  */
 const READING_TIME_MS = 4_000;
+
+/**
+ * How long entering the room waits for the server to start the clock before opening
+ * anyway. The call is normally a fraction of a second; a slow network should cost the
+ * candidate a slightly early clock, never a room that will not open.
+ */
+const BEGIN_WAIT_MS = 3_000;
+
+/**
+ * The longest one unbroken turn runs in a room with a workspace before the interviewer
+ * comes in on their own.
+ *
+ * Silence does not end a turn there — people go quiet to type and draw — so without a
+ * ceiling a candidate who never hands over would be recorded for the whole round in one
+ * take. Ten minutes is where a real interviewer checks in anyway, and it keeps one take at
+ * about 3.6 MB, far inside what the model accepts in a single request.
+ */
+const LONGEST_WORKSPACE_TAKE_MS = 10 * 60_000;
 
 type Phase =
   | "loading"
@@ -146,6 +166,11 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   const withinGrace = lateFor !== turnIndex;
   /** The voice is still rendering and has not used up its head start. Hold the text. */
   const speaksLocally = browserVoice.available;
+  /**
+   * A DSA or design room: the candidate works on something on screen, and going quiet to
+   * type or draw is the work, not the end of an answer.
+   */
+  const hasWorkspace = session?.workspace != null;
 
   /*
    * What the figure opposite is doing. "asking" with a voice still rendering is thinking
@@ -299,6 +324,12 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
   // The answer timer and the silence that ends the answer run off one tick, so a reading
   // and the timestamp it is judged against cannot disagree.
+  //
+  // Except in a room with a workspace, where silence ends nothing. Three and a half
+  // seconds of quiet is the end of a spoken answer and the middle of typing a loop, and
+  // treating it as an ending had the interviewer cut in with "let me stop you there" on a
+  // candidate who was simply writing code. There, the candidate hands over when they want
+  // the interviewer — "Over to you" — or the clock or the take ceiling does.
   useEffect(() => {
     if (phase !== "answering") return;
     const startedAt = Date.now();
@@ -311,14 +342,15 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
       setElapsed(Math.floor((now - startedAt) / 1000));
 
       silence = observe(silence, latest.current.level, now);
-      if (!ended && shouldEnd(silence, now, startedAt)) {
+      const over = hasWorkspace ? now - startedAt >= LONGEST_WORKSPACE_TAKE_MS : shouldEnd(silence, now, startedAt);
+      if (!ended && over) {
         ended = true;
         void latest.current.finish();
       }
     }, TICK_MS);
 
     return () => clearInterval(id);
-  }, [phase]);
+  }, [phase, hasWorkspace]);
 
   const beginAnswering = useCallback(async () => {
     const started = await capture.start();
@@ -539,6 +571,61 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     }
   }
 
+  /*
+   * The clock ends the round — on the candidate's screen, when it says 0:00.
+   *
+   * It used to be enforced only when the next answer arrived at the server, so a round
+   * whose clock ran out mid-answer simply carried on: one five-minute round ran to 7:17
+   * with the clock sat at zero. Now the room ends it itself. The answer in progress is
+   * submitted as the last one — it is assessed, not thrown away — and the interviewer
+   * says time is up.
+   *
+   * Level-triggered on purpose: an answer still being assessed at 0:00 can come back
+   * with another question, and that question must end the round too rather than open
+   * the microphone on a round that is over. One automatic attempt; if it fails, Submit is
+   * still there.
+   */
+  const [timeUp, setTimeUp] = useState(false);
+  const endingForTime = useRef(false);
+  const endForTime = useRef<() => void>(() => undefined);
+  useEffect(() => {
+    endForTime.current = () => {
+      if (endingForTime.current) return;
+      if (phase === "answering") {
+        endingForTime.current = true;
+        void finishAnswer(true);
+      } else if ((phase === "asking" || phase === "error") && answeredSoFar > 0) {
+        endingForTime.current = true;
+        void submitAndFinish();
+      }
+    };
+  });
+  useEffect(() => {
+    if (timeUp) endForTime.current();
+  }, [timeUp, phase]);
+
+  /*
+   * Walking into the room is what starts the clock.
+   *
+   * It used to start when the session row was written — before the problem had been
+   * composed, before the device check, before the candidate had read a word — so a
+   * five-minute round opened on 3:50. The server starts it once; a reload mid-round
+   * finds it already running and changes nothing.
+   */
+  async function enterRoom() {
+    if (accessToken) {
+      const begun = beginSession(accessToken, sessionId)
+        .then((view) =>
+          setSession((current) =>
+            current ? { ...current, startedAt: view.startedAt, scheduledEndAt: view.scheduledEndAt } : current,
+          ),
+        )
+        .catch(() => undefined);
+      await Promise.race([begun, new Promise((resolve) => setTimeout(resolve, BEGIN_WAIT_MS))]);
+    }
+    setPhase("asking");
+  }
+
   async function leave() {
     const confirmed = window.confirm(
       "Leave this interview?\n\nIt will be counted as forfeited: nothing you have said is assessed " +
@@ -594,7 +681,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   }
 
   if (phase === "checking" && session) {
-    return <DeviceCheck session={session} capture={capture} onEnter={() => setPhase("asking")} />;
+    return <DeviceCheck session={session} capture={capture} onEnter={() => void enterRoom()} />;
   }
 
   return (
@@ -609,7 +696,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           </span>
         </div>
         <div className="flex items-center gap-5">
-          <RoundClock endsAt={session?.scheduledEndAt ?? null} phase={turn?.phase} />
+          <RoundClock endsAt={session?.scheduledEndAt ?? null} phase={turn?.phase} onExpired={() => setTimeUp(true)} />
           <button
             type="button"
             onClick={() => void submitAndFinish()}
@@ -770,6 +857,21 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
             </p>
           ) : null}
 
+          {/*
+            * The one place the room has a hand-over control, and why: silence cannot mean
+            * "I'm done" when the work itself is silent. Saying "over to you" is what a
+            * candidate does at a whiteboard anyway.
+            */}
+          {hasWorkspace && phase === "answering" ? (
+            <button
+              type="button"
+              onClick={() => void finishAnswer()}
+              className="rounded-md border border-line px-3 py-1.5 text-caption font-medium text-ink transition-colors hover:bg-surface-sunken"
+            >
+              Over to you
+            </button>
+          ) : null}
+
           {!hint && (phase === "asking" || phase === "answering") ? (
             <button
               type="button"
@@ -784,7 +886,10 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
         <p className="text-caption text-ink-subtle">
           {phase === "answering"
-            ? "Just start talking. Stop, and the interviewer moves on — pausing to think is fine."
+            ? hasWorkspace
+              ? "Think out loud as you work — going quiet to type or draw won't end your turn. " +
+                "Press “Over to you” when you want the interviewer to come in."
+              : "Just start talking. Stop, and the interviewer moves on — pausing to think is fine."
             : "Asking for a nudge is allowed once per question, and the report records that you did."}
         </p>
 
@@ -810,41 +915,6 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   );
 }
 
-/**
- * Counts down to the server's deadline, not to a clock of its own — a drifting tab or a
- * sleeping laptop must not buy the candidate extra time.
- */
-function RoundClock({ endsAt, phase }: { endsAt: string | null; phase?: TurnView["phase"] }) {
-  const [remaining, setRemaining] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!endsAt) return;
-    const deadline = new Date(endsAt).getTime();
-    const tick = () => setRemaining(Math.max(0, Math.floor((deadline - Date.now()) / 1000)));
-    tick();
-    const id = setInterval(tick, 1_000);
-    return () => clearInterval(id);
-  }, [endsAt]);
-
-  if (remaining === null) return null;
-
-  return (
-    <span className="flex items-baseline gap-2">
-      {phase ? (
-        <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-          {phase === "warmup" ? "Warm-up" : phase === "closing" ? "Closing" : "Main round"}
-        </span>
-      ) : null}
-      <span
-        className="font-mono text-caption text-ink-muted tabular-nums"
-        aria-label={`${Math.ceil(remaining / 60)} minutes left in this round`}
-      >
-        {formatDuration(remaining)}
-      </span>
-    </span>
-  );
-}
-
 function SpeakingDot({ active, level }: { active: boolean; level: number }) {
   return (
     <span
@@ -863,9 +933,4 @@ function Centered({ children, role }: { children: React.ReactNode; role?: "statu
       </div>
     </div>
   );
-}
-
-function formatDuration(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  return `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
 }

@@ -196,6 +196,37 @@ class SessionRepository(
     }
 
     /**
+     * Starts the round's clock, once: the moment the candidate enters the room.
+     *
+     * `started_at` is written at insert, and until now that was when the clock started —
+     * before the problem had been composed, before the device check, before the candidate
+     * had seen a single word. A five-minute round opened on 3:50.
+     *
+     * The insert still writes it, because the constraints need a start before any end and
+     * a round abandoned during setup still ends. What marks the clock as not yet started
+     * is `started_at = created_at`: both are `now()` in the insert's own transaction, so
+     * they are equal to the microsecond until this moves one of them. That makes the
+     * update idempotent — reloading the room mid-round finds them unequal and changes
+     * nothing, so a refresh never buys anybody more time.
+     */
+    fun startClock(
+        sessionId: UUID,
+        userId: UUID,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                update public.sessions
+                   set started_at = now()
+                 where id = :id and user_id = :u
+                   and status = 'in_progress'
+                   and started_at = created_at
+                """.trimIndent(),
+            ).param("id", sessionId)
+            .param("u", userId)
+            .update() == 1
+
+    /**
      * Stores the material this round is conducted around, composed once at the start.
      *
      * Separate from `insertSession` because composing it needs the session to exist: the

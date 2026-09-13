@@ -189,6 +189,34 @@ data class ComposedProblem(
     val starterJava: String,
     val stdinFormat: String,
     val testCases: List<ProblemTestCase>,
+    /**
+     * A correct, efficient solution: [starterPython] with the stub filled in.
+     *
+     * With [bruteForcePython], this is how the expected outputs get checked — see
+     * `ProblemVerifier`. Both are cleared before the problem is stored, because the stored
+     * problem is sent to the candidate's browser and a solution in the page source is a
+     * solution handed over.
+     */
+    val referencePython: String? = null,
+    /** The most obviously correct solution, however slow, written independently of [referencePython]. */
+    val bruteForcePython: String? = null,
+    /**
+     * True when every expected output came from running two independent solutions and
+     * getting the same answer, rather than from the model working it out by hand.
+     * Set by `ProblemVerifier`, never by the model.
+     */
+    val testsVerified: Boolean = false,
+)
+
+/**
+ * What a code sandbox printed, one entry per program the provider actually executed.
+ *
+ * The output is the sandbox's own stdout, not the model's account of it. A model asked to
+ * report what a program prints can get it wrong the same way it gets expected outputs
+ * wrong; a sandbox cannot.
+ */
+data class SandboxRun(
+    val outputs: List<String>,
 )
 
 data class ProblemExample(

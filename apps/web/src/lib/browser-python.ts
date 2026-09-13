@@ -16,7 +16,10 @@
  *
  * So: the interpreter lives in a worker, where a stuck program can only stall the worker;
  * every run has a hard deadline, and a run that misses it has its worker terminated and
- * replaced; and stdin is an `io.StringIO`, which has an unambiguous end.
+ * replaced; and stdin is an in-memory stream, which has an unambiguous end.
+ *
+ * Verified against the sandbox that checks each problem's expected outputs: the same
+ * programs on the same inputs printed the same thing here, case for case.
  *
  * Why the browser at all: there is no free hosted sandbox any more (Piston went
  * whitelist-only in February 2026), the candidate's code never leaves their machine, and
@@ -81,7 +84,13 @@ self.onmessage = async (event) => {
   globals.set("__name__", "__main__");
   globals.set("__acemy_stdin__", stdin);
   try {
-    await py.runPythonAsync("import sys, io\\nsys.stdin = io.StringIO(__acemy_stdin__)", { globals });
+    // A real text stream over bytes rather than a StringIO: it has a definite end, and it
+    // has .buffer, so sys.stdin.buffer.read() works here exactly as it does on the server
+    // that checks the problem's expected outputs.
+    await py.runPythonAsync(
+      "import sys, io\\nsys.stdin = io.TextIOWrapper(io.BytesIO(__acemy_stdin__.encode()), encoding='utf-8')",
+      { globals },
+    );
     await py.runPythonAsync(source, { globals });
   } catch (error) {
     err.push(error && error.message ? error.message : String(error));
@@ -216,7 +225,22 @@ export async function runPython(source: string, stdin: string): Promise<PythonRu
   };
 }
 
-/** Compares a run's output to what the case expects, ignoring surrounding whitespace only. */
+/**
+ * Compares a run's output to what the case expects.
+ *
+ * Line endings and trailing spaces do not count; anything else does — `[1,2]` is not
+ * `[1, 2]`. The same rule the server applies when it checks the expected outputs by
+ * running two solutions, so a case it verified cannot fail here on formatting alone.
+ */
 export function matchesExpected(stdout: string, expected: string): boolean {
-  return stdout.trim() === expected.trim();
+  return normaliseOutput(stdout) === normaliseOutput(expected);
+}
+
+function normaliseOutput(output: string): string {
+  return output
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    .trim();
 }

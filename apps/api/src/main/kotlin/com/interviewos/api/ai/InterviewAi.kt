@@ -56,6 +56,16 @@ interface InterviewAi {
         durationMinutes: Int,
     ): AiResult<ComposedCase>
 
+    /**
+     * Runs [program] in the provider's code sandbox and returns what the sandbox printed.
+     *
+     * Only providers declaring [AiCapability.CODE_EXECUTION] implement this; the fallback
+     * chain never offers it to anyone else, so the default is unreachable in practice and
+     * says so if it is ever reached.
+     */
+    fun runPython(program: String): AiResult<SandboxRun> =
+        throw AiUnavailableException("$providerName cannot run code.", worthRetryingElsewhere = true)
+
     fun composeOpeningQuestion(
         brief: InterviewBrief,
         round: RoundContext,

@@ -69,6 +69,9 @@ class FallbackInterviewAi(
         durationMinutes: Int,
     ): AiResult<ComposedCase> = attempt(AiCapability.STRUCTURED_TEXT, "composeCase") { it.composeCase(brief, durationMinutes) }
 
+    override fun runPython(program: String): AiResult<SandboxRun> =
+        attempt(AiCapability.CODE_EXECUTION, "runPython") { it.runPython(program) }
+
     override fun composeOpeningQuestion(
         brief: InterviewBrief,
         round: RoundContext,

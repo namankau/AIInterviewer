@@ -29,6 +29,7 @@ import tools.jackson.databind.ObjectMapper
 class RoundWorkspaceComposer(
     private val interviewAi: InterviewAi,
     private val objectMapper: ObjectMapper,
+    private val problemVerifier: ProblemVerifier,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -61,14 +62,46 @@ class RoundWorkspaceComposer(
         brief: InterviewBrief,
         durationMinutes: Int,
     ): RoundWorkspace {
-        val problem = interviewAi.composeProblem(brief, durationMinutes).value
+        val problem = verifiedProblem(brief, durationMinutes)
         return RoundWorkspace(
-            json = objectMapper.writeValueAsString(ProblemPayload(problem = problem)),
+            // The solutions go no further than this. What is stored is what the browser is
+            // sent, and a solution in the page source is a solution handed over.
+            json =
+                objectMapper.writeValueAsString(
+                    ProblemPayload(problem = problem.copy(referencePython = null, bruteForcePython = null)),
+                ),
             openingQuestion = openingForProblem(problem, durationMinutes),
             probes = "How they scope and reason about a problem before writing code.",
             basis = "A ${problem.difficulty} problem on ${problem.topic}, of the kind this round asks at this level.",
             askedBecause = "It is the problem set for this round. Everything after this follows from how you approach it.",
         )
+    }
+
+    /**
+     * A problem whose expected outputs have been checked by running two solutions.
+     *
+     * Composed a second time only when the model's own two solutions disagreed — that
+     * means it does not have a consistent reading of the problem it wrote, which is the one
+     * failure a fresh attempt can fix. An unreachable sandbox is not: the problem is kept
+     * and shown as unverified. Costs about 3.5s of setup on a DSA round (measured), for
+     * test cases that are right.
+     */
+    private fun verifiedProblem(
+        brief: InterviewBrief,
+        durationMinutes: Int,
+    ): ComposedProblem {
+        val first = problemVerifier.verify(interviewAi.composeProblem(brief, durationMinutes).value)
+        if (first.outcome != ProblemVerifier.Verification.Outcome.INCONSISTENT) return first.problem
+
+        log.warn("The model's two solutions disagreed ({}); composing the problem once more", first.reason)
+        val second =
+            try {
+                problemVerifier.verify(interviewAi.composeProblem(brief, durationMinutes).value)
+            } catch (e: AiUnavailableException) {
+                log.warn("The second attempt at a problem failed; keeping the first, unverified", e)
+                return first.problem
+            }
+        return second.problem
     }
 
     private fun caseWorkspace(

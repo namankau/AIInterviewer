@@ -160,6 +160,90 @@ class InterviewPlanTest {
         assertEquals(TurnPhase.CLOSING, plan.phase, "the last minute is still the wrap-up")
     }
 
+    /**
+     * From a real round: an answer landed 3:53 into a five-minute round, and the
+     * interviewer said "we have about two minutes left" while the candidate's clock said
+     * 1:07. Whole minutes of elapsed time, rounded down, had rounded the time left up.
+     */
+    @Test
+    fun `the interviewer is never told there is more time than the clock shows`() {
+        val plan =
+            InterviewPlan.forTurn(
+                turnIndex = 1,
+                answeredTurns = 1,
+                startedAt = startedAt,
+                durationMinutes = 5,
+                now = startedAt.plusSeconds(3 * 60 + 53),
+            )
+
+        assertEquals(1, plan.minutesRemaining)
+        assertFalse(plan.mustConclude)
+    }
+
+    @Test
+    fun `an answer in the last half-minute is the last answer, and the clock is why`() {
+        val plan =
+            InterviewPlan.forTurn(
+                turnIndex = 2,
+                answeredTurns = 2,
+                startedAt = startedAt,
+                durationMinutes = 5,
+                now = startedAt.plusSeconds(5 * 60 - 20),
+            )
+
+        assertTrue(plan.mustConclude, "a question nobody has time to answer only ends in cutting them off")
+        assertTrue(plan.outOfTime)
+    }
+
+    @Test
+    fun `the turn ceiling ends a round without claiming the clock did`() {
+        val plan =
+            InterviewPlan.forTurn(
+                turnIndex = InterviewPlan.MAX_TURNS,
+                answeredTurns = InterviewPlan.MAX_TURNS,
+                startedAt = startedAt,
+                durationMinutes = 400,
+                now = startedAt.plus(Duration.ofMinutes(5)),
+            )
+
+        assertTrue(plan.mustConclude)
+        assertFalse(plan.outOfTime)
+    }
+
+    /**
+     * A DSA round opens on the problem, and the room used to label that whole stretch
+     * "Warm-up" because the opening plan did not know the round had a workspace.
+     */
+    @Test
+    fun `a round with a workspace opens on its material, not on an introduction`() {
+        val opening = InterviewPlan.opening(durationMinutes = 45, hasWarmup = false)
+
+        assertEquals(TurnPhase.MAIN, opening.phase)
+        assertNull(opening.warmupFocus)
+    }
+
+    /**
+     * After the first answer in a DSA round the plan used to be a warm-up beat whose
+     * instruction is "ask them to walk you through a project" — a question about something
+     * other than the problem on the screen.
+     */
+    @Test
+    fun `a round with a workspace never warms up or briefs`() {
+        val plan =
+            InterviewPlan.forTurn(
+                turnIndex = 1,
+                answeredTurns = 1,
+                startedAt = startedAt,
+                durationMinutes = 45,
+                now = startedAt.plus(Duration.ofMinutes(4)),
+                hasWarmup = false,
+            )
+
+        assertEquals(TurnPhase.MAIN, plan.phase)
+        assertNull(plan.warmupFocus)
+        assertFalse(plan.briefTheCandidate, "the templated opening already told them how the round runs")
+    }
+
     /** Scaling the closing phase must not move it for the rounds people actually sit. */
     @Test
     fun `the closing phase is unchanged for a real round`() {

@@ -55,4 +55,39 @@ Both `starterPython` and `starterJava` must be **complete programs**, not fragme
 worked examples, so the candidate sees the same numbers in the problem and in the tests.
 Include at least one edge case — an empty input, a single element, the bound.
 
+Read input with `sys.stdin.read()` or `input()`, and print with `print()`. Keep every test
+input small — a brute force must finish it instantly.
+
+## Every answer must be exactly one string
+
+The candidate's output is compared to `expected` character for character. So:
+
+- **No problem may have more than one correct output.** "Return any valid ordering" or
+  "return any index" cannot be checked. Define a canonical answer in the statement —
+  the lexicographically smallest, the earliest index, sorted ascending — and have every
+  solution produce it.
+- **No floating-point answers.** Ask for an integer, a string, or a rounded value printed
+  in a stated format.
+- Say in the statement exactly how the answer is printed: `true`/`false` or `True`/`False`,
+  a list as `[1, 2]` or as `1 2`. The starter's print line must produce that shape.
+
+## Write two solutions, so the tests can be checked
+
+Your expected outputs will not be trusted as written. Working a case out by hand is where
+this goes wrong — a window counted one element too long, a subsequence taken for a
+subarray — and a candidate whose correct code is marked wrong has been failed by the tool,
+not by the problem.
+
+So write two complete programs in addition to the starter, both reading and printing
+exactly as `starterPython` does:
+
+- `referencePython` — the starter with its stub replaced by a correct, efficient solution.
+- `bruteForcePython` — the most obviously correct solution you can write, however slow.
+  Try every option; use nested loops; no cleverness. Write it from the statement, not by
+  simplifying the reference, so a misreading in one is caught by the other.
+
+Both are executed on every test input. A case keeps the answer the two agree on, and the
+worked examples are rebuilt from those, so a wrong `expected` is corrected rather than
+shown. Neither solution is ever shown to the candidate.
+
 Return JSON matching the provided schema.

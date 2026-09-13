@@ -146,6 +146,7 @@ export function DsaWorkspace({
           onSelect={setSelectedCase}
           result={result}
           stdinFormat={problem.stdinFormat}
+          verified={problem.testsVerified === true}
         />
       </div>
     </div>
@@ -277,12 +278,15 @@ function TestCases({
   onSelect,
   result,
   stdinFormat,
+  verified,
 }: {
   cases: ProblemTestCase[];
   selected: number;
   onSelect: (index: number) => void;
   result: RunState | null;
   stdinFormat: string;
+  /** The expected outputs came from running two solutions, not from the model's working. */
+  verified: boolean;
 }) {
   const active = cases[selected];
   const shown = result && result.caseIndex === selected ? result : null;
@@ -318,6 +322,18 @@ function TestCases({
           </button>
         ))}
       </div>
+
+      {/*
+        Said plainly when it applies. A wrong expected output that the room presents as
+        fact tells a candidate with correct code that they are wrong — the one thing this
+        panel must never do without a warning.
+      */}
+      {!verified && (
+        <p className="px-4 pt-2 text-[0.7rem] leading-relaxed text-ink-subtle">
+          These expected outputs were not checked by running a solution, so one may be wrong. If your
+          output differs and you think you are right, say why — that is a good thing to argue.
+        </p>
+      )}
 
       <div className="grid gap-4 px-4 py-3 sm:grid-cols-2">
         <div>

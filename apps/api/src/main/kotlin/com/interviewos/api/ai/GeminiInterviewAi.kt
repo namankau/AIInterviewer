@@ -53,6 +53,7 @@ class GeminiInterviewAi(
             AiCapability.AUDIO_UNDERSTANDING,
             AiCapability.DOCUMENT_UNDERSTANDING,
             AiCapability.SPEECH_SYNTHESIS,
+            AiCapability.CODE_EXECUTION,
         )
 
     override fun parseResume(file: ResumeFile): AiResult<ParsedResume> {
@@ -138,6 +139,52 @@ class GeminiInterviewAi(
         val prompt = prompts.composeCase(brief, durationMinutes)
         val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("compose-case"))
         return AiResult(objectMapper.treeToValue(node, ComposedCase::class.java), usage)
+    }
+
+    /**
+     * Runs [program] with Gemini's code-execution tool.
+     *
+     * The model has to retype the program to run it — there is no "execute this verbatim"
+     * call — so what it ran is not guaranteed to be what it was given. The caller checks
+     * that from inside the program (it prints hashes of what it is running), rather than
+     * this method trying to compare code text the model may have reflowed.
+     *
+     * Measured on `gemini-3.1-flash-lite` against two real problems: 3.2–3.6s per run, and
+     * every embedded program ran byte for byte as sent.
+     */
+    override fun runPython(program: String): AiResult<SandboxRun> {
+        requireConfigured()
+        val body =
+            mapOf(
+                "contents" to
+                    listOf(
+                        mapOf(
+                            "role" to "user",
+                            "parts" to
+                                listOf(
+                                    textPart(
+                                        "Execute the Python program below exactly as written, once, using your code " +
+                                            "execution tool. Do not modify, reformat, shorten or fix it — copy it " +
+                                            "character for character. After it runs, reply with the single word DONE." +
+                                            "\n\n```python\n$program\n```",
+                                    ),
+                                ),
+                        ),
+                    ),
+                "tools" to listOf(mapOf("codeExecution" to emptyMap<String, Any>())),
+                "generationConfig" to mapOf("temperature" to 0),
+            )
+        val response = call(reasoningModel, body)
+        val outputs =
+            response
+                .path("candidates")
+                .path(0)
+                .path("content")
+                .path("parts")
+                .filter { it.has("codeExecutionResult") }
+                .map { it.path("codeExecutionResult").path("output").asString() ?: "" }
+        if (outputs.isEmpty()) throw AiUnavailableException("Gemini did not run the program on $reasoningModel.")
+        return AiResult(SandboxRun(outputs), usageOf(response, reasoningModel))
     }
 
     override fun composeOpeningQuestion(
@@ -309,6 +356,10 @@ class GeminiInterviewAi(
      * Audio is pulled out of the prompt count because it is priced separately (3x text on
      * flash-lite), and cached input because it is priced far lower. Both arrive as a
      * per-modality breakdown that is simply absent on calls that have neither.
+     *
+     * `toolUsePromptTokenCount` is the same trap as thinking: a code-execution call feeds
+     * the program's output back to the model as input, bills it as input, and reports it
+     * outside `promptTokenCount`. Measured at 2,443 of them against a 1,015-token prompt.
      */
     private fun usageOf(
         response: JsonNode,
@@ -317,7 +368,7 @@ class GeminiInterviewAi(
         val usage = response.path("usageMetadata")
         return AiUsage(
             model = model,
-            promptTokens = usage.path("promptTokenCount").asInt(0),
+            promptTokens = usage.path("promptTokenCount").asInt(0) + usage.path("toolUsePromptTokenCount").asInt(0),
             outputTokens = usage.path("candidatesTokenCount").asInt(0),
             thoughtTokens = usage.path("thoughtsTokenCount").asInt(0),
             audioTokens = modalityTokens(usage.path("promptTokensDetails"), "AUDIO"),

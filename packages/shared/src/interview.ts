@@ -127,6 +127,12 @@ export interface CodingProblem {
   starterJava: string;
   stdinFormat: string;
   testCases: ProblemTestCase[];
+  /**
+   * True when every expected output came from running two independent solutions and
+   * getting the same answer. False, or absent on rounds from before the check existed,
+   * means the outputs are the model's own working and may be wrong — the room says so.
+   */
+  testsVerified?: boolean;
 }
 
 export interface ProblemExample {

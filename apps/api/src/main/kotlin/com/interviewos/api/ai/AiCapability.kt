@@ -28,4 +28,13 @@ enum class AiCapability {
 
     /** Speaking a question aloud. */
     SPEECH_SYNTHESIS,
+
+    /**
+     * Running a Python program in the provider's own sandbox and reporting what it printed.
+     *
+     * Used to check a coding problem's expected outputs by executing solutions rather than
+     * trusting the model's arithmetic. The output is the sandbox's, not the model's
+     * account of it — which is the entire point.
+     */
+    CODE_EXECUTION,
 }

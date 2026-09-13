@@ -73,6 +73,16 @@ class SessionController(
     ): SessionView = interviewService.view(callerOf(jwt), id)
 
     /**
+     * The candidate has entered the room: starts the round's clock, once. Returns the
+     * session with the deadline to count down to. Calling it again changes nothing.
+     */
+    @PostMapping("/sessions/{id}/begin")
+    fun begin(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable id: UUID,
+    ): SessionView = interviewService.begin(callerOf(jwt), id)
+
+    /**
      * Submits one spoken answer. Multipart because the browser sends captured audio and,
      * when the candidate consented, video.
      */

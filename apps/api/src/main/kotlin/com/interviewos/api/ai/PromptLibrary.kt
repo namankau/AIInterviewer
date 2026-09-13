@@ -168,16 +168,17 @@ class PromptLibrary(
 
             round.briefTheCandidate -> {
                 "The warm-up is over and you now know who you are talking to. Before your next question, " +
-                    "tell them how the rest of the round will run - that there are about " +
-                    "${round.minutesRemaining} minutes left, roughly what you will cover given this round " +
+                    "tell them how the rest of the round will run - that there are " +
+                    "${timeLeft(round.minutesRemaining)} left, roughly what you will cover given this round " +
                     "type, that you want them to think out loud, and that they can ask you to repeat or " +
                     "clarify anything. Two or three sentences, spoken plainly. Then ask your first " +
                     "substantive question in the same turn."
             }
 
             round.phase == CLOSING_PHASE -> {
-                "Only ${round.minutesRemaining} minutes remain. Do not open new ground. Finish the thread " +
-                    "you are on, or ask one last question you can get a complete answer to."
+                "There is only ${timeLeft(round.minutesRemaining)} left. " +
+                    "Do not open new ground. Finish the thread you are on, or ask one last question you can " +
+                    "get a complete answer to. If you mention the time, say exactly this much and no more."
             }
 
             round.phase == WARMUP_PHASE -> {
@@ -190,9 +191,20 @@ class PromptLibrary(
             }
 
             else -> {
-                "You are in the main round with ${round.minutesRemaining} minutes left. Pace yourself so " +
+                "You are in the main round with ${timeLeft(round.minutesRemaining)} left. Pace yourself so " +
                     "the round finishes properly rather than being cut off mid-answer."
             }
+        }
+
+    /**
+     * The time left, as the interviewer should say it. The count is rounded down, so this
+     * never promises more than the clock on the candidate's screen shows.
+     */
+    private fun timeLeft(minutes: Int): String =
+        when (minutes) {
+            0 -> "less than a minute"
+            1 -> "about a minute"
+            else -> "about $minutes minutes"
         }
 
     private fun loadPrompt(name: String): String = readResource("ai/prompts/$name.md")

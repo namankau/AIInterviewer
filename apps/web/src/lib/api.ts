@@ -182,6 +182,15 @@ export function fetchSession(id: string, options: ApiGetOptions): Promise<Sessio
 }
 
 /**
+ * The candidate has entered the room: the round's clock starts now, once. Returns the
+ * session with the deadline to count down to; calling it again changes nothing, so a
+ * reload never restarts the clock.
+ */
+export function beginSession(accessToken: string, id: string): Promise<SessionView> {
+  return apiSend<SessionView>(`/api/v1/sessions/${id}/begin`, "POST", accessToken);
+}
+
+/**
  * One question. The room asks for this while a turn's speech is still `pending`, to
  * pick up the interviewer's voice after the question text has already been shown.
  */

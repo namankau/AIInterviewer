@@ -257,8 +257,6 @@ class InterviewService(
                 sources = sources,
                 background = background,
             )
-        val plan = InterviewPlan.opening(request.durationMinutes)
-
         // A DSA or design round is conducted around material — a problem, or a case — and
         // its opening is templated from that rather than asked of the model separately.
         // One call, not two, on the path the candidate is already waiting on.
@@ -266,6 +264,7 @@ class InterviewService(
             AiSpendContext.of(userId, sessionId) {
                 roundWorkspaceComposer.compose(brief, roundType, request.durationMinutes)
             }
+        val plan = InterviewPlan.opening(request.durationMinutes, hasWarmup = workspace == null)
 
         val opening =
             workspace?.let {
@@ -385,6 +384,7 @@ class InterviewService(
                 startedAt = session.startedAt,
                 durationMinutes = session.durationMinutes,
                 now = Instant.now(),
+                hasWarmup = session.workspace == null,
             )
 
         val roundType = RoundType.fromDbValue(session.roundType)
@@ -463,8 +463,12 @@ class InterviewService(
                 sessionComplete = true,
                 turnsCompleted = answered,
                 nextTurn = null,
+                // The clock wins over the button. When time runs out the room submits the
+                // answer in progress itself, and it arrives here looking exactly like a
+                // candidate pressing Submit — thanking them for a decision they did not make
+                // would be the machine not noticing what happened.
                 closingRemark =
-                    ClosingRemark.forRound(ranOutOfTime = plan.mustConclude && !endRound, endedByCandidate = endRound),
+                    ClosingRemark.forRound(ranOutOfTime = plan.outOfTime, endedByCandidate = endRound && !plan.outOfTime),
             )
         }
 
@@ -578,6 +582,7 @@ class InterviewService(
                 startedAt = session.startedAt,
                 durationMinutes = session.durationMinutes,
                 now = Instant.now(),
+                hasWarmup = session.workspace == null,
             )
         val priorTurns =
             repository
@@ -672,13 +677,39 @@ class InterviewService(
                 code = "nothing_to_assess",
             )
         }
+        // Also how the room ends a round whose clock has run out between answers, so the
+        // goodbye says which of the two it was.
+        val outOfTime =
+            InterviewPlan
+                .forTurn(
+                    turnIndex = answered,
+                    answeredTurns = answered,
+                    startedAt = session.startedAt,
+                    durationMinutes = session.durationMinutes,
+                    now = Instant.now(),
+                ).outOfTime
         repository.markSessionStatus(sessionId, userId, "completed")
         return SubmitAnswerResponse(
             sessionComplete = true,
             turnsCompleted = answered,
             nextTurn = null,
-            closingRemark = ClosingRemark.forRound(ranOutOfTime = false, endedByCandidate = true),
+            closingRemark = ClosingRemark.forRound(ranOutOfTime = outOfTime, endedByCandidate = !outOfTime),
         )
+    }
+
+    /**
+     * The candidate has entered the room, so the round's clock starts now — not when the
+     * session row was written, which was before the problem existed and before the device
+     * check. Idempotent: see [SessionRepository.startClock]. Returns the session with the
+     * deadline the room should count down to.
+     */
+    fun begin(
+        userId: UUID,
+        sessionId: UUID,
+    ): SessionView {
+        repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
+        repository.startClock(sessionId, userId)
+        return view(userId, sessionId)
     }
 
     fun view(

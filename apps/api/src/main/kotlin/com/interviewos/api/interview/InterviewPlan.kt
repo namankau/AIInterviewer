@@ -79,6 +79,11 @@ data class TurnPlan(
     val briefTheCandidate: Boolean,
     /** The clock or the turn ceiling has run out; this round has to end now. */
     val mustConclude: Boolean,
+    /**
+     * The clock specifically, as opposed to the turn ceiling. Decides how the round is
+     * closed: a candidate stopped by the clock is told so, whoever pressed what.
+     */
+    val outOfTime: Boolean = false,
 )
 
 /**
@@ -136,69 +141,95 @@ object InterviewPlan {
      */
     const val MAX_TURNS = 16
 
+    /**
+     * With less than this left, the round ends rather than asking another question.
+     *
+     * A question nobody has time to answer is worse than no question: the candidate starts
+     * an answer, the clock stops them mid-sentence, and the last thing the round did was
+     * cut them off. So an answer that lands in the final half-minute is the last answer.
+     */
+    const val LAST_QUESTION_SECONDS = 30
+
+    /**
+     * @param hasWarmup false for a round conducted around a problem or a design case. Its
+     *   opening *is* the round — "here is the problem, read it out" — and three warm-up
+     *   beats about the candidate's CV would be three turns not spent on it. Worse, the
+     *   project beat instructs the model to ask about a project, which in a DSA round is a
+     *   question about something else entirely.
+     */
     fun forTurn(
         turnIndex: Int,
         answeredTurns: Int,
         startedAt: Instant?,
         durationMinutes: Int,
         now: Instant,
+        hasWarmup: Boolean = true,
     ): TurnPlan {
-        val elapsed = minutesBetween(startedAt, now)
-        val remaining = (durationMinutes - elapsed).coerceAtLeast(0)
+        // Seconds, not minutes. Whole minutes rounded the time left *up* by as much as 59
+        // seconds, so the interviewer said "about two minutes left" while the clock on the
+        // candidate's screen said 1:07.
+        val elapsedSeconds = secondsBetween(startedAt, now)
+        val remainingSeconds = (durationMinutes * 60L - elapsedSeconds).coerceAtLeast(0)
+        val elapsed = (elapsedSeconds / 60).toInt()
 
-        val warmupTurns = warmupTurnsFor(durationMinutes)
+        val warmupTurns = if (hasWarmup) warmupTurnsFor(durationMinutes) else 0
         val warmupCeiling = (durationMinutes * WARMUP_CEILING_SHARE).toInt().coerceAtLeast(2)
 
         // Turns are what end the warm-up. The clock only overrides a runaway one.
         val warmingUp = answeredTurns < warmupTurns && elapsed < warmupCeiling
-        val justFinishedWarmup = !warmingUp && answeredTurns <= warmupTurns
+        val justFinishedWarmup = hasWarmup && !warmingUp && answeredTurns <= warmupTurns
 
         val phase =
             when {
                 warmingUp -> TurnPhase.WARMUP
-                remaining <= closingMinutesFor(durationMinutes) -> TurnPhase.CLOSING
+                remainingSeconds <= closingMinutesFor(durationMinutes) * 60L -> TurnPhase.CLOSING
                 else -> TurnPhase.MAIN
             }
+        val outOfTime = remainingSeconds < LAST_QUESTION_SECONDS
 
         return TurnPlan(
             turnIndex = turnIndex,
             phase = phase,
             minutesElapsed = elapsed,
-            minutesRemaining = remaining,
+            // Rounded down, so the interviewer never promises time the clock does not show.
+            minutesRemaining = (remainingSeconds / 60).toInt(),
             durationMinutes = durationMinutes,
             // `answeredTurns` counts the answers in hand, so it is also the index of the
             // warm-up beat now due: one answer given means the project question is next.
             warmupFocus = if (warmingUp) WarmupFocus.forTurn(answeredTurns) else null,
             // Said once, on the first turn that is no longer warm-up.
             briefTheCandidate = justFinishedWarmup && phase != TurnPhase.WARMUP,
-            mustConclude = remaining <= 0 || answeredTurns >= MAX_TURNS,
+            mustConclude = outOfTime || answeredTurns >= MAX_TURNS,
+            outOfTime = outOfTime,
         )
     }
 
-    /** The opening turn, before a clock has started or anything has been answered. */
-    fun opening(durationMinutes: Int): TurnPlan =
+    /**
+     * The opening turn, before a clock has started or anything has been answered.
+     *
+     * A round with a workspace opens on its material, in the main round — the DSA room used
+     * to show "Warm-up" beside the clock for the whole time the candidate was solving the
+     * problem.
+     */
+    fun opening(
+        durationMinutes: Int,
+        hasWarmup: Boolean = true,
+    ): TurnPlan =
         TurnPlan(
             turnIndex = 0,
-            phase = TurnPhase.WARMUP,
+            phase = if (hasWarmup) TurnPhase.WARMUP else TurnPhase.MAIN,
             minutesElapsed = 0,
             minutesRemaining = durationMinutes,
             durationMinutes = durationMinutes,
-            warmupFocus = WarmupFocus.INTRODUCTION,
+            warmupFocus = if (hasWarmup) WarmupFocus.INTRODUCTION else null,
             briefTheCandidate = false,
             mustConclude = false,
         )
 
     fun warmupTurnsFor(durationMinutes: Int): Int = if (durationMinutes < SHORT_ROUND_MINUTES) SHORT_ROUND_WARMUP_TURNS else WARMUP_TURNS
 
-    private fun minutesBetween(
+    private fun secondsBetween(
         from: Instant?,
         to: Instant,
-    ): Int =
-        from?.let {
-            Duration
-                .between(it, to)
-                .toMinutes()
-                .toInt()
-                .coerceAtLeast(0)
-        } ?: 0
+    ): Long = from?.let { Duration.between(it, to).seconds.coerceAtLeast(0) } ?: 0
 }

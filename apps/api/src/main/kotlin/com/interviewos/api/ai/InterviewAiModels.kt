@@ -503,7 +503,12 @@ data class SourceDocument(
  */
 data class ExtractedQuestion(
     val questionText: String,
-    val companyName: String? = null,
+    /**
+     * Every employer the document says asked this, as it names them. Empty when it names
+     * none — never a group like "FAANG". The engine, not the model, falls back to the
+     * source's declared company (see `ReportPlan`).
+     */
+    val companies: List<String> = emptyList(),
     val roundType: String? = null,
     val seniority: String? = null,
     val roleFamily: String? = null,

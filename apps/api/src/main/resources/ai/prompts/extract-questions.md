@@ -16,8 +16,20 @@ Only questions the document actually reports as having been asked. For each one:
 
 - `questionText` — the question as the source gives it. Tidy the grammar if it was
   transcribed badly; do not rewrite it into something more impressive.
-- `companyName` — the employer it was asked at, as named in the document. If the document
-  does not say, use the company named above. If neither is clear, leave it null.
+- `companies` — every employer the document says asked this question, each named as the
+  document names it. A question the author says came up at both Amazon and Microsoft
+  lists both. When the document establishes the employer once for the whole account — a
+  post about "my Amazon onsite" listing six questions — each of those questions lists
+  Amazon. **An empty list when the document does not name an employer for it.** Do not
+  fill it in from the company named above, from the URL or from the publisher: leave it
+  empty and the system applies the source's company itself.
+- Only ever a single, named employer. **Never a group or a category**: not "FAANG",
+  "MAANG", "big tech", "Big Four", "product companies", "service-based companies",
+  "startups", "MNCs" or "top tech companies". A question the document says is common
+  "at FAANG" names no employer, so its list is empty. Never a guess, a placeholder
+  ("Company X", "a large bank") or a description.
+- Keep the employer the document names, not its parent or a sibling: "Google Cloud
+  India" stays "Google Cloud India", and "AWS" stays "AWS".
 - `roundType` — one of: `technical_fundamentals`, `project_deep_dive`, `coding_practical`,
   `system_design`, `case_client_scenario`, `techno_managerial`,
   `behavioural_competency`, `hr_fit_closing`. Null if the document does not make it clear.

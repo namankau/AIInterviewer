@@ -9,9 +9,12 @@
           "questionText": {
             "type": "STRING"
           },
-          "companyName": {
-            "type": "STRING",
-            "nullable": true
+          "companies": {
+            "type": "ARRAY",
+            "items": {
+              "type": "STRING"
+            },
+            "description": "Every named employer the document says asked this. Empty if none is named. Never a group such as FAANG."
           },
           "roundType": {
             "type": "STRING",
@@ -46,7 +49,8 @@
           }
         },
         "required": [
-          "questionText"
+          "questionText",
+          "companies"
         ]
       }
     }

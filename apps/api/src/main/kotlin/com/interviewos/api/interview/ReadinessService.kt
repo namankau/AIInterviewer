@@ -24,6 +24,20 @@ class ReadinessService(
             .map { (key, rows) -> groupOf(key.first, key.second, rows) }
             .sortedByDescending { it.latestAttemptAt }
 
+    /**
+     * This candidate's completed sessions for exactly this company and role, case aside.
+     * Used by the prep plan to tie a practice round to a pattern the candidate's own past
+     * reports actually show, rather than inventing one.
+     */
+    fun readinessFor(
+        userId: UUID,
+        companyName: String,
+        roleTitle: String,
+    ): ReadinessGroup? =
+        readiness(userId).firstOrNull {
+            it.companyName.equals(companyName, ignoreCase = true) && it.roleTitle.equals(roleTitle, ignoreCase = true)
+        }
+
     private fun groupOf(
         company: String,
         role: String,

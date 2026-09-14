@@ -8,6 +8,7 @@ import com.interviewos.api.bank.QuestionBankRepository
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.interview.Archetype
 import com.interviewos.api.interview.ArchetypeResolver
+import com.interviewos.api.interview.Confidence
 import com.interviewos.api.interview.RoundType
 import org.springframework.stereotype.Service
 
@@ -33,6 +34,28 @@ class LoopBriefService(
         role: String?,
         level: String?,
     ): LoopBriefView {
+        val resolved = resolveLoop(companyName, role, level)
+        val coverage = resolved.company?.let { bank.coverage(it) }
+
+        return LoopBriefView(
+            company =
+                companyView(resolved.company, resolved.typedName, resolved.archetype, resolved.confidence.dbValue),
+            hasSources = resolved.sourcedStages.isNotEmpty(),
+            sourcedStages = resolved.sourcedStages.map { it.toView() },
+            generalPattern = resolved.generalPattern.sortedBy { it.order }.map { it.toView() },
+            bankCoverage = coverageView(resolved.company, coverage),
+        )
+    }
+
+    /**
+     * The domain-level loop a candidate typed in, resolved once and shared by the brief
+     * and the prep plan so the two can never disagree about which stages exist.
+     */
+    fun resolveLoop(
+        companyName: String,
+        role: String?,
+        level: String?,
+    ): ResolvedLoop {
         val cleanedCompany = companyName.trim()
         if (cleanedCompany.isEmpty()) throw ApiException.badRequest("A company is required.", code = "company_required")
 
@@ -40,17 +63,16 @@ class LoopBriefService(
         val resolution = archetypes.resolve(company?.name ?: cleanedCompany)
         val archetype = company?.archetype ?: resolution.archetype
 
-        val sourcedStages =
-            company?.let { SourcedStageMerger.merge(stages.stagesFor(it.id)) }.orEmpty()
-        val generalPattern = patterns.patternFor(archetype, role, level)
-        val coverage = company?.let { bank.coverage(it) }
+        val sourcedStages = company?.let { SourcedStageMerger.merge(stages.stagesFor(it.id)) }.orEmpty()
+        val generalPattern = patterns.patternFor(archetype, role, level).stages
 
-        return LoopBriefView(
-            company = companyView(company, cleanedCompany, archetype, resolution.confidence.dbValue),
-            hasSources = sourcedStages.isNotEmpty(),
-            sourcedStages = sourcedStages.map { it.toView() },
-            generalPattern = generalPattern.stages.sortedBy { it.order }.map { it.toView() },
-            bankCoverage = coverageView(company, coverage),
+        return ResolvedLoop(
+            company = company,
+            typedName = cleanedCompany,
+            archetype = archetype,
+            confidence = resolution.confidence,
+            sourcedStages = sourcedStages,
+            generalPattern = generalPattern,
         )
     }
 
@@ -113,6 +135,17 @@ class LoopBriefService(
             roundType = roundType?.let { RoundType.parseOrNull(it) }?.dbValue,
         )
 }
+
+/** The resolved loop, before it is shaped into either the brief's or the plan's view. */
+data class ResolvedLoop(
+    val company: Company?,
+    /** What the candidate typed, used when [company] is null — we hold no such employer. */
+    val typedName: String,
+    val archetype: Archetype,
+    val confidence: Confidence,
+    val sourcedStages: List<SourcedStage>,
+    val generalPattern: List<GeneralLoopStage>,
+)
 
 data class LoopBriefView(
     val company: LoopBriefCompanyView,

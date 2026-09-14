@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
 
 /** Routes that require a signed-in candidate. */
-const PROTECTED_PREFIXES = ["/dashboard"];
+const PROTECTED_PREFIXES = ["/dashboard", "/questions"];
 
 /** Routes a signed-in candidate has no reason to see. */
 const SIGNED_OUT_ONLY = ["/login"];

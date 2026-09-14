@@ -37,6 +37,17 @@ describe("updateSession", () => {
     expect(location.searchParams.get("next")).toBe("/dashboard");
   });
 
+  it("sends a signed-out visitor from a company's questions to sign in", async () => {
+    signedOut();
+
+    const response = await updateSession(requestFor("/questions/amazon"));
+
+    expect(response.status).toBe(307);
+    const location = new URL(response.headers.get("location") ?? "");
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("next")).toBe("/questions/amazon");
+  });
+
   it("lets a signed-in candidate through to the dashboard", async () => {
     signedIn();
 

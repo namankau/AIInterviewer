@@ -1,5 +1,6 @@
 package com.interviewos.api.sources
 
+import com.interviewos.api.bank.SourceOrigin
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.storage.ObjectStorage
 import com.interviewos.api.storage.StorageProperties
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import java.net.URI
+import java.time.LocalDate
+import java.time.format.DateTimeParseException
 import java.util.UUID
 
 /**
@@ -76,6 +79,8 @@ class SourceController(
                 title = request.title?.trim()?.takeIf { it.isNotEmpty() },
                 publisher = request.publisher?.trim()?.takeIf { it.isNotEmpty() },
                 companyName = request.companyName?.trim()?.takeIf { it.isNotEmpty() },
+                origin = parseOrigin(request.origin),
+                publishedOn = parsePublishedOn(request.publishedOn),
             )
         fetcher.refreshSoon(id)
         return repository.list().first { it.id == id }.toView()
@@ -89,8 +94,12 @@ class SourceController(
         @RequestParam(required = false) title: String?,
         @RequestParam(required = false) publisher: String?,
         @RequestParam(required = false) companyName: String?,
+        @RequestParam(required = false) origin: String?,
+        @RequestParam(required = false) publishedOn: String?,
     ): SourceView {
         val admin = adminAccess.require(SupabaseIdentity.from(jwt))
+        val sourceOrigin = parseOrigin(origin)
+        val published = parsePublishedOn(publishedOn)
         if (file.isEmpty) {
             throw ApiException.badRequest("That file was empty.", code = "empty_document")
         }
@@ -106,6 +115,8 @@ class SourceController(
                 title = title?.trim()?.takeIf { it.isNotEmpty() } ?: file.originalFilename,
                 publisher = publisher?.trim()?.takeIf { it.isNotEmpty() },
                 companyName = companyName?.trim()?.takeIf { it.isNotEmpty() },
+                origin = sourceOrigin,
+                publishedOn = published,
             )
         fetcher.refreshSoon(id)
         return repository.list().first { it.id == id }.toView()
@@ -122,7 +133,31 @@ class SourceController(
         fetcher.refreshSoon(id)
     }
 
-    /** Removes a source and, by cascade, every question that cited it. */
+    /**
+     * `employer`, `open_licence` or `author`, or nothing. Anything else is refused rather
+     * than stored as null: the origin is shown to candidates beside every citation, and a
+     * typo quietly dropped would turn an employer's own page into an unlabelled one.
+     */
+    private fun parseOrigin(value: String?): SourceOrigin? {
+        val clean = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        return SourceOrigin.fromDbValue(clean.lowercase())
+            ?: throw ApiException.badRequest(
+                "origin needs to be one of: employer, open_licence, author.",
+                code = "unsupported_origin",
+            )
+    }
+
+    /** An ISO date, `YYYY-MM-DD`, only if the source states one. */
+    private fun parsePublishedOn(value: String?): LocalDate? {
+        val clean = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        return try {
+            LocalDate.parse(clean)
+        } catch (e: DateTimeParseException) {
+            throw ApiException.badRequest("publishedOn needs to be a date, YYYY-MM-DD.", code = "invalid_date")
+        }
+    }
+
+    /** Removes a source, every report it made, and bank questions nothing else reports. */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun delete(
@@ -141,6 +176,8 @@ class SourceController(
             title = title,
             publisher = publisher,
             companyName = companyName,
+            origin = origin?.dbValue,
+            publishedOn = publishedOn?.toString(),
             status = status,
             lastFetchedAt = lastFetchedAt?.toString(),
             fetchError = fetchError,
@@ -155,6 +192,10 @@ data class AddLinkRequest(
     val publisher: String? = null,
     /** The employer this source is about. Questions inherit it when the text does not say. */
     val companyName: String? = null,
+    /** How we may use it: `employer`, `open_licence` or `author`. Shown with every citation. */
+    val origin: String? = null,
+    /** `YYYY-MM-DD`, only if the source states it. */
+    val publishedOn: String? = null,
 )
 
 data class SourceView(
@@ -164,6 +205,8 @@ data class SourceView(
     val title: String?,
     val publisher: String?,
     val companyName: String?,
+    val origin: String?,
+    val publishedOn: String?,
     val status: String,
     val lastFetchedAt: String?,
     val fetchError: String?,

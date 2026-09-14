@@ -3,6 +3,7 @@ package com.interviewos.api.sources
 import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.SourceDocument
+import com.interviewos.api.bank.QuestionBankWriter
 import com.interviewos.api.storage.ObjectStorage
 import com.interviewos.api.storage.ObjectStorageException
 import org.slf4j.LoggerFactory
@@ -36,6 +37,7 @@ import java.util.UUID
 @Component
 class SourceFetcher(
     private val repository: SourceRepository,
+    private val bankWriter: QuestionBankWriter,
     private val interviewAi: InterviewAi,
     private val storage: ObjectStorage,
     restClientBuilder: RestClient.Builder,
@@ -66,21 +68,22 @@ class SourceFetcher(
             }
 
             val hash = sha256(document.content)
-            if (hash == source.contentHash) {
-                // Unchanged since the last read. Re-extracting would cost a model call to
-                // arrive at the same rows.
+            if (!needsExtraction(source, hash)) {
+                // Unchanged since the last read, by the current extractor. Re-extracting
+                // would cost a model call to arrive at the same rows.
                 repository.markFetched(source.id, SourceStatus.FETCHED, hash, null)
                 return
             }
 
             val extracted = interviewAi.extractQuestions(document)
-            repository.replaceQuestions(source.id, extracted.value.questions)
-            repository.markFetched(source.id, SourceStatus.FETCHED, hash, null)
+            val recorded = bankWriter.replaceReports(source.id, source.companyName, extracted.value.questions)
+            repository.markFetched(source.id, SourceStatus.FETCHED, hash, null, EXTRACTOR_VERSION)
             log.info(
-                "Read source {} ({}): {} question(s)",
+                "Read source {} ({}) with extractor v{}: {} question(s)",
                 source.id,
                 source.url ?: source.storagePath,
-                extracted.value.questions.size,
+                EXTRACTOR_VERSION,
+                recorded,
             )
         } catch (e: AiUnavailableException) {
             log.warn("Could not extract questions from source {}", source.id, e)
@@ -209,6 +212,24 @@ class SourceFetcher(
             .joinToString("") { "%02x".format(it) }
 
     companion object {
+        /**
+         * The shape of what extraction produces. Bump it whenever the extractor changes what
+         * it reads out of a document: every fetched source behind it is re-read, even when
+         * its content has not changed — otherwise old sources keep the old shape for ever.
+         *
+         * 1: one `companyName` per question. 2: `companies`, reports into the bank (task 035).
+         */
+        const val EXTRACTOR_VERSION = 2
+
+        /**
+         * Whether a document must go through the model again: its content changed, or the
+         * questions stored for it came from an older extractor.
+         */
+        fun needsExtraction(
+            source: SourceRow,
+            contentHash: String,
+        ): Boolean = contentHash != source.contentHash || source.extractorVersion < EXTRACTOR_VERSION
+
         /** How long before a source is read again. */
         val REFRESH_AFTER: Duration = Duration.ofDays(7)
 
@@ -245,7 +266,12 @@ class SourceRefreshJob(
         fixedDelayString = "PT6H",
     )
     fun refresh() {
-        val due = repository.due(Instant.now().minus(SourceFetcher.REFRESH_AFTER), SourceFetcher.BATCH_SIZE)
+        val due =
+            repository.due(
+                Instant.now().minus(SourceFetcher.REFRESH_AFTER),
+                SourceFetcher.EXTRACTOR_VERSION,
+                SourceFetcher.BATCH_SIZE,
+            )
         if (due.isEmpty()) return
 
         log.info("Refreshing {} source(s) from the library", due.size)

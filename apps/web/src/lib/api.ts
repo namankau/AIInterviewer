@@ -1,5 +1,8 @@
 import type {
   ApiError,
+  BankCompany,
+  BankQuestionPage,
+  RoundType,
   CodeRunResult,
   EntitlementView,
   HintView,
@@ -208,6 +211,26 @@ export function fetchReport(id: string, options: ApiGetOptions): Promise<Session
 
 export function fetchReadiness(options: ApiGetOptions): Promise<ReadinessGroup[]> {
   return apiGet<ReadinessGroup[]>("/api/v1/readiness", options);
+}
+
+// -- question bank ----------------------------------------------------------
+
+/** Every company with at least one sourced question. */
+export function fetchBankCompanies(options: ApiGetOptions): Promise<BankCompany[]> {
+  return apiGet<BankCompany[]>("/api/v1/question-bank/companies", options);
+}
+
+/** One page of a company's sourced questions, optionally one round type. 404 for an unknown slug. */
+export function fetchBankQuestions(
+  company: string,
+  query: { roundType?: RoundType | null; limit?: number; offset?: number },
+  options: ApiGetOptions,
+): Promise<BankQuestionPage> {
+  const params = new URLSearchParams({ company });
+  if (query.roundType) params.set("roundType", query.roundType);
+  if (query.limit !== undefined) params.set("limit", String(query.limit));
+  if (query.offset !== undefined) params.set("offset", String(query.offset));
+  return apiGet<BankQuestionPage>(`/api/v1/question-bank?${params.toString()}`, options);
 }
 
 /**

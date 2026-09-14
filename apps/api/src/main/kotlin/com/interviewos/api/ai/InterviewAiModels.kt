@@ -139,6 +139,24 @@ data class InterviewBrief(
     val targetLevel: String?,
     /** Archetype-level grounding; carries its own provenance so nothing is invented. */
     val grounding: String,
+    /**
+     * A question from the bank the engine has chosen for this turn, or for the problem or
+     * case a workspace round is set on. Null when there is none, which is the common case.
+     */
+    val plannedQuestion: PlannedQuestion? = null,
+)
+
+/**
+ * A reported question the interviewer is to ask, chosen server-side from the company's own
+ * questions in the bank. The model may lead into it and shape it for speech; the engine
+ * checks what was said against [text] and decides the provenance.
+ */
+data class PlannedQuestion(
+    val text: String,
+    /** The employer it is reported at, as the candidate named it. */
+    val company: String,
+    /** True when it must be asked on this turn; false when it waits for the next new topic. */
+    val askNow: Boolean,
 )
 
 /** 24 kHz PCM as Gemini returns it, plus the mime type to store it under. */
@@ -361,6 +379,11 @@ data class AnswerAssessment(
     val questionBasis: String? = null,
     val questionProbes: String? = null,
     val questionAskedBecause: String? = null,
+    /**
+     * The model's word that [nextQuestionText] asks the planned question. Advisory, like
+     * everything else here: the engine checks the text before it believes it.
+     */
+    val askedPlannedQuestion: Boolean? = null,
 )
 
 /**

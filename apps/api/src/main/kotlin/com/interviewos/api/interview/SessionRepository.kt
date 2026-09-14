@@ -378,14 +378,17 @@ class SessionRepository(
         phase: TurnPhase,
         speechStatus: SpeechStatus,
         provenanceJson: String?,
+        /** The bank question this turn asked, when it asked one. See [askedBankQuestions]. */
+        bankQuestionId: UUID? = null,
     ) {
         jdbcClient
             .sql(
                 """
                 insert into public.session_turns
-                       (session_id, user_id, turn_index, question_text, phase, question_audio_status, provenance)
+                       (session_id, user_id, turn_index, question_text, phase, question_audio_status, provenance,
+                        bank_question_id)
                 values (:s, :u, :i, :q, cast(:phase as public.turn_phase), cast(:speech as public.speech_status),
-                        cast(:provenance as jsonb))
+                        cast(:provenance as jsonb), :bank)
                 on conflict (session_id, turn_index) do nothing
                 """.trimIndent(),
             ).param("s", sessionId)
@@ -395,8 +398,36 @@ class SessionRepository(
             .param("phase", phase.dbValue)
             .param("speech", speechStatus.dbValue)
             .param("provenance", provenanceJson)
+            .param("bank", bankQuestionId)
             .update()
     }
+
+    /**
+     * Every bank question this candidate has been asked, in any round, with when it was last
+     * asked and whether that was in [sessionId]. What selection needs to avoid repeats.
+     */
+    fun askedBankQuestions(
+        userId: UUID,
+        sessionId: UUID,
+    ): List<AskedBankQuestion> =
+        jdbcClient
+            .sql(
+                """
+                select bank_question_id, max(created_at) as last_asked, bool_or(session_id = :s) as this_round
+                  from public.session_turns
+                 where user_id = :u
+                   and bank_question_id is not null
+                 group by bank_question_id
+                """.trimIndent(),
+            ).param("u", userId)
+            .param("s", sessionId)
+            .query { rs, _ ->
+                AskedBankQuestion(
+                    bankQuestionId = rs.getObject("bank_question_id", UUID::class.java),
+                    lastAskedAt = rs.getTimestamp("last_asked").toInstant(),
+                    inThisRound = rs.getBoolean("this_round"),
+                )
+            }.list()
 
     /**
      * Attaches the spoken question once it has rendered, or marks it as never coming.
@@ -757,6 +788,13 @@ data class TurnRow(
     val hintLevel: String? = null,
     /** Why this question was asked, as raw JSON. Null on turns recorded before provenance existed. */
     val provenanceJson: String? = null,
+)
+
+/** A bank question a candidate has been asked, for selection. */
+data class AskedBankQuestion(
+    val bankQuestionId: UUID,
+    val lastAskedAt: Instant,
+    val inThisRound: Boolean,
 )
 
 data class ReadinessRow(

@@ -1,11 +1,13 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.bank.BankQuestion
+
 /**
  * How much authority stands behind a question.
  *
- * Mirrors the PRD's knowledge tiers (§03). Only [MODEL_KNOWLEDGE] is reachable today —
- * there is no retrieval corpus — and **the tier is decided by the engine, never by the
- * model.** A model asked to rate its own sourcing will reach for the most impressive
+ * Mirrors the PRD's knowledge tiers (§03). [PUBLISHED_SOURCE] is reached only by a turn that
+ * asked a question from the bank; everything else is [MODEL_KNOWLEDGE]. **The tier is
+ * decided by the engine, never by the model.** A model asked to rate its own sourcing will reach for the most impressive
  * label available, and a question labelled `published_source` with nothing behind it is
  * precisely the fabricated specificity that CLAUDE.md calls the most damaging failure
  * this product has.
@@ -108,6 +110,35 @@ data class QuestionProvenance(
             if (sources.isEmpty()) return fromModel(basis, probes, askedBecause)
             val base = fromModel(basis, probes, askedBecause) ?: return null
             return base.copy(tier = ProvenanceTier.PUBLISHED_SOURCE, sources = sources)
+        }
+
+        /**
+         * Provenance for a turn that asked a question from the bank (task 038).
+         *
+         * The citations are **that question's** sources and nobody else's, and the basis is
+         * written here from what the bank holds rather than by the model. [probes] and
+         * [askedBecause] are the model's, when it gave them for this question; null when its
+         * wording was replaced, because then what it said about its own question is about a
+         * question the candidate never heard.
+         */
+        fun fromBank(
+            question: BankQuestion,
+            company: String,
+            probes: String?,
+            askedBecause: String?,
+        ): QuestionProvenance? {
+            val sources = question.citations.map { it.toProvenanceSource() }
+            if (sources.isEmpty()) return fromModel(null, probes, askedBecause)
+            val reports = if (sources.size == 1) "one source" else "${sources.size} sources"
+            return QuestionProvenance(
+                tier = ProvenanceTier.PUBLISHED_SOURCE,
+                basis = "Reported for $company by $reports we hold, cited below.",
+                probes = probes?.trim()?.takeIf { it.isNotEmpty() } ?: question.notes?.trim().orEmpty(),
+                askedBecause =
+                    askedBecause?.trim()?.takeIf { it.isNotEmpty() }
+                        ?: "It is one of the questions reported for $company in this kind of round, and it was next in the plan.",
+                sources = sources,
+            )
         }
     }
 }

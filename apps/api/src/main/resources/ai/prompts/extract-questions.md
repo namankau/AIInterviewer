@@ -37,7 +37,9 @@ Only questions the document actually reports as having been asked. For each one:
 - `roleFamily` — the kind of role, if stated. Null otherwise.
 - `askedOn` — the date it was reportedly asked, as `YYYY-MM-DD`. **Only if the document
   gives one.** A date is shown to candidates as evidence of how current this is, so a
-  guessed one is worse than none. Null is the right answer far more often than not.
+  guessed one is worse than none. Null is the right answer far more often than not. If the
+  document gives a month and a year ("March 2024"), use the first of that month. If it gives
+  only a year ("in 2023"), leave it null — do not turn a year into 1 January.
 - `notes` — one line on what the source says it was testing, or what a good answer covered.
 
 ## Rules
@@ -47,7 +49,10 @@ Only questions the document actually reports as having been asked. For each one:
   whole pipeline exists to avoid — the candidate is going to be shown this alongside a
   link to this page, and if it is not on the page, we have lied to them.
 - Do not include questions the document invents as examples or practice material unless
-  it states they were actually asked.
+  it states they were actually asked. A list of questions that are "commonly asked",
+  "popular", "worth preparing" or "asked in big tech" is advice, not a report that anyone
+  asked them: leave every one of them out, even when the rest of the document is a real
+  account of an interview.
 - Do not infer the company from the URL or the publisher's name. Use what the text says.
 - Ignore navigation, adverts, comment forms and cookie notices.
 

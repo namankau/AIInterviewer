@@ -1,13 +1,21 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.bank.Company
+import com.interviewos.api.bank.CompanyDirectory
+import com.interviewos.api.bank.EmployerNames
+import com.interviewos.api.bank.QuestionBankRepository
 import com.interviewos.api.interview.BankFixtures.question
 import org.junit.jupiter.api.Test
+import org.mockito.BDDMockito.given
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.verifyNoInteractions
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -152,5 +160,118 @@ class PlannedQuestionCheckTest {
     @Test
     fun `nothing said at all is the bank question on its own`() {
         assertEquals(PlannedQuestionCheck.Delivery(behavioural, faithful = false), PlannedQuestionCheck.deliver(null, behavioural))
+    }
+}
+
+class ResolveTurnTest {
+    private val planned = question("Tell me about a time you disagreed with your manager.")
+
+    @Test
+    fun `a turn with no planned question is the model's own`() {
+        val turn = PlannedQuestionCheck.resolveTurn(null, askNow = true, modelSaysAsked = true, said = "What happened next?")
+
+        assertEquals(PlannedQuestionCheck.AskedTurn("What happened next?", null), turn)
+    }
+
+    @Test
+    fun `a follow-up the model says is not the planned question is not labelled as it`() {
+        val turn = PlannedQuestionCheck.resolveTurn(planned, askNow = false, modelSaysAsked = false, said = "What did you do then?")
+
+        assertNull(turn.bankQuestion)
+        assertEquals("What did you do then?", turn.text)
+    }
+
+    @Test
+    fun `the model saying it asked the question does not make its wording the question`() {
+        val turn =
+            PlannedQuestionCheck.resolveTurn(planned, askNow = false, modelSaysAsked = true, said = "Describe a conflict with your boss.")
+
+        assertEquals(planned, turn.bankQuestion)
+        assertEquals(planned.text, turn.text)
+        assertFalse(turn.faithful)
+    }
+
+    @Test
+    fun `asking the planned question without saying so still counts`() {
+        val said = "Tell me about a time you disagreed with your manager, and how it ended."
+        val turn = PlannedQuestionCheck.resolveTurn(planned, askNow = false, modelSaysAsked = null, said = said)
+
+        assertEquals(PlannedQuestionCheck.AskedTurn(said, planned), turn)
+    }
+}
+
+class GroundingNoteTest {
+    private fun note(
+        sourced: Int,
+        workspace: Boolean = false,
+        confidence: Confidence = Confidence.RECOGNISED,
+        company: String = "Amazon",
+    ) = GroundingNote.forRound(company, Archetype.GLOBAL_PRODUCT, confidence, RoundType.BEHAVIOURAL_COMPETENCY, sourced, workspace)
+
+    @Test
+    fun `a round with sourced questions counts them and names the company`() {
+        val text = note(sourced = 14)
+
+        assertTrue(text.contains("14 questions reported for Amazon's behavioural and competency rounds"), text)
+        assertTrue(text.contains("Follow-ups are written from your answers"), text)
+    }
+
+    @Test
+    fun `a round with none says so, and that the rest is general patterns`() {
+        val text = note(sourced = 0)
+
+        assertTrue(text.startsWith("We hold no sourced questions for Amazon's behavioural and competency rounds"), text)
+        assertTrue(text.contains(Archetype.GLOBAL_PRODUCT.inProse), text)
+    }
+
+    @Test
+    fun `an unrecognised employer is told it is unrecognised`() {
+        assertTrue(note(sourced = 0, confidence = Confidence.INFERRED, company = "Acme").startsWith("We do not recognise Acme"))
+    }
+
+    @Test
+    fun `a workspace round says the round is set on a reported question`() {
+        assertTrue(note(sourced = 1, workspace = true).startsWith("This round is set on a question reported for Amazon"))
+    }
+}
+
+class BankRoundPlannerTest {
+    private val directory: CompanyDirectory = mock(CompanyDirectory::class.java)
+    private val bank: QuestionBankRepository = mock(QuestionBankRepository::class.java)
+    private val planner = BankRoundPlanner(directory, bank, mock(SessionRepository::class.java))
+    private val google = Company(UUID.fromString("00000000-0000-0000-0000-0000000060e1"), "google", "Google", emptyList(), null)
+    private val meta = Company(UUID.fromString("00000000-0000-0000-0000-00000000e7a1"), "meta", "Meta", listOf("facebook"), null)
+
+    @Test
+    fun `Google Cloud India is not Google, and an alias is the only other name that reaches a company`() {
+        // What CompanyDirectory.resolve decides with, given what its exact-match query returns.
+        assertNull(EmployerNames.pick(EmployerNames.lookupKey("Google Cloud India"), listOf(google)))
+        assertEquals(meta, EmployerNames.pick(EmployerNames.lookupKey(" Facebook "), listOf(meta)))
+    }
+
+    @Test
+    fun `a company the directory does not know gets nothing from the bank`() {
+        assertNull(planner.forRound("Google Cloud India", RoundType.BEHAVIOURAL_COMPETENCY))
+
+        verifyNoInteractions(bank)
+    }
+
+    @Test
+    fun `only questions tagged to this company and this round type are offered`() {
+        val own = question("Tell me about a time you moved fast.", company = meta)
+        val elsewhere = question("Tell me about a time you failed.", company = google)
+        val otherRound = question("Design a news feed.", company = meta, roundType = RoundType.SYSTEM_DESIGN)
+        given(directory.resolve("Facebook")).willReturn(meta)
+        given(bank.questionsFor(meta.id, RoundType.BEHAVIOURAL_COMPETENCY, false, 100, 0))
+            .willReturn(listOf(own, elsewhere, otherRound))
+
+        assertEquals(listOf(own), assertNotNull(planner.forRound("Facebook", RoundType.BEHAVIOURAL_COMPETENCY)).questions)
+    }
+
+    @Test
+    fun `an empty bank for this company and round is no bank round at all`() {
+        given(directory.resolve("Meta")).willReturn(meta)
+
+        assertNull(planner.forRound("Meta", RoundType.BEHAVIOURAL_COMPETENCY))
     }
 }

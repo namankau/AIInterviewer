@@ -107,6 +107,22 @@ interface InterviewAi {
      */
     fun extractQuestions(source: SourceDocument): AiResult<ExtractedQuestions>
 
+    /**
+     * The general pattern for how loops run at a kind of employer, never a specific one.
+     *
+     * **[archetype] describes the employer; the company's own name is never in this
+     * call.** That is the whole point: a model that never sees "Amazon" cannot invent an
+     * Amazon-specific detail while writing this, however fluently it could if asked
+     * directly. The result is cached per (archetype, role, level) — it is neither
+     * personal nor about any one company, so the same answer is correct for everyone in
+     * that bucket, and caching it is what keeps this call almost free.
+     */
+    fun composeLoopPattern(
+        archetype: String,
+        roleFamily: String,
+        level: String,
+    ): AiResult<GeneralLoopPattern>
+
     fun composeReport(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,

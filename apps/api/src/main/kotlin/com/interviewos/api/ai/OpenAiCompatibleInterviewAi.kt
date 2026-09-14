@@ -79,6 +79,13 @@ class OpenAiCompatibleInterviewAi(
     override fun extractQuestions(source: SourceDocument): AiResult<ExtractedQuestions> =
         complete(prompts.extractQuestions(source), "extract-questions", ExtractedQuestions::class.java)
 
+    override fun composeLoopPattern(
+        archetype: String,
+        roleFamily: String,
+        level: String,
+    ): AiResult<GeneralLoopPattern> =
+        complete(prompts.loopPattern(archetype, roleFamily, level), "general-loop-pattern", GeneralLoopPattern::class.java)
+
     override fun composeReport(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,

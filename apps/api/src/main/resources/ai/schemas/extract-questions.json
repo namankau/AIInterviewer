@@ -55,6 +55,67 @@
       }
     }
   },
+    "processStages": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "companies": {
+            "type": "ARRAY",
+            "items": {
+              "type": "STRING"
+            },
+            "description": "Every named employer the document says runs this stage. Empty if none is named."
+          },
+          "roleFamily": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "order": {
+            "type": "INTEGER",
+            "nullable": true
+          },
+          "stageName": {
+            "type": "STRING"
+          },
+          "format": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "durationMinutes": {
+            "type": "INTEGER",
+            "nullable": true
+          },
+          "assesses": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "roundType": {
+            "type": "STRING",
+            "nullable": true,
+            "enum": [
+              "technical_fundamentals",
+              "project_deep_dive",
+              "coding_practical",
+              "system_design",
+              "case_client_scenario",
+              "techno_managerial",
+              "behavioural_competency",
+              "hr_fit_closing"
+            ]
+          },
+          "evidence": {
+            "type": "STRING",
+            "description": "A verbatim quote from the document, at most about 300 characters."
+          }
+        },
+        "required": [
+          "stageName",
+          "evidence"
+        ]
+      }
+    }
+  },
   "required": [
     "questions"
   ]

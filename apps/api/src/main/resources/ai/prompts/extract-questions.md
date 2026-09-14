@@ -42,6 +42,35 @@ Only questions the document actually reports as having been asked. For each one:
   only a year ("in 2023"), leave it null — do not turn a year into 1 January.
 - `notes` — one line on what the source says it was testing, or what a good answer covered.
 
+## Process stages
+
+Separately, pull out the interview **loop structure** the document describes at a named
+employer — the stages, in order, that a candidate goes through. For each stage:
+
+- `companies` — every employer the document says runs this stage, named exactly as it
+  does. Same rules as above: empty list rather than a guess, never a group.
+- `roleFamily` — the kind of role this loop is for, if stated. Null otherwise.
+- `order` — its position in the loop, starting at 1, only if the document makes the
+  order clear.
+- `stageName` — the stage's name as the document gives it: "Online assessment",
+  "Bar raiser", "Hiring manager round". Tidy the wording; do not invent a name it
+  never uses.
+- `format` — how it runs, if the document says (phone, onsite panel, take-home, panel
+  of three). Null otherwise.
+- `durationMinutes` — only if the document states a duration.
+- `assesses` — one line on what the document says the stage is testing. Null otherwise.
+- `roundType` — the same enum as above, or null for a stage this product does not
+  simulate: an online assessment, team matching, or an offer conversation.
+- `evidence` — **a verbatim quote from the document, at most about 300 characters**,
+  that supports this stage existing. It must be copied exactly from the text above —
+  not paraphrased, not reconstructed from memory. A stage whose evidence cannot be
+  found verbatim in the document is discarded before it ever reaches a candidate, so
+  an approximate quote is as useless as no quote.
+
+Only stages the document actually describes as part of a real loop. A blog post's
+generic "how to prepare for interviews" advice with no employer's actual process
+behind it contributes no stages, even if it lists round types.
+
 ## Rules
 
 - **Extract, do not generate.** If this document contains no actual reported questions,

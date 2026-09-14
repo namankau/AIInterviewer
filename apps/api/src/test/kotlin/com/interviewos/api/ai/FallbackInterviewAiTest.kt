@@ -336,6 +336,12 @@ class FallbackInterviewAiTest {
 
         override fun extractQuestions(source: SourceDocument) = answer(ExtractedQuestions())
 
+        override fun composeLoopPattern(
+            archetype: String,
+            roleFamily: String,
+            level: String,
+        ) = answer(GeneralLoopPattern())
+
         override fun composeReport(
             brief: InterviewBrief,
             transcript: List<TurnTranscript>,

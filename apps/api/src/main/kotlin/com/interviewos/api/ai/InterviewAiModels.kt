@@ -516,6 +516,51 @@ data class ExtractedQuestion(
     val notes: String? = null,
 )
 
+/**
+ * One stage of an employer's interview loop, as a document reports it.
+ *
+ * [evidence] is a verbatim quote of at most about 300 characters. The engine — not the
+ * model — checks it actually occurs in the fetched text before this stage is ever
+ * written down; a stage whose evidence does not check out is dropped rather than kept
+ * with a warning, because a process claim nobody can verify is exactly the fabricated
+ * specificity `CLAUDE.md` calls out.
+ */
+data class ExtractedProcessStage(
+    /** Every employer the document says runs this stage. Empty when it names none. */
+    val companies: List<String> = emptyList(),
+    val roleFamily: String? = null,
+    /** Where this stage sits in the loop, if the document makes the order clear. */
+    val order: Int? = null,
+    /** The stage's name as the document gives it: "Online assessment", "Bar raiser". */
+    val stageName: String,
+    val format: String? = null,
+    val durationMinutes: Int? = null,
+    /** What the stage is testing, in the document's own account. */
+    val assesses: String? = null,
+    /** One of `RoundType`'s db values, or null for a stage we do not simulate. */
+    val roundType: String? = null,
+    val evidence: String,
+)
+
 data class ExtractedQuestions(
     val questions: List<ExtractedQuestion> = emptyList(),
+    val processStages: List<ExtractedProcessStage> = emptyList(),
+)
+
+// ---------------------------------------------------------------------------
+// The loop brief's general pattern (PRD 04, 08) — archetype-level, never given the
+// company's name while it is written, so it cannot invent a company-specific detail.
+// ---------------------------------------------------------------------------
+
+data class GeneralLoopStage(
+    val order: Int,
+    val stageName: String,
+    val format: String? = null,
+    val assesses: String? = null,
+    /** One of `RoundType`'s db values, or null for a stage this product does not simulate. */
+    val roundType: String? = null,
+)
+
+data class GeneralLoopPattern(
+    val stages: List<GeneralLoopStage> = emptyList(),
 )

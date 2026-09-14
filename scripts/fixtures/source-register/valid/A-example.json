@@ -1,0 +1,41 @@
+{
+  "partition": "A-example",
+  "checkedOn": "2026-09-14",
+  "sources": [
+    {
+      "url": "https://example.com/careers/how-we-hire",
+      "title": "How we hire - Example Corp Careers",
+      "publisher": "Example Corp",
+      "companyName": "Example Corp",
+      "origin": "employer",
+      "basis": "Example Corp's own careers page on its hiring process",
+      "contributes": ["process"],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Names the stages of the loop.",
+      "robotsAllows": true,
+      "readableWithoutJs": true
+    },
+    {
+      "url": "https://someone.substack.com/p/example-corp-interview-experience",
+      "title": "My Example Corp interview experience",
+      "publisher": "Someone (Substack)",
+      "companyName": "Example Corp",
+      "origin": "author",
+      "basis": "The author's own Substack post, cited and linked",
+      "contributes": ["process", "questions"],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-06-01",
+      "summary": "A five-round loop with two coding questions and one system design question.",
+      "robotsAllows": true,
+      "readableWithoutJs": true
+    }
+  ],
+  "rejected": [
+    {
+      "url": "https://leetcode.com/discuss/post/example-corp-questions",
+      "reason": "Hard exclusion: LeetCode Discuss"
+    }
+  ],
+  "gaps": ["Example Two Corp - nothing usable found"]
+}

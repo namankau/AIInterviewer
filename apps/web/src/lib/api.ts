@@ -6,7 +6,9 @@ import type {
   CodeRunResult,
   EntitlementView,
   HintView,
+  LoopBrief,
   MeResponse,
+  PrepPlan,
   ProfileDetails,
   ResumeView,
   SkillView,
@@ -231,6 +233,30 @@ export function fetchBankQuestions(
   if (query.limit !== undefined) params.set("limit", String(query.limit));
   if (query.offset !== undefined) params.set("offset", String(query.offset));
   return apiGet<BankQuestionPage>(`/api/v1/question-bank?${params.toString()}`, options);
+}
+
+// -- the loop brief and prep plan --------------------------------------------
+
+/** How this company interviews for this role: sourced stages, the general pattern, bank coverage. */
+export function fetchLoopBrief(
+  query: { company: string; role?: string; level?: string },
+  options: ApiGetOptions,
+): Promise<LoopBrief> {
+  const params = new URLSearchParams({ company: query.company });
+  if (query.role) params.set("role", query.role);
+  if (query.level) params.set("level", query.level);
+  return apiGet<LoopBrief>(`/api/v1/loop-brief?${params.toString()}`, options);
+}
+
+/** The ordered practice plan for this company and role. Computed fresh every call. */
+export function fetchPrepPlan(
+  query: { company: string; role?: string; level?: string },
+  options: ApiGetOptions,
+): Promise<PrepPlan> {
+  const params = new URLSearchParams({ company: query.company });
+  if (query.role) params.set("role", query.role);
+  if (query.level) params.set("level", query.level);
+  return apiGet<PrepPlan>(`/api/v1/prep-plan?${params.toString()}`, options);
 }
 
 /**

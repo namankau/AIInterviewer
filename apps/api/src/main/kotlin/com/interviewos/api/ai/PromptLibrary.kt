@@ -65,6 +65,16 @@ class PromptLibrary(
             .replace("{{url}}", source.url ?: "(uploaded document)")
             .replace("{{content}}", source.content)
 
+    fun loopPattern(
+        archetype: String,
+        roleFamily: String,
+        level: String,
+    ): String =
+        loadPrompt("general-loop-pattern")
+            .replace("{{archetype}}", archetype)
+            .replace("{{roleFamily}}", roleFamily)
+            .replace("{{level}}", level)
+
     fun report(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,

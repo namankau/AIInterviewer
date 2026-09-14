@@ -101,6 +101,13 @@ class FallbackInterviewAi(
     override fun extractQuestions(source: SourceDocument): AiResult<ExtractedQuestions> =
         attempt(AiCapability.STRUCTURED_TEXT, "extractQuestions") { it.extractQuestions(source) }
 
+    override fun composeLoopPattern(
+        archetype: String,
+        roleFamily: String,
+        level: String,
+    ): AiResult<GeneralLoopPattern> =
+        attempt(AiCapability.STRUCTURED_TEXT, "composeLoopPattern") { it.composeLoopPattern(archetype, roleFamily, level) }
+
     override fun composeReport(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,

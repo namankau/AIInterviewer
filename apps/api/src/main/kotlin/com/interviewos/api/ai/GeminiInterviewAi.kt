@@ -243,6 +243,16 @@ class GeminiInterviewAi(
         return AiResult(objectMapper.treeToValue(node, ExtractedQuestions::class.java), usage)
     }
 
+    override fun composeLoopPattern(
+        archetype: String,
+        roleFamily: String,
+        level: String,
+    ): AiResult<GeneralLoopPattern> {
+        val prompt = prompts.loopPattern(archetype, roleFamily, level)
+        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("general-loop-pattern"))
+        return AiResult(objectMapper.treeToValue(node, GeneralLoopPattern::class.java), usage)
+    }
+
     override fun composeReport(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,

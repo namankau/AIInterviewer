@@ -12,6 +12,7 @@ import com.interviewos.api.ai.ComposedCase
 import com.interviewos.api.ai.ComposedProblem
 import com.interviewos.api.ai.ComposedRound
 import com.interviewos.api.ai.ExtractedQuestions
+import com.interviewos.api.ai.GeneralLoopPattern
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
 import com.interviewos.api.ai.OfferedHint
@@ -191,6 +192,12 @@ private abstract class StubAi : InterviewAi {
     ): AiResult<OfferedHint> = unsupported()
 
     override fun extractQuestions(source: SourceDocument): AiResult<ExtractedQuestions> = unsupported()
+
+    override fun composeLoopPattern(
+        archetype: String,
+        roleFamily: String,
+        level: String,
+    ): AiResult<GeneralLoopPattern> = unsupported()
 
     override fun composeReport(
         brief: InterviewBrief,

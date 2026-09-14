@@ -4,6 +4,7 @@ import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.SourceDocument
 import com.interviewos.api.bank.QuestionBankWriter
+import com.interviewos.api.loopbrief.ProcessStageWriter
 import com.interviewos.api.storage.ObjectStorage
 import com.interviewos.api.storage.ObjectStorageException
 import org.slf4j.LoggerFactory
@@ -38,6 +39,7 @@ import java.util.UUID
 class SourceFetcher(
     private val repository: SourceRepository,
     private val bankWriter: QuestionBankWriter,
+    private val stageWriter: ProcessStageWriter,
     private val interviewAi: InterviewAi,
     private val storage: ObjectStorage,
     restClientBuilder: RestClient.Builder,
@@ -77,13 +79,16 @@ class SourceFetcher(
 
             val extracted = interviewAi.extractQuestions(document)
             val recorded = bankWriter.replaceReports(source.id, source.companyName, extracted.value.questions)
+            val stages =
+                stageWriter.replaceStages(source.id, source.companyName, extracted.value.processStages, document.content)
             repository.markFetched(source.id, SourceStatus.FETCHED, hash, null, EXTRACTOR_VERSION)
             log.info(
-                "Read source {} ({}) with extractor v{}: {} question(s)",
+                "Read source {} ({}) with extractor v{}: {} question(s), {} process stage(s)",
                 source.id,
                 source.url ?: source.storagePath,
                 EXTRACTOR_VERSION,
                 recorded,
+                stages,
             )
         } catch (e: AiUnavailableException) {
             log.warn("Could not extract questions from source {}", source.id, e)
@@ -218,8 +223,10 @@ class SourceFetcher(
          * its content has not changed — otherwise old sources keep the old shape for ever.
          *
          * 1: one `companyName` per question. 2: `companies`, reports into the bank (task 035).
+         * 3: `processStages`, evidence-checked and written into `source_process_stages`
+         * for the loop brief (task 037).
          */
-        const val EXTRACTOR_VERSION = 2
+        const val EXTRACTOR_VERSION = 3
 
         /**
          * Whether a document must go through the model again: its content changed, or the

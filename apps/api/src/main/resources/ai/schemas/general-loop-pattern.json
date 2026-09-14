@@ -1,0 +1,48 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "stages": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "order": {
+            "type": "INTEGER"
+          },
+          "stageName": {
+            "type": "STRING"
+          },
+          "format": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "assesses": {
+            "type": "STRING",
+            "nullable": true
+          },
+          "roundType": {
+            "type": "STRING",
+            "nullable": true,
+            "enum": [
+              "technical_fundamentals",
+              "project_deep_dive",
+              "coding_practical",
+              "system_design",
+              "case_client_scenario",
+              "techno_managerial",
+              "behavioural_competency",
+              "hr_fit_closing"
+            ]
+          }
+        },
+        "required": [
+          "order",
+          "stageName"
+        ]
+      }
+    }
+  },
+  "required": [
+    "stages"
+  ]
+}

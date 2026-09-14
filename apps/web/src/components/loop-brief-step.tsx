@@ -160,8 +160,8 @@ export function LoopBriefStep({
             <>
               {brief.bankCoverage.questionCount} sourced question
               {brief.bankCoverage.questionCount === 1 ? "" : "s"} for {brief.company.name}.{" "}
-              {brief.bankCoverage.bankUrl ? (
-                <Link href={brief.bankCoverage.bankUrl} className="text-accent underline-offset-4 hover:underline">
+              {brief.company.slug ? (
+                <Link href={`/questions/${brief.company.slug}`} className="text-accent underline-offset-4 hover:underline">
                   See them
                 </Link>
               ) : null}

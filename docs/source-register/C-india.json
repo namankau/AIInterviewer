@@ -1,0 +1,521 @@
+{
+  "partition": "C-india",
+  "checkedOn": "2026-09-14",
+  "sources": [
+    {
+      "url": "https://www.flipkartcareers.com/howwehire",
+      "title": "Flipkart Careers - How We Hire",
+      "publisher": "Flipkart",
+      "companyName": "Flipkart",
+      "origin": "employer",
+      "basis": "Flipkart's own careers page describing its hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Seven-step process: application, application assessment, optional technical phone screen, onsite interview (recruiter explains number of rounds), independent hiring committee review of interviewer feedback, offer rollout, joining; plus an FAQ. Not role-specific; no questions.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:27.912Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 5817,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://medium.com/@anmol15554/flipkart-interview-experience-for-sde-2-9b7fbfadbdf1",
+      "title": "Flipkart Interview Experience for SDE-2",
+      "publisher": "anmol mittal (Medium)",
+      "companyName": "Flipkart",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2024-06-20",
+      "summary": "May 2024 SDE-2 loop (offer): 2.5h machine coding (30 min brief / 90 min coding / 30 min review) building a wallet system; DSA round with Longest Valid Parentheses and Maximum Performance of a Team; design round 'design a Jukebox/Spotify' (APIs, schema, DB indexing); hiring manager round.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:30.394Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://medium.com/@nirjharr05/my-interview-experience-at-flipkart-for-sde-2-5d6db0e49533",
+      "title": "My Interview Experience at Flipkart for SDE 2",
+      "publisher": "Nirjhar Roy (Medium)",
+      "companyName": "Flipkart",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-06-13",
+      "summary": "SDE-2 loop: machine coding a demoable stock-market app (tracking, orders, portfolio) with a code-review session three days later; DSA round with 'burning tree' and 'buy/sell stock with at most k transactions'; LLD-style design of Apple Health (schema expected); managerial round; a second design round (transport management) after re-evaluation.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:32.641Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://medium.com/@hy287719/flipkart-sde-2-interview-experience-13a29361ccf9",
+      "title": "Flipkart SDE-2 Interview Experience",
+      "publisher": "Himanshu yadav (Medium)",
+      "companyName": "Flipkart",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-04-27",
+      "summary": "SDE-2 backend hiring drive: four rounds (machine coding, DSA, design, hiring manager). Machine coding over a shared Google Meet with ~30 candidates: build an investing app (add user/stock, buy, sell, view portfolio, admin-controlled prices), 30/90/30 min brief/code/review; DSA two mediums (string, recursion/DP); HLD 'design a Spotify service' with search optimisation.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:36.690Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://medium.com/@parthvyas08910/flipkart-machine-coding-interview-experience-37e78c16d8eb",
+      "title": "Flipkart Machine Coding Interview Experience",
+      "publisher": "Parth Vyas (Medium)",
+      "companyName": "Flipkart",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-10-11",
+      "summary": "In-person machine coding round (rejected): candidates briefed together by a senior engineer, 1.5h to code an order notification service with stakeholders, role-based users and a bonus part, followed by a panel discussion of the implementation; author's reflections on time allocation.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:40.752Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://medium.com/@neeraj_swe/cracking-the-flipkart-sde-1-interview-my-journey-and-insights-fa6a2a222e6a",
+      "title": "Cracking the Flipkart SDE-1 Interview: My Journey and Insights",
+      "publisher": "Neeraj (Medium)",
+      "companyName": "Flipkart",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2023-12-04",
+      "summary": "SDE-1 loop: machine coding a bowling alley scorer (strikes, spares, bonus) judged on demoable code, readability, patterns, exception handling; DSA round with Set Matrix Zeroes and Car Pooling in one hour; managerial round on current architecture and motivation.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:44.827Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://medium.com/@garg22neha1999/swiggy-interview-experience-for-sde-2-backend-developer-0c529fce4c45",
+      "title": "Swiggy Interview Experience for SDE 2 Backend Developer",
+      "publisher": "Neha Garg (Medium)",
+      "companyName": "Swiggy",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2026-02-17",
+      "summary": "SDE-2 backend loop (offer, OA skipped): DSA round with two Swiggy-framed problems similar to Word Break and Partition Array for Maximum Sum; 1h LLD round coding a Top-K restaurant discovery system (nearest, nearest available, 50% discount, highest rated); HM round with HLD of splitting one pharma+grocery order into child orders under a parentOrderId (concurrency, sibling lookup); a second HM round for team matching.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:48.882Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://medium.com/@mpooja9440/swiggy-sde-1-backend-interview-experience-1-years-of-experience-8b181e8962d2",
+      "title": "Swiggy SDE-1 (Backend) | Interview Experience | 1+ years of Experience",
+      "publisher": "Pooja Reddy M (Medium)",
+      "companyName": "Swiggy",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-08-18",
+      "summary": "SDE-1 Go backend loop (rejected after last round): HackerRank OA in Go (3 questions); 1h technical round with Reverse String (warm-up) and Gas Station; 75-min LLD/machine coding round (five-part problem, statement linked as a Google Doc, not reproduced in the post); engineering-manager round on past projects.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:52.938Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://medium.com/@smgasghar/swiggy-interview-experience-backend-position-3899c1d59f17",
+      "title": "Swiggy Interview Experience Backend Position",
+      "publisher": "Syed Mohd Gulam Baquer (Medium)",
+      "companyName": "Swiggy",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2024-03-06",
+      "summary": "Associate SDE backend loop (selected, Feb 2024): OA with CS fundamentals, one easy DSA and one API-response backend question; LLD round coding a game problem judged on SOLID/OOP/readability; LLD+HLD round reviewing that code then designing APIs and schema for a live Swiggy Instamart feature; hiring manager round (Kafka, RabbitMQ, projects).",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:56.988Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://medium.com/@iamabhishek229313/swiggy-sde-1-backend-interview-experience-f231bd1a1c54",
+      "title": "Swiggy SDE-1 (Backend) | Interview Experience | [Offer]",
+      "publisher": "Abhishek Kumar (Medium)",
+      "companyName": "Swiggy",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2022-10-22",
+      "summary": "New-grad SDE-1 backend loop (offer; older than three years): OA of 3 questions; DSA round with Maximum Length of Pair Chain and longest valid substring; machine coding round 'design Splitwise' with five features and scale trade-offs; hiring manager round on projects and behavioural questions.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:33:01.053Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://razorpay.com/blog/beyond-resumes-setting-a-teams-through-values-driven-interviews/",
+      "title": "Beyond Resumes: Setting A-Teams through Values-Driven Interviews",
+      "publisher": "Razorpay",
+      "companyName": "Razorpay",
+      "origin": "employer",
+      "basis": "Razorpay's own company blog, authored by its Culture Head, describing how interviews are structured",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Describes Razorpay's values-based interview approach: interviewers probe six named values (Customer First, Autonomy & Ownership, Challenging the Status Quo, Agility with Integrity, Transparency, Razorpay Grows with Razors) by asking for specific examples rather than assessing resumes/credentials alone. Not engineering-specific and no named questions.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:33:05.110Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 4855,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://dev.to/anuraghazra/my-frontend-interview-experience-at-razorpay-29bo",
+      "title": "My FrontEnd Interview Experience At Razorpay",
+      "publisher": "Anurag Hazra (DEV Community)",
+      "companyName": "Razorpay",
+      "origin": "author",
+      "basis": "The author's own free dev.to post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2021-08-25",
+      "summary": "Frontend engineer loop, four rounds: 1h technical deep-dive on past projects/design-system work; 1.5h pair-programming coding round on CodeSandbox (any framework); 1h open-ended web-fundamentals discussion; 1h hiring-manager culture-fit round. Older than three years but specific and first-hand.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:33:07.480Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 19871,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://rahuldkjain.github.io/blog/cred-interview/CRED-interview-experience/",
+      "title": "CRED Interview Experience",
+      "publisher": "Rahul Kumar Jain",
+      "companyName": "CRED",
+      "origin": "author",
+      "basis": "The author's own personal blog (GitHub Pages), cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Frontend Developer loop (offer), interviewed July 2021: three 90-minute technical rounds (JS problem with live optimisation discussion; machine coding a search box with API integration covering event delegation, defer/async, module patterns, virtual DOM, Next.js routing; React machine coding building a PAN/Aadhaar form-validation app), a 60-minute cultural-fit round, then salary discussion.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:33:09.559Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 8602,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://blog.postman.com/how-postman-created-data-hiring-process/",
+      "title": "How (and Why) Postman Created a Data-Driven Hiring Process",
+      "publisher": "Postman",
+      "companyName": "Postman",
+      "origin": "employer",
+      "basis": "Postman's own company blog describing its hiring process design",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Describes Postman's hiring funnel (Applied, Screening, Technical Interview, Interviews, Offer, Hired) grouped into Attract/Screen/Interview/Offer phases, service-level objectives per stage (e.g. candidates not left in 'Applied' more than a day), automated candidate communication, and metrics tracked (time-to-hire, Process Performance Score, Candidate Experience Score). Not engineering-specific; no named questions.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:33:12.120Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 18882,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://blog.postman.com/how-to-be-successful-interviewing-for-big-tech/",
+      "title": "How to be Successful Interviewing for Big Tech",
+      "publisher": "Sagiv Ofek, Postman (Postman Blog)",
+      "companyName": "Postman",
+      "origin": "employer",
+      "basis": "Postman's own company blog, written by the Postman engineer (Codegen team lead) who designed the process being described",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Postman engineering lead describes the three-stage engineering interview he built at Postman: a take-home task with paired code review, a system-design conversation focused on trade-offs, and a behavioural/culture-fit round. States candidates may use AI tools, search engines, and modern tooling during interviews because 'the interview should mirror the job.'",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:33:15.227Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 13318,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://dev.to/sukanyaa_rashmi_e1a8b8d4d/my-interview-experience-for-senior-software-engineer-role-at-walmart-global-tech-23o3",
+      "title": "My Interview Experience for Senior Software Engineer Role at Walmart Global Tech",
+      "publisher": "Sukanyaa Rashmi (DEV Community)",
+      "companyName": "Walmart Global Tech",
+      "origin": "author",
+      "basis": "The author's own free dev.to post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-10-01",
+      "summary": "Senior Software Engineer loop, completed in one week (October 2025), four rounds: DSA (binary tree level-order traversal, DFS graph traversal plus a follow-up); LLD designing a Restaurant Reservation and Serving System (Spring Boot, transactions, ACID); HLD with a Java multithreading warm-up (print numbers using three threads in sequence) then 'design a video streaming system like Netflix or Disney+ Hotstar' (bitrates, CDNs, DB scalability); hiring-manager round on projects and ownership. Candidate received the offer.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:33:19.298Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 8540,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://dev.to/ssh3/goldman-sachs-sde-1-interview-experience-1obo",
+      "title": "Goldman Sachs SDE-1 Interview Experience (2024)",
+      "publisher": "shashi (DEV Community)",
+      "companyName": "Goldman Sachs",
+      "origin": "author",
+      "basis": "The author's own free dev.to post, cited and linked",
+      "contributes": [
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2024-07-24",
+      "summary": "SDE-1 interview (candidate not selected): reproduces two coding questions actually asked with the author's Java attempts - a 'shortest subarray with sum at least k' problem and a minimum-sum grid path (DP) problem. Thin on round structure; strong on two named, verifiable questions.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:33:21.371Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 3446,
+        "readable": true,
+        "error": null
+      }
+    }
+  ],
+  "rejected": [
+    {
+      "url": "https://www.geeksforgeeks.org/flipkart-interview-experience-for-sde-1-off-campus-2024/",
+      "reason": "GeeksforGeeks - hard exclusion"
+    },
+    {
+      "url": "https://www.glassdoor.com/Interview/Flipkart-Software-Engineer-Interview-Questions-EI_IE300494.0,8_KO9,26.htm",
+      "reason": "Glassdoor - hard exclusion"
+    },
+    {
+      "url": "https://leetcode.com/discuss/post/7560534/",
+      "reason": "LeetCode Discuss - hard exclusion"
+    },
+    {
+      "url": "https://www.interviewbit.com/flipkart-interview-questions/",
+      "reason": "InterviewBit - aggregator, hard exclusion"
+    },
+    {
+      "url": "https://www.naukri.com/code360/interview-experiences/flipkart/flipkart-interview-experience-on-campus-sep-2022",
+      "reason": "Naukri Code360 - aggregator republishing candidate content, hard exclusion"
+    },
+    {
+      "url": "https://ophyai.com/blog/company-guides/flipkart-interview-guide",
+      "reason": "Third-party prep-vendor guide synthesising others' reports (not employer, not a first-hand author account); aggregator-style, not used"
+    },
+    {
+      "url": "https://bitsofanant.medium.com/my-sde-2-interview-experience-at-swiggy-4fc2447789c8",
+      "reason": "Medium member-only story (Swiggy SDE-2) - paywalled"
+    },
+    {
+      "url": "https://bytes.swiggy.com/how-to-get-a-software-engineering-job-at-swiggy-interview-process-breakdown-cf458a26849c",
+      "reason": "Could not be fetched to verify (connection to bytes.swiggy.com timed out from this machine; WebFetch and the medium.com/swiggy-bytes mirror both failed/403). Not recorded because unverified. It appears to be a post on Swiggy's own engineering blog (Swiggy Bytes) about its SDE interview process - worth a manual check by the owner"
+    },
+    {
+      "url": "https://www.geeksforgeeks.org/interview-experiences/swiggy-interview-experience-set-3-sde-2/",
+      "reason": "GeeksforGeeks - hard exclusion"
+    },
+    {
+      "url": "https://www.codingkaro.in/jobs-internships/leetcode-interview-experience/Swiggy",
+      "reason": "Aggregator republishing LeetCode Discuss interview experiences - hard exclusion"
+    },
+    {
+      "url": "https://roundz.ai/interviews/81e322e1-3495-4eba-a7ea-bcab10032de2/interview-experience-swiggy-software-development-engineer-sde-ii-4",
+      "reason": "Aggregator of third-party interview reports - hard exclusion"
+    },
+    {
+      "url": "https://www.lets-code.co.in/previousyearcodingquestion/swiggy-previous-year-coding-questions/",
+      "reason": "Aggregator question list, not a first-hand account - excluded"
+    },
+    {
+      "url": "https://roundz.substack.com/p/interview-experience-174-phonepe-sde2",
+      "reason": "Fetched and confirmed: published by 'Team Roundz' from an anonymously-submitted candidate report ('Candidate Name: Not disclosing'), not the candidate's own account - third-party aggregator, same operation as roundz.ai already excluded above"
+    },
+    {
+      "url": "https://roundz.substack.com/p/interview-experience-130-phonepe-sde2",
+      "reason": "Same Roundz aggregator operation as above - not fetched individually, excluded on the same basis"
+    },
+    {
+      "url": "https://roundz.substack.com/p/interview-experience-165-myntra-sde",
+      "reason": "Same Roundz aggregator operation - excluded on the same basis"
+    },
+    {
+      "url": "https://www.hackerrank.com/blog/engineering-culture-at-cred/",
+      "reason": "Fetched: written by a HackerRank staff writer (not CRED, not an individual author reporting their own loop), and contains no hiring-process or interview-round detail - not usable"
+    },
+    {
+      "url": "https://www.jointaro.com/interviews/companies/jpmorgan-chase/experiences/software-engineer-india-april-1-2018-accepted-offer-positive-da21c00c/",
+      "reason": "Structured third-party interview-report database (Jointaro), not an individual author's own blog - aggregator, excluded"
+    },
+    {
+      "url": "https://www.enginebogie.com/interview/experience/walmart-global-tech-india-software-engineer-3/1059",
+      "reason": "Third-party interview-report aggregator site, not an individual author's own blog - excluded, not fetched"
+    },
+    {
+      "url": "https://anzal.hashnode.dev/zomato-sde-interview-experience",
+      "reason": "Returned HTTP 403 on every fetch attempt this session - could not verify content, not recorded"
+    }
+  ],
+  "gaps": [
+    "Systemic issue this session: medium.com (including custom-domain Medium publications like engineering.razorpay.com) returned HTTP 403 to WebFetch on every attempt after the first few minutes of this run, most likely because several sibling research agents in the same overnight run were fetching Medium concurrently and triggered rate-limiting/bot-blocking. Medium is the dominant venue for individual authors' interview-experience posts about Indian product companies, so this materially reduced what could be verified for: Zomato, Zerodha, Freshworks, Zoho, Meesho, PhonePe, Paytm, Myntra, JPMorgan Chase, BrowserStack, Uber India, Ola, InMobi. Many strong-looking free Medium candidates were found by search (e.g. multiple Zomato SDE posts, PhonePe frontend/backend posts, Paytm senior-SE posts, Ola/InMobi/Myntra SDE posts) but were NOT recorded because they could not be fetched and confirmed this session. Recommend a follow-up pass once Medium access is available again - search queries used are listed per company below.",
+    "Zomato: employer's own careers/engineering-blog pages (zomato.com/careers, bytes.zomato.com) were not found with process detail via search; candidate posts found were on Medium (blocked) or a Hashnode post (anzal.hashnode.dev/zomato-sde-interview-experience) that also 403'd on every attempt. No source recorded.",
+    "Zerodha: fetched zerodha.tech directly and listed all 12 visible engineering-blog post titles - none is about hiring or interviews. careers.zerodha.com is client-rendered (no content in a plain GET). No qualifying author post found off Medium. No source recorded.",
+    "Freshworks: no employer 'how we hire' page found; candidate posts found were on Medium only (blocked). No source recorded.",
+    "Zoho: no employer interview-process page found beyond generic careers marketing; candidate accounts found were on Naukri Code360 (aggregator, excluded) or Medium (blocked). No dev.to/Hashnode/Substack post found. No source recorded.",
+    "Meesho: candidate posts found were on Medium only (blocked); no employer process page or non-Medium author post found. No source recorded.",
+    "PhonePe: employer's own tech.phonepe.com blog has no interview-process content found via search; candidate posts found were on Medium (blocked) or roundz.substack.com (aggregator, rejected above). No source recorded.",
+    "Paytm: multiple detailed 2024-2025 candidate posts found (e.g. 'Paytm Senior Software Engineer Interview Experience 2025', a 'complete question bank' post) but all on Medium, which was blocked all session. No source recorded.",
+    "Myntra: candidate account found was on roundz.substack.com (aggregator, rejected above); other accounts found were on Medium (blocked) or Naukri (aggregator). No source recorded.",
+    "Walmart Global Tech: one dev.to source recorded above; a second candidate (Medium, Ashutosh Kumar/Phalgun Mittal) could not be fetched to add a second source in the time available.",
+    "Goldman Sachs (engineering): one dev.to source recorded above (thin - two named coding questions, no round structure). goldmansachs.com blocked WebFetch with 403 on every path tried (careers process pages, PDF interview-prep guide, India-specific process pages), despite robots.txt allowing a generic crawler - likely bot/WAF protection unrelated to robots.txt. No second source recorded.",
+    "JPMorgan Chase (technology): no employer India-technology hiring page found; only candidate source found was jointaro.com (aggregator, rejected above) and Medium/LeetCode results (blocked/excluded). No source recorded.",
+    "BrowserStack: candidate posts found were on Medium only (blocked); no employer process page with real detail or non-Medium author post found. No source recorded.",
+    "Uber India: Uber's own engineering-blog post on its interview process (uber.com/blog/engineering-interview-process) was found by search but returned HTTP 404 on every URL variant tried (with/without trailing slash, en-US, en-IN) - likely a bot-detection redirect rather than a real 404, since the same URL appears live in search results. Candidate posts found were on Medium (blocked). No source recorded.",
+    "Ola: candidate posts found were on Medium only (blocked); no employer process page found. No source recorded.",
+    "InMobi: candidate posts found were on Medium only (blocked); no employer process page found. No source recorded."
+  ]
+}

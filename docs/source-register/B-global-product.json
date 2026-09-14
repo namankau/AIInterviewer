@@ -1,0 +1,1000 @@
+{
+  "partition": "B-global-product",
+  "checkedOn": "2026-09-14",
+  "sources": [
+    {
+      "url": "https://www.atlassian.com/company/careers/resources/interviewing/engineering",
+      "title": "Atlassian Engineering Interview Guide",
+      "publisher": "Atlassian",
+      "companyName": "Atlassian",
+      "origin": "employer",
+      "basis": "Atlassian's own careers-site guide to its engineering interviews",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Names the engineering stages: a two-part coding interview (data structures, code design) in the candidate's chosen language, a 60-minute systems design interview from a set of structured questions, a manager interview, a values interview on Atlassian's five values (interviewer may be from outside the team), then a hiring committee review",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:26.283Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 12881,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://wac-cdn.atlassian.com/dam/jcr:7a71f595-39ee-48d1-979b-80f027b9c2d9/P60%20Backend%20Engineer%20Guide.pdf?cdnVersion=1600",
+      "title": "Principal Backend Engineer Interview Guide",
+      "publisher": "Atlassian",
+      "companyName": "Atlassian",
+      "origin": "employer",
+      "basis": "Atlassian's own candidate preparation guide (PDF, (c)2023 Atlassian), published on its own CDN",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "PDF (c)2023: three stages - Coding 1 (60 min); Coding 2 (60 min) + System Design (60 min); Leadership Craft (60 min) + Values (45 min). Coding in your own IDE with tests (TDD encouraged, debugger welcome); leadership craft digs into owning outcomes, direction and org impact; lists example values questions per value, e.g. 'When have you advocated to push for change?', 'How have you put the customer first? What trade-off(s) did you make?'",
+      "robotsAllows": true,
+      "readableWithoutJs": false,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:28.484Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 120000,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.atlassian.com/company/careers/resources/applying/early-careers-interview-guide",
+      "title": "Early Careers Interview Guide",
+      "publisher": "Atlassian",
+      "companyName": "Atlassian",
+      "origin": "employer",
+      "basis": "Atlassian's own careers-site guide for graduate and intern candidates",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Graduate/intern path: application, a timed online coding test for software engineer grads (take-home case study for PM grads), then a virtual loop of 3-4 interviews - craft-specific technical, a leadership interview and a values interview with behavioural and situational questions; STAR preparation advice",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:30.636Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 17472,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://gagan93.me/blog/2024/05/04/atlassian-interview-experience.html",
+      "title": "Atlassian Interview Experience",
+      "publisher": "Gagandeep Singh",
+      "companyName": "Atlassian",
+      "origin": "author",
+      "basis": "The author's own post on his personal blog, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2024-05-04",
+      "summary": "Senior Software Engineer loop, Nov 2023: Karat screen (5 rapid-fire system debugging scenarios in 20 min, e.g. 'a system is running very slow - how would you debug it', scaling from x to y users, porting a smart-freezer controller to a microcontroller; then two DS problems), a data-structures round (ranked-ballot vote counting with tie-breaking via a custom comparator, requirements changed twice), a low-level design round (snake game with tests in 45 min); names the system design, values and management rounds",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:32.901Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 13458,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://medium.com/@ritikajoshi141/i-interviewed-at-atlassian-heres-everything-you-need-to-know-b126553a03d5",
+      "title": "I Interviewed at Atlassian — Here's Everything You Need to Know",
+      "publisher": "Ritika Joshi (Medium)",
+      "companyName": "Atlassian",
+      "origin": "author",
+      "basis": "The author's own free (not member-only) Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-11-29",
+      "summary": "P3 Full Stack Software Engineer (front-end leaning): recruiter screen; 60-min Karat interview with a non-Atlassian interviewer (20-min full-stack system design on request lifecycle, sessions/tokens; 30-min plain HTML/CSS/JS layout build); 60-min verbal full-stack craft interview (API flow, auth tokens, React data fetching, HTTPS/DNS/SSL); 60-min React + TypeScript UI component coding round on HackerRank",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:35.710Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://medium.com/@stylus07/atlassian-interview-experience-e51cb1f0735b",
+      "title": "Atlassian Interview Experience",
+      "publisher": "Stylus07 (Medium)",
+      "companyName": "Atlassian",
+      "origin": "author",
+      "basis": "The author's own free (not member-only) Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2022-08-21",
+      "summary": "Front-end/full-stack loop (older, 2021-22): front-end system design screen (design a task list where each task has multiple tags - components, APIs, data model); onsite of coding (render a JSON file tree like GitHub/Bitbucket), a Trello-like front-end system design, a full-stack craft interview (walk through your app, then add authentication), a values interview with one question per value, and a management interview",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:37.781Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://shopify.engineering/nail-your-technical-shopify-interview",
+      "title": "Shopify's Technical Interview Process: What to Expect and How to Prepare",
+      "publisher": "Shopify",
+      "companyName": "Shopify",
+      "origin": "employer",
+      "basis": "Shopify's own engineering blog post on its technical interview process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2022-07-07",
+      "summary": "Describes each stage: the one-hour Life Story with a recruiter (five traits - impact, readiness, trust, engagement, self-awareness - and reflection prompts), a 40-minute CoderPad coding exercise, a 75-90 minute remote pair programming session where the candidate drives in their own environment (front-end candidates in HTML/CSS/JS or React), and a 60-minute Technical Deep Dive on one or two past projects (business impact, architecture, decisions)",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:41.846Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 13157,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.shopify.com/careers/faq",
+      "title": "Careers, Internships, and Jobs at Shopify | Shopify Careers - Shopify",
+      "publisher": "Shopify",
+      "companyName": "Shopify",
+      "origin": "employer",
+      "basis": "Shopify's own careers-site page on how it hires",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Current 'How we hire' sequence: apply (1-2 roles), 15-30 min initial call (R&D applicants skip it and go straight to pair programming before the Life Story), a 60-75 min craft assessment plus a brief predictive assessment, a 30-60 min Life Story with a recruiter ('the trophies and the bruises'), meet 3-5 future co-workers for up to an hour each, then a team decision",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:44.631Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 6456,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.lifeatspotify.com/start-your-journey",
+      "title": "Start Your Journey | Life at Spotify",
+      "publisher": "Spotify",
+      "companyName": "Spotify",
+      "origin": "employer",
+      "basis": "Spotify's own careers-site page on how it hires (apply, interview, decision)",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Spotify's hiring steps: recruiter video/phone interview, a second interview with one or two team members, then a final round meeting multiple 'band members' across the business (one leads, others shadow); interviews are mostly virtual using Google Meet/Zoom and CoderPad/Mural for technical work; says interviewers weigh values alignment, ownership, adaptability, collaboration and drive",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:47.030Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 10041,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://medium.com/@asifshaikh_39930/getting-interviewed-at-spotify-fdcca55d8ebf",
+      "title": "Getting Interviewed at Spotify.",
+      "publisher": "Asif Shaikh (Medium)",
+      "companyName": "Spotify",
+      "origin": "author",
+      "basis": "The author's own free (not member-only) Medium post, cited and linked",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2022-02-06",
+      "summary": "Android Engineer (Stockholm), hired: recruiter call; a second-round screen with a two-person panel (technical background, Android domain questions, a Java/Kotlin coding exercise); four one-hour final rounds - programming/data structures and algorithms, system design, an IDE programming interview live in Android Studio, and a Spotify values interview",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:50.171Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://medium.com/@funmmi/interviewing-for-an-ios-design-system-engineer-role-at-spotify-6727ecb5bfdc",
+      "title": "Interviewing for an iOS Design System Engineer role at Spotify",
+      "publisher": "Funmi (Medium)",
+      "companyName": "Spotify",
+      "origin": "author",
+      "basis": "The author's own free (not member-only) Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2020-09-29",
+      "summary": "iOS Design System Engineer (Sweden), hired, 2020: 45-min recruiter interview; 90-min technical stage with two iOS engineers (about 10 iOS trivia questions, then build an iOS app from scratch in Xcode while screen-sharing); finals - a 1-hour Show & Tell of own project to an engineer and a designer, a 1-hour mobile system design on Miro (design architecture for screens of a mock-up app), a 30-min fika, a design systems interview and a values interview",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:52.236Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://careers.booking.com/blog/the-graduate-software-engineering-bootcamp-patricia-nicole-experience/",
+      "title": "Decoding the Software Engineering Graduate Interview Process",
+      "publisher": "Booking.com",
+      "companyName": "Booking.com",
+      "origin": "employer",
+      "basis": "Booking.com's own careers-site blog describing its graduate software engineering recruitment process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Graduate Programme for junior software engineers (recruitment begins January): CV submission (often via referral), a coding challenge plus a take-home cognitive-ability assessment, a recruiter phone interview on the CV, then an Assessment Centre final stage with an introductory presentation followed by three assessments - a behavioural interview, a technical interview ('solving a real-world problem' with senior developers), and a group exercise, plus informal lunch with team members",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:56.290Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 6775,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://clevercoder.net/2017/09/08/booking-com-passed-the-interview/",
+      "title": "Booking.com: How I passed the interview",
+      "publisher": "CleverCoder.net (personal blog)",
+      "companyName": "Booking.com",
+      "origin": "author",
+      "basis": "The author's own personal blog post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2017-09-08",
+      "summary": "Software Development Engineer, 2017, offer received: a 75-minute HackerRank test (5 challenges) and recruiter call, then an onsite of an HR round, an algorithmic challenge solved on paper with two engineers ('harder than Hackerrank's but not beyond reason', a graph problem), a system-design round with two engineers requiring a structured approach (clarify requirements, estimates, main components), and a Principal Engineer round on business impact, Booking.com's business model and A/B testing fundamentals; notes PERL familiarity is expected for backend",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:00.328Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 9006,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://careers.adyen.com/faqs",
+      "title": "How we hire at Adyen",
+      "publisher": "Adyen",
+      "companyName": "Adyen",
+      "origin": "employer",
+      "basis": "Adyen's own careers-site FAQ describing its hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Six-stage process: application review (reply within 5 business days), a recruiter screen, a team interview on role/responsibilities/experience/ways of working, a skills assessment (a technical skills test or a case-study presentation depending on role), a leadership interview with a leader from the direct team, and a final interview with a senior executive from the Management Board or Global Leadership team; overall process takes 'a little over a month on average'",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:07.202Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 4301,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.adyen.com/knowledge-hub/interview-tips-from-our-global-recruitment-team",
+      "title": "Interview tips from our Global Recruitment team",
+      "publisher": "Adyen",
+      "companyName": "Adyen",
+      "origin": "employer",
+      "basis": "Adyen's own knowledge-hub page from its recruitment team on the interview process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Restates the same six stages (application review, recruiter screen, team interview, skills assessment, leadership interview, final interview) with recruiter quotes on what each evaluates, e.g. the skills assessment wants to 'see how you think on your feet', the leadership interview explores 'how you think, how you've grown, and how you've guided others through complexity'; recommends researching the 'Adyen Formula', customer case studies and the latest earnings report",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:09.982Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 5389,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://jobs.zalando.com/en/blog/technical-interview-for-software-engineers",
+      "title": "Technical interview for Software Engineers: What to expect and how to ace it at Zalando",
+      "publisher": "Zalando",
+      "companyName": "Zalando",
+      "origin": "employer",
+      "basis": "Zalando's own careers-blog post on its technical interview process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Five stages: a 30-min Talent Acquisition Partner call, a 30-60 min Hiring Manager interview, a 1-hour coding interview (evaluates understanding of requirements, code-structure trade-offs, runtime/memory complexity; recommends the REACTO method), a 1-hour system design and architecture interview (architecture, scalability, technology choices, resilience, operational excellence, security), and a 1-hour general tech interview on the end-to-end SDLC, design patterns and CS fundamentals; whole process spans 2-3 weeks",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:12.860Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 7778,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://clevercoder.net/2018/04/14/zalando-how-to-pass-the-interview/",
+      "title": "Zalando: How to pass the interview",
+      "publisher": "Gil Vegliach (CleverCoder.net)",
+      "companyName": "Zalando",
+      "origin": "author",
+      "basis": "The author's own personal blog post, cited and linked; he names himself as a former Zalando engineer of two-plus years who conducted hundreds of interviews before joining Amazon",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2018-04-14",
+      "summary": "Describes the loop as of the author's departure (May 2017), emphasis on Android roles: a recruiter call (behavioural, resume), a Skype phone screen with an engineer, then three further Skype or onsite interviews. Evaluated on correct working code, clear communication, deep Java (equals()/hashCode(), data structures), algorithm questions like flood-fill graph problems ('easier than Google/Amazon'), Android fundamentals (activities, services, fragments, lifecycles) and system design (app architecture, REST API and component design); a single 'strong no' rating could eliminate a candidate",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:16.008Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 10410,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://engineering.grab.com/how-grab-hires-engineers-in-singapore",
+      "title": "How Grab Hires Engineers in Singapore",
+      "publisher": "Grab",
+      "companyName": "Grab",
+      "origin": "employer",
+      "basis": "Grab's own engineering blog post on how it hires engineers, quoting its recruiter",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Recruiter Rachel describes the loop: phone screen with HR, an online coding round, and two technical rounds (final round with three Grab engineers in quick succession); says only 3-5% of candidates who start the process reach offer stage; evaluates GitHub project complexity, distributed-systems experience and algorithm proficiency alongside culture fit ('we will not proceed with a job offer if the team will not enjoy working with the person'); senior candidates are asked about recent technical decisions and backend microservice design, juniors about ownership potential",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:19.620Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 9761,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.grab.careers/en/how-we-hire/engineering/",
+      "title": "Engineering | How We Hire | Grab Careers",
+      "publisher": "Grab",
+      "companyName": "Grab",
+      "origin": "employer",
+      "basis": "Grab's own careers-site page on its engineering hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Three-stage engineering loop: Live Coding (1-2 real-time coding questions on an online platform, focused on data structures and algorithms), System Design (a brainstorming/whiteboarding session on architecture, security and monitoring), and Culture Fit (collaboration skills and alignment with Grab's 4Hs - Heart, Hunger, Honour, Humility); managerial roles get an added leadership-approach evaluation",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:22.560Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 3786,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://handbook.gitlab.com/job-description-library/engineering/backend-engineer/",
+      "title": "Backend Engineering | The GitLab Handbook",
+      "publisher": "GitLab",
+      "companyName": "GitLab",
+      "origin": "employer",
+      "basis": "GitLab's own public handbook, the job-family page for Backend Engineers, naming its hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Names the Backend Engineer hiring sequence: a 30-minute screening call with a Technical Recruiter, a 90-minute technical interview with a Backend Engineer, a 60-minute interview with a Backend Engineering Manager, and a 60-minute interview with the Director of Engineering, then an offer; notes the sequence may adjust for specific specialties",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:27.368Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 47699,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://handbook.gitlab.com/job-description-library/engineering/development/fullstack/",
+      "title": "Fullstack Engineers | The GitLab Handbook",
+      "publisher": "GitLab",
+      "companyName": "GitLab",
+      "origin": "employer",
+      "basis": "GitLab's own public handbook, the job-family page for Fullstack Engineers, naming its hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Names the Fullstack Engineer hiring sequence: a 30-minute screening call with a Global Recruiter, a 90-minute backend technical interview with a Backend Engineer, a 90-minute frontend technical interview with a Frontend Engineer, one or more 45-minute interviews with an Engineering Hiring Manager, and an optional 60-minute behavioural interview with a Senior Manager or Director of Engineering; also names a separate, longer process for the specialised Handbook Fullstack Engineer role including an interview with the Chief of Staff to the CEO",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:31.857Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 21338,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://handbook.gitlab.com/job-description-library/engineering/infrastructure/site-reliability-engineer/",
+      "title": "Site Reliability Engineer | The GitLab Handbook",
+      "publisher": "GitLab",
+      "companyName": "GitLab",
+      "origin": "employer",
+      "basis": "GitLab's own public handbook, the job-family page for Site Reliability Engineers, naming its hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Names the SRE hiring sequence: a technical questionnaire, a 30-minute screening call, a 60-minute technical discussion with a Reliability Engineering team member, 2-3 45-minute team interviews with at least one SRE, a 60-minute conversation with the hiring manager, and possible additional 60-minute interviews with the Director of Infrastructure Engineering or VP of Engineering; notes candidates can be declined at any stage and all interviews are on Zoom",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:35.416Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 39120,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.cloudflare.com/careers/",
+      "title": "Cloudflare Careers",
+      "publisher": "Cloudflare",
+      "companyName": "Cloudflare",
+      "origin": "employer",
+      "basis": "Cloudflare's own careers-site page describing its hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Five-stage process: initial conversation with a recruiter on background/interests/role, team panel interviews with the prospective manager and peers on problem-solving approach and skills, an executive call with senior leadership including the 'Orange Cloud Interview' on the behaviours Cloudflare values, an offer, then orientation",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:40.026Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 6908,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://blog.cloudflare.com/cloudflare-interview-questions/",
+      "title": "CloudFlare \"Interview Questions\"",
+      "publisher": "Marek Majkowski (Cloudflare engineering blog)",
+      "companyName": "Cloudflare",
+      "origin": "employer",
+      "basis": "Written by a Cloudflare engineer and published on Cloudflare's own engineering blog",
+      "contributes": [
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2015-05-11",
+      "summary": "States 'every engineer here must prove his/her comprehensive understanding of the full network stack' and lists the actual TCP/IP networking questions Cloudflare uses to probe candidates, grouped as Archaeology, Forgotten Quirks, Fragmentation and Congestion, Fresh Ideas, ICMP Path MTU and Linux Configuration - framed as an old 'TCP/IP pub game'; dated (2015) but the author and content are directly attributable to Cloudflare",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:46.192Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 14387,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://blog.cloudflare.com/internship-experience-research-engineer/",
+      "title": "Internship Experience: Research Engineer",
+      "publisher": "Sudheesh Singanamalla (Cloudflare blog)",
+      "companyName": "Cloudflare",
+      "origin": "employer",
+      "basis": "A named intern's first-hand account of Cloudflare's research-engineer internship interview, published on Cloudflare's own blog",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Author, a UW PhD student, describes his Cloudflare research-engineer internship interview: a programming task adding Certificate Transparency log-scanning to CFSSL (Cloudflare's open-source project), designing new scanner families with documented rationale and error handling; a pair-programming interview with a named Cloudflare engineer on research interests and a collaborative problem (design rationale, extensibility, code reuse, test coverage); then follow-up calls with research leads",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:48.698Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 21033,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://careers.datadoghq.com/candidate-experience/",
+      "title": "Candidate Experience | Datadog Careers",
+      "publisher": "Datadog",
+      "companyName": "Datadog",
+      "origin": "employer",
+      "basis": "Datadog's own careers-site page describing its interview process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Six stages: an initial screen (phone/Zoom with recruiter and/or hiring manager), face-to-face interviews (recruiter, hiring manager, team members, potentially multiple rounds, one step expected in person), an optional take-home project depending on role, an optional executive interview for some roles, an internal selection meeting, then a post-interview feedback survey",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:53.072Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 15827,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.mongodb.com/company/blog/culture/recruiting-tips/how-prepare-your-engineering-interview-mongodb",
+      "title": "How To Prepare For Your Engineering Interview At MongoDB",
+      "publisher": "MongoDB",
+      "companyName": "MongoDB",
+      "origin": "employer",
+      "basis": "MongoDB's own careers-blog post on preparing for its engineering interviews",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Team-based recruiting: one or two virtual interviews plus one onsite (currently Zoom). Technical interviews assess writing concurrency-safe code with good OO design, DS&A trade-off reasoning (runtime vs memory), testing, collaboration/communication, and systems design for scale (avoiding bottlenecks, proving correctness); may cover concurrency, distributed systems, algorithms, system design and language-specific coding. Behavioural interviews cover culture contribution, successes/failures, mentoring, goals, and project ownership",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:55.714Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 9587,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.mongodb.com/company/blog/culture/recruiting-tips/preparing-your-consulting-engineer-interview-mongodb",
+      "title": "Preparing for Your Consulting Engineer Interview at MongoDB",
+      "publisher": "MongoDB",
+      "companyName": "MongoDB",
+      "origin": "employer",
+      "basis": "MongoDB's own careers-blog post on preparing for its Consulting Engineer interviews",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Four-stage Consulting Engineer loop: recruiter screening (resume, industry experience, career goals), a hiring-manager interview (expectations, fit, past situations), multiple 1-hour interviews with MongoDB Consulting Engineers (relational/non-relational database expertise, software development experience, problem-solving, consulting and customer-interaction skills, report writing, verbal communication), then a less-technical Professional Services Director interview on org vision and strategy; explicitly says prior MongoDB experience is not required",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:31:59.114Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 13947,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.elastic.co/careers/how-we-hire",
+      "title": "Careers - How we hire",
+      "publisher": "Elastic",
+      "companyName": "Elastic",
+      "origin": "employer",
+      "basis": "Elastic's own careers-site page describing its hiring process stages",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Names six stages with expected durations: application ('quality over quantity'), a 30-minute recruiter screen, 45-90 minute department interviews (peer-to-peer, hiring manager, leadership), a 45-90 minute panel presentation (role-playing scenarios and product demos), a 60-90 minute technical assessment (online skills assessment or portfolio review), then an internal decision meeting and onboarding details once an offer is accepted",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:04.871Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 14173,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.elastic.co/blog/ai-guidelines-interview-process",
+      "title": "Elastic's guide to AI in the interview process",
+      "publisher": "Elastic",
+      "companyName": "Elastic",
+      "origin": "employer",
+      "basis": "Elastic's own blog post on its interview-process rules",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "States Elastic uses 'AI monitoring tools throughout our hiring process to identify anyone using technology for deception or to gain an unfair advantage', requires interview conversations to stay 'strictly human-to-human without the interference of AI tools', allows AI for proofreading/structuring/brainstorming but not fabricated experience, and warns that misrepresentation can cause disqualification or termination after joining",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:07.890Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 10116,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://blog.jetbrains.com/life-at-jetbrains/2026/07/jetbrains-engineering-hiring/",
+      "title": "JetBrains Engineering Hiring Process Guide",
+      "publisher": "JetBrains",
+      "companyName": "JetBrains",
+      "origin": "employer",
+      "basis": "JetBrains' own company blog post explaining its engineering hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Seven stages: CV review (impact over task lists), a recruiter call (skills alignment, motivation, walking through the last 2-3 roles), a team interview with a live technical exercise (live coding, a short case study, or a live code review, assessing how candidates think and communicate), a realistic take-home task ('not puzzles'), a task-review discussion on decisions and trade-offs made, reference checks (typically three), then an offer; emphasises reasoning about trade-offs and understanding the 'why'",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:12.709Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 11693,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://wise.jobs/engineering-interviews",
+      "title": "Engineering Interviews - Wise.jobs",
+      "publisher": "Wise",
+      "companyName": "Wise",
+      "origin": "employer",
+      "basis": "Wise's own careers-site page describing its engineering interview stages",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Three stages: a recruiter phone call on experience and motivations, technical tests (a case study, take-home challenge, technical test, or paired coding exercise depending on role), and a team meeting with open-ended and scenario-based questions assessing decision-making and values fit; links out to four specialised tracks - Backend Pair Programming, Backend System Design, Front End Pair Programming, Front End System Design",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:14.848Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 13769,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://wise.jobs/pair-programming-interviews",
+      "title": "Backend Pair Programming Interviews | Wise",
+      "publisher": "Wise",
+      "companyName": "Wise",
+      "origin": "employer",
+      "basis": "Wise's own careers-site page detailing its pair-programming interview round",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "A 60-minute HackerRank-based pair-programming round (5 minutes for questions at the end): candidate solves a practical coding challenge collaboratively with the interviewer, applying algorithms and data structures; explicitly not system design, riddles or a deep-dive on past experience; evaluates technical competency, problem solving/critical thinking, and communication/collaboration; backend is primarily Java but interviews accommodate the candidate's preferred language",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:18.570Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 12759,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://wise.jobs/system-design-interviews",
+      "title": "Backend System Design Interviews | Wise",
+      "publisher": "Wise",
+      "companyName": "Wise",
+      "origin": "employer",
+      "basis": "Wise's own careers-site page detailing its system-design interview round",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "A roughly one-hour system-design task (onsite or video) with two engineers: candidate proposes a high-level architecture for a product task, then goes into data structures and specific logic; evaluated on reasoning/trade-offs, lower-level design detail, communication, and coverage of scalability, availability, testing, monitoring, error handling and databases; explicitly says a 'perfect' or fully complete solution is not expected",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:32:23.217Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 14145,
+        "readable": true,
+        "error": null
+      }
+    }
+  ],
+  "rejected": [
+    {
+      "url": "https://roundz.substack.com/p/interview-experience-atlassian-sde2-p40",
+      "reason": "Aggregator: 'Team Roundz' newsletter republishing an anonymous candidate's experience ('Candidate Name: Not disclosing'), not the author's own post"
+    },
+    {
+      "url": "https://frontendpro.hashnode.dev/frontend-interview-experience-at-atlassian",
+      "reason": "Could not be verified: Hashnode returns a Cloudflare JavaScript challenge (HTTP 403) to any non-browser client, including the product's fetcher, so the content was never read"
+    },
+    {
+      "url": "https://enginebogie.com/interview/experience/atlassian-senior-software-engineer/96",
+      "reason": "Aggregator of user-submitted interview experiences"
+    },
+    {
+      "url": "https://www.codingkaro.in/jobs-internships/leetcode-interview-experience/Atlassian",
+      "reason": "Aggregator republishing LeetCode Discuss experiences (hard exclusion)"
+    },
+    {
+      "url": "https://hw.glich.co/resources/companies/atlassian/interview-process/p40-software-engineer",
+      "reason": "Aggregator/generated company guide, not a first-hand or employer source"
+    },
+    {
+      "url": "https://arunrawlani.medium.com/cracking-the-shopify-software-engineering-interview-f12e44bfc953",
+      "reason": "Member-only Medium story (paywalled); the free preview also says it withholds the questions"
+    },
+    {
+      "url": "https://gaijineer.co/developer-interview-experience-with-shopify",
+      "reason": "Aggregator: the series says it 'collect[s] stories from anonymous candidates'; also no specific questions"
+    },
+    {
+      "url": "https://jigarius.com/blog/shopify-software-developer-interview",
+      "reason": "Genuine first-hand Senior Software Developer loop, but from 2020, and its 'sample questions' are explicitly the author's own inventions - the extractor would file them as Shopify questions. Process detail is already covered by Shopify's own pages"
+    },
+    {
+      "url": "https://www.hellointerview.com/blog/shopify-ai-enabled-coding",
+      "reason": "Commercial interview-prep company's guide, not an employer page or an individual's own first-hand report"
+    },
+    {
+      "url": "https://engineeringenablement.substack.com/p/spotify-software-engineering-interview",
+      "reason": "Not first-hand: the author has not interviewed at Spotify and lists 20 hypothetical practice questions, none reported as asked"
+    },
+    {
+      "url": "https://www.jointaro.com/interviews/companies/spotify/experiences/software-engineer-new-york-ny-february-26-2025-accepted-offer-positive-2d2d7808/",
+      "reason": "Aggregator of user-submitted anonymous experiences"
+    },
+    {
+      "url": "https://www.geeksforgeeks.org/spotify-interview-experience-for-backend-engineer-ii/",
+      "reason": "GeeksforGeeks (hard exclusion)"
+    },
+    {
+      "url": "https://roundz.substack.com/p/interview-experience-144-bookingcom-sde2",
+      "reason": "Aggregator: 'Team Roundz' newsletter republishing an anonymous candidate's experience, not the author's own post"
+    },
+    {
+      "url": "https://enginebogie.com/interview/experience/booking-com-software-development-engineer-2/228",
+      "reason": "Aggregator of user-submitted interview experiences"
+    },
+    {
+      "url": "https://tech-wisdom.medium.com/senior-engineer-interview-at-booking-com-amsterdam-6818a521f19d",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://www.jointaro.com/interviews/companies/adyen/experiences/senior-software-engineer-amsterdam-north-holland-october-1-2024-no-offer-positive-4017025d/",
+      "reason": "Aggregator of user-submitted anonymous experiences"
+    },
+    {
+      "url": "https://github.com/HackYourFuture/interviewpreparation/blob/main/adyeninterviews.md",
+      "reason": "No LICENSE found in the repository; content is generic third-party interview coaching for bootcamp graduates, not specific reported questions or an employer/author first-hand account of an Adyen loop"
+    },
+    {
+      "url": "https://www.klarna.com/careers/life-at-klarna/nail-your-engineering-interview/",
+      "reason": "Could not be verified: page returns HTTP 404 on direct fetch (search engine's cached snippet describes content, but the live URL no longer serves it)"
+    },
+    {
+      "url": "https://www.klarna.com/careers/tips-and-tricks/application-process/",
+      "reason": "Could not be verified: page returns HTTP 404 on direct fetch"
+    },
+    {
+      "url": "https://www.klarna.com/careers/life-at-klarna/how-to-nail-your-klarna-interview/",
+      "reason": "Could not be verified: page returns HTTP 404 on direct fetch"
+    },
+    {
+      "url": "https://priver.dev/blog/note/my-interview-at-klarna/",
+      "reason": "Could not be verified: site returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://medium.com/interview-guide/my-it-specialist-navigating-klarnas-interview-labyrinth-my-journey-to-an-it-specialist-role-f4809ee678c2",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://medium.com/@dong.yang9527/sap-interview-experience-905763032cfd",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://medium.com/@garvitjindal09/cracking-the-sap-on-campus-interview-my-experience-d4432ae44a1e",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://medium.com/nybles/sap-labs-internship-interview-experience-on-campus-50f5e0b0828c",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://community.sap.com/t5/sap-learning-blog-posts/sap-career-my-personal-experience/ba-p/13052339",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://blogs.sap.com/2011/07/22/preparing-for-your-first-sap-interview/",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://community.sap.com/t5/career-corner-blog-posts/top-10-guidelines-for-your-sap-interviews/ba-p/12994731",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://jobs.sap.com/content/Hiring-Process/?locale=en_US",
+      "reason": "Fetched successfully (robots allows, no JS) but the page is a client-rendered navigation shell with no interview-process text - the actual content did not survive a plain GET"
+    },
+    {
+      "url": "https://jobs.sap.com/content/FAQ/?locale=en_US",
+      "reason": "Fetched successfully (robots allows, no JS) but the page is a client-rendered navigation shell with no interview-process text"
+    },
+    {
+      "url": "https://www.revolut.com/blog/post/how-to-ace-your-java-interview-at-revolut/",
+      "reason": "Could not be verified: domain returns HTTP 403 to non-browser fetch on every path tried (blog post and a plain careers page both blocked), so the content was never read"
+    },
+    {
+      "url": "https://www.canva.com/careers/engineering-interview/",
+      "reason": "Could not be verified: domain returns HTTP 403 to non-browser fetch on every path tried (this page and a plain job listing both blocked), so the content was never read"
+    },
+    {
+      "url": "https://medium.com/@tanishqarora-ios/n26-ios-engineer-interview-experience-with-questions-ec5789b2cb65",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://blog.stackademic.com/n26-berlin-software-engineer-interview-experience-88ee71c3f89c",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://roundz.substack.com/p/interview-experience-102-twilio-software-development-ic1",
+      "reason": "Aggregator: 'Team Roundz' newsletter republishing an anonymous candidate's experience ('Candidate Name: Not disclosing due to signed NDA'), not the author's own post"
+    },
+    {
+      "url": "https://arpit09chauhan.medium.com/my-twilio-interview-experience-software-engineer-p2-98466466ba51",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://medium.com/@nissy9/my-twilio-interview-experience-for-software-engineer-l3-role-ff3034c7ceab",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://medium.com/career-drill/staff-software-engineer-interview-experience-twilio-1f1d0bb01611",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://shreyasnisal.medium.com/twilio-interview-experience-67aebead6151",
+      "reason": "Could not be verified: returns HTTP 403 to non-browser fetch, so the content was never read"
+    },
+    {
+      "url": "https://www.twilio.com/en-us/careers",
+      "reason": "Fetched successfully but contains no interview-process detail beyond an AI-hiring-transparency disclaimer"
+    }
+  ],
+  "gaps": [
+    "SAP: employer careers pages (jobs.sap.com/content/Hiring-Process, /FAQ) exist and robots.txt allows them, but they are client-rendered shells - no interview-process text survives a plain GET. Every specific first-hand account found (2 medium.com/@ posts, a Nybles Medium post, two community.sap.com posts, a 2011 blogs.sap.com post) returned HTTP 403 to this agent's fetcher. Remaining candidates were GeeksforGeeks, Naukri, Quora and LeetCode Discuss (hard exclusions). No usable SAP source recorded - a human with browser access should check whether jobs.sap.com has a server-rendered process page elsewhere, and whether the blocked Medium/community.sap.com posts are worth re-fetching from a normal browser.",
+    "Klarna: no usable source recorded. The careers site root (klarna.com/careers/) fetches fine but has no interview detail; the three specific article slugs a search engine indexed (nail-your-engineering-interview, how-to-nail-your-klarna-interview, tips-and-tricks/application-process) all 404 on direct fetch, suggesting Klarna restructured or removed them. engineering.klarna.com has no interview-process post found in search. One promising personal blog (priver.dev/blog/note/my-interview-at-klarna) is blocked with HTTP 403 to non-browser fetch. Worth a human revisit if Klarna republishes the interview guide at a new URL.",
+    "Revolut: a strong-looking employer post (revolut.com/blog/post/how-to-ace-your-java-interview-at-revolut) exists per search results, but www.revolut.com returns HTTP 403 to this agent's fetcher on every path tried (the blog post and a plain team page), even though robots.txt itself is fetchable and does not disallow the path. Likely Cloudflare-style bot protection on the marketing domain. A human with a browser could confirm and add this source directly.",
+    "Canva: a dedicated employer page (canva.com/careers/engineering-interview/) exists per search results, but www.canva.com returns HTTP 403 to this agent's fetcher on every path tried (that page and a plain job listing). Canva's robots.txt also explicitly disallows several AI-crawler user agents (GPTBot, ClaudeBot, CCBot, anthropic-ai, Claude-Web) from most paths, though a generic crawler user agent falls under the separate unrestricted default rule. A human with a browser could confirm and add this source directly.",
+    "N26: no usable source recorded. Careers pages and the engineering blog (tech.n26.com/blog) exist but no interview-process-specific post was found in search beyond job listings. Two Medium posts by the same author (Tanishq Arora, iOS Engineer) and one Stackademic post (Freeze Francis, Berlin software engineer) were found but all three returned HTTP 403 to this agent's fetcher and could not be verified.",
+    "Twilio: no usable source recorded. twilio.com/en-us/careers fetched fine but has no process detail beyond an AI-hiring disclaimer. Four personal Medium accounts (Arpit Chauhan, Nissy, a Career Drill post, Shreyas Nisal) were found describing specific Twilio loops but all returned HTTP 403 to this agent's fetcher. One Substack account (roundz) was confirmed as the same anonymous-aggregator pattern rejected elsewhere in this register."
+  ]
+}

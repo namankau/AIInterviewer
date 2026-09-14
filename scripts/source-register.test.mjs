@@ -246,6 +246,12 @@ describe("validateRegister", () => {
     assert.deepEqual(validateRegister(files), []);
   });
 
+  test("readableWithoutJs may be null when the researcher could not tell, but not a string", () => {
+    assert.deepEqual(validateRegister([baseFile([baseEntry({ readableWithoutJs: null })])]), []);
+    const errors = validateRegister([baseFile([baseEntry({ readableWithoutJs: "yes" })])]);
+    assert.ok(errors.some((e) => e.includes('"readableWithoutJs"')));
+  });
+
   test("a rejected entry naming an excluded host is fine — only `sources` is checked", () => {
     const files = [
       baseFile([baseEntry()], { rejected: [{ url: "https://leetcode.com/discuss/x", reason: "Hard exclusion: LeetCode" }] }),

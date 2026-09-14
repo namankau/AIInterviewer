@@ -444,8 +444,10 @@ export function validateRegister(files) {
         errors.push(`${where}: "robotsAllows" is false — a source robots.txt disallows may not be registered`);
       }
 
-      if (typeof entry.readableWithoutJs !== "boolean") {
-        errors.push(`${where}: "readableWithoutJs" must be a boolean`);
+      // Null is the researcher saying "could not tell". That is an honest answer, and
+      // `check` settles it with a real plain GET — a guessed boolean would be worse.
+      if (entry.readableWithoutJs !== null && typeof entry.readableWithoutJs !== "boolean") {
+        errors.push(`${where}: "readableWithoutJs" must be a boolean, or null when unknown`);
       }
     });
 

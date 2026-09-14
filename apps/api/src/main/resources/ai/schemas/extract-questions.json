@@ -53,8 +53,7 @@
           "companies"
         ]
       }
-    }
-  },
+    },
     "processStages": {
       "type": "ARRAY",
       "items": {

@@ -43,6 +43,18 @@ class ProcessStageVerifierTest {
     }
 
     @Test
+    fun `drops a stage whose evidence is just its own name, even when that name is in the document`() {
+        // A nav menu or heading listing "Bar Raiser" makes that string trivially
+        // "verbatim" without saying anything about what actually happens in the stage --
+        // found live, against a page that 404'd but whose boilerplate still matched.
+        val stage = stage(evidence = "online assessment")
+
+        val kept = ProcessStageVerifier.verify(document, listOf(stage))
+
+        assertThat(kept).isEmpty()
+    }
+
+    @Test
     fun `drops a stage whose evidence is blank`() {
         val stage = stage(evidence = "   ")
 

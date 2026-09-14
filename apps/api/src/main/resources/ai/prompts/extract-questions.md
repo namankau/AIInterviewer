@@ -61,11 +61,14 @@ employer — the stages, in order, that a candidate goes through. For each stage
 - `assesses` — one line on what the document says the stage is testing. Null otherwise.
 - `roundType` — the same enum as above, or null for a stage this product does not
   simulate: an online assessment, team matching, or an offer conversation.
-- `evidence` — **a verbatim quote from the document, at most about 300 characters**,
+- `evidence` — **a verbatim quote from the document, roughly 25 to 300 characters**,
   that supports this stage existing. It must be copied exactly from the text above —
-  not paraphrased, not reconstructed from memory. A stage whose evidence cannot be
-  found verbatim in the document is discarded before it ever reaches a candidate, so
-  an approximate quote is as useless as no quote.
+  not paraphrased, not reconstructed from memory — and it must be a real sentence or
+  clause describing the stage, **never just the stage's own name repeated back**. A
+  navigation menu that happens to list "System Design Interview" is not evidence that
+  such a round runs; a sentence saying what it involves is. A stage whose evidence
+  cannot be found verbatim in the document, or is too short to be more than a label,
+  is discarded before it ever reaches a candidate.
 
 Only stages the document actually describes as part of a real loop. A blog post's
 generic "how to prepare for interviews" advice with no employer's actual process

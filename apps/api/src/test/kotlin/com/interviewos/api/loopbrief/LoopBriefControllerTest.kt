@@ -39,8 +39,7 @@ class LoopBriefControllerTest {
                     .param("role", "Backend Engineer")
                     .param("level", "L5")
                     .with(candidateToken()),
-            )
-            .andExpect(status().isOk)
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.company.name").value("Amazon"))
             .andExpect(jsonPath("$.hasSources").value(true))
             .andExpect(jsonPath("$.sourcedStages[0].stageName").value("Online assessment"))

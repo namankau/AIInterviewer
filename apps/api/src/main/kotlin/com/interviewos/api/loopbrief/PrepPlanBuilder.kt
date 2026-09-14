@@ -98,15 +98,25 @@ object PrepPlanBuilder {
     private fun unsimulatedNote(stageName: String): String {
         val lower = stageName.lowercase()
         return when {
-            "assessment" in lower || "oa" == lower ->
+            "assessment" in lower || "oa" == lower -> {
                 "We don't run this as a spoken round. Practise it on a coding platform beforehand."
-            "team match" in lower || "matching" in lower ->
+            }
+
+            "team match" in lower || "matching" in lower -> {
                 "This happens after the loop, once you have an offer to place — nothing to rehearse yet."
-            "offer" in lower || "negotiat" in lower ->
+            }
+
+            "offer" in lower || "negotiat" in lower -> {
                 "This is a conversation with a recruiter, not an interview. Decide your numbers ahead of it."
-            "reference" in lower ->
+            }
+
+            "reference" in lower -> {
                 "This is a check with people you name, not something to practise."
-            else -> "We don't simulate this stage yet. Read what it involves and prepare for it separately."
+            }
+
+            else -> {
+                "We don't simulate this stage yet. Read what it involves and prepare for it separately."
+            }
         }
     }
 

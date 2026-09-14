@@ -1,9 +1,9 @@
 package com.interviewos.api.loopbrief
 
-import com.interviewos.api.bank.Company
-import com.interviewos.api.bank.CompanyDirectory
 import com.interviewos.api.ai.GeneralLoopStage
+import com.interviewos.api.bank.Company
 import com.interviewos.api.bank.CompanyCoverage
+import com.interviewos.api.bank.CompanyDirectory
 import com.interviewos.api.bank.QuestionBankRepository
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.interview.Archetype

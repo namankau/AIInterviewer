@@ -95,7 +95,10 @@ class PrepPlanService(
                         "Typical of ${resolved.archetype.inProse}: a \"$stageName\" stage."
                     },
                 )
-                personalNote(roundType, background, history)?.let { append(' '); append(it) }
+                personalNote(roundType, background, history)?.let {
+                    append(' ')
+                    append(it)
+                }
             }
 
         return PrepPlanItemView(

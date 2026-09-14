@@ -42,5 +42,6 @@ export function RailNav() {
 const LINKS = [
   { href: "/dashboard", label: "Home" },
   { href: "/rounds", label: "Rounds" },
+  { href: "/questions", label: "Questions" },
   { href: "/profile", label: "Profile" },
 ] as const;

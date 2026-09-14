@@ -121,6 +121,39 @@ object PlannedQuestionCheck {
         return Delivery(if (leadIn.isEmpty()) question else "$leadIn $question", faithful = false)
     }
 
+    /** What a turn asks, and the bank question behind it when it asks one. */
+    data class AskedTurn(
+        val text: String,
+        val bankQuestion: BankQuestion?,
+        /** False when the model's wording was replaced with the bank's. */
+        val faithful: Boolean = true,
+    )
+
+    /**
+     * Decides whether the next turn asks [planned], and what the candidate hears.
+     *
+     * - [askNow] — the first question of the round proper — or the model saying it asked it:
+     *   the planned question is asked, in the model's words if they pass, otherwise in the
+     *   bank's after the model's lead-in.
+     * - The model saying nothing, but its wording asking the planned question anyway: that is
+     *   the planned question too, and labelled as such.
+     * - Otherwise a follow-up or a question of its own, with no bank question behind it.
+     */
+    fun resolveTurn(
+        planned: BankQuestion?,
+        askNow: Boolean,
+        modelSaysAsked: Boolean?,
+        said: String,
+    ): AskedTurn {
+        if (planned == null) return AskedTurn(said, null)
+        if (askNow || modelSaysAsked == true) {
+            val delivery = deliver(said, planned.text)
+            return AskedTurn(delivery.text, planned, delivery.faithful)
+        }
+        if (asks(said, planned.text)) return AskedTurn(said, planned)
+        return AskedTurn(said, null)
+    }
+
     /**
      * Everything before the question the model ended on, stopping at any other question.
      *

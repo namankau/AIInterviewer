@@ -1,0 +1,235 @@
+{
+  "partition": "A-us-big-tech-2",
+  "checkedOn": "2026-09-14",
+  "sources": [
+    {
+      "url": "https://jobs.uber.com/en/what-moves-us/how-we-hire/",
+      "title": "How we hire | Uber Careers",
+      "publisher": "Uber",
+      "companyName": "Uber",
+      "origin": "employer",
+      "basis": "Uber's own careers page describing its hiring process end to end (uber.com/us/en/careers/interviewing/ 301-redirects here)",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Six-step process: application; a Talent Team conversation on experience, role fit and working conditions; a Hiring Manager chat on skills and decision-making; a Technical Interview for tech roles (collaborative real-time problem solving assessing coding and building capability); a role-dependent Functional Exercise/Assessment (analytics challenges, written exercises, portfolio reviews, work simulations); and a Team Interview with teammates and cross-functional partners on collaboration and decision-making.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:45:34.630Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://careers.airbnb.com/faq/",
+      "title": "FAQ - Careers at Airbnb",
+      "publisher": "Airbnb",
+      "companyName": "Airbnb",
+      "origin": "employer",
+      "basis": "Airbnb's own careers FAQ page describing its interview process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "States the interview process 'is both rigorous and fun', that depending on role it 'may involve taking a test, making a video, or joining us for an event', that candidates meet with multiple individuals on the current team, that Airbnb aims to respond within 3-4 weeks of application, and that recruiters correspond only from @airbnb.com or @ext.airbnb.com and never ask for financial/payment information during interviewing. Thin on round-by-round detail.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:45:39.071Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 3875,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.databricks.com/company/careers/interview-prep",
+      "title": "Clear Interview Process and Insider Insights | Databricks",
+      "publisher": "Databricks",
+      "companyName": "Databricks",
+      "origin": "employer",
+      "basis": "Databricks' own careers page on its interview process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Seven-stage journey (identify opportunities, apply, connect with Talent Acquisition, skill assessments, interviewing, reference checks, decision/offer) typically spanning two to three months. Structure: recruiter call, then a pre-onsite screen (hiring-manager screen, technical assessment, or skill evaluation), then an onsite loop of four to six interviews, with a presentation stage for some go-to-market/executive roles. All interviews conducted virtually via Google Meet. Emphasises behavioural questions using real-life past examples ('Tell me about a time...').",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:45:42.038Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 13489,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://careers.snowflake.com/us/en/gethired",
+      "title": "Hiring Process | Snowflake Careers",
+      "publisher": "Snowflake",
+      "companyName": "Snowflake",
+      "origin": "employer",
+      "basis": "Snowflake's own careers page on its hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Three-stage general process (apply, interview, decide) with reference and background checks before offer. Engineering-specific pathway of four stages over 2-4 weeks: a 30-minute initial screen with recruiter/hiring manager on technical background and role fit; 60-minute technical interviews with live coding and system design; a panel of 3-5 sessions of 60 minutes each covering technical skills, behavioural fit and collaboration, sometimes including a 30-minute tech-talk presentation; then a decision within days. Candidates not hearing back within 30 days should assume no match.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:45:44.244Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 3999,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.intuit.com/careers/hiring-process/",
+      "title": "Hiring Process | Intuit Careers",
+      "publisher": "Intuit",
+      "companyName": "Intuit",
+      "origin": "employer",
+      "basis": "Intuit's own careers page on its hiring process for engineering-style roles",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Five-stage process: Interview Set-Up (engineers download coding tools and solve a technical question alone to present at the onsite craft demo); Craft Demonstration (60 minutes, 4 hiring-team members - candidate shares accomplishments with visual aids then completes a role-relevant case study); Assessors Interview (45 minutes, 2 assessors on technical skills and the case study); Team Member Interview (30 minutes, 1 cross-functional colleague on Intuit values and team dynamics); Manager Interview (30-60 minutes on career motivation and development). Commits to feedback within 24 hours of interviewing.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:45:48.158Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 9468,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.pinterestcareers.com/interviewing/",
+      "title": "Interviewing at Pinterest | Pinterest Careers",
+      "publisher": "Pinterest",
+      "companyName": "Pinterest",
+      "origin": "employer",
+      "basis": "Pinterest's own careers page on its interview process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Four phases: Application Review; Initial Conversations (a recruiter call on experience and process overview, then a hiring-manager conversation on qualifications and the team); a Team Interview round of competency-based interviews with team members and stakeholders; Decision & Offer (team debriefs after all interviews, recruiter communicates outcome). Interviews are described as structured around competencies rather than a fixed format, evaluating both technical qualifications and cross-functional fit.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:45:50.790Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://www.pinterestcareers.com/life-at-pinterest-blog/interviewing/advice-from-pinterest-recruiting/",
+      "title": "Advice from Pinterest Recruiting | Pinterest Careers",
+      "publisher": "Pinterest",
+      "companyName": "Pinterest",
+      "origin": "employer",
+      "basis": "Pinterest's own careers blog, advice from five named Pinterest recruiters on its interview process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Five Pinterest recruiters (Patrice Williams, Victoria Perez, Juliana Chua, Philip Floyd, Adam Gorelick) describe what they look for: treating the interview as a mutual exchange with questions welcomed; reviewing the job description and preparing an example per requirement; testing video-conferencing equipment beforehand and asking clarifying questions; researching interviewers on LinkedIn; and for technical roles, clearly communicating problem-solving approach and speaking concisely about impact.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:45:52.872Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://www.dropbox.jobs/en/how-we-hire/",
+      "title": "How we hire | Dropbox Careers",
+      "publisher": "Dropbox",
+      "companyName": "Dropbox",
+      "origin": "employer",
+      "basis": "Dropbox's own careers page on its hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Five stages: Online Application (AI helps surface relevant skills/experience but humans decide advancement); Initial Screen (recruiter discusses experience, interests and goals; AI transcription may be used with consent); Assessment or Technical Screen (a skills-based exercise, candidates notified in advance if AI tools are involved and may decline); Virtual Interviews (all interviews on video, discussing strengths, working style and approach to collaboration); Final Review and Decision (human judgement drives the decision, feedback given to finalists). Emphasises hiring for 'durable skills' - critical thinking, adaptability, curiosity, connection, judgment.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:45:56.975Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    }
+  ],
+  "rejected": [
+    {
+      "url": "https://gaijineer.co/databricks-software-engineer-interview",
+      "reason": "No named author byline or publish date on the page; the site identifies itself as 'Gaijineer, a collective' running a Hashnode-hosted interview-prep content business, not a clearly identifiable individual author's own account - same concern class as previously rejected commercial/marketing interview posts"
+    },
+    {
+      "url": "https://harshbharvada.hashnode.dev/paypal-interview-experience-software-engineer-ii",
+      "reason": "Fetch returned HTTP 403 (Hashnode custom-domain blog unreachable to this fetcher); could not verify content, so not used despite being a plausible individual author account of a PayPal SE II loop"
+    },
+    {
+      "url": "https://blog.stackademic.com/linkedin-staff-software-engineer-interview-experience-fff6fbbbba5b",
+      "reason": "Fetch returned HTTP 403; Stackademic is Medium-platform-hosted (its robots.txt matches Medium's bot-blocking pattern, e.g. ClaudeBot disallowed), so treated as unreachable like Medium"
+    },
+    {
+      "url": "https://www.oracle.com/careers/opportunities/getting-hired/",
+      "reason": "Fetch returned HTTP 403 again this session (site-level bot protection distinct from robots.txt), consistent with partition A's earlier finding; oracle.com remains unreachable to this fetcher"
+    },
+    {
+      "url": "https://careers.pypl.com/how-we-recruit/Interviewing/default.aspx",
+      "reason": "Fetch returned HTTP 429 Too Many Requests on every attempt across the session (site-level rate limiting), so PayPal's own 'How We Recruit - Interviewing' page could not be verified despite being found by search"
+    },
+    {
+      "url": "https://dev.to/felipeporto/im-a-senior-software-engineer-at-uber-quick-tips-that-helped-me-get-hired-4edf",
+      "reason": "Fetched successfully but content is generic external-resource-linking advice (pick a language, watch this system-design guide, watch this algorithms video), not a description of the author's own Uber interview loop or specific questions"
+    },
+    {
+      "url": "https://careers.linkedin.com/Howwehire",
+      "reason": "On linkedin.com. LinkedIn's user agreement prohibits automated access to any part of the site, so it is on the hard-exclusion list even for LinkedIn's own careers page."
+    }
+  ],
+  "gaps": [
+    "Apple: repeated this session - still no Apple careers 'how we hire'/interview-process page found (apple.com/careers, jobs.apple.com). Candidate first-hand accounts located by search (Medium and Stackademic-style publications) return HTTP 403 to this fetcher. No usable source found; matches the gap already recorded in A-us-big-tech.json.",
+    "Stripe: stripe.com/careers and stripe.com/jobs describe the process only in scattered marketing copy ('most hiring processes include a recruiter screen, a technical or skills-based assessment, and interviews with the team') with no single dedicated interview-process page found to fetch and verify. The dev.to posts with Stripe-specific round detail ('Stripe SDE Five-Round VO Interview Experience', 'Stripe OA 2026 Latest Interview Experience', 'Stripe SWE OA Guide') are all by the same account (net_programhelp_e160eef28) already rejected in A-us-big-tech.json as a commercial interview-assistance service, not an identifiable individual's own experience. No usable source found.",
+    "Oracle: oracle.com and blogs.oracle.com again returned HTTP 403 to every fetch attempt this session (confirms the gap already recorded in A-us-big-tech.json); the PDF prep guides on oracle.com (preparing-for-your-interview.pdf, global-interview-guide.pdf) are on the same blocked domain and were not fetchable either.",
+    "PayPal: careers.pypl.com ('How We Recruit - Interviewing', PayPal's own page) returned HTTP 429 on every attempt this session, so it could not be verified despite being the clear best source. The one individual-author account found (Harsh Bharvada, Software Engineer II, on a Hashnode custom domain) returned HTTP 403. No usable source found this session; worth retrying both URLs later.",
+    "Airbnb, Databricks, Snowflake, LinkedIn, Intuit, Pinterest, Dropbox, Uber: only employer sources were found and verified for these companies (1-2 each). Searches for individual-author first-hand loop accounts on dev.to, Hashnode and Substack for these companies mostly surfaced either the same rejected commercial-marketing dev.to account (net_programhelp_e160eef28, covering Snowflake/LinkedIn/Databricks OA posts), generic prep-guide content with no personal loop described, or Medium/roundz.substack.com aggregator posts already excluded by policy. None met the bar for a verifiable, specific, individual first-hand account this session."
+  ]
+}

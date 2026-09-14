@@ -5,6 +5,8 @@ import com.interviewos.api.ai.ComposedCase
 import com.interviewos.api.ai.ComposedProblem
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
+import com.interviewos.api.ai.PlannedQuestion
+import com.interviewos.api.bank.BankQuestion
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
@@ -41,39 +43,69 @@ class RoundWorkspaceComposer(
      * round at all. A candidate whose problem failed to compose gets a spoken round with
      * an apology, which is worth far more than a dead session — and the caller records
      * that it happened.
+     *
+     * @param seed a question from the company's bank for this round. The problem or case is
+     *   composed as that question, written out, and the workspace carries it only when what
+     *   came back still asks it — material that drifted into something else is kept, but not
+     *   labelled as reported.
      */
     fun compose(
         brief: InterviewBrief,
         roundType: RoundType,
         durationMinutes: Int,
-    ): RoundWorkspace? =
-        try {
+        seed: BankQuestion? = null,
+    ): RoundWorkspace? {
+        val seeded = seed?.let { brief.copy(plannedQuestion = PlannedQuestion(it.text, brief.company, askNow = true)) } ?: brief
+        return try {
             when (roundType) {
-                RoundType.CODING_PRACTICAL -> problemWorkspace(brief, durationMinutes)
-                RoundType.SYSTEM_DESIGN -> caseWorkspace(brief, durationMinutes)
+                RoundType.CODING_PRACTICAL -> problemWorkspace(seeded, durationMinutes, seed)
+                RoundType.SYSTEM_DESIGN -> caseWorkspace(seeded, durationMinutes, seed)
                 else -> null
             }
         } catch (e: AiUnavailableException) {
             log.warn("Workspace composition failed for a {} round; it runs as a spoken round", roundType.dbValue, e)
             null
         }
+    }
+
+    /** [seed], when [material] still asks it; otherwise null, and said in the log. */
+    private fun keptSeed(
+        seed: BankQuestion?,
+        material: String,
+    ): BankQuestion? {
+        if (seed == null) return null
+        if (PlannedQuestionCheck.asks(material, seed.text)) return seed
+        log.warn("The composed workspace does not ask bank question {}; it is not labelled as reported", seed.id)
+        return null
+    }
 
     private fun problemWorkspace(
         brief: InterviewBrief,
         durationMinutes: Int,
+        seed: BankQuestion?,
     ): RoundWorkspace {
         val problem = verifiedProblem(brief, durationMinutes)
+        val reported = keptSeed(seed, "${problem.title}. ${problem.statement}")
         return RoundWorkspace(
             // The solutions go no further than this. What is stored is what the browser is
             // sent, and a solution in the page source is a solution handed over.
             json =
                 objectMapper.writeValueAsString(
-                    ProblemPayload(problem = problem.copy(referencePython = null, bruteForcePython = null)),
+                    ProblemPayload(
+                        problem = problem.copy(referencePython = null, bruteForcePython = null),
+                        bankQuestionId = reported?.id?.toString(),
+                    ),
                 ),
             openingQuestion = openingForProblem(problem, durationMinutes),
             probes = "How they scope and reason about a problem before writing code.",
-            basis = "A ${problem.difficulty} problem on ${problem.topic}, of the kind this round asks at this level.",
+            basis =
+                if (reported != null) {
+                    "A question reported for ${brief.company}'s coding rounds, written out as a problem to run."
+                } else {
+                    "A ${problem.difficulty} problem on ${problem.topic}, of the kind this round asks at this level."
+                },
             askedBecause = "It is the problem set for this round. Everything after this follows from how you approach it.",
+            bankQuestion = reported,
         )
     }
 
@@ -107,14 +139,22 @@ class RoundWorkspaceComposer(
     private fun caseWorkspace(
         brief: InterviewBrief,
         durationMinutes: Int,
+        seed: BankQuestion?,
     ): RoundWorkspace {
         val case = interviewAi.composeCase(brief, durationMinutes).value
+        val reported = keptSeed(seed, "${case.title}. ${case.summary} ${case.openingPrompt}")
         return RoundWorkspace(
-            json = objectMapper.writeValueAsString(CasePayload(case = case)),
+            json = objectMapper.writeValueAsString(CasePayload(case = case, bankQuestionId = reported?.id?.toString())),
             openingQuestion = case.openingPrompt,
             probes = "Whether they narrow an open problem before designing for it.",
-            basis = "A design case of the kind this round sets at this level, with the scale that forces the trade-off.",
+            basis =
+                if (reported != null) {
+                    "A question reported for ${brief.company}'s design rounds, written out as a case with its scale."
+                } else {
+                    "A design case of the kind this round sets at this level, with the scale that forces the trade-off."
+                },
             askedBecause = "It is the case set for this round. How you scope it decides what the rest of the hour is about.",
+            bankQuestion = reported,
         )
     }
 
@@ -134,14 +174,22 @@ class RoundWorkspaceComposer(
             "${problem.title}. Read it out loud for me, then talk me through how you'd " +
             "approach it before you write anything."
 
+    companion object {
+        /** The round types conducted around a workspace. */
+        val ROUND_TYPES: Set<RoundType> = setOf(RoundType.CODING_PRACTICAL, RoundType.SYSTEM_DESIGN)
+    }
+
+    /** [bankQuestionId] is set when the material is a reported question; see [RoundWorkspace.bankQuestion]. */
     private data class ProblemPayload(
         val kind: String = "dsa",
         val problem: ComposedProblem,
+        val bankQuestionId: String? = null,
     )
 
     private data class CasePayload(
         val kind: String = "system_design",
         val case: ComposedCase,
+        val bankQuestionId: String? = null,
     )
 }
 
@@ -159,4 +207,6 @@ data class RoundWorkspace(
     val probes: String,
     val basis: String,
     val askedBecause: String,
+    /** The bank question the material is, when it was seeded with one and still asks it. */
+    val bankQuestion: BankQuestion? = null,
 )

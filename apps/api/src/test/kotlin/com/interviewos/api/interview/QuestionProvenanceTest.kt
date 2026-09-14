@@ -76,4 +76,17 @@ class QuestionProvenanceTest {
         assertEquals(ProvenanceTier.MODEL_KNOWLEDGE, ProvenanceTier.fromDbValue("something_new"))
         assertEquals(ProvenanceTier.MODEL_KNOWLEDGE, ProvenanceTier.fromDbValue(null))
     }
+
+    @Test
+    fun `a bank question cites its own sources and nobody else's`() {
+        val asked = BankFixtures.question("Tell me about a time you disagreed with your manager.", corroboration = 2)
+        BankFixtures.question("Tell me about a time you failed.", corroboration = 3)
+
+        val provenance = assertNotNull(QuestionProvenance.fromBank(asked, "Amazon", probes = null, askedBecause = null))
+
+        assertEquals(ProvenanceTier.PUBLISHED_SOURCE, provenance.tier)
+        assertEquals(asked.citations.map { it.url }, provenance.sources.map { it.url })
+        assertEquals("Reported for Amazon by 2 sources we hold, cited below.", provenance.basis)
+        assertTrue(provenance.askedBecause.isNotBlank(), "a replaced question still says why it was asked")
+    }
 }

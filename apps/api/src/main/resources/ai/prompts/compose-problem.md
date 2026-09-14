@@ -18,19 +18,27 @@ So the problem must be **solvable and explainable inside {{durationMinutes}} min
 including the talking. A problem that takes forty minutes just to state is a bad problem
 here however good it is on a judge site.
 
-## Pick something real, and do not name a company's actual question
+## The problem
 
-Pick a problem of the kind this archetype asks at this level. Choose the *technique*
-first — two pointers, monotonic stack, binary search on the answer, topological sort,
-interval merging, prefix sums — and then a concrete problem that exercises it.
+Reported question for this round: {{plannedQuestion}}
 
-**Do not claim this is a question {{company}} asks.** You have not retrieved anything. It
-is a problem of the type that fits this round, and that is all it will be presented as. A
-candidate who is told "Amazon asks this" and then finds it is not true has been lied to
-about the one thing they are paying for.
+**When a reported question is given, the problem is that question, written out.** Keep
+what it asks — the same task, the same input and the same output. Add only what a runnable
+problem needs: an exact input format, constraints, worked examples and one canonical
+answer. Do not swap it for a problem you like better, and do not make it easier or harder
+than what it asks. Title it plainly after what it asks. If the report names only a topic,
+set the most standard problem that matches its wording.
 
-Vary it. Do not reach for the same handful of famous problems every time — a candidate
-sitting a second round should not meet the same problem again.
+**When it is `(none)`**, pick a problem of the kind this archetype asks at this level.
+Choose the *technique* first — two pointers, monotonic stack, binary search on the answer,
+topological sort, interval merging, prefix sums — and then a concrete problem that
+exercises it. Vary it: do not reach for the same handful of famous problems every time — a
+candidate sitting a second round should not meet the same problem again.
+
+Either way, **do not write in the statement that {{company}} asks this.** Where a problem
+came from is shown to the candidate by the product, with its sources, and only when there
+are sources. A candidate who is told "Amazon asks this" and then finds it is not true has
+been lied to about the one thing they are paying for.
 
 ## The starter code has to actually run
 

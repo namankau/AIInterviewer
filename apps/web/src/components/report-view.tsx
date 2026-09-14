@@ -417,13 +417,11 @@ function AreaColumn({
  * Where the questions came from.
  *
  * The disclosure is not a footnote to be tucked away — it is the reason this section can
- * be believed. Every question today is written from the model's general knowledge of an
- * employer archetype, with no retrieved sources behind it, and the page says so before it
- * shows anything else. A candidate who reads "asked at Google in March", checks, and
- * finds nothing will never trust this report again, and they would be right.
- *
- * When a real corpus exists, `sources` fills in per question and the disclosure changes
- * with the tier. Nothing else here has to move.
+ * be believed. Only a question the server matched to the question bank carries `sources`
+ * and the `published_source` tier; follow-ups and model-written questions say they are
+ * general knowledge, and the page says which is which before it shows anything else. A
+ * candidate who reads "asked at Google in March", checks, and finds nothing will never
+ * trust this report again, and they would be right.
  */
 function QuestionSources({ sources }: { sources: ReportQuestionSources | undefined }) {
   // A report written before provenance existed has no sources section at all.

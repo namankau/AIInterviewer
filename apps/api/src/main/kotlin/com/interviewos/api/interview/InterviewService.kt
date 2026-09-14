@@ -7,14 +7,14 @@ import com.interviewos.api.ai.AskedQuestion
 import com.interviewos.api.ai.Intervention
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
+import com.interviewos.api.ai.PlannedQuestion
 import com.interviewos.api.ai.RoundContext
 import com.interviewos.api.ai.TurnTranscript
+import com.interviewos.api.bank.BankQuestion
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.resume.CandidateBackground
 import com.interviewos.api.resume.ResumeService
 import com.interviewos.api.resume.ResumeUse
-import com.interviewos.api.sources.GroundedSources
-import com.interviewos.api.sources.SourceGrounding
 import com.interviewos.api.storage.ObjectStorage
 import com.interviewos.api.storage.ObjectStorageException
 import com.interviewos.api.storage.StorageProperties
@@ -58,7 +58,7 @@ class InterviewService(
     private val entitlementProperties: EntitlementProperties,
     private val retentionProperties: RetentionProperties,
     private val roundMedia: RoundMediaProperties,
-    private val sourceGrounding: SourceGrounding,
+    private val bankRounds: BankRoundPlanner,
     private val resumeService: ResumeService,
     private val roundWorkspaceComposer: RoundWorkspaceComposer,
     private val codeRunner: CodeRunner,
@@ -130,7 +130,13 @@ class InterviewService(
                     "You have not named an employer, so this runs on general patterns for the round type. " +
                         "Name one and the round is shaped to that kind of employer instead."
                 } else {
-                    candidateFacingNote(company, resolution.archetype, resolution.confidence)
+                    candidateFacingNote(
+                        company,
+                        resolution.archetype,
+                        resolution.confidence,
+                        roundType,
+                        bankRounds.questionCount(company, roundType),
+                    )
                 },
         )
     }
@@ -245,7 +251,6 @@ class InterviewService(
         roundType: RoundType,
         resolution: ArchetypeResolution,
     ): SessionView {
-        val sources = groundingFor(request.companyName.trim(), roundType)
         val background = resumeService.backgroundFor(userId)
         val brief =
             briefFor(
@@ -254,15 +259,21 @@ class InterviewService(
                 role = request.roleTitle.trim(),
                 roundType = roundType,
                 language = request.language,
-                sources = sources,
                 background = background,
             )
         // A DSA or design round is conducted around material — a problem, or a case — and
         // its opening is templated from that rather than asked of the model separately.
-        // One call, not two, on the path the candidate is already waiting on.
+        // One call, not two, on the path the candidate is already waiting on. When the bank
+        // holds this company's questions for the round, the material *is* one of them.
+        val seed =
+            if (roundType in RoundWorkspaceComposer.ROUND_TYPES) {
+                bankRounds.forRound(request.companyName.trim(), roundType)?.let { bankRounds.next(userId, sessionId, it) }
+            } else {
+                null
+            }
         val workspace =
             AiSpendContext.of(userId, sessionId) {
-                roundWorkspaceComposer.compose(brief, roundType, request.durationMinutes)
+                roundWorkspaceComposer.compose(brief, roundType, request.durationMinutes, seed)
             }
         val plan = InterviewPlan.opening(request.durationMinutes, hasWarmup = workspace == null)
 
@@ -300,11 +311,13 @@ class InterviewService(
                 speechStatus = if (request.speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
                 provenanceJson =
                     provenanceJson(
+                        company = request.companyName.trim(),
                         basis = opening.questionBasis,
                         probes = opening.questionProbes,
                         askedBecause = opening.questionAskedBecause,
-                        sources = sources,
+                        bankQuestion = workspace?.bankQuestion,
                     ),
+                bankQuestionId = workspace?.bankQuestion?.id,
             )
             // Registered inside the transaction so it runs once the turn has committed —
             // the background renderer writes to the row this has just inserted.
@@ -390,7 +403,18 @@ class InterviewService(
         val roundType = RoundType.fromDbValue(session.roundType)
         val resolution =
             ArchetypeResolution(Archetype.fromDbValue(session.archetype), confidenceOf(session.archetypeConfidence))
-        val sources = groundingFor(session.companyName, roundType)
+        // The bank question planned for the next turn, if the round has one to offer. Never in
+        // the warm-up or once the round is closing, and never in a workspace round, whose
+        // material already is the question. The first question of the round proper must be it.
+        val askNow = plan.briefTheCandidate
+        val planned =
+            bankRounds
+                .takeIf {
+                    session.workspace == null &&
+                        !plan.mustConclude &&
+                        (plan.phase == TurnPhase.MAIN || askNow)
+                }?.forRound(session.companyName, roundType)
+                ?.let { bankRounds.next(userId, sessionId, it) }
         val brief =
             briefFor(
                 company = session.companyName,
@@ -398,8 +422,8 @@ class InterviewService(
                 role = session.roleTitle,
                 roundType = roundType,
                 language = session.language,
-                sources = sources,
                 background = resumeService.backgroundFor(userId),
+                planned = planned?.let { PlannedQuestion(it.text, session.companyName, askNow) },
             )
         val priorTurns =
             repository
@@ -474,11 +498,11 @@ class InterviewService(
 
         // Trimmed here rather than trusted to the prompt: three rounds of telling the
         // model not to open with "That's a great overview" did not stop it.
-        val nextText =
+        val modelText =
             assessment.value.nextQuestionText
                 ?.let { QuestionText.withoutPreamble(it) }
                 ?.takeIf { it.isNotBlank() }
-        if (nextText == null) {
+        if (modelText == null) {
             // The model had nothing left to ask. That is a conclusion too, and it gets the
             // same goodbye — the candidate cannot tell this apart from a planned ending,
             // and should not have to.
@@ -491,6 +515,10 @@ class InterviewService(
             )
         }
 
+        // Whether this turn asks the planned bank question is the engine's call, checked
+        // against the bank's wording; a drifted question is replaced after its lead-in.
+        val asked = PlannedQuestionCheck.resolveTurn(planned, askNow, assessment.value.askedPlannedQuestion, modelText)
+        val nextText = asked.text
         val nextIndex = turnIndex + 1
         repository.insertTurn(
             sessionId = sessionId,
@@ -503,11 +531,13 @@ class InterviewService(
             speechStatus = if (speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
             provenanceJson =
                 provenanceJson(
+                    company = session.companyName,
                     basis = assessment.value.questionBasis,
-                    probes = assessment.value.questionProbes,
-                    askedBecause = assessment.value.questionAskedBecause,
-                    sources = sources,
+                    probes = assessment.value.questionProbes.takeIf { asked.faithful },
+                    askedBecause = assessment.value.questionAskedBecause.takeIf { asked.faithful },
+                    bankQuestion = asked.bankQuestion,
                 ),
+            bankQuestionId = asked.bankQuestion?.id,
         )
         // Nothing to synthesise when the room is going to say it: that call is the single
         // most expensive thing in a turn and it would be thrown away.
@@ -721,6 +751,15 @@ class InterviewService(
         val archetype = Archetype.fromDbValue(session.archetype)
         val confidence = confidenceOf(session.archetypeConfidence)
         val roundType = RoundType.fromDbValue(session.roundType)
+        val workspace = session.workspace?.let(objectMapper::readTree)
+        // A workspace round is either set on a bank question or it is not, and the workspace
+        // says which; a spoken round is described by what the bank holds for it.
+        val sourcedQuestions =
+            if (workspace != null) {
+                if (workspace.path("bankQuestionId").isString) 1 else 0
+            } else {
+                bankRounds.questionCount(session.companyName, roundType)
+            }
 
         return SessionView(
             id = session.id,
@@ -728,7 +767,7 @@ class InterviewService(
             archetype = archetype.dbValue,
             archetypeLabel = archetype.label,
             archetypeConfidence = confidence.dbValue,
-            groundingNote = candidateFacingNote(session.companyName, archetype, confidence),
+            groundingNote = candidateFacingNote(session.companyName, archetype, confidence, roundType, sourcedQuestions),
             roleTitle = session.roleTitle,
             roundType = roundType.dbValue,
             roundLabel = roundType.label,
@@ -743,7 +782,7 @@ class InterviewService(
             scheduledEndAt = session.startedAt?.plus(Duration.ofMinutes(session.durationMinutes.toLong())),
             turnsCompleted = repository.countAnsweredTurns(sessionId, userId),
             maxTurns = InterviewPlan.MAX_TURNS,
-            workspace = session.workspace?.let(objectMapper::readTree),
+            workspace = workspace,
             board = session.board?.let(objectMapper::readTree),
             currentTurn =
                 latest
@@ -774,25 +813,25 @@ class InterviewService(
     /**
      * Why a question was asked, ready to store.
      *
-     * [sources] are the documents that actually grounded this round, or null when the
-     * library held none. They decide the tier: real documents make it
-     * `published_source`, and their absence leaves it `model_knowledge` with the
-     * disclosure that goes with it. The model never gets a vote either way.
+     * Decided per turn: [bankQuestion] is the bank question this turn asked, or null. A
+     * turn that asked one is `published_source`, citing that question's sources and no
+     * others; every other turn — follow-ups included, in a round full of bank questions —
+     * is `model_knowledge`. The model never gets a vote either way.
      */
     private fun provenanceJson(
+        company: String,
         basis: String?,
         probes: String?,
         askedBecause: String?,
-        sources: GroundedSources?,
+        bankQuestion: BankQuestion?,
     ): String? {
-        val citations =
-            sources?.citations()?.map {
-                ProvenanceSource(title = it.title, publisher = it.publisher, url = it.url, year = it.year)
-            } ?: emptyList()
-
-        return QuestionProvenance
-            .fromSources(basis, probes, askedBecause, citations)
-            ?.let { objectMapper.writeValueAsString(it) }
+        val provenance =
+            if (bankQuestion != null) {
+                QuestionProvenance.fromBank(bankQuestion, company, probes, askedBecause)
+            } else {
+                QuestionProvenance.fromModel(basis, probes, askedBecause)
+            }
+        return provenance?.let { objectMapper.writeValueAsString(it) }
     }
 
     /**
@@ -854,46 +893,33 @@ class InterviewService(
         company: String,
         archetype: Archetype,
         confidence: Confidence,
-    ): String =
-        when (confidence) {
-            Confidence.RECOGNISED -> {
-                "Run as ${archetype.inProse}. These are general patterns for that kind of employer, " +
-                    "not a description of $company's current process."
-            }
-
-            Confidence.INFERRED -> {
-                "We do not recognise $company, so this runs as ${archetype.inProse} on general patterns " +
-                    "rather than on anything specific to them."
-            }
-        }
-
-    /**
-     * Real questions from the source library for this employer and round, or null when
-     * the library holds none — which is the common case and not a failure. Absence runs
-     * the round on archetype patterns and says so, exactly as before.
-     */
-    private fun groundingFor(
-        company: String,
         roundType: RoundType,
-    ): GroundedSources? = sourceGrounding.forRound(company, roundType.dbValue)
+        sourcedQuestions: Int,
+    ): String =
+        GroundingNote.forRound(
+            company = company,
+            archetype = archetype,
+            confidence = confidence,
+            roundType = roundType,
+            sourcedQuestions = sourcedQuestions,
+            workspaceRound = roundType in RoundWorkspaceComposer.ROUND_TYPES,
+        )
 
     /**
-     * Archetype patterns first, then anything real we actually hold.
+     * Archetype patterns, then the candidate's own background.
      *
-     * The order matters. The archetype text carries the standing rules about not
-     * inventing employer-specific detail, and those still govern everything after it —
-     * having real sources for one round does not licence invention around the edges of
-     * what they cover.
+     * There is no list of the employer's reported questions here any more, on purpose. A
+     * model handed twelve of them asked whichever it liked, and the engine could not tell
+     * which turn was which — so every turn was stamped as sourced. The bank reaches the
+     * model only as the one planned question, whose asking the engine checks.
      */
     private fun groundingText(
         resolution: ArchetypeResolution,
-        sources: GroundedSources?,
         background: CandidateBackground?,
         resumeUse: ResumeUse,
     ): String =
         listOfNotNull(
             resolution.grounding,
-            sources?.asPrompt(),
             background?.asPrompt(resumeUse),
         ).joinToString(separator = "\n\n")
 
@@ -903,8 +929,8 @@ class InterviewService(
         role: String,
         roundType: RoundType,
         language: String,
-        sources: GroundedSources? = null,
         background: CandidateBackground? = null,
+        planned: PlannedQuestion? = null,
     ) = InterviewBrief(
         company = company,
         archetype = resolution.archetype.label,
@@ -917,7 +943,8 @@ class InterviewService(
         candidateFunction = background?.resume?.headline,
         candidateLevel = background?.let { "${it.tenure.totalExperienceMonths / 12} years of experience" },
         targetLevel = null,
-        grounding = groundingText(resolution, sources, background, roundType.resumeUse),
+        grounding = groundingText(resolution, background, roundType.resumeUse),
+        plannedQuestion = planned,
     )
 
     private fun TurnPlan.toContext() =

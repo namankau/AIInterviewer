@@ -329,10 +329,10 @@ class ReportService(
      * the question was composed. A turn with none recorded is simply absent rather than
      * reconstructed.
      *
-     * **The confidence line is the truth, not a hedge.** `sources` is empty on every
-     * question today because there is no retrieval corpus, so the header says the
-     * questions are archetype patterns rather than sourced reports of this employer's
-     * process — and says whether we even recognised the employer. A candidate who reads
+     * **The confidence line is the truth, not a hedge.** Only a turn that asked a question
+     * from the bank carries `sources`, and the header counts those turns rather than
+     * describing the round as sourced — and, when there are none, says the questions are
+     * archetype patterns and whether we even recognised the employer. A candidate who reads
      * "asked at Google in March" and finds nothing behind it never trusts the report
      * again, and they would be right.
      */
@@ -375,24 +375,45 @@ class ReportService(
             }
 
         val recognised = Confidence.entries.firstOrNull { it.dbValue == session.archetypeConfidence } == Confidence.RECOGNISED
+        // Counted from the tiers recorded per turn, which the engine set when each question
+        // was asked. A round with bank questions in it is still mostly follow-ups, and the
+        // header has to say which is which rather than lend the whole round the citations.
+        val sourced = entries.count { it["tier"] == ProvenanceTier.PUBLISHED_SOURCE.dbValue }
+        val company = session.companyName
         return mapOf(
             "entries" to entries,
             "employerRecognised" to recognised,
             "archetypeLabel" to archetype.label,
             "headline" to
-                if (recognised) {
-                    "These questions were composed for ${archetype.inProse}, ${session.roleTitle}, from " +
-                        "general knowledge of how that kind of employer interviews."
-                } else {
-                    "We do not have specific information about ${session.companyName}, so these questions " +
-                        "were composed from the general patterns of ${archetype.inProse}."
+                when {
+                    sourced > 0 -> {
+                        val which = if (sourced == 1) "One of these questions was" else "$sourced of these questions were"
+                        "$which reported for $company by sources we hold, and each is cited beneath it. The rest " +
+                            "were written for this round from your answers and from how ${archetype.inProse} interviews."
+                    }
+
+                    recognised -> {
+                        "These questions were composed for ${archetype.inProse}, ${session.roleTitle}, from " +
+                            "general knowledge of how that kind of employer interviews."
+                    }
+
+                    else -> {
+                        "We do not have specific information about $company, so these questions " +
+                            "were composed from the general patterns of ${archetype.inProse}."
+                    }
                 },
             // Said plainly, and said even though it is unflattering. It is the difference
             // between a citation and a claim.
             "disclosure" to
-                "None of these are sourced reports of questions ${session.companyName} has actually asked. " +
-                "We do not have a corpus of real interview reports yet, and we would rather tell you that " +
-                "than show you a citation we cannot stand behind.",
+                if (sourced > 0) {
+                    "Only a question with a citation under it is one a source reports $company asking. " +
+                        "Follow-ups and anything else we wrote are labelled as general knowledge, because that " +
+                        "is what they are."
+                } else {
+                    "None of these are sourced reports of questions $company has actually asked. We held no " +
+                        "reported questions to ask you in this round, and we would rather tell you that than " +
+                        "show you a citation we cannot stand behind."
+                },
         )
     }
 

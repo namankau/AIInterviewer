@@ -152,6 +152,34 @@ class PromptLibrary(
             .replace("{{candidateLevel}}", brief.candidateLevel ?: "unspecified")
             .replace("{{targetLevel}}", brief.targetLevel ?: "unspecified")
             .replace("{{grounding}}", brief.grounding)
+            .replace("{{plannedQuestion}}", plannedQuestionOf(brief.plannedQuestion))
+            .replace("{{plannedQuestionWhen}}", plannedQuestionWhen(brief.plannedQuestion))
+
+    private fun plannedQuestionOf(planned: PlannedQuestion?): String =
+        planned?.let { "\"${it.text.trim()}\" (reported for ${it.company} by sources we hold)" } ?: "(none)"
+
+    /**
+     * When the planned question is to be asked. Decided by the engine: the first question
+     * of the round proper is always the planned one, and after that it waits for the round
+     * to move to new ground, because following the candidate's answer is the product.
+     */
+    private fun plannedQuestionWhen(planned: PlannedQuestion?): String =
+        when {
+            planned == null -> {
+                "There is no planned question on this turn. Carry on from where the round is."
+            }
+
+            planned.askNow -> {
+                "Ask the planned question on this turn, whatever the candidate just said: it is the first " +
+                    "question of the round proper. Lead into it if the turn needs a lead-in."
+            }
+
+            else -> {
+                "Ask it when you move to new ground - when this line is done and you would otherwise " +
+                    "`move_on`. If this answer needs a follow-up, a probe, a challenge or a hand, do that " +
+                    "instead and leave the planned question: it will still be here next turn."
+            }
+        }
 
     /**
      * Fills in where the round is up to, and what that means the interviewer should be

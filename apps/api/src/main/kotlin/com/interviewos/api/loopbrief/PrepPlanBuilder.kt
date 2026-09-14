@@ -52,6 +52,33 @@ data class PrepPlanBuild(
  *   do about the parts of the loop that are not a spoken round at all.
  */
 object PrepPlanBuilder {
+    /**
+     * The stages a plan is built from: sourced first, then the general pattern after them.
+     *
+     * Sourced alone is not enough. A sourced loop rarely maps cleanly onto the rounds we
+     * run — Amazon's own SDE II page describes an online assessment and an "Interview Loop"
+     * of four 55-minute interviews, neither of which is one round type — so a plan built
+     * only from sourced stages came back empty for exactly the employers we know most
+     * about. The general pattern fills the round types the sources leave uncovered.
+     *
+     * Sourced stages still come first and still win a tie on round type (so the item keeps
+     * its citation). General stages never carry a citation, and when sourced stages exist
+     * a general stage with no round type is left out — the sources already say which parts
+     * of the loop are not a spoken round, and a second, generic "not simulated" note for
+     * the same thing would only be noise.
+     */
+    fun combine(
+        sourced: List<PlanStageInput>,
+        general: List<PlanStageInput>,
+    ): List<PlanStageInput> {
+        val after = sourced.mapNotNull { it.order }.maxOrNull() ?: 0
+        val fill =
+            general
+                .filter { sourced.isEmpty() || it.roundType != null }
+                .map { it.copy(order = it.order?.plus(after), citations = emptyList()) }
+        return sourced + fill
+    }
+
     fun build(
         offered: Set<RoundType>,
         stages: List<PlanStageInput>,

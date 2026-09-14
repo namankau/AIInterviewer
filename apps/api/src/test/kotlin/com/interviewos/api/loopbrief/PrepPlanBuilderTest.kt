@@ -81,10 +81,71 @@ class PrepPlanBuilderTest {
         assertThat(plan.items.map { it.roundType }).containsExactly(RoundType.CODING_PRACTICAL, RoundType.SYSTEM_DESIGN)
     }
 
+    @Test
+    fun `sourced stages that map to no round still leave a plan, from the general pattern`() {
+        // Amazon's own SDE II page, as extracted on 14 September: two real stages, neither
+        // of them a single round type. A plan from these alone was empty.
+        val sourced =
+            listOf(
+                sourced(1, "Online Assessment", null),
+                sourced(2, "Interview Loop", null),
+            )
+        val general =
+            listOf(
+                general(1, "Recruiter screen", RoundType.HR_FIT_CLOSING),
+                general(2, "Coding interview", RoundType.CODING_PRACTICAL),
+                general(3, "System design interview", RoundType.SYSTEM_DESIGN),
+            )
+
+        val plan = PrepPlanBuilder.build(allOffered, PrepPlanBuilder.combine(sourced, general))
+
+        assertThat(plan.items.map { it.roundType })
+            .containsExactly(RoundType.HR_FIT_CLOSING, RoundType.CODING_PRACTICAL, RoundType.SYSTEM_DESIGN)
+        assertThat(plan.items).allSatisfy { assertThat(it.isSourced).isFalse() }
+        assertThat(plan.unsimulatedStages.map { it.stageName }).containsExactly("Online Assessment", "Interview Loop")
+    }
+
+    @Test
+    fun `a sourced stage wins its round type over the general pattern, and keeps its citation`() {
+        val sourced = listOf(sourced(1, "Onsite coding", RoundType.CODING_PRACTICAL))
+        val general = listOf(general(1, "Coding interview", RoundType.CODING_PRACTICAL), general(2, "Design", RoundType.SYSTEM_DESIGN))
+
+        val plan = PrepPlanBuilder.build(allOffered, PrepPlanBuilder.combine(sourced, general))
+
+        assertThat(plan.items.map { it.stageName }).containsExactly("Onsite coding", "Design")
+        assertThat(plan.items.first().isSourced).isTrue()
+        assertThat(plan.items.last().isSourced).isFalse()
+    }
+
+    @Test
+    fun `with sources present, a general stage we do not simulate adds no second note`() {
+        val sourced = listOf(sourced(1, "Online Assessment", null))
+        val general = listOf(general(1, "Online assessment", null), general(2, "Coding interview", RoundType.CODING_PRACTICAL))
+
+        val plan = PrepPlanBuilder.build(allOffered, PrepPlanBuilder.combine(sourced, general))
+
+        assertThat(plan.unsimulatedStages.map { it.stageName }).containsExactly("Online Assessment")
+    }
+
+    @Test
+    fun `a general stage never gains a citation, even if one was passed in`() {
+        val leaked = sourced(1, "Coding interview", RoundType.CODING_PRACTICAL)
+
+        val combined = PrepPlanBuilder.combine(emptyList(), listOf(leaked))
+
+        assertThat(combined.single().citations).isEmpty()
+    }
+
+    private fun general(
+        order: Int,
+        stageName: String,
+        roundType: RoundType?,
+    ) = PlanStageInput(order = order, stageName = stageName, assesses = null, roundType = roundType)
+
     private fun sourced(
         order: Int,
         stageName: String,
-        roundType: RoundType,
+        roundType: RoundType?,
     ) = PlanStageInput(
         order = order,
         stageName = stageName,

@@ -50,15 +50,16 @@ class PrepPlanService(
     }
 
     private fun stageInputsFor(resolved: ResolvedLoop): List<PlanStageInput> =
-        if (resolved.sourcedStages.isNotEmpty()) {
-            resolved.sourcedStages.map {
-                PlanStageInput(it.order, it.stageName, it.assesses, it.roundType, it.citations)
-            }
-        } else {
-            resolved.generalPattern.map {
-                PlanStageInput(it.order, it.stageName, it.assesses, it.roundType?.let(RoundType::parseOrNull))
-            }
-        }
+        PrepPlanBuilder.combine(
+            sourced =
+                resolved.sourcedStages.map {
+                    PlanStageInput(it.order, it.stageName, it.assesses, it.roundType, it.citations)
+                },
+            general =
+                resolved.generalPattern.map {
+                    PlanStageInput(it.order, it.stageName, it.assesses, it.roundType?.let(RoundType::parseOrNull))
+                },
+        )
 
     private fun safeBackground(userId: UUID): CandidateBackground? =
         try {

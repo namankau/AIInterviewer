@@ -10,33 +10,85 @@ Every source here still needs the owner's per-source review (PRD §04), and the 
 |---|---|---|---|---|
 | Adobe | 1 | 1 | 0 | 2 |
 | Adyen | 2 | 0 | 0 | 2 |
+| Airbnb | 1 | 0 | 0 | 1 |
 | Amazon | 4 | 3 | 0 | 7 |
 | Atlassian | 3 | 3 | 0 | 6 |
 | Booking.com | 1 | 1 | 0 | 2 |
 | Cloudflare | 3 | 0 | 0 | 3 |
 | CRED | 0 | 1 | 0 | 1 |
+| Databricks | 1 | 0 | 0 | 1 |
 | Datadog | 1 | 0 | 0 | 1 |
+| Dropbox | 1 | 0 | 0 | 1 |
 | Elastic | 2 | 0 | 0 | 2 |
 | Flipkart | 1 | 5 | 0 | 6 |
 | GitLab | 3 | 0 | 0 | 3 |
 | Goldman Sachs | 0 | 1 | 0 | 1 |
 | Google | 3 | 3 | 0 | 6 |
 | Grab | 2 | 0 | 0 | 2 |
+| Intuit | 1 | 0 | 0 | 1 |
 | JetBrains | 1 | 0 | 0 | 1 |
 | Meta | 2 | 2 | 0 | 4 |
 | Microsoft | 2 | 3 | 0 | 5 |
 | MongoDB | 2 | 0 | 0 | 2 |
 | Netflix | 1 | 0 | 0 | 1 |
 | Nvidia | 1 | 0 | 0 | 1 |
+| Pinterest | 2 | 0 | 0 | 2 |
 | Postman | 2 | 0 | 0 | 2 |
 | Razorpay | 1 | 1 | 0 | 2 |
 | Salesforce | 1 | 1 | 0 | 2 |
 | Shopify | 2 | 0 | 0 | 2 |
+| Snowflake | 1 | 0 | 0 | 1 |
 | Spotify | 1 | 2 | 0 | 3 |
 | Swiggy | 0 | 4 | 0 | 4 |
+| Uber | 1 | 0 | 0 | 1 |
 | Walmart Global Tech | 0 | 1 | 0 | 1 |
 | Wise | 3 | 0 | 0 | 3 |
 | Zalando | 1 | 1 | 0 | 2 |
+
+## A-us-big-tech-2
+
+### Airbnb
+
+| Title | Origin | Publisher | Basis | Published | Checked | Robots | Readable |
+|---|---|---|---|---|---|---|---|
+| [FAQ - Careers at Airbnb](https://careers.airbnb.com/faq/) | Employer | Airbnb | Airbnb's own careers FAQ page describing its interview process | — | 2026-09-14T09:45:39.071Z | allowed | yes (3875 chars) |
+
+### Databricks
+
+| Title | Origin | Publisher | Basis | Published | Checked | Robots | Readable |
+|---|---|---|---|---|---|---|---|
+| [Clear Interview Process and Insider Insights \| Databricks](https://www.databricks.com/company/careers/interview-prep) | Employer | Databricks | Databricks' own careers page on its interview process | — | 2026-09-14T09:45:42.038Z | allowed | yes (13489 chars) |
+
+### Dropbox
+
+| Title | Origin | Publisher | Basis | Published | Checked | Robots | Readable |
+|---|---|---|---|---|---|---|---|
+| [How we hire \| Dropbox Careers](https://www.dropbox.jobs/en/how-we-hire/) | Employer | Dropbox | Dropbox's own careers page on its hiring process | — | 2026-09-14T09:45:56.975Z | allowed | n/a |
+
+### Intuit
+
+| Title | Origin | Publisher | Basis | Published | Checked | Robots | Readable |
+|---|---|---|---|---|---|---|---|
+| [Hiring Process \| Intuit Careers](https://www.intuit.com/careers/hiring-process/) | Employer | Intuit | Intuit's own careers page on its hiring process for engineering-style roles | — | 2026-09-14T09:45:48.158Z | allowed | yes (9468 chars) |
+
+### Pinterest
+
+| Title | Origin | Publisher | Basis | Published | Checked | Robots | Readable |
+|---|---|---|---|---|---|---|---|
+| [Advice from Pinterest Recruiting \| Pinterest Careers](https://www.pinterestcareers.com/life-at-pinterest-blog/interviewing/advice-from-pinterest-recruiting/) | Employer | Pinterest | Pinterest's own careers blog, advice from five named Pinterest recruiters on its interview process | — | 2026-09-14T09:45:52.872Z | allowed | n/a |
+| [Interviewing at Pinterest \| Pinterest Careers](https://www.pinterestcareers.com/interviewing/) | Employer | Pinterest | Pinterest's own careers page on its interview process | — | 2026-09-14T09:45:50.790Z | allowed | n/a |
+
+### Snowflake
+
+| Title | Origin | Publisher | Basis | Published | Checked | Robots | Readable |
+|---|---|---|---|---|---|---|---|
+| [Hiring Process \| Snowflake Careers](https://careers.snowflake.com/us/en/gethired) | Employer | Snowflake | Snowflake's own careers page on its hiring process | — | 2026-09-14T09:45:44.244Z | allowed | yes (3999 chars) |
+
+### Uber
+
+| Title | Origin | Publisher | Basis | Published | Checked | Robots | Readable |
+|---|---|---|---|---|---|---|---|
+| [How we hire \| Uber Careers](https://jobs.uber.com/en/what-moves-us/how-we-hire/) | Employer | Uber | Uber's own careers page describing its hiring process end to end (uber.com/us/en/careers/interviewing/ 301-redirects here) | — | 2026-09-14T09:45:34.630Z | allowed | n/a |
 
 ## A-us-big-tech
 
@@ -270,6 +322,16 @@ Every source here still needs the owner's per-source review (PRD §04), and the 
 
 ## Rejected
 
+### A-us-big-tech-2
+
+- https://blog.stackademic.com/linkedin-staff-software-engineer-interview-experience-fff6fbbbba5b — Fetch returned HTTP 403; Stackademic is Medium-platform-hosted (its robots.txt matches Medium's bot-blocking pattern, e.g. ClaudeBot disallowed), so treated as unreachable like Medium
+- https://careers.linkedin.com/Howwehire — On linkedin.com. LinkedIn's user agreement prohibits automated access to any part of the site, so it is on the hard-exclusion list even for LinkedIn's own careers page.
+- https://careers.pypl.com/how-we-recruit/Interviewing/default.aspx — Fetch returned HTTP 429 Too Many Requests on every attempt across the session (site-level rate limiting), so PayPal's own 'How We Recruit - Interviewing' page could not be verified despite being found by search
+- https://dev.to/felipeporto/im-a-senior-software-engineer-at-uber-quick-tips-that-helped-me-get-hired-4edf — Fetched successfully but content is generic external-resource-linking advice (pick a language, watch this system-design guide, watch this algorithms video), not a description of the author's own Uber interview loop or specific questions
+- https://gaijineer.co/databricks-software-engineer-interview — No named author byline or publish date on the page; the site identifies itself as 'Gaijineer, a collective' running a Hashnode-hosted interview-prep content business, not a clearly identifiable individual author's own account - same concern class as previously rejected commercial/marketing interview posts
+- https://harshbharvada.hashnode.dev/paypal-interview-experience-software-engineer-ii — Fetch returned HTTP 403 (Hashnode custom-domain blog unreachable to this fetcher); could not verify content, so not used despite being a plausible individual author account of a PayPal SE II loop
+- https://www.oracle.com/careers/opportunities/getting-hired/ — Fetch returned HTTP 403 again this session (site-level bot protection distinct from robots.txt), consistent with partition A's earlier finding; oracle.com remains unreachable to this fetcher
+
 ### A-us-big-tech
 
 - https://blogs.oracle.com/jobsatoracle/ace-your-technical-interview — Oracle's own hiring blog; blogs.oracle.com returned HTTP 403 to every fetch attempt this session (site-level bot protection, not a robots.txt disallow), so content could not be verified
@@ -375,6 +437,14 @@ Every source here still needs the owner's per-source review (PRD §04), and the 
 - https://www.naukri.com/code360/interview-experiences/flipkart/flipkart-interview-experience-on-campus-sep-2022 — Naukri Code360 - aggregator republishing candidate content, hard exclusion
 
 ## Gaps
+
+### A-us-big-tech-2
+
+- Airbnb, Databricks, Snowflake, LinkedIn, Intuit, Pinterest, Dropbox, Uber: only employer sources were found and verified for these companies (1-2 each). Searches for individual-author first-hand loop accounts on dev.to, Hashnode and Substack for these companies mostly surfaced either the same rejected commercial-marketing dev.to account (net_programhelp_e160eef28, covering Snowflake/LinkedIn/Databricks OA posts), generic prep-guide content with no personal loop described, or Medium/roundz.substack.com aggregator posts already excluded by policy. None met the bar for a verifiable, specific, individual first-hand account this session.
+- Apple: repeated this session - still no Apple careers 'how we hire'/interview-process page found (apple.com/careers, jobs.apple.com). Candidate first-hand accounts located by search (Medium and Stackademic-style publications) return HTTP 403 to this fetcher. No usable source found; matches the gap already recorded in A-us-big-tech.json.
+- Oracle: oracle.com and blogs.oracle.com again returned HTTP 403 to every fetch attempt this session (confirms the gap already recorded in A-us-big-tech.json); the PDF prep guides on oracle.com (preparing-for-your-interview.pdf, global-interview-guide.pdf) are on the same blocked domain and were not fetchable either.
+- PayPal: careers.pypl.com ('How We Recruit - Interviewing', PayPal's own page) returned HTTP 429 on every attempt this session, so it could not be verified despite being the clear best source. The one individual-author account found (Harsh Bharvada, Software Engineer II, on a Hashnode custom domain) returned HTTP 403. No usable source found this session; worth retrying both URLs later.
+- Stripe: stripe.com/careers and stripe.com/jobs describe the process only in scattered marketing copy ('most hiring processes include a recruiter screen, a technical or skills-based assessment, and interviews with the team') with no single dedicated interview-process page found to fetch and verify. The dev.to posts with Stripe-specific round detail ('Stripe SDE Five-Round VO Interview Experience', 'Stripe OA 2026 Latest Interview Experience', 'Stripe SWE OA Guide') are all by the same account (net_programhelp_e160eef28) already rejected in A-us-big-tech.json as a commercial interview-assistance service, not an identifiable individual's own experience. No usable source found.
 
 ### A-us-big-tech
 

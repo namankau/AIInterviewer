@@ -32,6 +32,12 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test
+      # scripts/ is plain Node, not an npm workspace, so it runs under node:test directly
+      # rather than through a package script. An explicit glob rather than the bare
+      # `scripts/` directory: node --test's directory-argument scanning does not reliably
+      # find files that way on every platform (confirmed broken for a bare directory on
+      # Node 24 / Windows locally; the glob form worked everywhere tried).
+      - run: node --test scripts/*.test.mjs
       - run: npm run build
 
   api:

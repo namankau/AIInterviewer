@@ -1,0 +1,22 @@
+{
+  "partition": "B-example",
+  "checkedOn": "2026-09-14",
+  "sources": [
+    {
+      "url": "https://example.org/engineering/interview-loop",
+      "title": "Our engineering interview loop - Example Org Engineering Blog",
+      "publisher": "Example Org",
+      "companyName": "Example Org",
+      "origin": "employer",
+      "basis": "Example Org's own engineering-blog post about its process",
+      "contributes": ["process"],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2024-11-20",
+      "summary": "Describes a phone screen, a take-home, and an onsite of four interviews.",
+      "robotsAllows": true,
+      "readableWithoutJs": true
+    }
+  ],
+  "rejected": [],
+  "gaps": []
+}

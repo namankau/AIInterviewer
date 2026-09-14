@@ -44,11 +44,17 @@ export const MAX_CONTENT_CHARS = 120_000;
 export const MIN_READABLE_CHARS = 800;
 
 /**
- * One request at a time, spaced out — this is somebody else's server. Overridable only
- * for tests, which run against a local HTTP server and would otherwise take forever.
+ * One request at a time, spaced out — this is somebody else's server. Read from the
+ * environment on every call, rather than frozen at module load, so tests (which run
+ * against a local HTTP server and would otherwise take forever) can dial both down
+ * without caring whether they set the variable before or after this module was imported.
  */
-const MIN_HOST_INTERVAL_MS = Number(process.env.SOURCE_REGISTER_MIN_HOST_INTERVAL_MS ?? 2000);
-const REQUEST_TIMEOUT_MS = Number(process.env.SOURCE_REGISTER_TIMEOUT_MS ?? 20_000);
+function minHostIntervalMs() {
+  return Number(process.env.SOURCE_REGISTER_MIN_HOST_INTERVAL_MS ?? 2000);
+}
+function requestTimeoutMs() {
+  return Number(process.env.SOURCE_REGISTER_TIMEOUT_MS ?? 20_000);
+}
 
 /**
  * Hard exclusions (task 036). This list is code, not a policy someone has to remember —
@@ -229,10 +235,10 @@ const lastRequestAtByHost = new Map();
 /** Waits out any remainder of the per-host spacing, then performs the request. */
 async function politeFetch(host, url, options) {
   const last = lastRequestAtByHost.get(host) ?? 0;
-  const wait = last + MIN_HOST_INTERVAL_MS - Date.now();
+  const wait = last + minHostIntervalMs() - Date.now();
   if (wait > 0) await sleep(wait);
   try {
-    return await fetchWithTimeout(url, options, REQUEST_TIMEOUT_MS);
+    return await fetchWithTimeout(url, options, requestTimeoutMs());
   } finally {
     lastRequestAtByHost.set(host, Date.now());
   }
@@ -519,19 +525,18 @@ async function cmdCheck(dir, { only, partition } = {}) {
     let changed = false;
     for (const entry of data.sources) {
       if (!matchesOnly(entry, only)) continue;
-      process.stdout.write(`checking ${entry.url} … `);
       const result = await checkOne(entry);
       entry.check = result;
       changed = true;
       checked += 1;
       if (!result.robotsAllowed) {
         blocked += 1;
-        console.log("blocked by robots.txt");
+        console.log(`checking ${entry.url} … blocked by robots.txt`);
       } else if (result.error || (result.httpStatus && result.httpStatus >= 400)) {
         failed += 1;
-        console.log(`failed (${result.error ?? `HTTP ${result.httpStatus}`})`);
+        console.log(`checking ${entry.url} … failed (${result.error ?? `HTTP ${result.httpStatus}`})`);
       } else {
-        console.log(`ok (${result.readableChars} readable char(s))`);
+        console.log(`checking ${entry.url} … ok (${result.readableChars} readable char(s))`);
       }
     }
 
@@ -710,7 +715,17 @@ function cmdRender(dir) {
 // import
 // ---------------------------------------------------------------------------------------
 
-function passesCheck(entry) {
+function pollIntervalMs() {
+  return Number(process.env.SOURCE_REGISTER_POLL_INTERVAL_MS ?? 5000);
+}
+
+/** The pause between POSTs (task 036: "Pause ≥1s between posts"). Lazy, for the same
+ * reason as the other timing knobs above. */
+function postIntervalMs() {
+  return Number(process.env.SOURCE_REGISTER_POST_INTERVAL_MS ?? 1000);
+}
+
+export function passesCheck(entry) {
   const check = entry.check;
   if (!check) return false;
   if (!check.robotsAllowed) return false;
@@ -735,7 +750,7 @@ async function pollUntilSettled(apiBase, headers, urls, timeoutMinutes) {
         pending.delete(source.url);
       }
     }
-    if (pending.size > 0) await sleep(5000);
+    if (pending.size > 0) await sleep(pollIntervalMs());
   }
 
   return lastList;
@@ -789,14 +804,17 @@ async function cmdImport(dir, { only, dryRun, timeoutMinutes } = {}) {
       origin: entry.origin,
       publishedOn: entry.publishedOn,
     };
-    process.stdout.write(`POST ${entry.url} … `);
     const response = await fetch(`${apiBase}/api/v1/admin/sources/links`, {
       method: "POST",
       headers,
       body: JSON.stringify(body),
     });
-    console.log(response.ok ? `${response.status}` : `${response.status} ${await response.text()}`);
-    await sleep(1000);
+    console.log(
+      response.ok
+        ? `POST ${entry.url} … ${response.status}`
+        : `POST ${entry.url} … ${response.status} ${await response.text()}`,
+    );
+    await sleep(postIntervalMs());
   }
 
   console.log("\nPolling for every imported source to settle…");

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { LoopBriefStep } from "@/components/loop-brief-step";
 import { ApiRequestError, composeRound, startSession } from "@/lib/api";
 import { loadVoices, pickVoice } from "@/lib/browser-speech";
 import { ROUND_CATALOGUE } from "@/lib/rounds";
@@ -47,6 +48,10 @@ export function NewInterviewForm() {
   const [draft, setDraft] = useState<RoundDraft | null>(null);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Past the "how they interview" step, either because the candidate chose a round from
+  // it or asked to skip straight to setup.
+  const [pastBrief, setPastBrief] = useState(false);
+  const [chosenRoundType, setChosenRoundType] = useState<RoundType | null>(null);
 
   async function read(event: React.FormEvent) {
     event.preventDefault();
@@ -69,14 +74,33 @@ export function NewInterviewForm() {
   }
 
   if (draft) {
+    const hasCompany = draft.companyName.trim() !== "";
+
+    if (hasCompany && !pastBrief) {
+      return (
+        <LoopBriefStep
+          companyName={draft.companyName}
+          roleTitle={draft.roleTitle}
+          accessToken={accessToken}
+          onChooseRound={(roundType) => {
+            setChosenRoundType(roundType);
+            setPastBrief(true);
+          }}
+          onSkip={() => setPastBrief(true)}
+        />
+      );
+    }
+
     return (
       <RoundSetup
-        draft={draft}
+        draft={chosenRoundType ? { ...draft, roundType: chosenRoundType } : draft}
         query={query}
         error={error}
         onEdit={() => {
           setDraft(null);
           setError(null);
+          setPastBrief(false);
+          setChosenRoundType(null);
         }}
         onStart={(id) => router.push(`/interview/${id}`)}
         accessToken={accessToken}

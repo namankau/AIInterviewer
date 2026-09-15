@@ -1,6 +1,11 @@
 import { chapterComplexity } from "@/content/courses/dsa/02-complexity";
 import { chapterInterviewApproach } from "@/content/courses/dsa/03-interview-approach";
 import { chapterWhatIsDsa } from "@/content/courses/dsa/01-what-is-dsa";
+import { chapterArraysInMemory } from "@/content/courses/dsa/04-arrays-in-memory";
+import { chapterTwoPointers } from "@/content/courses/dsa/05-two-pointers";
+import { chapterSlidingWindow } from "@/content/courses/dsa/06-sliding-window";
+import { chapterPrefixSums } from "@/content/courses/dsa/07-prefix-sums";
+import { chapterStringTechniques } from "@/content/courses/dsa/08-string-techniques";
 import type { Course } from "@/content/courses/types";
 
 /**
@@ -16,6 +21,16 @@ export const dsaCourse: Course = {
     {
       title: "Foundations",
       chapters: [chapterWhatIsDsa, chapterComplexity, chapterInterviewApproach],
+    },
+    {
+      title: "Arrays and strings",
+      chapters: [
+        chapterArraysInMemory,
+        chapterTwoPointers,
+        chapterSlidingWindow,
+        chapterPrefixSums,
+        chapterStringTechniques,
+      ],
     },
   ],
 };

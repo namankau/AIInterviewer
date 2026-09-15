@@ -13,11 +13,15 @@ import { chapterSimpleSorts } from "@/content/courses/dsa/12-simple-sorts";
 import { chapterMergeSort } from "@/content/courses/dsa/13-merge-sort";
 import { chapterQuickSort } from "@/content/courses/dsa/14-quick-sort";
 import { chapterBinarySearch } from "@/content/courses/dsa/15-binary-search";
+import { chapterLinkedLists } from "@/content/courses/dsa/16-linked-lists";
+import { chapterStacks } from "@/content/courses/dsa/17-stacks";
+import { chapterQueuesAndDeques } from "@/content/courses/dsa/18-queues-and-deques";
 import type { Course } from "@/content/courses/types";
 
 /**
  * Data Structures & Algorithms (task 046). Modules 1-4 — foundations; arrays and strings; hashing and
- * recursion; sorting and searching — are written here; modules 5-8 are task 046b (feat/courses-dsa-2).
+ * recursion; sorting and searching — are written in feat/courses-dsa-1; modules 5-8 — linear structures;
+ * trees; graphs; paradigms — are written here (feat/courses-dsa-2).
  */
 export const dsaCourse: Course = {
   slug: "dsa",
@@ -46,6 +50,10 @@ export const dsaCourse: Course = {
     {
       title: "Sorting and searching",
       chapters: [chapterSimpleSorts, chapterMergeSort, chapterQuickSort, chapterBinarySearch],
+    },
+    {
+      title: "Linear structures",
+      chapters: [chapterLinkedLists, chapterStacks, chapterQueuesAndDeques],
     },
   ],
 };

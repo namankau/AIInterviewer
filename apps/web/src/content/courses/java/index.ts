@@ -27,12 +27,19 @@ import { chapterArrayListVsLinkedList } from "@/content/courses/java/26-arraylis
 import { chapterHashMapHashSet } from "@/content/courses/java/27-hashmap-and-hashset";
 import { chapterGenerics } from "@/content/courses/java/28-generics";
 import { chapterComparableComparator } from "@/content/courses/java/29-comparable-and-comparator";
+import { chapterFileIO } from "@/content/courses/java/30-file-io";
+import { chapterStackHeapGC } from "@/content/courses/java/31-stack-heap-gc";
+import { chapterMultithreading } from "@/content/courses/java/32-multithreading-basics";
+import { chapterLambdas } from "@/content/courses/java/33-lambdas-functional-interfaces";
+import { chapterStreams } from "@/content/courses/java/34-streams-api";
+import { chapterRecordsModernJava } from "@/content/courses/java/35-records-modern-java";
 import type { Course } from "@/content/courses/types";
 
 /**
  * Java programming (PRD design brief, 15 Sep 2026). Modules 1-3 are task 045;
  * modules 4-6 — OOP, core APIs, beyond basics — are task 045b.
  */
+// All 35 chapters (modules 1-6) are complete as of task 045b.
 export const javaCourse: Course = {
   slug: "java",
   title: "Java Programming",
@@ -81,6 +88,17 @@ export const javaCourse: Course = {
         chapterHashMapHashSet,
         chapterGenerics,
         chapterComparableComparator,
+      ],
+    },
+    {
+      title: "Beyond basics",
+      chapters: [
+        chapterFileIO,
+        chapterStackHeapGC,
+        chapterMultithreading,
+        chapterLambdas,
+        chapterStreams,
+        chapterRecordsModernJava,
       ],
     },
   ],

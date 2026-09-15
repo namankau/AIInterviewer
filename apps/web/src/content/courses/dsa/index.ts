@@ -16,6 +16,10 @@ import { chapterBinarySearch } from "@/content/courses/dsa/15-binary-search";
 import { chapterLinkedLists } from "@/content/courses/dsa/16-linked-lists";
 import { chapterStacks } from "@/content/courses/dsa/17-stacks";
 import { chapterQueuesAndDeques } from "@/content/courses/dsa/18-queues-and-deques";
+import { chapterTreeBasicsAndTraversals } from "@/content/courses/dsa/19-tree-basics-and-traversals";
+import { chapterBinarySearchTrees } from "@/content/courses/dsa/20-binary-search-trees";
+import { chapterHeapsAndPriorityQueues } from "@/content/courses/dsa/21-heaps-and-priority-queues";
+import { chapterTries } from "@/content/courses/dsa/22-tries";
 import type { Course } from "@/content/courses/types";
 
 /**
@@ -54,6 +58,15 @@ export const dsaCourse: Course = {
     {
       title: "Linear structures",
       chapters: [chapterLinkedLists, chapterStacks, chapterQueuesAndDeques],
+    },
+    {
+      title: "Trees",
+      chapters: [
+        chapterTreeBasicsAndTraversals,
+        chapterBinarySearchTrees,
+        chapterHeapsAndPriorityQueues,
+        chapterTries,
+      ],
     },
   ],
 };

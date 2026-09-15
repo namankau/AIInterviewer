@@ -6,10 +6,37 @@ The hidden AI question pool, as you set it out on 15 September. Task files are
 `runs/2026-09-15-progress.md` (gitignored).
 
 **Where it stands:**
-- 039, 040 and 041 are merged into `develop`.
-- 042 is **PR #7**, waiting for you because it touches sign-in route protection.
+- 039, 040, 041 and 042 are merged into `develop`, with every migration applied.
 - 043 has not started. It spends money, so it needs your go-ahead.
 - Nothing has called Gemini, and no mock round was run.
+
+## Your four fixes (after you looked at the running app)
+1. **The Questions tab was still showing** because 042 was waiting in PR #7. I took out
+   042's sign-in change, which you hadn't asked for and which was the only reason it needed
+   your review (`046ffa8`). CI passed, and I merged PR #7 at `753eec7` and applied its
+   migration. `/questions` is hidden unless `NEXT_PUBLIC_QUESTION_BANK_BROWSABLE=true`.
+   **Restart the API to see it.**
+2. **The loop brief said too much.** It stated the caveat three times, gave a whole block to
+   a sourced record that said nothing, and had a Question bank section that only said it
+   was empty. Now the caveat appears once, the Question bank section is gone, and a
+   content-free record becomes a quiet "Based in part on: …" citation. Merged at `add3447`.
+3. **Back navigation** (same merge). "← Back to how <Company> interviews" returns from round
+   setup to the brief, and "Edit the description this was built from" returns from the
+   brief to the one-line input.
+4. **A better answer for every question in the report.** The prompt only annotated "the
+   weaker answers", and the improvement field could come back empty. Now:
+   - every answered question gets a "How you could have answered it better" note, and the
+     field is required;
+   - the list of questions is built from the interview itself, so a question the model
+     skipped still appears, with "No note was written for this answer.";
+   - the prompt forbids inventing the candidate's experience;
+   - pool questions pass the model their "strong answer covers" points as reference only.
+
+   Merged at `4d3f749`; CI passed on the merged `develop` (run 34982216345). Warm-up
+   questions get no note. Old reports render as before, with the same fallback text.
+   **Needs a live check you haven't approved yet:** whether the notes are actually good,
+   and the cost, which I estimate at a few hundred extra output tokens per report.
+   Neither is measured.
 
 ## What I built
 
@@ -113,21 +140,19 @@ The hidden AI question pool, as you set it out on 15 September. Task files are
 - 039: merged into `develop` at `7e4e091`, migration applied.
 - 040: merged at `859d4de`, migration applied.
 - 041: merged at `e3f5715`, no migration.
-- **042: PR #7**, because it touches sign-in route protection. With the flag off, signed-out
-  visitors to `/questions` get the 404 rather than a sign-in redirect. No data becomes
-  reachable. **Run `npm run db:push` when you merge it.** Its migration was deliberately not
-  applied ahead of the PR, because a remote migration that `develop` lacks would make every
-  later `db push` refuse to run.
+- 042: merged at `753eec7` after its sign-in change was reverted, migration applied.
+- The loop-brief fix is merged at `add3447` and the report fix at `4d3f749`. Neither has a
+  migration.
 - **Every task came in over the ~800-line guidance:** 039 about 4,960 lines, 040 about 990,
   041 about 1,140, 042 about 1,890. 039's admin endpoints and export, and 042's `/questions`
   flag, should each have been their own task.
 
 ## Suggested next task
-- Merge PR #7, then run 043 step 1: the Amazon, Google and Flipkart sample, under a tight
-  spend cap, exported for your review.
+- 043 step 1: the Amazon, Google and Flipkart sample, under a tight spend cap, exported for
+  your review. Composing one real report at the same time would check the new
+  better-answer notes.
 
 ## Open questions for you
-- **PR #7:** merge it, remembering `npm run db:push`.
 - **043:** do you approve the sample run? It makes live Gemini calls and spends real money,
   though only a small amount under the cap. The full run of about ₹1,000 comes only after
   you have reviewed the sample.

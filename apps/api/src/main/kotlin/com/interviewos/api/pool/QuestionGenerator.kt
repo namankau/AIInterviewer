@@ -5,6 +5,7 @@ import com.interviewos.api.ai.EmployerKnowledge
 import com.interviewos.api.ai.GeneratedQuestions
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.PoolQuestionRequest
+import com.interviewos.api.interview.Archetype
 import com.interviewos.api.interview.RoundType
 import org.springframework.stereotype.Component
 
@@ -61,7 +62,9 @@ class HrFitQuestionGenerator(
 ) : QuestionGenerator {
     override val roundType: RoundType = RoundType.HR_FIT_CLOSING
 
-    override val version: Int = 1
+    // Bumped for task 041: the guidance now varies by archetype rather than asking the same
+    // HR questions of a service-based IT firm and a global product company. See [guidance].
+    override val version: Int = 2
 
     override fun generate(request: PoolGenerationRequest): AiResult<GeneratedQuestions> =
         ai.generatePoolQuestions(
@@ -71,7 +74,7 @@ class HrFitQuestionGenerator(
                 roundType = roundType.label,
                 roleFamily = request.cell.coordinate.roleFamily.label,
                 level = request.cell.coordinate.level.label,
-                roundGuidance = guidance(),
+                roundGuidance = guidance(request.cell.coordinate.archetype),
                 count = request.count,
                 avoid = request.avoid,
                 knowledge = request.knowledge,
@@ -79,22 +82,75 @@ class HrFitQuestionGenerator(
         )
 
     /**
-     * What this round is for, in the round type's own words.
+     * What this round is for, in the round type's own words, plus what actually differs by
+     * [Archetype] — task 041's extension. A service-based IT firm's HR round runs on notice
+     * period, bench policy and a bond or service agreement; a global product company's runs
+     * on compensation banding and relocation. Asking the same five HR questions of both is
+     * the "one set tagged seven ways" failure the technical-fundamentals generator was
+     * written to avoid, and this round has the same shape of problem even though it has no
+     * separate role-family axis to hang it on.
      *
      * Read off [RoundType] rather than written out again here, so the pool asks for the
      * same round the live interviewer runs. Two descriptions of the HR round that drifted
      * apart would give a candidate a pool question that does not belong in the round it
      * gets asked in.
      */
-    private fun guidance(): String =
+    private fun guidance(archetype: Archetype): String =
         buildString {
             append(roundType.brief)
             append("\n\nGround this round has to get across:\n")
             append(roundType.covers.joinToString("\n") { "- $it" })
+            append("\n\n")
+            append(archetypeEmphasis(archetype))
             append(
                 "\n\nThis is the round where a candidate is most often asked about the employer itself. " +
                     "That makes it the round where an invented detail about a real company does the most " +
                     "damage, so the rule above about what you may treat as known is not a formality here.",
             )
+        }
+
+    /** What actually differs about the HR conversation for one kind of employer. */
+    private fun archetypeEmphasis(archetype: Archetype): String =
+        when (archetype) {
+            Archetype.SERVICE_BASED_IT -> {
+                "This is ${archetype.inProse}. Weight this round toward what is distinctive there: a notice " +
+                    "period that may be long and negotiable only within limits, a service agreement or bond and " +
+                    "what breaking it costs, redeployment onto a project or client they did not choose, and a " +
+                    "compensation conversation anchored to a band and a hike percentage rather than an open " +
+                    "negotiation."
+            }
+
+            Archetype.CONSULTING_BIG_FOUR -> {
+                "This is ${archetype.inProse}. Weight this round toward travel and client-site expectations, " +
+                    "a staffing and bench model rather than a fixed team, and up-or-out progression."
+            }
+
+            Archetype.EUROPEAN_EMPLOYER -> {
+                "This is ${archetype.inProse}. Weight this round toward a frank, direct conversation on " +
+                    "relocation and work-authorisation status, notice period under local norms, and " +
+                    "compensation stated in the terms that employer's market actually uses."
+            }
+
+            Archetype.GLOBAL_PRODUCT, Archetype.INDIAN_PRODUCT -> {
+                "This is ${archetype.inProse}. Weight this round toward compensation expectations asked " +
+                    "directly, why this employer over its close competitors, and relocation where the role " +
+                    "involves it."
+            }
+
+            Archetype.GCC_CAPTIVE -> {
+                "This is ${archetype.inProse}. Weight this round toward what reporting into a captive centre " +
+                    "actually means day to day — a global stakeholder in a different time zone, process and " +
+                    "compliance expectations — alongside notice period and compensation."
+            }
+
+            Archetype.REGULATED_PROFESSIONAL -> {
+                "This is ${archetype.inProse}. Weight this round toward fit for the practice and its standards " +
+                    "of conduct, alongside notice period and compensation."
+            }
+
+            Archetype.INDUSTRIAL_MANUFACTURING -> {
+                "This is ${archetype.inProse}. Weight this round toward site location, shift or plant-floor " +
+                    "expectations where the role has them, alongside notice period and compensation."
+            }
         }
 }

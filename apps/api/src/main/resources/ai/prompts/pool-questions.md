@@ -48,6 +48,12 @@ Each one:
   Concrete and checkable, so it can be used to score an answer and to tell the candidate
   what they missed. Not "good communication".
 - `companySpecific` — per the rule above.
+- `valueClaimed` — only when this question is built around one specific named value or
+  principle of the employer's (a behavioural round asking a candidate to demonstrate it):
+  the value's name, copied exactly as it appears in "What you know about this employer"
+  above. Leave it out entirely rather than paraphrase, shorten, or supply one that is not
+  listed there — a name that does not match what you were told you know is treated as
+  invented and the question is downgraded regardless of `companySpecific`.
 
 Calibrate to the level. `entry` is someone with a degree and maybe an internship; `staff`
 is someone who has been setting technical direction for years. The same question asked at

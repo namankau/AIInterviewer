@@ -638,6 +638,16 @@ data class GeneratedQuestion(
      * archetype level whenever the knowledge check did not earn it.
      */
     val companySpecific: Boolean = false,
+    /**
+     * Which of [EmployerKnowledge.namedValues] this question is built around, verbatim, or
+     * null when it is not a values question. Only ever a name the knowledge check licensed
+     * — task 041's behavioural generator checks it against that list before it will let
+     * [companySpecific] stand, because a plausible-sounding value the check never named is
+     * exactly the fabricated leadership-principle failure CLAUDE.md calls out. Not itself a
+     * database column: the check is what stops the fabrication, and the value that survives
+     * it is already in [text] and cross-checked against the stored `knowledge_basis`.
+     */
+    val valueClaimed: String? = null,
 )
 
 data class GeneratedQuestions(

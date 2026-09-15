@@ -23,6 +23,9 @@
           },
           "companySpecific": {
             "type": "BOOLEAN"
+          },
+          "valueClaimed": {
+            "type": "STRING"
           }
         },
         "required": [

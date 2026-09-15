@@ -36,11 +36,11 @@ class PoolAssociationGateTest {
 
         assertThat(decision.association).isEqualTo(Association.COMPANY_SPECIFIC)
         assertThat(decision.knowledgeBasis).isEqualTo(knows.basis)
-        assertThat(decision.downgraded).isFalse()
+        assertThat(decision.dropped).isFalse()
     }
 
     @Test
-    fun `a claim for a company the model said it does not know is withdrawn`() {
+    fun `a claim for a company the model said it does not know is refused, for the caller to drop`() {
         val decision =
             PoolAssociationGate.decide(
                 companyId = company,
@@ -51,7 +51,7 @@ class PoolAssociationGateTest {
             )
 
         assertThat(decision.association).isEqualTo(Association.EMPLOYER_KIND)
-        assertThat(decision.downgraded).isTrue()
+        assertThat(decision.dropped).isTrue()
         assertThat(decision.reason).contains("does not know")
     }
 
@@ -71,12 +71,12 @@ class PoolAssociationGateTest {
             )
 
         assertThat(decision.association).isEqualTo(Association.EMPLOYER_KIND)
-        assertThat(decision.downgraded).isTrue()
+        assertThat(decision.dropped).isTrue()
         assertThat(decision.reason).contains("named no round, value or format")
     }
 
     @Test
-    fun `a claim about an employer nobody named is withdrawn`() {
+    fun `a claim about an employer nobody named is refused, for the caller to drop`() {
         val decision =
             PoolAssociationGate.decide(
                 companyId = null,
@@ -87,11 +87,11 @@ class PoolAssociationGateTest {
             )
 
         assertThat(decision.association).isEqualTo(Association.EMPLOYER_KIND)
-        assertThat(decision.downgraded).isTrue()
+        assertThat(decision.dropped).isTrue()
     }
 
     @Test
-    fun `a claim written by a model other than the one that vouched is withdrawn`() {
+    fun `a claim written by a model other than the one that vouched is refused, for the caller to drop`() {
         // The chain fell through between the knowledge check and the generation. What the
         // cheap model knows about an employer is not evidence about what the expensive one
         // knows, so the claim goes back to archetype level.
@@ -105,12 +105,12 @@ class PoolAssociationGateTest {
             )
 
         assertThat(decision.association).isEqualTo(Association.EMPLOYER_KIND)
-        assertThat(decision.downgraded).isTrue()
+        assertThat(decision.dropped).isTrue()
         assertThat(decision.reason).contains("vouched")
     }
 
     @Test
-    fun `a question that never claimed to be company-specific is not counted as a downgrade`() {
+    fun `a question that never claimed to be company-specific is not counted as a drop`() {
         val decision =
             PoolAssociationGate.decide(
                 companyId = company,
@@ -121,7 +121,7 @@ class PoolAssociationGateTest {
             )
 
         assertThat(decision.association).isEqualTo(Association.EMPLOYER_KIND)
-        assertThat(decision.downgraded).isFalse()
+        assertThat(decision.dropped).isFalse()
         assertThat(decision.reason).isNull()
         // The basis is still stored: it is what the model said about the employer, and a
         // reviewer reading the export needs it whichever way the label went.

@@ -108,13 +108,18 @@ class BehaviouralCompetencyQuestionGeneratorTest {
     }
 
     @Test
-    fun `a question claiming a value the knowledge check never named is downgraded`() {
+    fun `a question claiming a value the knowledge check never named is dropped, not relabelled`() {
         // The knowledge check licensed "Customer Obsession" only. The model writes a
         // question around "Bias for Speed" -- a plausible-sounding Amazon-flavoured name
         // that was never named. This is exactly the fabricated-leadership-principle failure
         // CLAUDE.md calls the most damaging this product has, and PoolAssociationGate's own
         // check (knows the employer at all, named something) would not catch it because the
         // employer genuinely is known and something genuinely was named -- just not this.
+        //
+        // Task 041's fix: the question is dropped entirely rather than kept with
+        // `companySpecific` cleared. Its own `text` -- "Tell me about a time you showed Bias
+        // for Speed" -- is built around the invented value, and relabelling the row
+        // `employer_kind` would leave that sentence in front of a candidate unchanged.
         val knowledge = EmployerKnowledge(knowsProcess = true, basis = "Public LP list.", namedValues = listOf("Customer Obsession"))
         val question =
             GeneratedQuestion(
@@ -128,13 +133,11 @@ class BehaviouralCompetencyQuestionGeneratorTest {
 
         val result = generator.generate(request(knowledge))
 
-        val written = result.value.questions.single()
-        assertThat(written.companySpecific).isFalse()
-        assertThat(written.valueClaimed).isNull()
+        assertThat(result.value.questions).isEmpty()
     }
 
     @Test
-    fun `a claim with no named value at all is never given the benefit of the doubt`() {
+    fun `a claim with no named value at all is never given the benefit of the doubt, and is dropped`() {
         val knowledge = EmployerKnowledge(knowsProcess = true, basis = "Public LP list.", namedValues = listOf("Ownership"))
         val question =
             GeneratedQuestion(
@@ -148,11 +151,25 @@ class BehaviouralCompetencyQuestionGeneratorTest {
 
         val result = generator.generate(request(knowledge))
 
-        assertThat(
-            result.value.questions
-                .single()
-                .companySpecific,
-        ).isFalse()
+        assertThat(result.value.questions).isEmpty()
+    }
+
+    @Test
+    fun `a question that never claimed to be company-specific is unaffected by the value check`() {
+        val knowledge = EmployerKnowledge(knowsProcess = true, basis = "Public LP list.", namedValues = listOf("Ownership"))
+        val question =
+            GeneratedQuestion(
+                text = "Tell me about a time you disagreed with a decision.",
+                followUps = listOf("What did you personally decide?", "What would you do differently?"),
+                strongAnswerCovers = listOf("a concrete decision"),
+                companySpecific = false,
+                valueClaimed = null,
+            )
+        val generator = BehaviouralCompetencyQuestionGenerator(ScriptedAi(listOf(question)))
+
+        val result = generator.generate(request(knowledge))
+
+        assertThat(result.value.questions).containsExactly(question)
     }
 
     @Test

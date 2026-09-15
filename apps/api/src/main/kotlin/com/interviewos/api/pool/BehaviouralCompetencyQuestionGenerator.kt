@@ -6,6 +6,7 @@ import com.interviewos.api.ai.GeneratedQuestions
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.PoolQuestionRequest
 import com.interviewos.api.interview.RoundType
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 /**
@@ -26,11 +27,21 @@ import org.springframework.stereotype.Component
  * different, equally plausible one the model reached for instead". A model that knows
  * Amazon has leadership principles and invents "Bias for Speed" instead of the real "Bias
  * for Action" passes the gate's check and fails this one.
+ *
+ * **A question that fails this check is dropped, not kept under a weaker label.** An
+ * earlier version of this generator (and of `PoolAssociationGate`) copied the question with
+ * `companySpecific` cleared and stored it as `employer_kind` — but `text` was written around
+ * the claim ("Tell me about a time you showed Bias for Speed, one of Amazon's leadership
+ * principles"), and relabelling the row does not remove the invented specific sitting in its
+ * own wording. That is the exact failure CLAUDE.md calls the most damaging this product has,
+ * and it survives relabelling. So the whole question is dropped instead (task 041's fix).
  */
 @Component
 class BehaviouralCompetencyQuestionGenerator(
     private val ai: InterviewAi,
 ) : QuestionGenerator {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     override val roundType: RoundType = RoundType.BEHAVIOURAL_COMPETENCY
 
     override val version: Int = 1
@@ -57,22 +68,29 @@ class BehaviouralCompetencyQuestionGenerator(
                 .orEmpty()
                 .map { it.trim().lowercase() }
                 .toSet()
-        val sanitised =
-            result.value.questions.map { question ->
-                if (question.companySpecific && !claimIsLicensed(question.valueClaimed, licensedValues)) {
-                    // Withdrawn here, in code, rather than left for `PoolAssociationGate` to
-                    // catch on a coarser check. The gate would still downgrade a cell the
+        val kept =
+            result.value.questions.filter { question ->
+                val licensed = !question.companySpecific || claimIsLicensed(question.valueClaimed, licensedValues)
+                if (!licensed) {
+                    // Dropped here, in code, rather than left for `PoolAssociationGate` to
+                    // catch on a coarser check. The gate would still refuse a cell the
                     // knowledge check never licensed at all; this is the case where the
                     // check licensed something, just not the specific thing this question
                     // claims, and nothing downstream of the generator can tell those apart
-                    // once the value name is only sitting in the question's own text.
-                    question.copy(companySpecific = false, valueClaimed = null)
-                } else {
-                    question
+                    // once the value name is only sitting in the question's own text. Not
+                    // added to the job's per-run drop count: that count lives where
+                    // `PoolAssociationGate` runs, and this question never reaches it.
+                    log.info(
+                        "Dropped a question that claimed \"{}\" as {}'s value without the knowledge check " +
+                            "licensing it",
+                        question.valueClaimed,
+                        request.cell.companyName,
+                    )
                 }
+                licensed
             }
 
-        return AiResult(GeneratedQuestions(sanitised), result.usage)
+        return AiResult(GeneratedQuestions(kept), result.usage)
     }
 
     /**

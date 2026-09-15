@@ -53,7 +53,7 @@ Each one:
   the value's name, copied exactly as it appears in "What you know about this employer"
   above. Leave it out entirely rather than paraphrase, shorten, or supply one that is not
   listed there — a name that does not match what you were told you know is treated as
-  invented and the question is downgraded regardless of `companySpecific`.
+  invented and the whole question is discarded, whatever `companySpecific` says.
 
 Calibrate to the level. `entry` is someone with a degree and maybe an internship; `staff`
 is someone who has been setting technical direction for years. The same question asked at

@@ -31,8 +31,9 @@ import java.util.concurrent.atomic.AtomicInteger
  *   run pauses if the next call might exceed its budget. See [PoolSpendCap].
  * - **Labelled.** Every question goes through [PoolAssociationGate] on the way in, so no
  *   claim the model makes about a real employer survives without the separate answer that
- *   licensed it — and the withdrawals are counted, because a generator whose claims are
- *   being withdrawn nine times in ten is a generator with a broken prompt.
+ *   licensed it. A claim that is refused is dropped, not written under a weaker label — and
+ *   the drops are counted, because a generator whose claims are being refused nine times in
+ *   ten is a generator with a broken prompt.
  */
 @Component
 class PoolGenerationJob(
@@ -95,7 +96,7 @@ class PoolGenerationJob(
                 state.everyAttemptFailed() -> PoolRunStatus.FAILED
                 else -> PoolRunStatus.FINISHED
             }
-        val note =
+        val statusNote =
             when (status) {
                 PoolRunStatus.PAUSED -> {
                     "Paused at the spend cap: %.4f USD of %.4f USD used. Resume to continue."
@@ -110,14 +111,27 @@ class PoolGenerationJob(
                     null
                 }
             }
+        // Written to `pool_generation_runs.note`, a column that already exists and is
+        // already read back by every caller of `GET /runs/{id}` — so the rate the owner
+        // needs to see at task 043 travels with the run record itself rather than needing
+        // its own migration. Appended to whatever the status above already says rather than
+        // replacing it, so a paused run's spend note and its drop count are both visible.
+        val dropNote =
+            state.unlicensedClaimsDropped.get().takeIf { it > 0 }?.let {
+                "Dropped $it question(s) that claimed to be company-specific without a value the knowledge " +
+                    "check licensed."
+            }
+        val note = listOfNotNull(statusNote, dropNote).joinToString(" ").ifBlank { null }
         runs.updateStatus(runId, status, note)
-        if (state.downgrades.get() > 0) {
+        if (state.unlicensedClaimsDropped.get() > 0) {
             // Loud on purpose. This is the number that says whether the provenance gate is
-            // doing its job or whether the prompt is asking for something it never gets.
+            // doing its job or whether a prompt is asking for something it never gets — and
+            // task 041 changed what happens to it: a refused claim is no longer written
+            // under a weaker label, it is not written at all.
             log.info(
-                "Run {} withdrew {} company-specific claims out of {} questions written",
+                "Run {} dropped {} question(s) whose company-specific claim was refused, out of {} written",
                 runId,
-                state.downgrades.get(),
+                state.unlicensedClaimsDropped.get(),
                 state.written.get(),
             )
         }
@@ -166,7 +180,7 @@ class PoolGenerationJob(
             val outcome = AiSpendContext.ofPoolRun(state.runId) { work(cell, state) }
             runs.completeCell(cell.id, outcome)
             state.written.addAndGet(outcome.questionsWritten)
-            state.downgrades.addAndGet(outcome.downgraded)
+            state.unlicensedClaimsDropped.addAndGet(outcome.unlicensedClaimsDropped)
             state.attempted.incrementAndGet()
             if (outcome.status == PoolCellStatus.FAILED) state.failures.incrementAndGet()
         }
@@ -209,9 +223,9 @@ class PoolGenerationJob(
 
             val deduped = deduplicator.dedupe(generated.value.questions, existing, pool.embeddingsSupported)
 
-            var downgraded = 0
+            var unlicensedClaimsDropped = 0
             val toWrite =
-                deduped.kept.map { kept ->
+                deduped.kept.mapNotNull { kept ->
                     val decision =
                         PoolAssociationGate.decide(
                             companyId = cell.coordinate.companyId,
@@ -220,25 +234,33 @@ class PoolGenerationJob(
                             vouchingModel = knowledge?.model,
                             writingModel = writingModel,
                         )
-                    if (decision.downgraded) {
-                        downgraded++
-                        log.info("Withdrew a company-specific claim: {}", decision.reason)
+                    // A refused company-specific claim is dropped, not written as
+                    // `employer_kind` — the question's own text was built around the claim,
+                    // and relabelling the row does not un-fabricate what the text says
+                    // (task 041's fix; PRD §04, §08). A question that never claimed to be
+                    // company-specific is unaffected: it reaches the `else` below exactly
+                    // as it did before.
+                    if (decision.dropped) {
+                        unlicensedClaimsDropped++
+                        log.info("Dropped a refused company-specific claim: {}", decision.reason)
+                        null
+                    } else {
+                        NewPoolQuestion(
+                            coordinate = cell.coordinate,
+                            text = kept.question.text,
+                            followUps = kept.question.followUps,
+                            strongAnswerCovers = kept.question.strongAnswerCovers,
+                            association = decision.association,
+                            knowledgeBasis = decision.knowledgeBasis,
+                            generatorVersion = generator.version,
+                            model = writingModel,
+                            embedding = kept.embedding,
+                        )
                     }
-                    NewPoolQuestion(
-                        coordinate = cell.coordinate,
-                        text = kept.question.text,
-                        followUps = kept.question.followUps,
-                        strongAnswerCovers = kept.question.strongAnswerCovers,
-                        association = decision.association,
-                        knowledgeBasis = decision.knowledgeBasis,
-                        generatorVersion = generator.version,
-                        model = writingModel,
-                        embedding = kept.embedding,
-                    )
                 }
 
             val written = pool.writeBatch(cell.id, toWrite)
-            PoolCellOutcome(PoolCellStatus.DONE, written, deduped.dropped, downgraded)
+            PoolCellOutcome(PoolCellStatus.DONE, written, deduped.dropped, unlicensedClaimsDropped)
         } catch (e: AiUnavailableException) {
             log.warn("Cell {} failed", cell.id, e)
             PoolCellOutcome(PoolCellStatus.FAILED, 0, 0, 0, e.message?.take(ERROR_LIMIT))
@@ -300,7 +322,7 @@ class PoolGenerationJob(
     ) {
         val paused = AtomicBoolean(false)
         val written = AtomicInteger(0)
-        val downgrades = AtomicInteger(0)
+        val unlicensedClaimsDropped = AtomicInteger(0)
         val attempted = AtomicInteger(0)
         val failures = AtomicInteger(0)
         val knowledge = ConcurrentHashMap<UUID, Optional<KnowledgeAnswer>>()

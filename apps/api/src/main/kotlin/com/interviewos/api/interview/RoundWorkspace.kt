@@ -32,6 +32,7 @@ class RoundWorkspaceComposer(
     private val interviewAi: InterviewAi,
     private val objectMapper: ObjectMapper,
     private val problemVerifier: ProblemVerifier,
+    private val poolMaterial: PoolMaterial,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -68,6 +69,51 @@ class RoundWorkspaceComposer(
         }
     }
 
+    /**
+     * The workspace for a round set on a pool question, or null when [pick] carries no
+     * material for [roundType].
+     *
+     * No model call and no verification: the problem was composed and its tests checked
+     * when the pool was generated, which is the whole of the latency the pool saves. The
+     * opening is templated exactly as a composed round's is.
+     */
+    fun fromPool(
+        pick: PlannedFrom.Pool,
+        roundType: RoundType,
+        durationMinutes: Int,
+    ): RoundWorkspace? =
+        when (roundType) {
+            RoundType.CODING_PRACTICAL -> {
+                poolMaterial.problemOf(pick.question)?.let { problem ->
+                    RoundWorkspace(
+                        json = objectMapper.writeValueAsString(ProblemPayload(problem = problem)),
+                        openingQuestion = openingForProblem(problem, durationMinutes),
+                        probes = PROBLEM_PROBES,
+                        basis = "",
+                        askedBecause = PROBLEM_ASKED_BECAUSE,
+                        poolQuestion = pick,
+                    )
+                }
+            }
+
+            RoundType.SYSTEM_DESIGN -> {
+                poolMaterial.caseOf(pick.question)?.let { case ->
+                    RoundWorkspace(
+                        json = objectMapper.writeValueAsString(CasePayload(case = case)),
+                        openingQuestion = case.openingPrompt,
+                        probes = CASE_PROBES,
+                        basis = "",
+                        askedBecause = CASE_ASKED_BECAUSE,
+                        poolQuestion = pick,
+                    )
+                }
+            }
+
+            else -> {
+                null
+            }
+        }
+
     /** [seed], when [material] still asks it; otherwise null, and said in the log. */
     private fun keptSeed(
         seed: BankQuestion?,
@@ -97,14 +143,14 @@ class RoundWorkspaceComposer(
                     ),
                 ),
             openingQuestion = openingForProblem(problem, durationMinutes),
-            probes = "How they scope and reason about a problem before writing code.",
+            probes = PROBLEM_PROBES,
             basis =
                 if (reported != null) {
                     "A question reported for ${brief.company}'s coding rounds, written out as a problem to run."
                 } else {
                     "A ${problem.difficulty} problem on ${problem.topic}, of the kind this round asks at this level."
                 },
-            askedBecause = "It is the problem set for this round. Everything after this follows from how you approach it.",
+            askedBecause = PROBLEM_ASKED_BECAUSE,
             bankQuestion = reported,
         )
     }
@@ -146,14 +192,14 @@ class RoundWorkspaceComposer(
         return RoundWorkspace(
             json = objectMapper.writeValueAsString(CasePayload(case = case, bankQuestionId = reported?.id?.toString())),
             openingQuestion = case.openingPrompt,
-            probes = "Whether they narrow an open problem before designing for it.",
+            probes = CASE_PROBES,
             basis =
                 if (reported != null) {
                     "A question reported for ${brief.company}'s design rounds, written out as a case with its scale."
                 } else {
                     "A design case of the kind this round sets at this level, with the scale that forces the trade-off."
                 },
-            askedBecause = "It is the case set for this round. How you scope it decides what the rest of the hour is about.",
+            askedBecause = CASE_ASKED_BECAUSE,
             bankQuestion = reported,
         )
     }
@@ -177,6 +223,13 @@ class RoundWorkspaceComposer(
     companion object {
         /** The round types conducted around a workspace. */
         val ROUND_TYPES: Set<RoundType> = setOf(RoundType.CODING_PRACTICAL, RoundType.SYSTEM_DESIGN)
+
+        private const val PROBLEM_PROBES = "How they scope and reason about a problem before writing code."
+        private const val PROBLEM_ASKED_BECAUSE =
+            "It is the problem set for this round. Everything after this follows from how you approach it."
+        private const val CASE_PROBES = "Whether they narrow an open problem before designing for it."
+        private const val CASE_ASKED_BECAUSE =
+            "It is the case set for this round. How you scope it decides what the rest of the hour is about."
     }
 
     /** [bankQuestionId] is set when the material is a reported question; see [RoundWorkspace.bankQuestion]. */
@@ -209,4 +262,6 @@ data class RoundWorkspace(
     val askedBecause: String,
     /** The bank question the material is, when it was seeded with one and still asks it. */
     val bankQuestion: BankQuestion? = null,
+    /** The pool question the material was read from, when the round is set on one. */
+    val poolQuestion: PlannedFrom.Pool? = null,
 )

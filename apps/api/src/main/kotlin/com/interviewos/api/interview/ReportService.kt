@@ -361,7 +361,9 @@ class ReportService(
                     "askedBecause" to provenance.askedBecause,
                     "basis" to provenance.basis,
                     "tier" to provenance.tier.dbValue,
-                    "tierDisclosure" to provenance.tier.disclosure,
+                    // A pool question's own label replaces the tier's general sentence: it is
+                    // the one thing the report says about where that question came from.
+                    "tierDisclosure" to (provenance.label ?: provenance.tier.disclosure),
                     "sources" to
                         provenance.sources.map {
                             mapOf(

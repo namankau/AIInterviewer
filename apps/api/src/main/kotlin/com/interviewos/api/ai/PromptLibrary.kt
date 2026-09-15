@@ -246,7 +246,20 @@ class PromptLibrary(
             .replace("{{plannedQuestionWhen}}", plannedQuestionWhen(brief.plannedQuestion))
 
     private fun plannedQuestionOf(planned: PlannedQuestion?): String =
-        planned?.let { "\"${it.text.trim()}\" (reported for ${it.company} by sources we hold)" } ?: "(none)"
+        when {
+            planned == null -> {
+                "(none)"
+            }
+
+            planned.reported -> {
+                "\"${planned.text.trim()}\" (reported for ${planned.company} by sources we hold)"
+            }
+
+            else -> {
+                "\"${planned.text.trim()}\" (written ahead of time from general knowledge; no source we hold reports " +
+                    "${planned.company} asking it, so never say or imply that they do)"
+            }
+        }
 
     /**
      * When the planned question is to be asked. Decided by the engine: the first question

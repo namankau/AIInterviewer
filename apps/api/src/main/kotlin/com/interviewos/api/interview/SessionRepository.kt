@@ -609,6 +609,13 @@ class SessionRepository(
             .query(Int::class.java)
             .single()
 
+    /**
+     * The report reads the pool row's `strong_answer_covers` for a turn asked from the AI
+     * pool (task 042/044) and hands it to the model as reference material for judging that
+     * answer — never as a sourced fact, since a pool question is not one (`PromptLibrary`,
+     * `report.md`). The join is left so a turn with no pool question, or an older pool row
+     * with nothing recorded, simply carries an empty list.
+     */
     fun listTranscript(
         sessionId: UUID,
         userId: UUID,
@@ -616,20 +623,24 @@ class SessionRepository(
         jdbcClient
             .sql(
                 """
-                select turn_index, question_text, question_audio_path,
-                       question_audio_status::text as question_audio_status,
-                       answer_transcript, answered_at,
-                       intervention::text as intervention, intervention_note,
-                       phase::text as phase, delivery_note, provenance::text as provenance,
-                       hint_requested_at, hint_text, hint_level::text as hint_level
-                  from public.session_turns
-                 where session_id = :s and user_id = :u
-                 order by turn_index
+                select t.turn_index, t.question_text, t.question_audio_path,
+                       t.question_audio_status::text as question_audio_status,
+                       t.answer_transcript, t.answered_at,
+                       t.intervention::text as intervention, t.intervention_note,
+                       t.phase::text as phase, t.delivery_note, t.provenance::text as provenance,
+                       t.hint_requested_at, t.hint_text, t.hint_level::text as hint_level,
+                       pq.strong_answer_covers
+                  from public.session_turns t
+                  left join public.pool_questions pq on pq.id = t.pool_question_id
+                 where t.session_id = :s and t.user_id = :u
+                 order by t.turn_index
                 """.trimIndent(),
             ).param("s", sessionId)
             .param("u", userId)
-            .query { rs, _ -> mapTurn(rs) }
-            .list()
+            .query { rs, _ ->
+                val covers = rs.getArray("strong_answer_covers")?.array as? Array<*>
+                mapTurn(rs).copy(poolStrongAnswerCovers = covers?.filterIsInstance<String>() ?: emptyList())
+            }.list()
 
     // -- reports --------------------------------------------------------------
 
@@ -807,6 +818,13 @@ data class TurnRow(
     val hintLevel: String? = null,
     /** Why this question was asked, as raw JSON. Null on turns recorded before provenance existed. */
     val provenanceJson: String? = null,
+    /**
+     * What a strong answer to this question covers, when it was asked from the AI question
+     * pool (`pool_question_id`) and that row carries `strong_answer_covers`. Empty for a
+     * bank question, a freeform follow-up, or a pool row with nothing recorded. Populated
+     * only by [listTranscript], not by [findTurn].
+     */
+    val poolStrongAnswerCovers: List<String> = emptyList(),
 )
 
 /** A bank question a candidate has been asked, for selection. */

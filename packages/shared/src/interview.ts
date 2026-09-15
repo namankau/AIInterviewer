@@ -316,6 +316,14 @@ export interface ReportCompetency {
   turnIndex: number | null;
 }
 
+/**
+ * One question the candidate was asked, and how they could have answered it better.
+ *
+ * The API now writes one of these for every answered, non-warm-up question — engine-side,
+ * not left to the model, so a turn is never silently missing its note. `strongerFraming` is
+ * nullable here only because a report stored before this existed may have none, or may have
+ * one only for its weaker answers; a fresh report always has it.
+ */
 export interface ReportAnnotation {
   turnIndex: number;
   question: string;

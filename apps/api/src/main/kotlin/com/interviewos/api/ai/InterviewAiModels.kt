@@ -348,6 +348,14 @@ data class TurnTranscript(
     val warmUp: Boolean = false,
     /** How they came across on this turn, from the video when there was one. */
     val deliveryNote: String? = null,
+    /**
+     * What a strong answer to this question would cover, when it was asked from the AI
+     * question pool (task 042) and that pool row carries `strong_answer_covers`. Given to
+     * the report model as reference material for judging the answer and writing a better
+     * one — never shown to the candidate as though it were a sourced fact, because the
+     * pool question itself is not (`PlannedQuestion.reported`).
+     */
+    val referencePoints: List<String> = emptyList(),
 )
 
 /**
@@ -446,7 +454,14 @@ data class AnswerAnnotation(
     val worked: String?,
     val vague: String?,
     val wouldProbe: String?,
-    val strongerFraming: String?,
+    /**
+     * How this specific answer could have been stronger — what to lead with, what was
+     * missing, how to structure it, and where useful a short example of the stronger
+     * version. Required: every answered question gets one, engine-side
+     * ([com.interviewos.api.interview.AnswerAnnotations]) fills in an honest placeholder
+     * when the model skipped a turn rather than letting the question go without a note.
+     */
+    val strongerFraming: String,
 )
 
 data class CommunicationAnalysis(

@@ -193,6 +193,11 @@ class PromptLibrary(
                     append("Q: ${turn.questionText}\n")
                     append("A: ${turn.answerTranscript ?: "(no answer captured)"}")
                     turn.deliveryNote?.let { append("\n[delivery observed: $it]") }
+                    // For judging the answer only — report.md tells the model never to
+                    // present this as a sourced fact about the employer.
+                    if (turn.referencePoints.isNotEmpty()) {
+                        append("\n[what a strong answer to this would cover: ${turn.referencePoints.joinToString("; ")}]")
+                    }
                     // Marked inline so the model cannot praise an answer it was handed
                     // without noticing that it handed it over.
                     if (turn.intervention.isAssisted) {

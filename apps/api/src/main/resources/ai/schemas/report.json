@@ -65,13 +65,13 @@
             "nullable": true
           },
           "strongerFraming": {
-            "type": "STRING",
-            "nullable": true
+            "type": "STRING"
           }
         },
         "required": [
           "turnIndex",
-          "question"
+          "question",
+          "strongerFraming"
         ]
       }
     },

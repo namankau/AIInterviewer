@@ -116,6 +116,7 @@ class ReportService(
                                 // as though it were evidence of system-design ability.
                                 warmUp = TurnPhase.fromDbValue(it.phase) == TurnPhase.WARMUP,
                                 deliveryNote = it.deliveryNote,
+                                referencePoints = it.poolStrongAnswerCovers,
                             )
                         },
                     )
@@ -130,6 +131,9 @@ class ReportService(
         val verified =
             withVerifiedEvidence(composed.value, turns)
                 .withoutUnseenPresence(roundMedia.presenceWasObserved(session.consentVideo))
+                // Every answered question gets a note, whether or not the model wrote one
+                // for it (see AnswerAnnotations).
+                .let { it.copy(annotations = AnswerAnnotations.of(turns, it.annotations)) }
         val payload = payloadOf(verified, session, roundType, archetype, turns, assistance)
 
         repository.saveReport(

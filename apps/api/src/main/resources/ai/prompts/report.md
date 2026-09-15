@@ -19,8 +19,13 @@ Non-negotiable rules:
   with no quote is worthless — do not emit one.
 - Score each competency out of `maxScore` 5 against what this function and level demands,
   on the anchored scale below. Read it before you score anything.
-- `annotations`: for the weaker answers, say what worked, what was vague, what a real
-  interviewer would have probed, and offer a stronger framing.
+- `annotations`: **one entry for every answered turn that is not a warm-up, in turn
+  order, numbered the same way the transcript above numbers them ("Turn 0", "Turn 1", …
+  is `turnIndex` 0, 1, …).** Do not skip a turn because the answer was fine — a candidate
+  who did well still deserves to see what would have made it exceptional rather than
+  merely good. `worked`, `vague` and `wouldProbe` may be null when they do not apply;
+  `strongerFraming` may not — every turn gets a concrete note on how that specific answer
+  could have been better. See "What a good `strongerFraming` note is" below.
 - `communication`: assess structure, filler density, pace, rambling, and how they handled
   not knowing something — from the transcript, concretely.
 - Turns marked **(warm-up)** are the opening conversation: who they are, what they have
@@ -114,6 +119,33 @@ knowing.
 
 The outcome simulation must reflect assisted performance, not the polished end state of
 each answer.
+
+## What a good `strongerFraming` note is
+
+Every answered turn gets one — this is the section a candidate rereads before their real
+interview, so it has to be usable, not a compliment or a restatement of the score.
+
+- **Specific to this answer.** What to lead with, what was missing, how to structure it —
+  STAR for a behavioural answer, trade-offs stated before a design is defended, the
+  complexity called out before the code. Not "be more structured."
+- **A short example of the stronger version, where that helps** — a sharper opening line,
+  the one sentence that was missing, the number they should have estimated. Enough to show
+  the shape of a better answer, not a rewrite of the whole thing.
+- **Never invent the candidate's experience.** No project, employer, outcome, or number
+  that is not in what they actually said or their resume, presented as theirs. Putting
+  words in someone's mouth as if they said them is fabricated evidence — the same failure
+  as an invented quote (CLAUDE.md). Where the gap is knowledge rather than framing — they
+  did not know the concept, not just phrase it badly — say what a strong answer would
+  cover in general terms, not what they specifically would have said.
+- **Even a strong answer gets a real note.** "Nothing to add" is not a note. Say what would
+  have taken it from strong to exceptional, or name the one thing a harder interviewer
+  would still have pushed on.
+
+Some turns carry a `[what a strong answer to this would cover: ...]` line. That is
+reference material for your own judgement of the answer, not a sourced fact about the
+employer — never tell the candidate this list came from anywhere, and never present it as
+something an interviewer is known to require. Use it only to judge what the answer was
+missing and to shape a better version.
 
 ## What held up, and what did not
 

@@ -12,25 +12,35 @@ import java.util.UUID
  * seconds earlier, because by then it has an answer to be consistent with. So the model's
  * claim is treated as exactly that — a claim — and this decides.
  *
- * It only ever decides downwards. There is no input that turns an `employer_kind` question
- * into a `company_specific` one; every path either keeps the claim or withdraws it. A
- * question that loses its claim is still a perfectly good question, it is just labelled as
- * being about the kind of employer, which is what it actually is.
+ * A question that never claimed to be company-specific is unaffected: it is stored as
+ * `employer_kind`, which is what it already was asking to be. **A question that DID claim
+ * to be company-specific and is refused is dropped, not relabelled and kept.** That is
+ * task 041's fix (PRD §04, §08) to what this file originally did: the earlier version stored
+ * a refused claim as `employer_kind` with a `downgraded` flag, on the reasoning that "a
+ * question that loses its claim is still a perfectly good question". It is not, when the
+ * question's own `text` was written around the claim — "Tell me about a time you showed
+ * Bias for Speed, one of Amazon's leadership principles" does not become a true statement
+ * about the kind of employer just because the row it is stored under says `employer_kind`.
+ * Relabelling does not un-fabricate a detail already sitting in the text a candidate reads,
+ * and that is exactly the failure CLAUDE.md calls the most damaging this product has. So a
+ * refused claim is dropped instead — the caller must not write the question at all.
  *
- * Every withdrawal is counted, and the count goes in the run report. A generator whose
- * claims are being withdrawn ninety per cent of the time is a generator whose prompt is
- * wrong, and that is only visible if somebody is counting.
+ * Every drop is counted, and the count goes in the run's note. A generator whose claims are
+ * being refused ninety per cent of the time is a generator with a broken prompt, and that is
+ * only visible if somebody is counting.
  */
 object PoolAssociationGate {
     /**
-     * @param downgraded whether the model claimed the stronger label and did not get it.
-     *   Counted per run, not per question, by the caller.
-     * @param reason why it was withdrawn, for the log. Null when nothing was withdrawn.
+     * @param dropped whether the model claimed the stronger label and did not get it — the
+     *   caller must not write this question under any label. Counted per run, not per
+     *   question, by the caller. False, including for every question that never claimed to
+     *   be company-specific in the first place: nothing about those changes here.
+     * @param reason why the claim was refused, for the log. Null when nothing was refused.
      */
     data class Decision(
         val association: Association,
         val knowledgeBasis: String?,
-        val downgraded: Boolean,
+        val dropped: Boolean,
         val reason: String?,
     )
 
@@ -54,28 +64,32 @@ object PoolAssociationGate {
     ): Decision {
         val basis = knowledge?.basis?.trim()?.takeIf { it.isNotEmpty() }
 
-        fun withdraw(reason: String) =
+        fun refuse(reason: String) =
             Decision(
+                // Meaningless when `dropped` is true — the caller never writes this
+                // question, under this or any label. Set anyway so a question that never
+                // claimed company-specific (the common case reaching this branch) still
+                // gets a real association to be stored under.
                 association = Association.EMPLOYER_KIND,
-                // Kept even on an archetype-level row: it is what the model said about the
-                // employer, it cost a call, and a reviewer asking "why was this downgraded"
-                // needs to read it. The database allows it here and requires it above.
+                // Kept even when dropped: it is what the model said about the employer, it
+                // cost a call, and a reviewer asking "why was this refused" needs to read
+                // it in the log line built from this decision.
                 knowledgeBasis = basis,
-                downgraded = claimedCompanySpecific,
+                dropped = claimedCompanySpecific,
                 reason = reason.takeIf { claimedCompanySpecific },
             )
 
         return when {
             companyId == null -> {
-                withdraw("the cell has no employer — it was generated for the archetype")
+                refuse("the cell has no employer — it was generated for the archetype")
             }
 
             knowledge == null || !knowledge.knowsProcess -> {
-                withdraw("the model said it does not know this employer's process")
+                refuse("the model said it does not know this employer's process")
             }
 
             basis == null -> {
-                withdraw("the model said it knows the process but gave no account of what it knows")
+                refuse("the model said it knows the process but gave no account of what it knows")
             }
 
             // The one that catches the confident nothing. "Yes, I am familiar with their
@@ -83,19 +97,19 @@ object PoolAssociationGate {
             // with the question rather than answering it, and it is the most common way a
             // fabricated specific would get through.
             !knowledge.namesSomething -> {
-                withdraw("the model claimed knowledge but named no round, value or format")
+                refuse("the model claimed knowledge but named no round, value or format")
             }
 
             vouchingModel != null && vouchingModel != writingModel -> {
-                withdraw("$writingModel wrote this, but it was $vouchingModel that vouched for knowing the employer")
+                refuse("$writingModel wrote this, but it was $vouchingModel that vouched for knowing the employer")
             }
 
             !claimedCompanySpecific -> {
-                Decision(Association.EMPLOYER_KIND, basis, downgraded = false, reason = null)
+                Decision(Association.EMPLOYER_KIND, basis, dropped = false, reason = null)
             }
 
             else -> {
-                Decision(Association.COMPANY_SPECIFIC, basis, downgraded = false, reason = null)
+                Decision(Association.COMPANY_SPECIFIC, basis, dropped = false, reason = null)
             }
         }
     }

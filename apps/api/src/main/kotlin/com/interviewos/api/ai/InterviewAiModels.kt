@@ -635,10 +635,23 @@ data class GeneratedQuestion(
     val strongAnswerCovers: List<String> = emptyList(),
     /**
      * The model's own claim that this question reflects the named employer specifically.
-     * A claim, not a decision: `PoolAssociationGate` decides, and downgrades it to
-     * archetype level whenever the knowledge check did not earn it.
+     * A claim, not a decision: `PoolAssociationGate` decides, and the question is *dropped*
+     * — not written under a weaker label — whenever the knowledge check did not earn it,
+     * because [text] itself was written around the claim and relabelling the row would not
+     * remove it.
      */
     val companySpecific: Boolean = false,
+    /**
+     * Which of [EmployerKnowledge.namedValues] this question is built around, verbatim, or
+     * null when it is not a values question. Only ever a name the knowledge check licensed
+     * — task 041's behavioural generator checks it against that list and drops the whole
+     * question, rather than letting [companySpecific] stand, when it does not match, because
+     * a plausible-sounding value the check never named is exactly the fabricated
+     * leadership-principle failure CLAUDE.md calls out. Not itself a database column: the
+     * check is what stops the fabrication, and the value that survives it is already in
+     * [text] and cross-checked against the stored `knowledge_basis`.
+     */
+    val valueClaimed: String? = null,
     /**
      * Round-type-specific detail a generator wants stored alongside the question — a
      * verified coding problem's test cases, a system-design case's constraints and deep

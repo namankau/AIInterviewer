@@ -216,7 +216,12 @@ class PoolGenerationJobTest {
     }
 
     @Test
-    fun `a company-specific claim the knowledge check did not earn is withdrawn on the way in`() {
+    fun `a company-specific claim the knowledge check did not earn is dropped, not stored as employer_kind`() {
+        // Task 041's fix: an earlier version of this stored the question anyway, relabelled
+        // `employer_kind`. That is wrong whenever the question's own text was written
+        // around the refused claim -- relabelling the row does not remove what the text
+        // says, which is the fabricated-detail failure CLAUDE.md calls the most damaging
+        // this product has. So the question must not be written at all.
         val ai = knowledgeAi(EmployerKnowledge(knowsProcess = false, basis = null))
         val generator = CountingGenerator(listOf(question("What draws you to Amazon?", companySpecific = true)))
         given(runs.findRun(runId)).willReturn(run())
@@ -224,21 +229,28 @@ class PoolGenerationJobTest {
         given(runs.claimNextCell(runId, properties.maxAttemptsPerCell)).willReturn(cell(), null)
         given(pool.existingFor(anyArg())).willReturn(PoolDeduplicator.Existing(emptySet(), emptyList()))
         given(pool.embeddingsSupported).willReturn(false)
-        given(pool.writeBatch(any(), anyList())).willReturn(1)
+        given(pool.writeBatch(any(), anyList())).willReturn(0)
 
         job(ai, generator).run(runId)
 
         @Suppress("UNCHECKED_CAST")
         val written = ArgumentCaptor.forClass(List::class.java) as ArgumentCaptor<List<NewPoolQuestion>>
         verify(pool).writeBatch(eqArg(cellId), captureArg(written))
-        val questions = written.value
-        assertThat(questions.single().association).isEqualTo(Association.EMPLOYER_KIND)
+        // Nothing reaches the pool under any label -- not `employer_kind`, not anything.
+        assertThat(written.value).isEmpty()
 
         val outcome: ArgumentCaptor<PoolCellOutcome> = ArgumentCaptor.forClass(PoolCellOutcome::class.java)
         verify(runs).completeCell(eqArg(cellId), captureArg(outcome))
-        // Counted, because a generator whose claims are withdrawn every time is a
+        assertThat(outcome.value.questionsWritten).isZero()
+        // Counted, because a generator whose claims are refused every time is a
         // generator with a broken prompt and nothing else would say so.
-        assertThat(outcome.value.downgraded).isEqualTo(1)
+        assertThat(outcome.value.unlicensedClaimsDropped).isEqualTo(1)
+
+        // And visible to the owner without them having to read a log: the drop count rides
+        // on the run's own `note`, which `GET /runs/{id}` already returns.
+        val note: ArgumentCaptor<String> = ArgumentCaptor.forClass(String::class.java)
+        verify(runs).updateStatus(eqArg(runId), eqArg(PoolRunStatus.FINISHED), captureArg(note))
+        assertThat(note.value).contains("Dropped 1 question")
     }
 
     @Test

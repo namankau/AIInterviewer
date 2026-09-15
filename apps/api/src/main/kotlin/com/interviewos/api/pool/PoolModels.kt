@@ -196,7 +196,16 @@ data class PoolCellOutcome(
     val status: PoolCellStatus,
     val questionsWritten: Int,
     val duplicatesDropped: Int,
-    val downgraded: Int,
+    /**
+     * Questions the model wrote as a company-specific claim that `PoolAssociationGate` (or
+     * a generator's own, sharper check) refused. **Dropped, not written under a weaker
+     * label** — a question's own text is built around the claim it makes, so relabelling it
+     * `employer_kind` would still leave a fabricated detail about a real employer sitting in
+     * `text`, which is the exact failure CLAUDE.md calls the most damaging this product has.
+     * Renamed from `downgraded` (task 041's fix): that name described a row that used to
+     * survive with a weaker label, and none does any more.
+     */
+    val unlicensedClaimsDropped: Int,
     val error: String? = null,
 )
 

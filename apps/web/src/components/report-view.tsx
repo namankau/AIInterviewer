@@ -471,9 +471,7 @@ function QuestionSources({ sources }: { sources: ReportQuestionSources | undefin
                 question {entry.turnIndex + 1}
               </span>
               {entry.phase === "warmup" ? (
-                <span className="rounded border border-line-strong px-1.5 py-0.5 font-mono text-micro text-ink-subtle">
-                  warm-up
-                </span>
+                <span className="pill pill-accent">warm-up</span>
               ) : null}
             </div>
 

@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import java.sql.ResultSet
 import java.sql.Timestamp
@@ -109,14 +110,14 @@ class QuestionPoolRepository(
                         insert into public.pool_questions
                                (company_id, archetype, round_type, role_family, level, text, follow_ups,
                                 strong_answer_covers, association, knowledge_basis, cell_id, generator_version,
-                                model$embeddingColumn)
+                                model, payload$embeddingColumn)
                         values (:company, cast(:archetype as public.employer_archetype),
                                 cast(:round as public.round_type), cast(:role as public.role_family),
                                 cast(:level as public.experience_level), :text,
                                 $TEXT_ARRAY_FROM_JSON_FOLLOW_UPS,
                                 $TEXT_ARRAY_FROM_JSON_COVERS,
                                 cast(:association as public.pool_association), :basis, :cell,
-                                :generatorVersion, :model$embeddingValue)
+                                :generatorVersion, :model, cast(:payload as jsonb)$embeddingValue)
                         """.trimIndent(),
                     ).param("company", question.coordinate.companyId)
                     .param("archetype", question.coordinate.archetype.dbValue)
@@ -131,6 +132,7 @@ class QuestionPoolRepository(
                     .param("cell", cellId)
                     .param("generatorVersion", question.generatorVersion)
                     .param("model", question.model)
+                    .param("payload", question.payload?.let { objectMapper.writeValueAsString(it) })
             if (vectorType != null) {
                 spec = spec.param("embedding", question.embedding?.let { literalOf(it) })
             }
@@ -312,6 +314,7 @@ class QuestionPoolRepository(
                        q.strong_answer_covers,
                        q.model,
                        q.generator_version,
+                       q.payload::text as payload,
                        q.created_at
                   from public.pool_questions q
                   join public.pool_generation_cells cell on cell.id = q.cell_id
@@ -336,6 +339,7 @@ class QuestionPoolRepository(
                     strongAnswerCovers = stringArray(rs, "strong_answer_covers"),
                     model = rs.getString("model"),
                     generatorVersion = rs.getInt("generator_version"),
+                    payload = rs.getString("payload")?.let { objectMapper.readTree(it) },
                     createdAt = rs.getTimestamp("created_at").toInstant(),
                 )
             }.list()
@@ -361,6 +365,7 @@ class QuestionPoolRepository(
             fingerprint = rs.getString("fingerprint"),
             reviewedAt = rs.getTimestamp("reviewed_at")?.toInstant(),
             retiredAt = rs.getTimestamp("retired_at")?.toInstant(),
+            payload = rs.getString("payload")?.let { objectMapper.readTree(it) },
         )
 
     /** One pool row, as deduplication needs it. */
@@ -400,7 +405,7 @@ class QuestionPoolRepository(
             "id, company_id, archetype::text as archetype, round_type::text as round_type, " +
                 "role_family::text as role_family, level::text as level, text, follow_ups, " +
                 "strong_answer_covers, association::text as association, knowledge_basis, " +
-                "generator_version, model, fingerprint, reviewed_at, retired_at"
+                "generator_version, model, fingerprint, reviewed_at, retired_at, payload::text as payload"
 
         fun stringArray(
             rs: ResultSet,
@@ -438,5 +443,6 @@ data class PoolExportRow(
     val strongAnswerCovers: List<String>,
     val model: String,
     val generatorVersion: Int,
+    val payload: JsonNode? = null,
     val createdAt: Instant,
 )

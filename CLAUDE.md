@@ -254,37 +254,31 @@ an ignore directive. If a test is genuinely wrong, fix it and explain why in the
 
 ## Design direction
 
-The user is a nervous candidate preparing for something that affects their
-livelihood. The interface should feel calm, serious, and professional — closer to a
-tool than a consumer app.
+**Changed by the owner on 15 September 2026 — this replaces the earlier "calm, ink on
+paper, one restrained accent" direction. Do not restore it.** The owner judged the old
+look too plain to win an audience, and asked for a revamp in the style of
+interviewbit.com: a bright, confident, polished learning-platform look.
 
-- One primary action per screen. The dashboard's job is to start the next interview.
-- The live session screen is deliberately near-empty: speaking indicator, timer,
-  round label, exit. No score tickers, no live hints, no gamification.
-- Typography-led, generously spaced, single restrained accent colour.
-- Reports are where visual richness belongs.
-- Mobile-responsive from day one. Accessible by default: transcript alongside audio,
-  keyboard navigation, adequate contrast.
-
-### The quality bar
-
-This must not look like a generated template. Candidates are handing it their career
-anxiety and a payment; a page that looks assembled from defaults reads as untrustworthy
-before a single question is asked. Concretely, the tells to avoid:
-
-- Purple-to-blue gradients, glassmorphism, neon accents on dark cards, emoji as
-  iconography, "🚀 Get Started" energy.
-- Three-column feature grids of identical cards with an icon, a bold noun, and two
-  lines of filler.
-- Centred hero, huge gradient headline, two buttons, meaningless abstract SVG.
-- Rounded-everything with a large drop shadow on every surface.
-- Text that says nothing: "seamless", "powerful", "revolutionise your prep".
-
-What to do instead: a real typographic hierarchy with deliberate scale contrast;
-generous whitespace and restraint over decoration; asymmetry and editorial layout
-rather than symmetric card grids; specific, concrete copy — a real employer name and a
-real round type beats an adjective; one accent colour used sparingly for meaning, not
-mood. Prose that sounds like a person who has sat on both sides of an interview table.
+- **Look and feel:** white and soft-blue surfaces, a deep navy for hero bands and the
+  footer, one saturated primary blue for actions and links, plus a small supporting
+  palette (green for success/progress, amber for highlights) used consistently.
+  Bold modern sans headings (via `next/font`, no new dependency), clear scale contrast,
+  cards with soft borders and gentle shadows, pill badges, and illustrated or iconographic
+  touches drawn in SVG.
+- **The landing page is a marketing page:** hero with a clear promise and primary CTA,
+  a strip of the employers we cover, product sections (mock interviews, reports,
+  courses), stats that are true, and a real footer. No invented user counts or
+  testimonials. A number must be true or it does not appear.
+- **Courses are a product surface** (`/courses`): free, public, server-rendered for
+  search. Every chapter is written for a class-12 student: one vivid everyday analogy,
+  small steps, complete runnable code with output, a "remember this" box, common
+  mistakes, and a quick self-check.
+- **Still true:** the live session screen stays near-empty (speaking indicator, timer,
+  round label, exit; no score tickers, no live hints) because that is how an interview
+  feels, not a style choice. Mobile-responsive and accessible: keyboard navigation,
+  adequate contrast (WCAG AA), a visible focus ring.
+- **Still banned:** copy that says nothing ("seamless", "revolutionise your prep"),
+  emoji as iconography, and any claim about a real employer that is not sourced.
 
 ---
 

@@ -6,7 +6,6 @@ import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.PoolQuestionRequest
 import com.interviewos.api.interview.RoundType
 import org.springframework.stereotype.Component
-import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
@@ -53,13 +52,17 @@ class TechnoManagerialQuestionGenerator(
         requested: Int,
         level: Level,
     ): Int {
-        val fraction =
+        val (numerator, denominator) =
             when (level) {
-                Level.ENTRY -> 0.25
-                Level.MID -> 0.67
-                Level.SENIOR, Level.STAFF -> 1.0
+                Level.ENTRY -> 1 to 4
+                Level.MID -> 2 to 3
+                Level.SENIOR, Level.STAFF -> 1 to 1
             }
-        return min(requested, max(1, ceil(requested * fraction).toInt()))
+        // Integer ceiling division (`requested * numerator / denominator`, rounded up)
+        // rather than floating-point multiplication, so the count asked for is exact and
+        // reproducible instead of one off by a rounding artefact at an arbitrary batch size.
+        val scaled = (requested * numerator + denominator - 1) / denominator
+        return min(requested, max(1, scaled))
     }
 
     private fun guidance(): String =

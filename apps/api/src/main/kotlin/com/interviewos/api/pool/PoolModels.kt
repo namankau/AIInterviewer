@@ -2,6 +2,7 @@ package com.interviewos.api.pool
 
 import com.interviewos.api.interview.Archetype
 import com.interviewos.api.interview.RoundType
+import tools.jackson.databind.JsonNode
 import java.time.Instant
 import java.util.Locale
 import java.util.UUID
@@ -134,6 +135,13 @@ data class NewPoolQuestion(
     val model: String,
     /** L2-normalised, [PoolProperties.embeddingDimensions] wide, or null when embeddings are unavailable. */
     val embedding: FloatArray? = null,
+    /**
+     * Round-type-specific detail — a verified coding problem's tests, a design case's
+     * constraints — that does not fit the columns every round type shares. Null for round
+     * types with nothing beyond the question itself. See `20260915010000_pool_coding_payload.sql`
+     * for the shapes task 040 writes here.
+     */
+    val payload: JsonNode? = null,
 ) {
     // Generated equality over a FloatArray compares references, which would make two
     // identical questions unequal and is never what a caller means. Nothing in the pool
@@ -157,6 +165,7 @@ data class PoolQuestion(
     val fingerprint: String,
     val reviewedAt: Instant?,
     val retiredAt: Instant?,
+    val payload: JsonNode? = null,
 )
 
 /** One run of the generation job. */

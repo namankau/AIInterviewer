@@ -1,5 +1,6 @@
 package com.interviewos.api.ai
 
+import tools.jackson.databind.JsonNode
 import java.time.LocalDate
 
 /*
@@ -638,6 +639,15 @@ data class GeneratedQuestion(
      * archetype level whenever the knowledge check did not earn it.
      */
     val companySpecific: Boolean = false,
+    /**
+     * Round-type-specific detail a generator wants stored alongside the question — a
+     * verified coding problem's test cases, a system-design case's constraints and deep
+     * dives. Null for round types with nothing beyond the question itself (task 040).
+     * Never set by the model directly: [GeneratedQuestion] is what a provider returns, and
+     * only [com.interviewos.api.pool.QuestionGenerator] implementations that build this
+     * value themselves (rather than deserialising it from the model) populate it.
+     */
+    val payload: JsonNode? = null,
 )
 
 data class GeneratedQuestions(

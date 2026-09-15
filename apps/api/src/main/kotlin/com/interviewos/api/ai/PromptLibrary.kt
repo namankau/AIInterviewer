@@ -65,6 +65,96 @@ class PromptLibrary(
             .replace("{{url}}", source.url ?: "(uploaded document)")
             .replace("{{content}}", source.content)
 
+    /**
+     * The question the model is asked *before* it writes anything about an employer.
+     *
+     * The company's name is in this prompt and nothing else is: no round, no role, no
+     * request for questions. Asked cold like this, with nothing already written to be
+     * consistent with, a model says "no, I only know the general pattern" far more often
+     * than it does when the same question rides along with the work.
+     */
+    fun employerKnowledge(
+        companyName: String,
+        archetype: String,
+    ): String =
+        loadPrompt("employer-knowledge")
+            .replace("{{company}}", companyName)
+            .replace("{{archetype}}", archetype)
+
+    /**
+     * One cell of the question pool.
+     *
+     * When [PoolQuestionRequest.companyName] is null the employer's name never enters the
+     * prompt — it reads "an employer of this kind" — for the same reason
+     * [loopPattern] never sees it: a model that was not told the company cannot invent a
+     * detail about it, however fluently it could have.
+     */
+    fun poolQuestions(request: PoolQuestionRequest): String =
+        loadPrompt("pool-questions")
+            .replace("{{company}}", request.companyName ?: "(not given — write for the kind of employer below)")
+            .replace("{{archetype}}", request.archetype)
+            .replace("{{roundType}}", request.roundType)
+            .replace("{{roleFamily}}", request.roleFamily)
+            .replace("{{level}}", request.level)
+            .replace("{{roundGuidance}}", request.roundGuidance)
+            .replace("{{count}}", request.count.toString())
+            .replace("{{knowledge}}", knowledgeOf(request))
+            .replace(
+                "{{avoid}}",
+                request.avoid
+                    .takeIf { it.isNotEmpty() }
+                    ?.joinToString("\n") { "- $it" }
+                    ?: "(nothing yet — this is the first batch for this slot)",
+            )
+
+    /**
+     * How the knowledge check's answer is put in front of the generator.
+     *
+     * Written as prose the model has to work against rather than as a flag it can skim
+     * past, and the "you do not know" case is stated in the strongest terms available,
+     * because that is the case that covers most employers and the one where a fabricated
+     * specific would do the damage.
+     */
+    private fun knowledgeOf(request: PoolQuestionRequest): String {
+        val knowledge = request.knowledge
+        if (request.companyName == null) {
+            return "You have not been told which employer this is. Write for the kind of employer above."
+        }
+        if (knowledge == null || !knowledge.knowsProcess) {
+            return "You were asked separately whether you know this employer's interview process, and you said " +
+                "you do not. So you do not. Write for the kind of employer above, and do not name this company " +
+                "or any of its products, teams or values in a question."
+        }
+        val named =
+            listOfNotNull(
+                namedLine("Rounds you named", knowledge.namedRounds),
+                namedLine("Values or principles you named", knowledge.namedValues),
+                namedLine("Formats you named", knowledge.namedFormats),
+            )
+        val stated = knowledge.basis.orEmpty().trim()
+        val basis = stated.ifBlank { "(no detail given)" }
+        return buildString {
+            append("You were asked separately whether you know this employer's interview process, and you said ")
+            append("you do. This is what you said:\n\n")
+            append(basis)
+            if (named.isNotEmpty()) {
+                append("\n\n")
+                append(named.joinToString("\n") { "- $it" })
+            }
+            append("\n\nThat list is the whole of what you may treat as known about this employer. Anything not ")
+            append("on it is a general pattern, not a fact about them.")
+        }
+    }
+
+    /** One line of what the model said it could name, or null when it named nothing. */
+    private fun namedLine(
+        label: String,
+        values: List<String>,
+    ): String? {
+        val kept = values.filter { it.isNotBlank() }
+        return if (kept.isEmpty()) null else "$label: ${kept.joinToString("; ")}"
+    }
+
     fun loopPattern(
         archetype: String,
         roleFamily: String,

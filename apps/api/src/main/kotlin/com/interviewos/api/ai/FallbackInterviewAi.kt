@@ -113,6 +113,21 @@ class FallbackInterviewAi(
         transcript: List<TurnTranscript>,
     ): AiResult<ReportContent> = attempt(AiCapability.STRUCTURED_TEXT, "composeReport") { it.composeReport(brief, transcript) }
 
+    override fun assessEmployerKnowledge(
+        companyName: String,
+        archetype: String,
+    ): AiResult<EmployerKnowledge> =
+        attempt(AiCapability.STRUCTURED_TEXT, "assessEmployerKnowledge") { it.assessEmployerKnowledge(companyName, archetype) }
+
+    override fun generatePoolQuestions(request: PoolQuestionRequest): AiResult<GeneratedQuestions> =
+        attempt(AiCapability.STRUCTURED_TEXT, "generatePoolQuestions") { it.generatePoolQuestions(request) }
+
+    override fun embed(
+        texts: List<String>,
+        model: String,
+        dimensions: Int,
+    ): AiResult<TextEmbeddings> = attempt(AiCapability.TEXT_EMBEDDING, "embed") { it.embed(texts, model, dimensions) }
+
     private fun <T> attempt(
         capability: AiCapability,
         call: String,
@@ -187,6 +202,7 @@ class FallbackInterviewAi(
                     microUsd = AiPrices.microUsd(usage),
                     userId = attribution?.userId,
                     sessionId = attribution?.sessionId,
+                    poolRunId = attribution?.poolRunId,
                 ),
             )
         } catch (e: RuntimeException) {

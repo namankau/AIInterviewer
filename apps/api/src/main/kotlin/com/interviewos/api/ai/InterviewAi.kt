@@ -127,6 +127,51 @@ interface InterviewAi {
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,
     ): AiResult<ReportContent>
+
+    /**
+     * Asks whether the model actually knows how this employer interviews — before it has
+     * been asked to write a single question about them.
+     *
+     * The order is the point. A model asked to write company-specific questions and to
+     * grade its own specificity in one breath will do both fluently, because by the time
+     * it reaches the second part it has already written the first. Asked this first, cold,
+     * with nothing invested, it says no far more often — and a no is what keeps the pool's
+     * labels honest for the long tail of employers nobody has published about.
+     *
+     * A yes here still does not make a question a report. It is the difference between
+     * "questions like the ones this employer asks" and "questions like the ones employers
+     * of this kind ask", and nothing more than that.
+     */
+    fun assessEmployerKnowledge(
+        companyName: String,
+        archetype: String,
+    ): AiResult<EmployerKnowledge>
+
+    /**
+     * Writes a batch of pool questions for one (company, round type, role family, level).
+     *
+     * Generation, not retrieval: what comes back is the model's own knowledge and is
+     * stored, labelled as such, in `pool_questions` — never in the bank, which only ever
+     * holds what a fetched document says a real employer asked.
+     */
+    fun generatePoolQuestions(request: PoolQuestionRequest): AiResult<GeneratedQuestions>
+
+    /**
+     * Embeds [texts] for the pool's deduplicator.
+     *
+     * Only providers declaring [AiCapability.TEXT_EMBEDDING] implement this; the chain
+     * never offers it to anyone else, so the default is unreachable in practice and says
+     * so if it is ever reached.
+     *
+     * @param dimensions the output width to ask for. Passed rather than fixed because the
+     *   stored column's width and this have to agree exactly, and the column is the thing
+     *   that is hard to change.
+     */
+    fun embed(
+        texts: List<String>,
+        model: String,
+        dimensions: Int,
+    ): AiResult<TextEmbeddings> = throw AiUnavailableException("$providerName cannot embed text.", worthRetryingElsewhere = true)
 }
 
 /**

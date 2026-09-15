@@ -336,6 +336,13 @@ class FallbackInterviewAiTest {
 
         override fun extractQuestions(source: SourceDocument) = answer(ExtractedQuestions())
 
+        override fun assessEmployerKnowledge(
+            companyName: String,
+            archetype: String,
+        ) = answer(EmployerKnowledge())
+
+        override fun generatePoolQuestions(request: PoolQuestionRequest) = answer(GeneratedQuestions())
+
         override fun composeLoopPattern(
             archetype: String,
             roleFamily: String,

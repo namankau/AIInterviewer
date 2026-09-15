@@ -12,10 +12,18 @@ import { chapterStrings } from "@/content/courses/java/11-strings";
 import { chapterStringBuilder } from "@/content/courses/java/12-stringbuilder";
 import { chapterMethods } from "@/content/courses/java/13-methods";
 import { chapterRecursion } from "@/content/courses/java/14-recursion-basics";
+import { chapterClassesAndObjects } from "@/content/courses/java/15-classes-and-objects";
+import { chapterConstructorsAndThis } from "@/content/courses/java/16-constructors-and-this";
+import { chapterStatic } from "@/content/courses/java/17-static";
+import { chapterEncapsulation } from "@/content/courses/java/18-encapsulation-access-modifiers";
+import { chapterInheritance } from "@/content/courses/java/19-inheritance-and-super";
+import { chapterPolymorphism } from "@/content/courses/java/20-polymorphism";
+import { chapterAbstractInterfaces } from "@/content/courses/java/21-abstract-classes-and-interfaces";
+import { chapterPackages } from "@/content/courses/java/22-packages";
 import type { Course } from "@/content/courses/types";
 
 /**
- * Java programming (PRD design brief, 15 Sep 2026). Modules 1-3 are written (task 045);
+ * Java programming (PRD design brief, 15 Sep 2026). Modules 1-3 are task 045;
  * modules 4-6 — OOP, core APIs, beyond basics — are task 045b.
  */
 export const javaCourse: Course = {
@@ -42,6 +50,19 @@ export const javaCourse: Course = {
     {
       title: "Arrays, strings, methods",
       chapters: [chapterArrays, chapterStrings, chapterStringBuilder, chapterMethods, chapterRecursion],
+    },
+    {
+      title: "OOP",
+      chapters: [
+        chapterClassesAndObjects,
+        chapterConstructorsAndThis,
+        chapterStatic,
+        chapterEncapsulation,
+        chapterInheritance,
+        chapterPolymorphism,
+        chapterAbstractInterfaces,
+        chapterPackages,
+      ],
     },
   ],
 };

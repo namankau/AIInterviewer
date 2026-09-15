@@ -1,0 +1,43 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "questions": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "text": {
+            "type": "STRING"
+          },
+          "followUps": {
+            "type": "ARRAY",
+            "items": {
+              "type": "STRING"
+            }
+          },
+          "strongAnswerCovers": {
+            "type": "ARRAY",
+            "items": {
+              "type": "STRING"
+            }
+          },
+          "companySpecific": {
+            "type": "BOOLEAN"
+          },
+          "valueClaimed": {
+            "type": "STRING"
+          }
+        },
+        "required": [
+          "text",
+          "followUps",
+          "strongAnswerCovers",
+          "companySpecific"
+        ]
+      }
+    }
+  },
+  "required": [
+    "questions"
+  ]
+}

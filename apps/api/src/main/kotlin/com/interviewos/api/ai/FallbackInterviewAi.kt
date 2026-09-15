@@ -69,6 +69,9 @@ class FallbackInterviewAi(
         durationMinutes: Int,
     ): AiResult<ComposedCase> = attempt(AiCapability.STRUCTURED_TEXT, "composeCase") { it.composeCase(brief, durationMinutes) }
 
+    override fun runPython(program: String): AiResult<SandboxRun> =
+        attempt(AiCapability.CODE_EXECUTION, "runPython") { it.runPython(program) }
+
     override fun composeOpeningQuestion(
         brief: InterviewBrief,
         round: RoundContext,
@@ -98,10 +101,32 @@ class FallbackInterviewAi(
     override fun extractQuestions(source: SourceDocument): AiResult<ExtractedQuestions> =
         attempt(AiCapability.STRUCTURED_TEXT, "extractQuestions") { it.extractQuestions(source) }
 
+    override fun composeLoopPattern(
+        archetype: String,
+        roleFamily: String,
+        level: String,
+    ): AiResult<GeneralLoopPattern> =
+        attempt(AiCapability.STRUCTURED_TEXT, "composeLoopPattern") { it.composeLoopPattern(archetype, roleFamily, level) }
+
     override fun composeReport(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,
     ): AiResult<ReportContent> = attempt(AiCapability.STRUCTURED_TEXT, "composeReport") { it.composeReport(brief, transcript) }
+
+    override fun assessEmployerKnowledge(
+        companyName: String,
+        archetype: String,
+    ): AiResult<EmployerKnowledge> =
+        attempt(AiCapability.STRUCTURED_TEXT, "assessEmployerKnowledge") { it.assessEmployerKnowledge(companyName, archetype) }
+
+    override fun generatePoolQuestions(request: PoolQuestionRequest): AiResult<GeneratedQuestions> =
+        attempt(AiCapability.STRUCTURED_TEXT, "generatePoolQuestions") { it.generatePoolQuestions(request) }
+
+    override fun embed(
+        texts: List<String>,
+        model: String,
+        dimensions: Int,
+    ): AiResult<TextEmbeddings> = attempt(AiCapability.TEXT_EMBEDDING, "embed") { it.embed(texts, model, dimensions) }
 
     private fun <T> attempt(
         capability: AiCapability,
@@ -177,6 +202,7 @@ class FallbackInterviewAi(
                     microUsd = AiPrices.microUsd(usage),
                     userId = attribution?.userId,
                     sessionId = attribution?.sessionId,
+                    poolRunId = attribution?.poolRunId,
                 ),
             )
         } catch (e: RuntimeException) {

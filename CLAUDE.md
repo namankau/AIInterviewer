@@ -72,8 +72,77 @@ rather than restating requirements.
    unattended run produces code nobody reviews. One task, done properly, with tests.
 6. **Do not add dependencies casually.** Prefer the standard library or an existing
    dependency. If a new one is genuinely needed, justify it in `HANDOFF.md`.
+7. **No live interviews and no live AI spend without the owner's go-ahead.** Test by
+   code: unit and integration tests with the AI mocked at the boundary, and CI. Do not
+   start mock rounds, run prompt harnesses against Gemini, smoke-test the running API
+   with real model calls, or run data-generation jobs that spend, until the owner says
+   so in the session. Applying migrations at merge (rule 1) is not a test and still
+   happens. The cost of this rule is real — live checks caught the empty Amazon prep
+   plan and a malformed schema file that every test passed (task 037) — so when a
+   change is the kind only a live check would catch, say so in `HANDOFF.md` and let the
+   owner decide whether to spend on it.
 
 ---
+# General Instructions & System Rules
+
+## Session Continuity Protocol
+- Our conversation may interrupt due to session expirations or message limits. 
+- If I state "The previous session expired, let's resume," or if I paste a state context, you must:
+  1. Acknowledge the continuation instantly without re-introducing yourself or greeting me.
+  2. Read the provided context and ask for the last 2–3 messages only if critical information is missing.
+  3. Keep your subsequent responses highly concise to optimize token space in the new session.
+  4. Provide a 1-sentence confirmation of the current objective so we are aligned before moving forward.
+
+### Unattended runs that hit a usage limit
+The overnight run of 13–14 September hit the plan's usage limit three times, and every
+agent stopped until it reset. Work must survive that without anyone re-explaining it:
+
+- **Keep a progress file for the run** — `runs/<date>-progress.md` (gitignored): the
+  task list, what is merged, which branch each agent is on, and the next action. Update
+  it after every step, before the step's result is reported.
+- **Commit and push after every coherent step.** An agent killed mid-task loses only
+  what it had not pushed.
+- **On any restart — a usage-limit reset, a stalled agent, a new session — continue
+  from the progress file and the pushed branches.** Do not re-plan, re-read the whole
+  codebase, or redo finished steps. Resume a stopped agent with SendMessage so it keeps
+  its context; start a new one only if that fails.
+- **Something has to prompt the session again after a reset** — a file cannot wake it.
+  Before a long unattended run, set a recurring in-session schedule (every 30 minutes)
+  whose prompt is "continue the run from the progress file; if everything is done,
+  stop the schedule". Ticks during the limit fail quietly; the first one after the
+  reset picks the work up. It only lives while the editor or terminal stays open.
+
+***
+
+## Agents: choosing a model and effort for each job
+
+The orchestrating session picks the agent profile for each job — the owner does not.
+The goal is the most work per unit of the plan's usage: **use the cheapest profile that
+can do the job safely, and move up only when the job needs it.** Profiles live in
+`.claude/agents/`; each sets its model and effort.
+
+| Profile | Model · effort | Use for |
+|---|---|---|
+| `researcher` | Sonnet · low | Web research, source checks, reading and summarising. Never writes to the repo. |
+| `builder` | Sonnet · medium | Well-specified coding that follows patterns already in the codebase: generators, endpoints, UI, tests, fixes with a clear cause. The default. |
+| `builder-careful` | Opus · high | Design that is costly to get wrong: schema, provenance and labelling, anything that decides what the product claims about a real employer, security, and fixes whose cause is not yet understood. |
+
+- Never `xhigh` or `max` effort, and no Haiku for code — the first burns usage for
+  little gain on specified tasks, the second costs more in rework than it saves.
+- **Escalate, don't start high.** A `builder` that fails CI twice on the same problem, or
+  reports a design question it cannot settle, is re-run as `builder-careful` from its
+  pushed branch.
+- **At most two build agents at once.** Three research agents in parallel consumed most
+  of a usage window in fifteen minutes (13 September). Parallel work finishes no sooner
+  if it hits the limit sooner.
+- Plumbing — watching CI, merging, applying migrations, rendering files — the
+  orchestrator does itself with the shell, not through an agent.
+- **Agent worktrees are created from `main`, which lags `develop`.** Every brief starts
+  with `git fetch origin && git checkout -b <branch> origin/develop`. Agents push their
+  branch and stop; the orchestrator merges into `develop`, one branch at a time, per
+  rule 1.
+
+***
 
 ## Stack
 

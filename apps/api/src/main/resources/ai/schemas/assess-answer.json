@@ -56,6 +56,11 @@
       "type": "STRING",
       "description": "Why this candidate is being asked this, referring to what they have already said.",
       "nullable": true
+    },
+    "askedPlannedQuestion": {
+      "type": "BOOLEAN",
+      "description": "True when nextQuestionText asks the planned question; false otherwise, including when there is none.",
+      "nullable": true
     }
   },
   "required": [

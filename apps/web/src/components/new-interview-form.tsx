@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { LoopBriefStep } from "@/components/loop-brief-step";
 import { ApiRequestError, composeRound, startSession } from "@/lib/api";
 import { loadVoices, pickVoice } from "@/lib/browser-speech";
 import { ROUND_CATALOGUE } from "@/lib/rounds";
@@ -47,6 +48,10 @@ export function NewInterviewForm() {
   const [draft, setDraft] = useState<RoundDraft | null>(null);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Past the "how they interview" step, either because the candidate chose a round from
+  // it or asked to skip straight to setup.
+  const [pastBrief, setPastBrief] = useState(false);
+  const [chosenRoundType, setChosenRoundType] = useState<RoundType | null>(null);
 
   async function read(event: React.FormEvent) {
     event.preventDefault();
@@ -69,15 +74,48 @@ export function NewInterviewForm() {
   }
 
   if (draft) {
+    const hasCompany = draft.companyName.trim() !== "";
+
+    const onEdit = () => {
+      setDraft(null);
+      setError(null);
+      setPastBrief(false);
+      setChosenRoundType(null);
+    };
+
+    if (hasCompany && !pastBrief) {
+      return (
+        <LoopBriefStep
+          companyName={draft.companyName}
+          roleTitle={draft.roleTitle}
+          accessToken={accessToken}
+          onChooseRound={(roundType) => {
+            setChosenRoundType(roundType);
+            setPastBrief(true);
+          }}
+          onSkip={() => setPastBrief(true)}
+          onEdit={onEdit}
+        />
+      );
+    }
+
     return (
       <RoundSetup
-        draft={draft}
+        draft={chosenRoundType ? { ...draft, roundType: chosenRoundType } : draft}
         query={query}
         error={error}
-        onEdit={() => {
-          setDraft(null);
-          setError(null);
-        }}
+        onEdit={onEdit}
+        // The brief was shown first whenever a company was recognised — that's the only
+        // path into this screen with `hasCompany` true, so it's also the only case
+        // "back to the brief" makes sense.
+        onBackToBrief={
+          hasCompany
+            ? () => {
+                setChosenRoundType(null);
+                setPastBrief(false);
+              }
+            : null
+        }
         onStart={(id) => router.push(`/interview/${id}`)}
         accessToken={accessToken}
       />
@@ -161,6 +199,7 @@ function RoundSetup({
   query,
   error: composeError,
   onEdit,
+  onBackToBrief,
   onStart,
   accessToken,
 }: {
@@ -168,6 +207,8 @@ function RoundSetup({
   query: string;
   error: string | null;
   onEdit: () => void;
+  /** Null when this session never went through the loop brief, so there's nowhere to go back to. */
+  onBackToBrief: (() => void) | null;
   onStart: (sessionId: string) => void;
   accessToken: string | null | undefined;
 }) {
@@ -236,6 +277,15 @@ function RoundSetup({
     <form onSubmit={submit} className="flex flex-col gap-10">
       <header className="flex flex-col gap-3">
         <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">New interview</p>
+        {onBackToBrief ? (
+          <button
+            type="button"
+            onClick={onBackToBrief}
+            className="self-start text-caption text-accent underline-offset-4 hover:underline"
+          >
+            ← Back to how {draft.companyName} interviews
+          </button>
+        ) : null}
         <h1 className="text-title text-balance text-ink">
           {draft.understood || "Set up your round"}
         </h1>

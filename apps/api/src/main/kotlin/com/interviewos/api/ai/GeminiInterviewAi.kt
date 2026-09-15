@@ -53,6 +53,8 @@ class GeminiInterviewAi(
             AiCapability.AUDIO_UNDERSTANDING,
             AiCapability.DOCUMENT_UNDERSTANDING,
             AiCapability.SPEECH_SYNTHESIS,
+            AiCapability.CODE_EXECUTION,
+            AiCapability.TEXT_EMBEDDING,
         )
 
     override fun parseResume(file: ResumeFile): AiResult<ParsedResume> {
@@ -140,6 +142,52 @@ class GeminiInterviewAi(
         return AiResult(objectMapper.treeToValue(node, ComposedCase::class.java), usage)
     }
 
+    /**
+     * Runs [program] with Gemini's code-execution tool.
+     *
+     * The model has to retype the program to run it — there is no "execute this verbatim"
+     * call — so what it ran is not guaranteed to be what it was given. The caller checks
+     * that from inside the program (it prints hashes of what it is running), rather than
+     * this method trying to compare code text the model may have reflowed.
+     *
+     * Measured on `gemini-3.1-flash-lite` against two real problems: 3.2–3.6s per run, and
+     * every embedded program ran byte for byte as sent.
+     */
+    override fun runPython(program: String): AiResult<SandboxRun> {
+        requireConfigured()
+        val body =
+            mapOf(
+                "contents" to
+                    listOf(
+                        mapOf(
+                            "role" to "user",
+                            "parts" to
+                                listOf(
+                                    textPart(
+                                        "Execute the Python program below exactly as written, once, using your code " +
+                                            "execution tool. Do not modify, reformat, shorten or fix it — copy it " +
+                                            "character for character. After it runs, reply with the single word DONE." +
+                                            "\n\n```python\n$program\n```",
+                                    ),
+                                ),
+                        ),
+                    ),
+                "tools" to listOf(mapOf("codeExecution" to emptyMap<String, Any>())),
+                "generationConfig" to mapOf("temperature" to 0),
+            )
+        val response = call(reasoningModel, body)
+        val outputs =
+            response
+                .path("candidates")
+                .path(0)
+                .path("content")
+                .path("parts")
+                .filter { it.has("codeExecutionResult") }
+                .map { it.path("codeExecutionResult").path("output").asString() ?: "" }
+        if (outputs.isEmpty()) throw AiUnavailableException("Gemini did not run the program on $reasoningModel.")
+        return AiResult(SandboxRun(outputs), usageOf(response, reasoningModel))
+    }
+
     override fun composeOpeningQuestion(
         brief: InterviewBrief,
         round: RoundContext,
@@ -196,6 +244,16 @@ class GeminiInterviewAi(
         return AiResult(objectMapper.treeToValue(node, ExtractedQuestions::class.java), usage)
     }
 
+    override fun composeLoopPattern(
+        archetype: String,
+        roleFamily: String,
+        level: String,
+    ): AiResult<GeneralLoopPattern> {
+        val prompt = prompts.loopPattern(archetype, roleFamily, level)
+        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("general-loop-pattern"))
+        return AiResult(objectMapper.treeToValue(node, GeneralLoopPattern::class.java), usage)
+    }
+
     override fun composeReport(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,
@@ -203,6 +261,81 @@ class GeminiInterviewAi(
         val prompt = prompts.report(brief, transcript)
         val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("report"))
         return AiResult(objectMapper.treeToValue(node, ReportContent::class.java), usage)
+    }
+
+    override fun assessEmployerKnowledge(
+        companyName: String,
+        archetype: String,
+    ): AiResult<EmployerKnowledge> {
+        val prompt = prompts.employerKnowledge(companyName, archetype)
+        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("employer-knowledge"))
+        return AiResult(objectMapper.treeToValue(node, EmployerKnowledge::class.java), usage)
+    }
+
+    override fun generatePoolQuestions(request: PoolQuestionRequest): AiResult<GeneratedQuestions> {
+        val prompt = prompts.poolQuestions(request)
+        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("pool-questions"))
+        return AiResult(objectMapper.treeToValue(node, GeneratedQuestions::class.java), usage)
+    }
+
+    /**
+     * Embeds a batch in one request.
+     *
+     * `SEMANTIC_SIMILARITY` rather than the retrieval task types, because the question
+     * being asked of these vectors is symmetric — is this question the same question as
+     * that one — rather than "does this document answer this query".
+     *
+     * **Token usage is best effort here, and that is a real gap.** The embed endpoints do
+     * not consistently report `usageMetadata`, so an embedding call can land in the ledger
+     * costing zero. It is the cheapest call the product makes by a wide margin, so a run's
+     * spend cap is still governed almost entirely by generation — but a pool run's
+     * recorded cost is a floor rather than an exact figure, and the ledger should be read
+     * that way.
+     */
+    override fun embed(
+        texts: List<String>,
+        model: String,
+        dimensions: Int,
+    ): AiResult<TextEmbeddings> {
+        requireConfigured()
+        if (texts.isEmpty()) return AiResult(TextEmbeddings(emptyList(), model), AiUsage.none(model))
+
+        val body =
+            mapOf(
+                "requests" to
+                    texts.map { text ->
+                        mapOf(
+                            "model" to "models/$model",
+                            "content" to mapOf("parts" to listOf(mapOf("text" to text))),
+                            "taskType" to "SEMANTIC_SIMILARITY",
+                            "outputDimensionality" to dimensions,
+                        )
+                    },
+            )
+        val response = call(model, body, method = "batchEmbedContents")
+        val embeddings = response.path("embeddings")
+        val vectors = ArrayList<FloatArray>(embeddings.size())
+        for (index in 0 until embeddings.size()) {
+            val values = embeddings.path(index).path("values")
+            if (!values.isArray || values.isEmpty) {
+                throw AiUnavailableException("Gemini returned an empty embedding from $model.")
+            }
+            vectors += FloatArray(values.size()) { i -> values.path(i).asDouble(0.0).toFloat() }
+        }
+        if (vectors.size != texts.size) {
+            // Silently short would mis-pair every vector after the gap with the wrong
+            // question, and a deduplicator comparing the wrong things drops real questions
+            // and keeps duplicates — so this fails rather than guesses.
+            throw AiUnavailableException("Gemini embedded ${vectors.size} of ${texts.size} texts on $model.")
+        }
+        vectors.firstOrNull()?.let {
+            if (it.size != dimensions) {
+                throw AiUnavailableException(
+                    "Gemini returned ${it.size}-dimension embeddings from $model; the pool column holds $dimensions.",
+                )
+            }
+        }
+        return AiResult(TextEmbeddings(vectors, model), usageOf(response, model))
     }
 
     // ---------------------------------------------------------------------------
@@ -248,14 +381,20 @@ class GeminiInterviewAi(
         return parsed to usageOf(response, model)
     }
 
+    /**
+     * @param method the model method to call. Everything in the interview loop is
+     *   `generateContent`; the pool's deduplicator is the one caller that needs another
+     *   endpoint on the same host, with the same key and the same error handling.
+     */
     private fun call(
         model: String,
         body: Map<String, Any>,
+        method: String = "generateContent",
     ): JsonNode =
         try {
             restClient
                 .post()
-                .uri("${properties.baseUrl}/models/$model:generateContent")
+                .uri("${properties.baseUrl}/models/$model:$method")
                 .header("x-goog-api-key", properties.apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
@@ -309,6 +448,10 @@ class GeminiInterviewAi(
      * Audio is pulled out of the prompt count because it is priced separately (3x text on
      * flash-lite), and cached input because it is priced far lower. Both arrive as a
      * per-modality breakdown that is simply absent on calls that have neither.
+     *
+     * `toolUsePromptTokenCount` is the same trap as thinking: a code-execution call feeds
+     * the program's output back to the model as input, bills it as input, and reports it
+     * outside `promptTokenCount`. Measured at 2,443 of them against a 1,015-token prompt.
      */
     private fun usageOf(
         response: JsonNode,
@@ -317,7 +460,7 @@ class GeminiInterviewAi(
         val usage = response.path("usageMetadata")
         return AiUsage(
             model = model,
-            promptTokens = usage.path("promptTokenCount").asInt(0),
+            promptTokens = usage.path("promptTokenCount").asInt(0) + usage.path("toolUsePromptTokenCount").asInt(0),
             outputTokens = usage.path("candidatesTokenCount").asInt(0),
             thoughtTokens = usage.path("thoughtsTokenCount").asInt(0),
             audioTokens = modalityTokens(usage.path("promptTokensDetails"), "AUDIO"),

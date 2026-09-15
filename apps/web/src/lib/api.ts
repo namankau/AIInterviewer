@@ -1,9 +1,14 @@
 import type {
   ApiError,
+  BankCompany,
+  BankQuestionPage,
+  RoundType,
   CodeRunResult,
   EntitlementView,
   HintView,
+  LoopBrief,
   MeResponse,
+  PrepPlan,
   ProfileDetails,
   ResumeView,
   SkillView,
@@ -182,6 +187,15 @@ export function fetchSession(id: string, options: ApiGetOptions): Promise<Sessio
 }
 
 /**
+ * The candidate has entered the room: the round's clock starts now, once. Returns the
+ * session with the deadline to count down to; calling it again changes nothing, so a
+ * reload never restarts the clock.
+ */
+export function beginSession(accessToken: string, id: string): Promise<SessionView> {
+  return apiSend<SessionView>(`/api/v1/sessions/${id}/begin`, "POST", accessToken);
+}
+
+/**
  * One question. The room asks for this while a turn's speech is still `pending`, to
  * pick up the interviewer's voice after the question text has already been shown.
  */
@@ -199,6 +213,50 @@ export function fetchReport(id: string, options: ApiGetOptions): Promise<Session
 
 export function fetchReadiness(options: ApiGetOptions): Promise<ReadinessGroup[]> {
   return apiGet<ReadinessGroup[]>("/api/v1/readiness", options);
+}
+
+// -- question bank ----------------------------------------------------------
+
+/** Every company with at least one sourced question. */
+export function fetchBankCompanies(options: ApiGetOptions): Promise<BankCompany[]> {
+  return apiGet<BankCompany[]>("/api/v1/question-bank/companies", options);
+}
+
+/** One page of a company's sourced questions, optionally one round type. 404 for an unknown slug. */
+export function fetchBankQuestions(
+  company: string,
+  query: { roundType?: RoundType | null; limit?: number; offset?: number },
+  options: ApiGetOptions,
+): Promise<BankQuestionPage> {
+  const params = new URLSearchParams({ company });
+  if (query.roundType) params.set("roundType", query.roundType);
+  if (query.limit !== undefined) params.set("limit", String(query.limit));
+  if (query.offset !== undefined) params.set("offset", String(query.offset));
+  return apiGet<BankQuestionPage>(`/api/v1/question-bank?${params.toString()}`, options);
+}
+
+// -- the loop brief and prep plan --------------------------------------------
+
+/** How this company interviews for this role: sourced stages, the general pattern, bank coverage. */
+export function fetchLoopBrief(
+  query: { company: string; role?: string; level?: string },
+  options: ApiGetOptions,
+): Promise<LoopBrief> {
+  const params = new URLSearchParams({ company: query.company });
+  if (query.role) params.set("role", query.role);
+  if (query.level) params.set("level", query.level);
+  return apiGet<LoopBrief>(`/api/v1/loop-brief?${params.toString()}`, options);
+}
+
+/** The ordered practice plan for this company and role. Computed fresh every call. */
+export function fetchPrepPlan(
+  query: { company: string; role?: string; level?: string },
+  options: ApiGetOptions,
+): Promise<PrepPlan> {
+  const params = new URLSearchParams({ company: query.company });
+  if (query.role) params.set("role", query.role);
+  if (query.level) params.set("level", query.level);
+  return apiGet<PrepPlan>(`/api/v1/prep-plan?${params.toString()}`, options);
 }
 
 /**
@@ -250,6 +308,14 @@ export function runCode(
   return apiSend<CodeRunResult>(`/api/v1/sessions/${id}/run`, "POST", accessToken, request);
 }
 
+/**
+ * Ends the round now and completes it, so the report is written from what has been
+ * answered so far. The opposite of [abandonSession], which forfeits it.
+ */
+export function finishSession(accessToken: string, id: string): Promise<SubmitAnswerResponse> {
+  return apiSend<SubmitAnswerResponse>(`/api/v1/sessions/${id}/finish`, "POST", accessToken);
+}
+
 export function abandonSession(accessToken: string, id: string): Promise<void> {
   return apiSend<void>(`/api/v1/sessions/${id}/abandon`, "POST", accessToken);
 }
@@ -273,9 +339,12 @@ export function submitAnswer(
   audio: Blob,
   video: Blob | null,
   speaksLocally = false,
+  /** Submit pressed mid-answer: assess this answer as the last one and end the round. */
+  endRound = false,
 ): Promise<SubmitAnswerResponse> {
   const form = new FormData();
   form.append("turnIndex", String(turnIndex));
+  form.append("endRound", String(endRound));
   // Told per turn rather than per session: it describes this browser, and the same
   // candidate may come back on a phone with no usable voice.
   form.append("speaksLocally", String(speaksLocally));

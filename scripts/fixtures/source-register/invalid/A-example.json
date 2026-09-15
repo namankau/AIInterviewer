@@ -1,0 +1,36 @@
+{
+  "partition": "A-example",
+  "checkedOn": "2026-09-14",
+  "sources": [
+    {
+      "url": "https://www.reddit.com/r/cscareerquestions/comments/example",
+      "title": "An excluded source",
+      "publisher": "Reddit",
+      "companyName": "Example Corp",
+      "origin": "author",
+      "basis": "Should never pass validate",
+      "contributes": ["questions"],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "This host is on the exclusion list.",
+      "robotsAllows": true,
+      "readableWithoutJs": true
+    },
+    {
+      "url": "https://example.com/blocked-by-robots",
+      "title": "A page robots.txt disallows",
+      "publisher": "Example Corp",
+      "companyName": "Example Corp",
+      "origin": "employer",
+      "basis": "Should never pass validate",
+      "contributes": ["process"],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "robotsAllows is false.",
+      "robotsAllows": false,
+      "readableWithoutJs": true
+    }
+  ],
+  "rejected": [],
+  "gaps": []
+}

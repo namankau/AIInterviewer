@@ -7,14 +7,14 @@ import com.interviewos.api.ai.AskedQuestion
 import com.interviewos.api.ai.Intervention
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
+import com.interviewos.api.ai.PlannedQuestion
 import com.interviewos.api.ai.RoundContext
 import com.interviewos.api.ai.TurnTranscript
+import com.interviewos.api.bank.BankQuestion
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.resume.CandidateBackground
 import com.interviewos.api.resume.ResumeService
 import com.interviewos.api.resume.ResumeUse
-import com.interviewos.api.sources.GroundedSources
-import com.interviewos.api.sources.SourceGrounding
 import com.interviewos.api.storage.ObjectStorage
 import com.interviewos.api.storage.ObjectStorageException
 import com.interviewos.api.storage.StorageProperties
@@ -24,7 +24,9 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.task.TaskExecutor
 import org.springframework.stereotype.Service
+import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import java.time.Duration
@@ -56,13 +58,16 @@ class InterviewService(
     private val entitlementProperties: EntitlementProperties,
     private val retentionProperties: RetentionProperties,
     private val roundMedia: RoundMediaProperties,
-    private val sourceGrounding: SourceGrounding,
+    private val bankRounds: BankRoundPlanner,
+    private val poolRounds: PoolRoundPlanner,
     private val resumeService: ResumeService,
     private val roundWorkspaceComposer: RoundWorkspaceComposer,
     private val codeRunner: CodeRunner,
+    transactionManager: PlatformTransactionManager,
     @Qualifier("interviewBackgroundExecutor") private val backgroundExecutor: TaskExecutor,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
+    private val transactions = TransactionTemplate(transactionManager)
 
     fun entitlement(userId: UUID): EntitlementView {
         val decision =
@@ -126,20 +131,42 @@ class InterviewService(
                     "You have not named an employer, so this runs on general patterns for the round type. " +
                         "Name one and the round is shaped to that kind of employer instead."
                 } else {
-                    candidateFacingNote(company, resolution.archetype, resolution.confidence)
+                    candidateFacingNote(
+                        company,
+                        resolution.archetype,
+                        resolution.confidence,
+                        roundType,
+                        bankRounds.questionCount(company, roundType),
+                    )
                 },
         )
     }
 
-    @Transactional
+    /**
+     * Starts a round.
+     *
+     * **Deliberately not one transaction.** It used to be, and that made setup take three
+     * to five minutes. `provision()` upserts the user row, and because `users.email` is
+     * unique and appears in the upsert's SET list, Postgres locks that row FOR UPDATE —
+     * held until the transaction commits. The transaction then made a Gemini call, and
+     * every model call records its cost through `AiSpendRepository`, which runs
+     * REQUIRES_NEW: a second connection, on the same thread, inserting an `ai_calls` row
+     * whose foreign key needs FOR KEY SHARE on that same user row. The inner write waited
+     * for the outer transaction; the outer transaction waited for its own thread. Postgres
+     * cannot see that as a deadlock, so it sat there until `statement_timeout` fired, the
+     * ledger write was swallowed, and the round finally opened.
+     *
+     * It was also why `composeOpeningQuestion` never appeared in the ledger at all.
+     *
+     * So: the rows that must exist together are written in one short transaction, the
+     * model is called with no transaction open, and what it produced is written in a
+     * second. A slow model call now costs the candidate the model's time and nothing more,
+     * and it never holds a database connection while it waits.
+     */
     fun start(
         identity: SupabaseIdentity,
         request: StartSessionRequest,
     ): SessionView {
-        // Provisioning used to be a side effect of GET /me, so starting an interview
-        // before that endpoint had ever been called failed on the users foreign key.
-        // Any entry point that creates user-owned rows has to stand on its own.
-        userRepository.provision(identity)
         val userId = identity.id
 
         if (!request.consentAudio) {
@@ -153,6 +180,39 @@ class InterviewService(
             RoundType.parseOrNull(request.roundType)
                 ?: throw ApiException.badRequest("That is not a round type we run.", code = "unknown_round_type")
 
+        val resolution = archetypeResolver.resolve(request.companyName)
+        val sessionId =
+            inTransaction {
+                // Provisioning used to be a side effect of GET /me, so starting an interview
+                // before that endpoint had ever been called failed on the users foreign key.
+                // Any entry point that creates user-owned rows has to stand on its own.
+                userRepository.provision(identity)
+                admitAndInsert(userId, request, roundType, resolution)
+            }
+
+        // The session row has committed, so a failure from here on can no longer be rolled
+        // back — it has to be recorded. Without this a round that died mid-setup would sit
+        // `in_progress` with no question in it, and block the candidate's next start.
+        return try {
+            composeAndOpen(userId, sessionId, request, roundType, resolution)
+        } catch (e: RuntimeException) {
+            runCatching { repository.markSessionStatus(sessionId, userId, "failed") }
+            throw e
+        }
+    }
+
+    /**
+     * The entitlement check and the session row, together.
+     *
+     * These have to share a transaction: two starts racing for the same candidate would
+     * otherwise both see "no round in progress" and both create one.
+     */
+    private fun admitAndInsert(
+        userId: UUID,
+        request: StartSessionRequest,
+        roundType: RoundType,
+        resolution: ArchetypeResolution,
+    ): UUID {
         val decision =
             Entitlement.evaluate(
                 completedSessions = repository.countCompletedSessions(userId),
@@ -167,22 +227,31 @@ class InterviewService(
             }
         }
 
-        val resolution = archetypeResolver.resolve(request.companyName)
-        val sessionId =
-            repository.insertSession(
-                userId = userId,
-                companyName = request.companyName.trim(),
-                archetype = resolution.archetype,
-                confidence = resolution.confidence,
-                roleTitle = request.roleTitle.trim(),
-                roundType = roundType.dbValue,
-                language = request.language,
-                consentAudio = request.consentAudio,
-                consentVideo = request.consentVideo,
-                durationMinutes = request.durationMinutes,
-            )
+        return repository.insertSession(
+            userId = userId,
+            companyName = request.companyName.trim(),
+            archetype = resolution.archetype,
+            confidence = resolution.confidence,
+            roleTitle = request.roleTitle.trim(),
+            roundType = roundType.dbValue,
+            language = request.language,
+            consentAudio = request.consentAudio,
+            consentVideo = request.consentVideo,
+            durationMinutes = request.durationMinutes,
+        )
+    }
 
-        val sources = groundingFor(request.companyName.trim(), roundType)
+    /**
+     * Everything that needs the model, done with no transaction open, then the opening
+     * turn written in one short one.
+     */
+    private fun composeAndOpen(
+        userId: UUID,
+        sessionId: UUID,
+        request: StartSessionRequest,
+        roundType: RoundType,
+        resolution: ArchetypeResolution,
+    ): SessionView {
         val background = resumeService.backgroundFor(userId)
         val brief =
             briefFor(
@@ -191,19 +260,35 @@ class InterviewService(
                 role = request.roleTitle.trim(),
                 roundType = roundType,
                 language = request.language,
-                sources = sources,
                 background = background,
             )
-        val plan = InterviewPlan.opening(request.durationMinutes)
-
         // A DSA or design round is conducted around material — a problem, or a case — and
         // its opening is templated from that rather than asked of the model separately.
-        // One call, not two, on the path the candidate is already waiting on.
-        val workspace =
-            AiSpendContext.of(userId, sessionId) {
-                roundWorkspaceComposer.compose(brief, roundType, request.durationMinutes)
+        // One call, not two, on the path the candidate is already waiting on. When the bank
+        // holds this company's questions for the round, the material *is* one of them. When
+        // it holds none, a problem or case from the pool is used as it stands — no call at all.
+        val workspaceRound = roundType in RoundWorkspaceComposer.ROUND_TYPES
+        val bankRound = if (workspaceRound) bankRounds.forRound(request.companyName.trim(), roundType) else null
+        val seed = bankRound?.let { bankRounds.next(userId, sessionId, it) }
+        val fromPool =
+            if (workspaceRound && bankRound == null) {
+                poolRounds
+                    .forRound(
+                        request.companyName.trim(),
+                        resolution.archetype,
+                        roundType,
+                        request.roleTitle,
+                        background?.tenure?.totalExperienceMonths,
+                    )?.let { poolRounds.next(userId, sessionId, it) }
+                    ?.let { roundWorkspaceComposer.fromPool(it, roundType, request.durationMinutes) }
+            } else {
+                null
             }
-        workspace?.let { repository.setWorkspace(sessionId, userId, it.json) }
+        val workspace =
+            fromPool ?: AiSpendContext.of(userId, sessionId) {
+                roundWorkspaceComposer.compose(brief, roundType, request.durationMinutes, seed)
+            }
+        val plan = InterviewPlan.opening(request.durationMinutes, hasWarmup = workspace == null)
 
         val opening =
             workspace?.let {
@@ -226,29 +311,48 @@ class InterviewService(
                 )
             }
 
-        repository.insertTurn(
-            sessionId = sessionId,
-            userId = userId,
-            turnIndex = 0,
-            questionText = opening.text,
-            phase = plan.phase,
-            // Pending means "a voice is coming". Nothing is coming when the room
-            // speaks for itself, and saying otherwise leaves it polling for ever.
-            speechStatus = if (request.speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
-            provenanceJson =
-                provenanceJson(
-                    basis = opening.questionBasis,
-                    probes = opening.questionProbes,
-                    askedBecause = opening.questionAskedBecause,
-                    sources = sources,
-                ),
-        )
-        if (!request.speaksLocally) {
-            questionSpeech.render(SpeechRequest(userId, sessionId, 0, opening.text, request.language))
+        inTransaction {
+            workspace?.let { repository.setWorkspace(sessionId, userId, it.json) }
+            repository.insertTurn(
+                sessionId = sessionId,
+                userId = userId,
+                turnIndex = 0,
+                questionText = opening.text,
+                phase = plan.phase,
+                // Pending means "a voice is coming". Nothing is coming when the room
+                // speaks for itself, and saying otherwise leaves it polling for ever.
+                speechStatus = if (request.speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
+                provenanceJson =
+                    provenanceJson(
+                        company = request.companyName.trim(),
+                        basis = opening.questionBasis,
+                        probes = opening.questionProbes,
+                        askedBecause = opening.questionAskedBecause,
+                        bankQuestion = workspace?.bankQuestion,
+                        poolQuestion = workspace?.poolQuestion,
+                    ),
+                bankQuestionId = workspace?.bankQuestion?.id,
+                poolQuestionId = workspace?.poolQuestion?.question?.id,
+            )
+            // Registered inside the transaction so it runs once the turn has committed —
+            // the background renderer writes to the row this has just inserted.
+            if (!request.speaksLocally) {
+                questionSpeech.render(SpeechRequest(userId, sessionId, 0, opening.text, request.language))
+            }
         }
 
         return view(userId, sessionId)
     }
+
+    /**
+     * Runs [block] in its own short transaction.
+     *
+     * Programmatic rather than `@Transactional`, because the whole point is to open and
+     * close transactions *inside* one method — around the database writes and not around
+     * the model call between them — and a self-invoked annotated method would not go
+     * through the proxy at all.
+     */
+    private fun <T> inTransaction(block: () -> T): T = transactions.execute { block() }
 
     @Transactional
     fun submitAnswer(
@@ -260,6 +364,11 @@ class InterviewService(
         videoContentType: String?,
         /** The browser will read the next question out itself. See [StartSessionRequest]. */
         speaksLocally: Boolean = false,
+        /**
+         * The candidate pressed Submit mid-answer: assess this answer as the last one and
+         * end the round, rather than asking another question they have chosen not to take.
+         */
+        endRound: Boolean = false,
     ): SubmitAnswerResponse {
         val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
         if (session.status != "in_progress") {
@@ -303,12 +412,23 @@ class InterviewService(
                 startedAt = session.startedAt,
                 durationMinutes = session.durationMinutes,
                 now = Instant.now(),
+                hasWarmup = session.workspace == null,
             )
 
         val roundType = RoundType.fromDbValue(session.roundType)
         val resolution =
             ArchetypeResolution(Archetype.fromDbValue(session.archetype), confidenceOf(session.archetypeConfidence))
-        val sources = groundingFor(session.companyName, roundType)
+        // The question planned for the next turn, if the round has one to offer. Never in the
+        // warm-up or once the round is closing, and never in a workspace round, whose material
+        // already is the question. The first question of the round proper must be it.
+        val askNow = plan.briefTheCandidate
+        val background = resumeService.backgroundFor(userId)
+        val planned =
+            if (session.workspace == null && !plan.mustConclude && (plan.phase == TurnPhase.MAIN || askNow)) {
+                plannedQuestion(userId, session, roundType, resolution.archetype, background?.tenure?.totalExperienceMonths)
+            } else {
+                null
+            }
         val brief =
             briefFor(
                 company = session.companyName,
@@ -316,8 +436,8 @@ class InterviewService(
                 role = session.roleTitle,
                 roundType = roundType,
                 language = session.language,
-                sources = sources,
-                background = resumeService.backgroundFor(userId),
+                background = background,
+                planned = planned?.let { PlannedQuestion(it.text, session.companyName, askNow, reported = it is PlannedFrom.Bank) },
             )
         val priorTurns =
             repository
@@ -374,24 +494,29 @@ class InterviewService(
         val answered = repository.countAnsweredTurns(sessionId, userId)
         // The clock ends the round. `mustConclude` also covers the turn ceiling, which is
         // there so a runaway session cannot run up an unbounded model bill.
-        val shouldConclude = plan.mustConclude || nextAction == "conclude"
+        val shouldConclude = endRound || plan.mustConclude || nextAction == "conclude"
         if (shouldConclude) {
             repository.markSessionStatus(sessionId, userId, "completed")
             return SubmitAnswerResponse(
                 sessionComplete = true,
                 turnsCompleted = answered,
                 nextTurn = null,
-                closingRemark = ClosingRemark.forRound(ranOutOfTime = plan.mustConclude),
+                // The clock wins over the button. When time runs out the room submits the
+                // answer in progress itself, and it arrives here looking exactly like a
+                // candidate pressing Submit — thanking them for a decision they did not make
+                // would be the machine not noticing what happened.
+                closingRemark =
+                    ClosingRemark.forRound(ranOutOfTime = plan.outOfTime, endedByCandidate = endRound && !plan.outOfTime),
             )
         }
 
         // Trimmed here rather than trusted to the prompt: three rounds of telling the
         // model not to open with "That's a great overview" did not stop it.
-        val nextText =
+        val modelText =
             assessment.value.nextQuestionText
                 ?.let { QuestionText.withoutPreamble(it) }
                 ?.takeIf { it.isNotBlank() }
-        if (nextText == null) {
+        if (modelText == null) {
             // The model had nothing left to ask. That is a conclusion too, and it gets the
             // same goodbye — the candidate cannot tell this apart from a planned ending,
             // and should not have to.
@@ -404,6 +529,11 @@ class InterviewService(
             )
         }
 
+        // Whether this turn asks the planned question is the engine's call, checked against
+        // its stored wording; a drifted question is replaced after its lead-in.
+        val asked = PlannedQuestionCheck.resolveText(planned?.text, askNow, assessment.value.askedPlannedQuestion, modelText)
+        val askedFrom = planned?.takeIf { asked.askedPlanned }
+        val nextText = asked.text
         val nextIndex = turnIndex + 1
         repository.insertTurn(
             sessionId = sessionId,
@@ -416,11 +546,15 @@ class InterviewService(
             speechStatus = if (speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
             provenanceJson =
                 provenanceJson(
+                    company = session.companyName,
                     basis = assessment.value.questionBasis,
-                    probes = assessment.value.questionProbes,
-                    askedBecause = assessment.value.questionAskedBecause,
-                    sources = sources,
+                    probes = assessment.value.questionProbes.takeIf { asked.faithful },
+                    askedBecause = assessment.value.questionAskedBecause.takeIf { asked.faithful },
+                    bankQuestion = (askedFrom as? PlannedFrom.Bank)?.question,
+                    poolQuestion = askedFrom as? PlannedFrom.Pool,
                 ),
+            bankQuestionId = (askedFrom as? PlannedFrom.Bank)?.question?.id,
+            poolQuestionId = (askedFrom as? PlannedFrom.Pool)?.question?.id,
         )
         // Nothing to synthesise when the room is going to say it: that call is the single
         // most expensive thing in a turn and it would be thrown away.
@@ -495,6 +629,7 @@ class InterviewService(
                 startedAt = session.startedAt,
                 durationMinutes = session.durationMinutes,
                 now = Instant.now(),
+                hasWarmup = session.workspace == null,
             )
         val priorTurns =
             repository
@@ -562,6 +697,68 @@ class InterviewService(
         repository.setBoard(sessionId, userId, objectMapper.writeValueAsString(board))
     }
 
+    /**
+     * The candidate has said all they want to say: end the round now and let the report
+     * be written from what they have answered.
+     *
+     * This is the opposite of [abandon]. Leaving forfeits the round — no report, and it is
+     * not counted as practice. Submitting completes it: the answers given so far are
+     * assessed exactly as they would be had the clock run out.
+     *
+     * A round with nothing answered has nothing to assess, so it cannot be submitted; the
+     * room only offers the button once there is an answer on the record.
+     */
+    @Transactional
+    fun finish(
+        userId: UUID,
+        sessionId: UUID,
+    ): SubmitAnswerResponse {
+        val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
+        if (session.status != "in_progress") {
+            throw ApiException.conflict("This interview is no longer running.", code = "session_not_running")
+        }
+        val answered = repository.countAnsweredTurns(sessionId, userId)
+        if (answered == 0) {
+            throw ApiException.conflict(
+                "Answer at least one question before submitting — there is nothing to assess yet.",
+                code = "nothing_to_assess",
+            )
+        }
+        // Also how the room ends a round whose clock has run out between answers, so the
+        // goodbye says which of the two it was.
+        val outOfTime =
+            InterviewPlan
+                .forTurn(
+                    turnIndex = answered,
+                    answeredTurns = answered,
+                    startedAt = session.startedAt,
+                    durationMinutes = session.durationMinutes,
+                    now = Instant.now(),
+                ).outOfTime
+        repository.markSessionStatus(sessionId, userId, "completed")
+        return SubmitAnswerResponse(
+            sessionComplete = true,
+            turnsCompleted = answered,
+            nextTurn = null,
+            closingRemark = ClosingRemark.forRound(ranOutOfTime = outOfTime, endedByCandidate = !outOfTime),
+        )
+    }
+
+    /**
+     * The candidate has entered the room, so the round's clock starts now — not when the
+     * session row was written, which was before the problem existed and before the device
+     * check. Idempotent: see [SessionRepository.startClock]. Returns the session with the
+     * deadline the room should count down to.
+     */
+    fun begin(
+        userId: UUID,
+        sessionId: UUID,
+    ): SessionView {
+        repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
+        repository.startClock(sessionId, userId)
+        return view(userId, sessionId)
+    }
+
     fun view(
         userId: UUID,
         sessionId: UUID,
@@ -571,6 +768,15 @@ class InterviewService(
         val archetype = Archetype.fromDbValue(session.archetype)
         val confidence = confidenceOf(session.archetypeConfidence)
         val roundType = RoundType.fromDbValue(session.roundType)
+        val workspace = session.workspace?.let(objectMapper::readTree)
+        // A workspace round is either set on a bank question or it is not, and the workspace
+        // says which; a spoken round is described by what the bank holds for it.
+        val sourcedQuestions =
+            if (workspace != null) {
+                if (workspace.path("bankQuestionId").isString) 1 else 0
+            } else {
+                bankRounds.questionCount(session.companyName, roundType)
+            }
 
         return SessionView(
             id = session.id,
@@ -578,7 +784,7 @@ class InterviewService(
             archetype = archetype.dbValue,
             archetypeLabel = archetype.label,
             archetypeConfidence = confidence.dbValue,
-            groundingNote = candidateFacingNote(session.companyName, archetype, confidence),
+            groundingNote = candidateFacingNote(session.companyName, archetype, confidence, roundType, sourcedQuestions),
             roleTitle = session.roleTitle,
             roundType = roundType.dbValue,
             roundLabel = roundType.label,
@@ -593,7 +799,7 @@ class InterviewService(
             scheduledEndAt = session.startedAt?.plus(Duration.ofMinutes(session.durationMinutes.toLong())),
             turnsCompleted = repository.countAnsweredTurns(sessionId, userId),
             maxTurns = InterviewPlan.MAX_TURNS,
-            workspace = session.workspace?.let(objectMapper::readTree),
+            workspace = workspace,
             board = session.board?.let(objectMapper::readTree),
             currentTurn =
                 latest
@@ -622,27 +828,49 @@ class InterviewService(
     }
 
     /**
+     * The question a spoken round plans next, in the task-042 order: the sourced bank when
+     * it holds anything for this company and round type — it keeps first claim, exactly as
+     * before — and the AI pool only when it holds nothing. Null means live questions.
+     */
+    private fun plannedQuestion(
+        userId: UUID,
+        session: SessionRow,
+        roundType: RoundType,
+        archetype: Archetype,
+        experienceMonths: Int?,
+    ): PlannedFrom? {
+        bankRounds.forRound(session.companyName, roundType)?.let { round ->
+            return bankRounds.next(userId, session.id, round)?.let { PlannedFrom.Bank(it) }
+        }
+        return poolRounds
+            .forRound(session.companyName, archetype, roundType, session.roleTitle, experienceMonths)
+            ?.let { poolRounds.next(userId, session.id, it) }
+    }
+
+    /**
      * Why a question was asked, ready to store.
      *
-     * [sources] are the documents that actually grounded this round, or null when the
-     * library held none. They decide the tier: real documents make it
-     * `published_source`, and their absence leaves it `model_knowledge` with the
-     * disclosure that goes with it. The model never gets a vote either way.
+     * Decided per turn: [bankQuestion] is the bank question this turn asked, or null. A
+     * turn that asked one is `published_source`, citing that question's sources and no
+     * others; a turn that asked [poolQuestion] is `model_knowledge` with that question's
+     * label; every other turn — follow-ups included, in a round full of bank questions —
+     * is `model_knowledge`. The model never gets a vote either way.
      */
     private fun provenanceJson(
+        company: String,
         basis: String?,
         probes: String?,
         askedBecause: String?,
-        sources: GroundedSources?,
+        bankQuestion: BankQuestion?,
+        poolQuestion: PlannedFrom.Pool? = null,
     ): String? {
-        val citations =
-            sources?.citations()?.map {
-                ProvenanceSource(title = it.title, publisher = it.publisher, url = it.url, year = it.year)
-            } ?: emptyList()
-
-        return QuestionProvenance
-            .fromSources(basis, probes, askedBecause, citations)
-            ?.let { objectMapper.writeValueAsString(it) }
+        val provenance =
+            when {
+                bankQuestion != null -> QuestionProvenance.fromBank(bankQuestion, company, probes, askedBecause)
+                poolQuestion != null -> QuestionProvenance.fromPool(poolQuestion.label, probes, askedBecause)
+                else -> QuestionProvenance.fromModel(basis, probes, askedBecause)
+            }
+        return provenance?.let { objectMapper.writeValueAsString(it) }
     }
 
     /**
@@ -704,46 +932,33 @@ class InterviewService(
         company: String,
         archetype: Archetype,
         confidence: Confidence,
-    ): String =
-        when (confidence) {
-            Confidence.RECOGNISED -> {
-                "Run as ${archetype.inProse}. These are general patterns for that kind of employer, " +
-                    "not a description of $company's current process."
-            }
-
-            Confidence.INFERRED -> {
-                "We do not recognise $company, so this runs as ${archetype.inProse} on general patterns " +
-                    "rather than on anything specific to them."
-            }
-        }
-
-    /**
-     * Real questions from the source library for this employer and round, or null when
-     * the library holds none — which is the common case and not a failure. Absence runs
-     * the round on archetype patterns and says so, exactly as before.
-     */
-    private fun groundingFor(
-        company: String,
         roundType: RoundType,
-    ): GroundedSources? = sourceGrounding.forRound(company, roundType.dbValue)
+        sourcedQuestions: Int,
+    ): String =
+        GroundingNote.forRound(
+            company = company,
+            archetype = archetype,
+            confidence = confidence,
+            roundType = roundType,
+            sourcedQuestions = sourcedQuestions,
+            workspaceRound = roundType in RoundWorkspaceComposer.ROUND_TYPES,
+        )
 
     /**
-     * Archetype patterns first, then anything real we actually hold.
+     * Archetype patterns, then the candidate's own background.
      *
-     * The order matters. The archetype text carries the standing rules about not
-     * inventing employer-specific detail, and those still govern everything after it —
-     * having real sources for one round does not licence invention around the edges of
-     * what they cover.
+     * There is no list of the employer's reported questions here any more, on purpose. A
+     * model handed twelve of them asked whichever it liked, and the engine could not tell
+     * which turn was which — so every turn was stamped as sourced. The bank reaches the
+     * model only as the one planned question, whose asking the engine checks.
      */
     private fun groundingText(
         resolution: ArchetypeResolution,
-        sources: GroundedSources?,
         background: CandidateBackground?,
         resumeUse: ResumeUse,
     ): String =
         listOfNotNull(
             resolution.grounding,
-            sources?.asPrompt(),
             background?.asPrompt(resumeUse),
         ).joinToString(separator = "\n\n")
 
@@ -753,8 +968,8 @@ class InterviewService(
         role: String,
         roundType: RoundType,
         language: String,
-        sources: GroundedSources? = null,
         background: CandidateBackground? = null,
+        planned: PlannedQuestion? = null,
     ) = InterviewBrief(
         company = company,
         archetype = resolution.archetype.label,
@@ -767,7 +982,8 @@ class InterviewService(
         candidateFunction = background?.resume?.headline,
         candidateLevel = background?.let { "${it.tenure.totalExperienceMonths / 12} years of experience" },
         targetLevel = null,
-        grounding = groundingText(resolution, sources, background, roundType.resumeUse),
+        grounding = groundingText(resolution, background, roundType.resumeUse),
+        plannedQuestion = planned,
     )
 
     private fun TurnPlan.toContext() =

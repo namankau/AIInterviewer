@@ -11,11 +11,15 @@ import com.interviewos.api.ai.AskedQuestion
 import com.interviewos.api.ai.ComposedCase
 import com.interviewos.api.ai.ComposedProblem
 import com.interviewos.api.ai.ComposedRound
+import com.interviewos.api.ai.EmployerKnowledge
 import com.interviewos.api.ai.ExtractedQuestions
+import com.interviewos.api.ai.GeneralLoopPattern
+import com.interviewos.api.ai.GeneratedQuestions
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
 import com.interviewos.api.ai.OfferedHint
 import com.interviewos.api.ai.ParsedResume
+import com.interviewos.api.ai.PoolQuestionRequest
 import com.interviewos.api.ai.ReportContent
 import com.interviewos.api.ai.ResumeFile
 import com.interviewos.api.ai.RoundContext
@@ -191,6 +195,19 @@ private abstract class StubAi : InterviewAi {
     ): AiResult<OfferedHint> = unsupported()
 
     override fun extractQuestions(source: SourceDocument): AiResult<ExtractedQuestions> = unsupported()
+
+    override fun assessEmployerKnowledge(
+        companyName: String,
+        archetype: String,
+    ): AiResult<EmployerKnowledge> = unsupported()
+
+    override fun generatePoolQuestions(request: PoolQuestionRequest): AiResult<GeneratedQuestions> = unsupported()
+
+    override fun composeLoopPattern(
+        archetype: String,
+        roleFamily: String,
+        level: String,
+    ): AiResult<GeneralLoopPattern> = unsupported()
 
     override fun composeReport(
         brief: InterviewBrief,

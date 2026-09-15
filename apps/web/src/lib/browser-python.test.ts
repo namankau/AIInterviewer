@@ -21,6 +21,16 @@ describe("matchesExpected", () => {
     expect(matchesExpected("[1, 2]", "  [1, 2]  ")).toBe(true);
   });
 
+  /**
+   * Multi-line answers: a Windows line ending or a trailing space on one line is invisible
+   * and is not a wrong answer. The server applies the same rule when it checks the cases.
+   */
+  it("ignores line endings and trailing spaces inside a multi-line answer", () => {
+    expect(matchesExpected("1 2 \r\n3\r\n", "1 2\n3")).toBe(true);
+    expect(matchesExpected("1 2\n3", "1 2\n4")).toBe(false);
+    expect(matchesExpected("1  2\n3", "1 2\n3")).toBe(false);
+  });
+
   it("still holds the answer to the letter", () => {
     expect(matchesExpected("True", "true")).toBe(false);
     expect(matchesExpected("[1,2]", "[1, 2]")).toBe(false);

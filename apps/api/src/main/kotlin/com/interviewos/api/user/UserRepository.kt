@@ -15,19 +15,37 @@ class UserRepository(
      * edited is kept — the identity provider does not get to overwrite it.
      */
     fun provision(identity: SupabaseIdentity) {
+        // Insert-if-missing, then update only what actually changed. The previous
+        // single upsert put `email` in its SET list, and because `users.email` is unique
+        // that made Postgres lock the row FOR UPDATE on every call — including every page
+        // load, since GET /me provisions too. A FOR UPDATE lock blocks the FOR KEY SHARE
+        // that any foreign key to this user needs, so an ordinary profile read could stall
+        // an unrelated write. An UPDATE whose WHERE matches nothing locks nothing.
         jdbcClient
             .sql(
                 """
                 insert into public.users (id, email, display_name)
                 values (:id, :email, :displayName)
-                on conflict (id) do update
-                   set email = excluded.email,
-                       display_name = coalesce(public.users.display_name, excluded.display_name)
+                on conflict (id) do nothing
                 """.trimIndent(),
             ).param("id", identity.id)
             .param("email", identity.email)
             .param("displayName", identity.displayName)
             .update()
+
+        jdbcClient
+            .sql("update public.users set email = :email where id = :id and email is distinct from :email")
+            .param("id", identity.id)
+            .param("email", identity.email)
+            .update()
+
+        if (!identity.displayName.isNullOrBlank()) {
+            jdbcClient
+                .sql("update public.users set display_name = :displayName where id = :id and display_name is null")
+                .param("id", identity.id)
+                .param("displayName", identity.displayName)
+                .update()
+        }
 
         jdbcClient
             .sql(

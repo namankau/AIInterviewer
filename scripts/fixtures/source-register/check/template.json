@@ -1,0 +1,64 @@
+{
+  "partition": "check-fixture",
+  "checkedOn": "2026-09-14",
+  "sources": [
+    {
+      "url": "{{BASE_URL}}/allowed/long",
+      "title": "A long, readable page",
+      "publisher": "Fixture",
+      "companyName": "Fixture Co",
+      "origin": "employer",
+      "basis": "Local fixture server",
+      "contributes": ["process"],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Fixture entry for the check command's happy path.",
+      "robotsAllows": true,
+      "readableWithoutJs": true
+    },
+    {
+      "url": "{{BASE_URL}}/allowed/short",
+      "title": "A short page",
+      "publisher": "Fixture",
+      "companyName": "Fixture Co",
+      "origin": "employer",
+      "basis": "Local fixture server",
+      "contributes": ["process"],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Fixture entry for a page under the readable-chars threshold.",
+      "robotsAllows": true,
+      "readableWithoutJs": true
+    },
+    {
+      "url": "{{BASE_URL}}/blocked/page",
+      "title": "A page robots.txt disallows",
+      "publisher": "Fixture",
+      "companyName": "Fixture Co",
+      "origin": "author",
+      "basis": "Local fixture server",
+      "contributes": ["process"],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Fixture entry for the robots-blocked path.",
+      "robotsAllows": true,
+      "readableWithoutJs": true
+    },
+    {
+      "url": "{{BASE_URL}}/missing/page",
+      "title": "A page that 404s",
+      "publisher": "Fixture",
+      "companyName": "Fixture Co",
+      "origin": "author",
+      "basis": "Local fixture server",
+      "contributes": ["process"],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Fixture entry for an HTTP failure.",
+      "robotsAllows": true,
+      "readableWithoutJs": true
+    }
+  ],
+  "rejected": [],
+  "gaps": []
+}

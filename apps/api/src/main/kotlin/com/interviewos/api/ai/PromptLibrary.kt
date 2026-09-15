@@ -65,6 +65,106 @@ class PromptLibrary(
             .replace("{{url}}", source.url ?: "(uploaded document)")
             .replace("{{content}}", source.content)
 
+    /**
+     * The question the model is asked *before* it writes anything about an employer.
+     *
+     * The company's name is in this prompt and nothing else is: no round, no role, no
+     * request for questions. Asked cold like this, with nothing already written to be
+     * consistent with, a model says "no, I only know the general pattern" far more often
+     * than it does when the same question rides along with the work.
+     */
+    fun employerKnowledge(
+        companyName: String,
+        archetype: String,
+    ): String =
+        loadPrompt("employer-knowledge")
+            .replace("{{company}}", companyName)
+            .replace("{{archetype}}", archetype)
+
+    /**
+     * One cell of the question pool.
+     *
+     * When [PoolQuestionRequest.companyName] is null the employer's name never enters the
+     * prompt — it reads "an employer of this kind" — for the same reason
+     * [loopPattern] never sees it: a model that was not told the company cannot invent a
+     * detail about it, however fluently it could have.
+     */
+    fun poolQuestions(request: PoolQuestionRequest): String =
+        loadPrompt("pool-questions")
+            .replace("{{company}}", request.companyName ?: "(not given — write for the kind of employer below)")
+            .replace("{{archetype}}", request.archetype)
+            .replace("{{roundType}}", request.roundType)
+            .replace("{{roleFamily}}", request.roleFamily)
+            .replace("{{level}}", request.level)
+            .replace("{{roundGuidance}}", request.roundGuidance)
+            .replace("{{count}}", request.count.toString())
+            .replace("{{knowledge}}", knowledgeOf(request))
+            .replace(
+                "{{avoid}}",
+                request.avoid
+                    .takeIf { it.isNotEmpty() }
+                    ?.joinToString("\n") { "- $it" }
+                    ?: "(nothing yet — this is the first batch for this slot)",
+            )
+
+    /**
+     * How the knowledge check's answer is put in front of the generator.
+     *
+     * Written as prose the model has to work against rather than as a flag it can skim
+     * past, and the "you do not know" case is stated in the strongest terms available,
+     * because that is the case that covers most employers and the one where a fabricated
+     * specific would do the damage.
+     */
+    private fun knowledgeOf(request: PoolQuestionRequest): String {
+        val knowledge = request.knowledge
+        if (request.companyName == null) {
+            return "You have not been told which employer this is. Write for the kind of employer above."
+        }
+        if (knowledge == null || !knowledge.knowsProcess) {
+            return "You were asked separately whether you know this employer's interview process, and you said " +
+                "you do not. So you do not. Write for the kind of employer above, and do not name this company " +
+                "or any of its products, teams or values in a question."
+        }
+        val named =
+            listOfNotNull(
+                namedLine("Rounds you named", knowledge.namedRounds),
+                namedLine("Values or principles you named", knowledge.namedValues),
+                namedLine("Formats you named", knowledge.namedFormats),
+            )
+        val stated = knowledge.basis.orEmpty().trim()
+        val basis = stated.ifBlank { "(no detail given)" }
+        return buildString {
+            append("You were asked separately whether you know this employer's interview process, and you said ")
+            append("you do. This is what you said:\n\n")
+            append(basis)
+            if (named.isNotEmpty()) {
+                append("\n\n")
+                append(named.joinToString("\n") { "- $it" })
+            }
+            append("\n\nThat list is the whole of what you may treat as known about this employer. Anything not ")
+            append("on it is a general pattern, not a fact about them.")
+        }
+    }
+
+    /** One line of what the model said it could name, or null when it named nothing. */
+    private fun namedLine(
+        label: String,
+        values: List<String>,
+    ): String? {
+        val kept = values.filter { it.isNotBlank() }
+        return if (kept.isEmpty()) null else "$label: ${kept.joinToString("; ")}"
+    }
+
+    fun loopPattern(
+        archetype: String,
+        roleFamily: String,
+        level: String,
+    ): String =
+        loadPrompt("general-loop-pattern")
+            .replace("{{archetype}}", archetype)
+            .replace("{{roleFamily}}", roleFamily)
+            .replace("{{level}}", level)
+
     fun report(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,
@@ -93,6 +193,11 @@ class PromptLibrary(
                     append("Q: ${turn.questionText}\n")
                     append("A: ${turn.answerTranscript ?: "(no answer captured)"}")
                     turn.deliveryNote?.let { append("\n[delivery observed: $it]") }
+                    // For judging the answer only — report.md tells the model never to
+                    // present this as a sourced fact about the employer.
+                    if (turn.referencePoints.isNotEmpty()) {
+                        append("\n[what a strong answer to this would cover: ${turn.referencePoints.joinToString("; ")}]")
+                    }
                     // Marked inline so the model cannot praise an answer it was handed
                     // without noticing that it handed it over.
                     if (turn.intervention.isAssisted) {
@@ -142,6 +247,47 @@ class PromptLibrary(
             .replace("{{candidateLevel}}", brief.candidateLevel ?: "unspecified")
             .replace("{{targetLevel}}", brief.targetLevel ?: "unspecified")
             .replace("{{grounding}}", brief.grounding)
+            .replace("{{plannedQuestion}}", plannedQuestionOf(brief.plannedQuestion))
+            .replace("{{plannedQuestionWhen}}", plannedQuestionWhen(brief.plannedQuestion))
+
+    private fun plannedQuestionOf(planned: PlannedQuestion?): String =
+        when {
+            planned == null -> {
+                "(none)"
+            }
+
+            planned.reported -> {
+                "\"${planned.text.trim()}\" (reported for ${planned.company} by sources we hold)"
+            }
+
+            else -> {
+                "\"${planned.text.trim()}\" (written ahead of time from general knowledge; no source we hold reports " +
+                    "${planned.company} asking it, so never say or imply that they do)"
+            }
+        }
+
+    /**
+     * When the planned question is to be asked. Decided by the engine: the first question
+     * of the round proper is always the planned one, and after that it waits for the round
+     * to move to new ground, because following the candidate's answer is the product.
+     */
+    private fun plannedQuestionWhen(planned: PlannedQuestion?): String =
+        when {
+            planned == null -> {
+                "There is no planned question on this turn. Carry on from where the round is."
+            }
+
+            planned.askNow -> {
+                "Ask the planned question on this turn, whatever the candidate just said: it is the first " +
+                    "question of the round proper. Lead into it if the turn needs a lead-in."
+            }
+
+            else -> {
+                "Ask it when you move to new ground - when this line is done and you would otherwise " +
+                    "`move_on`. If this answer needs a follow-up, a probe, a challenge or a hand, do that " +
+                    "instead and leave the planned question: it will still be here next turn."
+            }
+        }
 
     /**
      * Fills in where the round is up to, and what that means the interviewer should be
@@ -168,16 +314,17 @@ class PromptLibrary(
 
             round.briefTheCandidate -> {
                 "The warm-up is over and you now know who you are talking to. Before your next question, " +
-                    "tell them how the rest of the round will run - that there are about " +
-                    "${round.minutesRemaining} minutes left, roughly what you will cover given this round " +
+                    "tell them how the rest of the round will run - that there are " +
+                    "${timeLeft(round.minutesRemaining)} left, roughly what you will cover given this round " +
                     "type, that you want them to think out loud, and that they can ask you to repeat or " +
                     "clarify anything. Two or three sentences, spoken plainly. Then ask your first " +
                     "substantive question in the same turn."
             }
 
             round.phase == CLOSING_PHASE -> {
-                "Only ${round.minutesRemaining} minutes remain. Do not open new ground. Finish the thread " +
-                    "you are on, or ask one last question you can get a complete answer to."
+                "There is only ${timeLeft(round.minutesRemaining)} left. " +
+                    "Do not open new ground. Finish the thread you are on, or ask one last question you can " +
+                    "get a complete answer to. If you mention the time, say exactly this much and no more."
             }
 
             round.phase == WARMUP_PHASE -> {
@@ -190,9 +337,20 @@ class PromptLibrary(
             }
 
             else -> {
-                "You are in the main round with ${round.minutesRemaining} minutes left. Pace yourself so " +
+                "You are in the main round with ${timeLeft(round.minutesRemaining)} left. Pace yourself so " +
                     "the round finishes properly rather than being cut off mid-answer."
             }
+        }
+
+    /**
+     * The time left, as the interviewer should say it. The count is rounded down, so this
+     * never promises more than the clock on the candidate's screen shows.
+     */
+    private fun timeLeft(minutes: Int): String =
+        when (minutes) {
+            0 -> "less than a minute"
+            1 -> "about a minute"
+            else -> "about $minutes minutes"
         }
 
     private fun loadPrompt(name: String): String = readResource("ai/prompts/$name.md")

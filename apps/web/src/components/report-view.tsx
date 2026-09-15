@@ -179,20 +179,49 @@ export function ReportDocument({ report }: { report: SessionReport }) {
       </Section>
 
       {annotations.length > 0 ? (
-        <Section title="Answer by answer" lead="What a real interviewer would have made of each one.">
-          <ul className="flex flex-col gap-10">
-            {annotations.map((note) => (
-              <li key={note.turnIndex} className="flex flex-col gap-3">
+        <Section
+          title="Answer by answer"
+          lead="Every question you were asked, and how you could have answered it better."
+        >
+          <ol className="flex flex-col gap-10">
+            {annotations.map((note, index) => (
+              <li
+                key={`${note.turnIndex}-${index}`}
+                className="flex flex-col gap-4 border-t border-line pt-8 first:border-0 first:pt-0"
+              >
+                <div className="flex flex-wrap items-baseline gap-3">
+                  <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+                    question {note.turnIndex + 1}
+                  </span>
+                </div>
                 <p className="text-body font-medium text-ink">{note.question}</p>
-                <dl className="grid gap-3 sm:grid-cols-2">
-                  <Note term="What worked" detail={note.worked} />
-                  <Note term="What was vague" detail={note.vague} />
-                  <Note term="Where they'd have probed" detail={note.wouldProbe} />
-                  <Note term="A stronger framing" detail={note.strongerFraming} />
-                </dl>
+
+                {/*
+                  * The load-bearing part of this section, so it is the one thing that
+                  * cannot be quiet: a candidate who reads nothing else on this page should
+                  * still leave with this. Rendered even for an older stored report that
+                  * has no note for this question — an honest "no note" beats the question
+                  * silently vanishing from the list.
+                  */}
+                <div className="flex flex-col gap-2 rounded-lg border border-accent/30 bg-surface-raised p-5">
+                  <span className="font-mono text-micro tracking-widest text-accent uppercase">
+                    How you could have answered it better
+                  </span>
+                  <p className="max-w-prose text-body text-ink">
+                    {note.strongerFraming ?? "No note was written for this answer."}
+                  </p>
+                </div>
+
+                {note.worked || note.vague || note.wouldProbe ? (
+                  <dl className="grid gap-3 sm:grid-cols-3">
+                    <Note term="What worked" detail={note.worked} />
+                    <Note term="What was vague" detail={note.vague} />
+                    <Note term="Where they'd have probed" detail={note.wouldProbe} />
+                  </dl>
+                ) : null}
               </li>
             ))}
-          </ul>
+          </ol>
         </Section>
       ) : null}
 
@@ -417,13 +446,11 @@ function AreaColumn({
  * Where the questions came from.
  *
  * The disclosure is not a footnote to be tucked away — it is the reason this section can
- * be believed. Every question today is written from the model's general knowledge of an
- * employer archetype, with no retrieved sources behind it, and the page says so before it
- * shows anything else. A candidate who reads "asked at Google in March", checks, and
- * finds nothing will never trust this report again, and they would be right.
- *
- * When a real corpus exists, `sources` fills in per question and the disclosure changes
- * with the tier. Nothing else here has to move.
+ * be believed. Only a question the server matched to the question bank carries `sources`
+ * and the `published_source` tier; follow-ups and model-written questions say they are
+ * general knowledge, and the page says which is which before it shows anything else. A
+ * candidate who reads "asked at Google in March", checks, and finds nothing will never
+ * trust this report again, and they would be right.
  */
 function QuestionSources({ sources }: { sources: ReportQuestionSources | undefined }) {
   // A report written before provenance existed has no sources section at all.
@@ -461,7 +488,8 @@ function QuestionSources({ sources }: { sources: ReportQuestionSources | undefin
               <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
                 Basis
               </span>
-              <p className="max-w-prose text-caption text-ink-muted">{entry.basis}</p>
+              {/* A pool question has no basis beside its label, which arrives as the disclosure. */}
+              {entry.basis ? <p className="max-w-prose text-caption text-ink-muted">{entry.basis}</p> : null}
               <p className="max-w-prose text-caption text-ink-subtle">{entry.tierDisclosure}</p>
             </div>
 

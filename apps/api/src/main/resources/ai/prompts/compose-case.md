@@ -32,14 +32,23 @@ thing unavoidable:
 `summary` names that tension. `constraints` are the three numbers that force it — the ones
 a candidate should be doing arithmetic with in the first five minutes.
 
+## Which system
+
+Reported question for this round: {{plannedQuestion}}
+
+**When a reported question is given, the case is that question, written out.** Design the
+system it names, at the scale it names; add the tension and the three numbers it needs, and
+nothing that turns it into a different system. Title it plainly after what it asks.
+
+**When it is `(none)`**, pick a case of the kind this archetype sets at this level, and vary
+it: a candidate sitting a second design round should not meet the same system.
+
 ## What you must not do
 
-**Do not claim this is a case {{company}} actually uses.** You have not retrieved
-anything. Pick a case of the kind this archetype sets at this level. It is presented to
-the candidate as a case fitting this round, never as a report of this employer's process,
-and inventing one would be the most damaging thing this product can do.
-
-Vary the case. A candidate sitting a second design round should not meet the same system.
+**Do not write in the case that {{company}} uses it.** Where a case came from is shown to
+the candidate by the product, with its sources, and only when there are sources. Presenting
+an invented case as a report of this employer's process would be the most damaging thing
+this product can do.
 
 ## The opening
 

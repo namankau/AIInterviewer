@@ -46,6 +46,14 @@
       "type": "STRING",
       "description": "How one test case is laid out on standard input, described in one sentence so the harness and the tests agree."
     },
+    "referencePython": {
+      "type": "STRING",
+      "description": "starterPython with the stub replaced by a correct, efficient solution. Identical input reading and output printing. Never shown to the candidate; it is executed to check the expected outputs."
+    },
+    "bruteForcePython": {
+      "type": "STRING",
+      "description": "The same program with the most obviously correct solution you can write, however slow: try every option, nested loops, no cleverness. Written independently of referencePython, so a mistake in one is caught by the other. Identical input reading and output printing."
+    },
     "testCases": {
       "type": "ARRAY",
       "description": "Four cases. The first two must be the worked examples above. Include at least one edge case.",
@@ -75,6 +83,8 @@
     "starterPython",
     "starterJava",
     "stdinFormat",
+    "referencePython",
+    "bruteForcePython",
     "testCases"
   ]
 }

@@ -33,10 +33,12 @@ class AiSpendRepository(
                 """
                 insert into public.ai_calls
                   (call, provider, model, fell_back_from, prompt_tokens, output_tokens,
-                   thought_tokens, audio_tokens, cached_tokens, micro_usd, user_id, session_id)
+                   thought_tokens, audio_tokens, cached_tokens, micro_usd, user_id, session_id,
+                   pool_run_id)
                 values
                   (:call, :provider, :model, :fellBackFrom, :promptTokens, :outputTokens,
-                   :thoughtTokens, :audioTokens, :cachedTokens, :microUsd, :userId, :sessionId)
+                   :thoughtTokens, :audioTokens, :cachedTokens, :microUsd, :userId, :sessionId,
+                   :poolRunId)
                 """.trimIndent(),
             ).param("call", record.call)
             .param("provider", record.provider)
@@ -50,6 +52,7 @@ class AiSpendRepository(
             .param("microUsd", record.microUsd)
             .param("userId", record.userId)
             .param("sessionId", record.sessionId)
+            .param("poolRunId", record.poolRunId)
             .update()
 
         // Loud on purpose, and only on the path that costs money unexpectedly. A round

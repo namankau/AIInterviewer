@@ -1,0 +1,22 @@
+{
+  "partition": "A-fixture",
+  "checkedOn": "2026-09-14",
+  "sources": [
+    {
+      "url": "{{BASE_URL}}/allowed/long",
+      "title": "Fixture Co's page",
+      "publisher": "Fixture",
+      "companyName": "Fixture Co",
+      "origin": "employer",
+      "basis": "Local fixture server",
+      "contributes": ["process"],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Fixture entry for the --only and --partition filter tests.",
+      "robotsAllows": true,
+      "readableWithoutJs": true
+    }
+  ],
+  "rejected": [],
+  "gaps": []
+}

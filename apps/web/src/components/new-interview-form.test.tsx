@@ -1,4 +1,4 @@
-import type { RoundDraft } from "@acemyinterview/shared";
+import type { LoopBrief, PrepPlan, RoundDraft } from "@acemyinterview/shared";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,16 +7,45 @@ import { NewInterviewForm } from "./new-interview-form";
 
 const composeRound = vi.hoisted(() => vi.fn());
 const startSession = vi.hoisted(() => vi.fn());
+const fetchLoopBrief = vi.hoisted(() => vi.fn());
+const fetchPrepPlan = vi.hoisted(() => vi.fn());
 const push = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api", () => ({
   composeRound,
   startSession,
+  fetchLoopBrief,
+  fetchPrepPlan,
   ApiRequestError: class ApiRequestError extends Error {},
 }));
 
 vi.mock("@/lib/use-access-token", () => ({ useAccessToken: () => "token" }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+
+function briefFor(companyName: string, confidence: "recognised" | "inferred" = "recognised"): LoopBrief {
+  return {
+    company: {
+      slug: companyName.toLowerCase(),
+      name: companyName,
+      archetype: "service_based_it",
+      archetypeLabel: "Service-based IT firm",
+      archetypeInProse: "a service-based IT loop",
+      archetypeConfidence: confidence,
+    },
+    hasSources: false,
+    sourcedStages: [],
+    generalPattern: [],
+    bankCoverage: { questionCount: 0, roundTypes: [], bankUrl: `/questions/${companyName.toLowerCase()}` },
+  };
+}
+
+const emptyPlan: PrepPlan = { items: [], unsimulatedStages: [] };
+
+/** Past the "how they interview" step and into the setup form, for tests about setup itself. */
+async function skipBrief() {
+  await waitFor(() => expect(screen.getByRole("button", { name: /let me pick/i })).toBeInTheDocument());
+  await userEvent.click(screen.getByRole("button", { name: /let me pick/i }));
+}
 
 const draft: RoundDraft = {
   companyName: "Infosys",
@@ -39,6 +68,10 @@ describe("NewInterviewForm", () => {
     composeRound.mockReset();
     startSession.mockReset();
     push.mockReset();
+    fetchLoopBrief.mockReset().mockImplementation((query: { company: string }) =>
+      Promise.resolve(briefFor(query.company)),
+    );
+    fetchPrepPlan.mockReset().mockResolvedValue(emptyPlan);
   });
 
   it("turns one line into a round, and shows it back before anything starts", async () => {
@@ -50,6 +83,7 @@ describe("NewInterviewForm", () => {
       "Infosys MR round next Tuesday",
     );
     await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+    await skipBrief();
 
     await waitFor(() => expect(screen.getByDisplayValue("Infosys")).toBeInTheDocument());
     expect(composeRound).toHaveBeenCalledWith("token", "Infosys MR round next Tuesday");
@@ -72,6 +106,7 @@ describe("NewInterviewForm", () => {
 
     await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys MR round");
     await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+    await skipBrief();
     await waitFor(() => expect(screen.getByDisplayValue("Infosys")).toBeInTheDocument());
 
     expect(screen.getByText(/read 'mr round' as techno-managerial/i)).toBeInTheDocument();
@@ -105,8 +140,11 @@ describe("NewInterviewForm", () => {
     });
     render(<NewInterviewForm />);
 
+    fetchLoopBrief.mockResolvedValue(briefFor("Sagitec Solutions", "inferred"));
+
     await userEvent.type(screen.getByLabelText(/describe the interview/i), "Sagitec round");
     await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+    await skipBrief();
 
     await waitFor(() =>
       expect(screen.getByText(/we do not have specific information about sagitec/i)).toBeInTheDocument(),
@@ -146,6 +184,7 @@ describe("NewInterviewForm", () => {
 
     await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys MR round");
     await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+    await skipBrief();
     await waitFor(() => expect(screen.getByDisplayValue("Infosys")).toBeInTheDocument());
 
     expect(screen.getByText(/nothing from it is uploaded, recorded or scored/i)).toBeInTheDocument();
@@ -170,6 +209,7 @@ describe("NewInterviewForm", () => {
 
     await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys MR round");
     await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+    await skipBrief();
     await waitFor(() => expect(screen.getByDisplayValue("Infosys")).toBeInTheDocument());
 
     await userEvent.click(screen.getByRole("checkbox", { name: /record my voice/i }));
@@ -192,5 +232,48 @@ describe("NewInterviewForm", () => {
 
     expect(screen.getByRole("button", { name: /begin interview/i })).toBeDisabled();
     expect(screen.getByText(/voice recording is required/i)).toBeInTheDocument();
+  });
+
+  describe("getting back to the loop brief", () => {
+    it("offers a Back button on setup when the candidate came from the brief, and it returns there", async () => {
+      composeRound.mockResolvedValue(draft);
+      render(<NewInterviewForm />);
+
+      await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys MR round");
+      await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+      await skipBrief();
+      await waitFor(() => expect(screen.getByDisplayValue("Infosys")).toBeInTheDocument());
+
+      const back = screen.getByRole("button", { name: /back to how infosys interviews/i });
+      await userEvent.click(back);
+
+      // Back on the brief, not the setup form.
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: /how infosys interviews/i })).toBeInTheDocument(),
+      );
+      expect(screen.queryByDisplayValue("Infosys")).not.toBeInTheDocument();
+    });
+
+    it("has no Back button when the candidate never saw a brief", async () => {
+      render(<NewInterviewForm />);
+      await userEvent.click(screen.getByRole("button", { name: /fill it in yourself/i }));
+
+      expect(screen.queryByRole("button", { name: /back to how/i })).not.toBeInTheDocument();
+    });
+
+    it("returns from the brief to editing the description", async () => {
+      composeRound.mockResolvedValue(draft);
+      render(<NewInterviewForm />);
+
+      await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys MR round");
+      await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: /how infosys interviews/i })).toBeInTheDocument(),
+      );
+      await userEvent.click(screen.getByRole("button", { name: /edit the description/i }));
+
+      expect(screen.getByLabelText(/describe the interview/i)).toBeInTheDocument();
+    });
   });
 });

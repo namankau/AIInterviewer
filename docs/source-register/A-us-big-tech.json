@@ -1,0 +1,843 @@
+{
+  "partition": "A-us-big-tech",
+  "checkedOn": "2026-09-14",
+  "sources": [
+    {
+      "url": "https://www.google.com/about/careers/applications/how-we-hire/",
+      "title": "Our hiring process - Google Careers",
+      "publisher": "Google",
+      "companyName": "Google",
+      "origin": "employer",
+      "basis": "Google's own careers page on its hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Names the stages: Google Hiring Assessment (workstyle) plus role-related assessments such as a coding exercise, one or two recruiter conversations, optional project work, then a panel of structured interviews scored on shared rubrics with open-ended role-related questions, no brainteasers, AI tools not permitted; roughly 6-8 weeks.",
+      "robotsAllows": true,
+      "readableWithoutJs": false,
+      "check": {
+        "checkedAt": "2026-09-14T09:28:47.320Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 1758,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.google.com/about/careers/applications/interview-tips/",
+      "title": "Interviewing at Google: Best practices, advice, and tips - Google Careers",
+      "publisher": "Google",
+      "companyName": "Google",
+      "origin": "employer",
+      "basis": "Google's own careers page on how to prepare for its interviews",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Google's interview advice: questions are largely 'Tell me about a time...' and 'How would you approach...', STAR structure, data-backed impact ('Accomplished X, as measured by Y, by doing Z'), ambiguity, conflict with a co-worker, influencing teammates, leadership style; notes internal review after interviews and that Search/AI are not permitted.",
+      "robotsAllows": true,
+      "readableWithoutJs": false,
+      "check": {
+        "checkedAt": "2026-09-14T09:28:51.846Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 1796,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://rework.withgoogle.com/intl/en/guides/a-guide-to-structured-interviewing-for-better-hiring-practices",
+      "title": "A guide to structured interviewing for better hiring practices - Google re:Work",
+      "publisher": "Google (re:Work)",
+      "companyName": "Google",
+      "origin": "employer",
+      "basis": "Google's own published guide to how it runs structured interviews",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "How Google structures interviews: vetted role-relevant questions, recorded feedback, rubrics graded poor/borderline/solid/outstanding; hiring attributes role-related knowledge, problem solving, leadership (emergent leadership for ICs); one behavioural and one hypothetical example question, each with its predetermined follow-ups.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:28:56.283Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 9800,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://medium.com/@sshiwangi770/my-google-software-engineer-interview-experience-l4-46de5a70fb1f",
+      "title": "My Google [ Software Engineer ] Interview Experience | L4",
+      "publisher": "Shiwangi Kumari (Medium)",
+      "companyName": "Google",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-04-02",
+      "summary": "2025 L4 loop, one phone screen plus three technical rounds and a Googliness round, with the questions: arrange item quantities in an m x n grid so like items are adjacent; safe deletion order for disks and snapshots (dependency graph); maximum nesting of 2D boxes (hard DP); reshuffle blocks of coloured houses so each block is unique and sorted. Says 'exceeds' was needed in two of three technical rounds.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:28:58.974Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://medium.com/@arisatano1/google-l5-interview-experience-e17d34d9e90f",
+      "title": "Google L5 interview experience",
+      "publisher": "Arisa (Medium)",
+      "companyName": "Google",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2026-03-10",
+      "summary": "L5 loop: phone screen coded in a Google Doc, then five virtual onsite rounds (three coding, one system design, one Googleyness and Leadership); recruiter's topic list; coding rounds on a geometry problem and a DFS graph problem with a scheduling follow-up; design an image/GIF/video hosting platform without sign-up; G&L questions on failure, others' impact on your success, pushing back on a manager's technical decision.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:01.204Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://jatinnarula.substack.com/p/google-interview-experience-l4-software",
+      "title": "Google Interview Experience - L4 Software Engineer",
+      "publisher": "Jatin Narula (Sudo Scripts, Substack)",
+      "companyName": "Google",
+      "origin": "author",
+      "basis": "The author's own Substack post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2022-09-16",
+      "summary": "2022 L4 loop, five rounds with the question type for each: screening round on a priority queue, multi-source BFS, a modified Dijkstra, a vague overlapping-intervals variant with four escalating follow-ups, and a Googlyness round (resolving a conflict between teammates, onboarding a new joiner). Older than three years.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:08.739Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 11002,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://amazon.jobs/content/en/how-we-hire/sde-ii-interview-prep",
+      "title": "SDE II Interview Prep",
+      "publisher": "Amazon",
+      "companyName": "Amazon",
+      "origin": "employer",
+      "basis": "Amazon's own careers page on how it interviews SDE II candidates",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "SDE II process: application, online assessment (90 minutes for two coding questions, then system design scenarios and a Work Style Survey on the Leadership Principles), then a loop of four 55-minute interviews; at least one system design question; syntactically correct code, no pseudocode; two or three Leadership Principle behavioural questions per interviewer, STAR, no brain teasers; outcome within 5 business days.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:11.842Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 7816,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://amazon.jobs/content/en/how-we-hire/sde-iii-interview-prep",
+      "title": "SDE III Interview Prep",
+      "publisher": "Amazon",
+      "companyName": "Amazon",
+      "origin": "employer",
+      "basis": "Amazon's own careers page on how it interviews senior SDE (SDE III) candidates",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Senior SDE process: a 60-minute technical phone screen with a senior leader (half Leadership Principles, half coding and system design), then a loop of five 55-minute interviews covering technical and Leadership Principle competencies; at least one system design question, high-level and low-level design; syntactically correct code.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:15.315Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 6861,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://amazon.jobs/content/en/how-we-hire/interview-loop",
+      "title": "Interview Loop",
+      "publisher": "Amazon",
+      "companyName": "Amazon",
+      "origin": "employer",
+      "basis": "Amazon's own careers page on its interview loop",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "The loop: two to seven interviewers, possibly including a Bar Raiser from another team focused on hiring quality, 45-60 minutes each; behavioural questions guided by the Leadership Principles, no brain teasers; five example questions (a problem with multiple possible solutions, a risk/mistake/failure, leading a project, motivating a group, using data to decide); STAR. The body sits in collapsed sections rendered from embedded script data, so a plain GET sees only headings.",
+      "robotsAllows": true,
+      "readableWithoutJs": false,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:20.253Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 2037,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://amazon.jobs/content/en/our-workplace/leadership-principles",
+      "title": "Leadership Principles",
+      "publisher": "Amazon",
+      "companyName": "Amazon",
+      "origin": "employer",
+      "basis": "Amazon's own careers page stating the Leadership Principles its behavioural interviews assess",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Full text of all sixteen Leadership Principles (Customer Obsession through Success and Scale Bring Broad Responsibility), the rubric for every behavioural question in the loop.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:24.685Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 6273,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://medium.com/@saiteja.dasari123/interview-experience-sde-2-at-amazon-accepted-offer-57655fab76b8",
+      "title": "Interview Experience — SDE-2 at Amazon (Accepted offer)",
+      "publisher": "Saiteja Dasari (Medium)",
+      "companyName": "Amazon",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-04-06",
+      "summary": "SDE-2 (L5) loop: OA (task-scheduler-style problem and a DP problem, plus behavioural), coding round (nodes at a given level of an N-ary tree, then O(1) counts under inserts/deletes), LLD (design Stack Overflow in 30 minutes), HLD with the hiring manager (design an online coding judge), Bar Raiser (40 minutes of LPs then trapping rain water); names the two LPs asked in each round.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:29.154Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://igreaper.medium.com/amazon-sde-1-interview-experience-a69578a4f699",
+      "title": "My Amazon Sde 1 Interview Experience",
+      "publisher": "Pratham Sharma (Medium)",
+      "companyName": "Amazon",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2026-03-03",
+      "summary": "SDE-1, Sept 2025 to Feb 2026: 70-minute HackerRank OA (two DSA problems, work simulation, workstyle); round 2 stock-trading DP and trapping rain water plus a project deep-dive; round 3 rotting oranges and maximal rectangle of 1s plus Kafka ordering/partitioning and B vs B+ trees; Bar Raiser on Leadership Principles with three to four levels of follow-up.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:31.297Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://medium.com/@SarveshMankar/my-amazon-sde-1-interview-experience-ed728372c5d0",
+      "title": "My Amazon SDE-1 Interview Experience",
+      "publisher": "Sarvesh Mankar (Medium)",
+      "companyName": "Amazon",
+      "origin": "author",
+      "basis": "The author's own free Medium post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-07-12",
+      "summary": "SDE-1, four rounds: OA (two DP problems, behavioural judgement scenarios); round 1 minimum classrooms for lecture timings with a follow-up to assign rooms, plus design an automated restaurant system; round 2 inorder traversal, subtree of another tree, and a rotting-vegetables multi-source BFS; Bar Raiser with 35-40 minutes of behavioural questions then a LiveCode problem.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:33.787Z",
+        "robotsAllowed": true,
+        "httpStatus": 403,
+        "readableChars": null,
+        "readable": false,
+        "error": "HTTP 403"
+      }
+    },
+    {
+      "url": "https://careers.microsoft.com/v2/global/en/hiring-tips/technical-interviewing",
+      "title": "Technical interviewing | Microsoft Careers",
+      "publisher": "Microsoft",
+      "companyName": "Microsoft",
+      "origin": "employer",
+      "basis": "Microsoft's own careers page on how it runs technical interviews",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Describes the 45-minute technical round using a third-party coding tool, and the four things engineering interviewers assess: problem solving ('how you break down information...how you put yourself in the customer's shoes'), design (building/designing a system from scratch), coding (clean, concise, bug-free code in your strongest language), and testing (corner cases, security, error conditions).",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:35.823Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 5827,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://careers.microsoft.com/v2/global/en/hiring-tips.html",
+      "title": "How we hire | Microsoft Careers",
+      "publisher": "Microsoft",
+      "companyName": "Microsoft",
+      "origin": "employer",
+      "basis": "Microsoft's own careers page describing its hiring process end to end",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Stages from application to offer: application review with an optional screening conversation, then 2-4 interviews of up to an hour each by phone, Teams, or in person, then an offer stage covering total compensation, then pre-onboarding logistics.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:38.980Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 13150,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://dev.to/dhilipkmr/software-engineer-2-ui-interview-at-microsoft-1i0b",
+      "title": "Software Engineer 2 UI Interview at Microsoft",
+      "publisher": "Dhilip Kumar (dev.to)",
+      "companyName": "Microsoft",
+      "origin": "author",
+      "basis": "The author's own dev.to post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2020-10-17",
+      "summary": "SE2 (UI/frontend) loop at Microsoft IDC Bangalore, six rounds: 2-hour machine coding (build an email client or chat UI in vanilla JS); JS round (write an ES6/ES2020 polyfill, a Promise-based LRU memoization); HLD+LLD design a Snakes and Ladders game; two string/backtracking DSA problems; hiring-manager round on JS, performance and web vitals; final round with senior leadership on DS and system design. Older than three years but specific.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:43.375Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 27296,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://dev.to/nyashakarata/what-i-learned-after-failing-a-technical-interview-at-microsoft-2fe",
+      "title": "What I learned after failing a technical interview at Microsoft",
+      "publisher": "Nyasha Karata (dev.to)",
+      "companyName": "Microsoft",
+      "origin": "author",
+      "basis": "The author's own dev.to post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2022-10-02",
+      "summary": "June 2022 SDE II loop, three rounds (one behavioural, two coding on Microsoft Teams). Names the two LeetCode-medium coding questions asked: 'Kth Largest Element in an Array' and 'Longest substring with no repeating characters'; author failed on communication (no clarifying questions, no discussion of alternatives) despite solving both optimally.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:45.488Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 4406,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://devsunite.com/blog/my-microsoft-sde-interview-experience-as-a-fresher-2026",
+      "title": "My Microsoft SDE Interview Experience as a Fresher (2026)",
+      "publisher": "Shriya Awasthi (DevsUnite)",
+      "companyName": "Microsoft",
+      "origin": "author",
+      "basis": "The author's own first-person blog post, cited and linked; robots.txt allows /blog/*",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2026-09-12",
+      "summary": "Fresher SDE loop: online assessment (an array problem, a tree-traversal variant, CS-fundamentals MCQs); first technical round (an array problem with a memory-constraint follow-up); second technical round (an ambiguous notification-system design prompt); final HR/project round on the candidate's college scheduling tool.",
+      "robotsAllows": true,
+      "readableWithoutJs": null,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:49.504Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 14248,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.metacareers.com/blog/preparing-for-your-software-engineering-interview-at-meta/",
+      "title": "Preparing for your software engineering interview at Meta | Meta Careers",
+      "publisher": "Meta",
+      "companyName": "Meta",
+      "origin": "employer",
+      "basis": "Meta's own careers page on how it runs software engineering interviews",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": null,
+      "summary": "Two-stage process: initial technical screen (intros, 35 minutes of coding on algorithms/data structures/recursion/binary trees, questions); then a full loop of three 45-minute interviews (a harder coding round, a design round done on a whiteboard covering systems or product, and a behavioural round on background/passion/fit using STAR). Advises writing code in a plain text editor without syntax highlighting.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:52.733Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 17251,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.metacareers.com/hiring-process/",
+      "title": "Meta Jobs Hiring Process | Meta Careers",
+      "publisher": "Meta",
+      "companyName": "Meta",
+      "origin": "employer",
+      "basis": "Meta's own careers page on its end-to-end hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Stages: application, an initial recruiter call on background/experience/goals, a recruiter conversation plus initial screening plus a full loop interview (assessing technical background and problem solving), a decision from the recruiter, then an offer letter; typically 2-3 months end to end.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:29:56.808Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 8078,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://dev.to/_1c38abf3f8630eeac6180/meta-three-round-interview-experience-finally-landing-the-ic5-position-1h20",
+      "title": "Meta Three-Round Interview Experience: Finally Landing the IC5 Position!",
+      "publisher": "dev.to author _1c38abf3f8630eeac6180",
+      "companyName": "Meta",
+      "origin": "author",
+      "basis": "The author's own dev.to post recounting their own IC5 loop, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-08-12",
+      "summary": "IC5 loop, three rounds after an 8-week process: coding round designing a program that ingests two CSV files of dinosaur data to compute speed and sort bipedal dinosaurs; behavioural round on conflict resolution, tight deadlines, and team leadership; system design round to 'Design FB Post Search' with sub-500ms median query latency and content searchable within a minute of posting.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:04.832Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 6117,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://reliabilitywhisperer.substack.com/p/2025meta-e4-production-engineer-interview",
+      "title": "[2025][Meta] E4 Production Engineer Interview Experience",
+      "publisher": "The Reliability Whisperer (Substack)",
+      "companyName": "Meta",
+      "origin": "author",
+      "basis": "The author's own first-person Substack post, cited and linked; robots.txt's User-agent: * block does not disallow /p/ post paths (only /p/*/comment/*)",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-04-02",
+      "summary": "E4 Production Engineer loop: phone screen with a CSV-parsing/string-manipulation coding problem and a website-outage troubleshooting exercise (root cause: disk space); onsite of four rounds - coding with optimisation follow-ups, system design (author's weakest round), Linux fundamentals (memory management, processes, file systems, security, networking), and a STAR-format behavioural round.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:07.239Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 4079,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://jobs.netflix.com/culture",
+      "title": "Netflix Culture | Careers at Netflix",
+      "publisher": "Netflix",
+      "companyName": "Netflix",
+      "origin": "employer",
+      "basis": "Netflix's own careers page setting out the hiring and evaluation philosophy it applies to candidates and employees",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "States the 'keeper test' used in hiring and retention decisions ('if X wanted to leave, would I fight to keep them?'), that the Dream Team is 'driven by performance, not seniority, tenure, or unconditional loyalty', and the eight core traits Netflix hires and evaluates for: judgment, communication, curiosity, courage, passion, selflessness, innovation, and inclusion.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:10.067Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 14307,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.nvidia.com/en-us/about-nvidia/careers/how-we-hire/",
+      "title": "How We Hire | NVIDIA",
+      "publisher": "NVIDIA",
+      "companyName": "Nvidia",
+      "origin": "employer",
+      "basis": "NVIDIA's own careers page describing its hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Three-stage process: search and apply (recommends applying to at most five best-matched roles); 'Let's Meet' - phone/video/in-person rounds with the hiring manager, team members and other groups, a mandatory in-person onsite before any offer, a HackerRank coding exercise for technical roles (explicitly disqualifies use of unapproved tools like ChatGPT during the interview), and an optional 15-minute non-evaluative 'Insider Chat' with an employee resource group member; then join-the-team logistics. Decisions typically communicated within a few weeks.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:13.619Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 28497,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://www.salesforce.com/company/careers/culture/how-we-hire/",
+      "title": "How We Hire at Salesforce | Interviewing at Salesforce",
+      "publisher": "Salesforce",
+      "companyName": "Salesforce",
+      "origin": "employer",
+      "basis": "Salesforce's own careers page on its hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Most interviews happen virtually over Google Meet with candidates expected to be on camera; an on-site office interview is required before any offer; interviewers may ask behavioural, competency-based, or situational questions; states a merit-based, non-discriminatory hiring policy and recommends applying to no more than three roles in a 12-month period.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:15.774Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 31310,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://dev.to/ram_k_baf95b757f3d5359a7e/interview-experience-with-salesforce-39ib",
+      "title": "Interview Experience with Salesforce",
+      "publisher": "Prakash K (dev.to)",
+      "companyName": "Salesforce",
+      "origin": "author",
+      "basis": "The author's own dev.to post, cited and linked",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2025-07-10",
+      "summary": "First-round MTS interview conducted by a senior manager overseeing two teams; the round centred on the candidate's recent work experience, how they handle on-call support, and their approach to production issues under pressure, rather than DSA questions. Only the first round is described.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:18.872Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 2665,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://careers.adobe.com/us/en/hiring-process",
+      "title": "How We Hire | Adobe",
+      "publisher": "Adobe",
+      "companyName": "Adobe",
+      "origin": "employer",
+      "basis": "Adobe's own careers page on its hiring process",
+      "contributes": [
+        "process"
+      ],
+      "roleFamily": null,
+      "publishedOn": null,
+      "summary": "Five-step process: application; a talent-partner conversation on background and career goals; a hiring-manager interview on problem-solving and fit; skills assessments and team interviews (for technical roles: 'coding challenges, system design discussions, or portfolio reviews'); then offer, background checks and onboarding.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:20.946Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 10555,
+        "readable": true,
+        "error": null
+      }
+    },
+    {
+      "url": "https://dev.to/venkyakshaya/web-engineer-intern-at-adobe-interview-3e96",
+      "title": "Web Engineer Intern at Adobe - Interview",
+      "publisher": "Akshaya Venkatesh (dev.to)",
+      "companyName": "Adobe",
+      "origin": "author",
+      "basis": "The author's own dev.to post, cited and linked",
+      "contributes": [
+        "process",
+        "questions"
+      ],
+      "roleFamily": "software_engineering",
+      "publishedOn": "2023-05-10",
+      "summary": "Web Engineer intern loop: HackerRank OA (one LeetCode-medium problem, 45 minutes); a resume/skills-and-interests round with an engineering manager; three back-to-back technical rounds (JS-based DSA plus DOM manipulation; React fundamentals and architecture; testing frameworks plus behavioural); same-day recruiter behavioural call; offer three days later. Notes Adobe's process is team-dependent, not standardised. Older than three years but specific.",
+      "robotsAllows": true,
+      "readableWithoutJs": true,
+      "check": {
+        "checkedAt": "2026-09-14T09:30:23.733Z",
+        "robotsAllowed": true,
+        "httpStatus": 200,
+        "readableChars": 6034,
+        "readable": true,
+        "error": null
+      }
+    }
+  ],
+  "rejected": [
+    {
+      "url": "https://www.google.com/about/careers/applications/candidate-prep/swe",
+      "reason": "Google's SWE interview prep guide: robots.txt disallows /about/careers/applications/candidate-prep for all user agents"
+    },
+    {
+      "url": "https://medium.com/life-with-tech/my-google-interview-experience-l4-software-engineer-8-rounds-6-months-countless-lessons-c80e76243783",
+      "reason": "Member-only Medium story (paywalled)"
+    },
+    {
+      "url": "https://roundz.substack.com/p/interview-experience-google-software-engineer-l4",
+      "reason": "Aggregator: 'Team Roundz' newsletter republishing an anonymous candidate's account, not the author's own post"
+    },
+    {
+      "url": "https://dev.to/net_programhelp_e160eef28/google-software-engineer-interview-experience-2b5o",
+      "reason": "Account of a commercial interview-assistance service; marketing post, not an identifiable author's own experience"
+    },
+    {
+      "url": "https://leetcode.com/discuss/post/6469509/google-latest-interview-experiences-coll-r4zm/",
+      "reason": "Hard exclusion: LeetCode Discuss"
+    },
+    {
+      "url": "https://medium.com/@neeraj_swe/amazon-sde-2-interview-experience-68f5abdb329c",
+      "reason": "Second-hand: the author relays a colleague's Amazon SDE-2 loop as part of a series of other people's stories, not their own experience"
+    },
+    {
+      "url": "https://roundz.substack.com/p/interview-experience-156-amazon-sde2-l5",
+      "reason": "Aggregator: 'Team Roundz' newsletter, numbered series (#156) of anonymous candidates' accounts, not the author's own post"
+    },
+    {
+      "url": "https://www.teamblind.com/post/amazon-interview-experience-timeline-almost-a-1-year-process-2025-grad-0fbl4cvy",
+      "reason": "Hard exclusion: Blind"
+    },
+    {
+      "url": "https://medium.com/@id.shivanjali/the-complete-microsoft-software-engineering-interview-guide-2026-a27fb1ece27d",
+      "reason": "Fetch returned HTTP 403 on repeated attempts; could not verify content, so not used"
+    },
+    {
+      "url": "https://medium.com/@supriyamalkar07/microsoft-interview-experience-software-engineer-role-d04621d614a8",
+      "reason": "Fetch returned HTTP 403; could not verify content, so not used"
+    },
+    {
+      "url": "https://medium.com/@rohitverma_87831/microsoft-senior-engineer-interview-experience-2026-the-offer-that-took-me-three-attempts-e0d6e052bdb1",
+      "reason": "Fetch returned HTTP 403; could not verify content, so not used"
+    },
+    {
+      "url": "https://dev.to/alexr/microsoft-interview-tips-and-insights-from-successful-sde-2-application-offer-2024-232f",
+      "reason": "Second-hand: article explicitly written 'based on Surabhi Gupta's interview experience' by a different author, not the author's own loop"
+    },
+    {
+      "url": "https://dev.to/itsugo/the-microsoft-interview-question-i-keep-thinking-about-38gl",
+      "reason": "Not specific enough: a reflective essay on one Cloud Solutions Architect conversational question, not a software-engineering loop with named rounds"
+    },
+    {
+      "url": "https://roundz.substack.com/p/interview-experience-53-meta-software-engineer-e5",
+      "reason": "Aggregator: 'Team Roundz' newsletter, not the author's own post"
+    },
+    {
+      "url": "https://roundz.substack.com/p/interview-experience-115-meta-software",
+      "reason": "Aggregator: 'Team Roundz' newsletter, not the author's own post"
+    },
+    {
+      "url": "https://roundz.substack.com/p/interview-experience-meta-sde1-e3",
+      "reason": "Aggregator: 'Team Roundz' newsletter, not the author's own post"
+    },
+    {
+      "url": "https://roundz.substack.com/p/interview-experience-meta-software-engineer-e55",
+      "reason": "Aggregator: 'Team Roundz' newsletter, not the author's own post"
+    },
+    {
+      "url": "https://medium.com/@priyankakunchala828/my-meta-interview-experience-sde-software-development-engineer-fa00ca74c6f8",
+      "reason": "Fetch returned HTTP 403; could not verify content, so not used"
+    },
+    {
+      "url": "https://medium.com/@amukul82/my-meta-interview-experience-e5-offer-44f9816cf9e6",
+      "reason": "Fetch returned HTTP 403; could not verify content, so not used"
+    },
+    {
+      "url": "https://dev.to/pawanupadhyay10/metafacebook-university-grad-full-time-interview-experience-off-campus-1038",
+      "reason": "Superseded by more recent, more specific author sources for Meta; interview ended early due to a hiring freeze so the loop was incomplete"
+    },
+    {
+      "url": "https://medium.com/@debmalyapan98/my-first-faang-interview-experience-7527c6a1dce8",
+      "reason": "Fetch returned HTTP 403 on repeated attempts (Medium became unreachable to this fetcher partway through the session); could not verify content, so not used"
+    },
+    {
+      "url": "https://pranalibose.medium.com/my-complete-apple-interview-experience-2025-c56b14cc43f4",
+      "reason": "Fetch returned HTTP 403; could not verify content, so not used"
+    },
+    {
+      "url": "https://medium.com/@arisatano1/apple-swe-interview-jan-2026-8153679663a9",
+      "reason": "Fetch returned HTTP 403; could not verify content, so not used"
+    },
+    {
+      "url": "https://engineeringenablement.substack.com/p/how-id-prepare-for-the-apple-software",
+      "reason": "Generic prep advice drawing on the author's Microsoft/Meta hiring experience, not a first-hand Apple interview account with real rounds or questions"
+    },
+    {
+      "url": "https://dev.to/itsugo/the-microsoft-interview-question-i-keep-thinking-about-38gl",
+      "reason": "Duplicate note: also not usable for Apple - covers a Cloud Solutions Architect role, not software engineering"
+    },
+    {
+      "url": "https://dev.to/kaydacode/preparing-for-your-first-ios-interview-10ma",
+      "reason": "Interviewer-perspective general advice, not the author's own candidacy experience"
+    },
+    {
+      "url": "https://netflixtechblog.com/demystifying-interviewing-for-backend-engineers-netflix-aceb26a83495",
+      "reason": "Netflix's own engineering blog post on backend interviewing, hosted on Medium's infrastructure (netflixtechblog.com resolves through medium.com, license medium.com/license.xml) - Medium became unreachable to this fetcher (HTTP 403) partway through the session so the content could not be verified. robots.txt's generic User-agent: * block would have allowed the path; only named bots (ClaudeBot, GPTBot, etc.) are blocked site-wide there. Worth a retry by a later checker once Medium fetches succeed again."
+    },
+    {
+      "url": "https://medium.com/@contentblocc47/cracking-the-netflix-software-engineer-interview-983e858e21f",
+      "reason": "Not fetched: Medium confirmed unreachable to this fetcher (HTTP 403) on multiple other URLs this session"
+    },
+    {
+      "url": "https://rathod-ajay.medium.com/nvidia-senior-software-engineer-interview-experienc-2025-bf731dccf3dd",
+      "reason": "Not fetched: Medium (including custom-domain Medium publications) was confirmed unreachable to this fetcher (HTTP 403) on multiple other URLs this session"
+    },
+    {
+      "url": "https://ihitsuperhuman.medium.com/interview-experience-nvidia-senior-system-software-engineer-2024-30eb979ee025",
+      "reason": "Fetch returned HTTP 403; could not verify content, so not used"
+    },
+    {
+      "url": "https://interviewnoodle.com/my-salesforce-amts-new-grad-interview-experience-from-application-to-offer-5ef0edb348f8",
+      "reason": "Fetch returned HTTP 403; InterviewNoodle is a Medium publication, unreachable to this fetcher this session"
+    },
+    {
+      "url": "https://blogs.oracle.com/jobsatoracle/ace-your-technical-interview",
+      "reason": "Oracle's own hiring blog; blogs.oracle.com returned HTTP 403 to every fetch attempt this session (site-level bot protection, not a robots.txt disallow), so content could not be verified"
+    },
+    {
+      "url": "https://www.oracle.com/careers/opportunities/getting-hired/",
+      "reason": "Oracle's own careers page; oracle.com returned HTTP 403 to every fetch attempt this session, so content could not be verified"
+    },
+    {
+      "url": "https://www.oracle.com/a/ocom/docs/preparing-for-your-interview.pdf",
+      "reason": "Fetch returned HTTP 403; could not verify content, so not used"
+    },
+    {
+      "url": "https://dev.to/gowthampotureddi/oracle-data-engineering-interview-questions-4haj",
+      "reason": "Generic domain-agnostic interview-prep guide framed around common problem patterns, not the author's own reported Oracle interview loop"
+    },
+    {
+      "url": "https://dev.to/abhilash1910/adobe-ml-2-engineer-interview-experience-nj3",
+      "reason": "Thin: mostly links out to the author's YouTube channel rather than describing specific questions in the post itself; superseded by a more specific Adobe author source"
+    }
+  ],
+  "gaps": [
+    "Apple: Searched for an Apple careers 'how we hire' / interview-process page (apple.com/careers, jobs.apple.com) - none found; Apple appears not to publish one. Found several specific first-hand candidate accounts (Debmalya Pan, Pranalibose, Arisa) but all are hosted on Medium, which returned HTTP 403 to every fetch attempt in this session and so could not be verified. Non-Medium candidates found (dev.to itsugo, kaydacode) were either not software-engineering-specific or not first-hand candidacy accounts. Worth retrying the Medium URLs once fetching recovers.",
+    "Oracle: Oracle's own careers/hiring-process pages (oracle.com/careers/opportunities/getting-hired, blogs.oracle.com/jobsatoracle) exist and were found by search, but oracle.com and blogs.oracle.com returned HTTP 403 to every fetch attempt this session (site-level bot protection, distinct from the Medium blockage), so none could be verified and used. Candidate author accounts found were on Medium (also blocked) or were generic prep guides rather than first-hand loops. Worth retrying once fetching succeeds against oracle.com."
+  ]
+}

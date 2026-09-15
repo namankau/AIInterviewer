@@ -196,6 +196,37 @@ class SessionRepository(
     }
 
     /**
+     * Starts the round's clock, once: the moment the candidate enters the room.
+     *
+     * `started_at` is written at insert, and until now that was when the clock started —
+     * before the problem had been composed, before the device check, before the candidate
+     * had seen a single word. A five-minute round opened on 3:50.
+     *
+     * The insert still writes it, because the constraints need a start before any end and
+     * a round abandoned during setup still ends. What marks the clock as not yet started
+     * is `started_at = created_at`: both are `now()` in the insert's own transaction, so
+     * they are equal to the microsecond until this moves one of them. That makes the
+     * update idempotent — reloading the room mid-round finds them unequal and changes
+     * nothing, so a refresh never buys anybody more time.
+     */
+    fun startClock(
+        sessionId: UUID,
+        userId: UUID,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                update public.sessions
+                   set started_at = now()
+                 where id = :id and user_id = :u
+                   and status = 'in_progress'
+                   and started_at = created_at
+                """.trimIndent(),
+            ).param("id", sessionId)
+            .param("u", userId)
+            .update() == 1
+
+    /**
      * Stores the material this round is conducted around, composed once at the start.
      *
      * Separate from `insertSession` because composing it needs the session to exist: the
@@ -347,14 +378,19 @@ class SessionRepository(
         phase: TurnPhase,
         speechStatus: SpeechStatus,
         provenanceJson: String?,
+        /** The bank question this turn asked, when it asked one. See [askedBankQuestions]. */
+        bankQuestionId: UUID? = null,
+        /** The pool question this turn asked, when it asked one. See [askedPoolQuestions]. */
+        poolQuestionId: UUID? = null,
     ) {
         jdbcClient
             .sql(
                 """
                 insert into public.session_turns
-                       (session_id, user_id, turn_index, question_text, phase, question_audio_status, provenance)
+                       (session_id, user_id, turn_index, question_text, phase, question_audio_status, provenance,
+                        bank_question_id, pool_question_id)
                 values (:s, :u, :i, :q, cast(:phase as public.turn_phase), cast(:speech as public.speech_status),
-                        cast(:provenance as jsonb))
+                        cast(:provenance as jsonb), :bank, :pool)
                 on conflict (session_id, turn_index) do nothing
                 """.trimIndent(),
             ).param("s", sessionId)
@@ -364,8 +400,53 @@ class SessionRepository(
             .param("phase", phase.dbValue)
             .param("speech", speechStatus.dbValue)
             .param("provenance", provenanceJson)
+            .param("bank", bankQuestionId)
+            .param("pool", poolQuestionId)
             .update()
     }
+
+    /**
+     * Every bank question this candidate has been asked, in any round, with when it was last
+     * asked and whether that was in [sessionId]. What selection needs to avoid repeats.
+     */
+    fun askedBankQuestions(
+        userId: UUID,
+        sessionId: UUID,
+    ): List<AskedBankQuestion> =
+        askedFrom("bank_question_id", userId, sessionId) { id, at, thisRound -> AskedBankQuestion(id, at, thisRound) }
+
+    /** [askedBankQuestions], for the AI pool: the same query over `pool_question_id`. */
+    fun askedPoolQuestions(
+        userId: UUID,
+        sessionId: UUID,
+    ): List<AskedPoolQuestion> =
+        askedFrom("pool_question_id", userId, sessionId) { id, at, thisRound -> AskedPoolQuestion(id, at, thisRound) }
+
+    /** [column] is one of two literals above, never caller input. */
+    private fun <T : Any> askedFrom(
+        column: String,
+        userId: UUID,
+        sessionId: UUID,
+        row: (UUID, Instant, Boolean) -> T,
+    ): List<T> =
+        jdbcClient
+            .sql(
+                """
+                select $column as question_id, max(created_at) as last_asked, bool_or(session_id = :s) as this_round
+                  from public.session_turns
+                 where user_id = :u
+                   and $column is not null
+                 group by $column
+                """.trimIndent(),
+            ).param("u", userId)
+            .param("s", sessionId)
+            .query { rs, _ ->
+                row(
+                    rs.getObject("question_id", UUID::class.java),
+                    rs.getTimestamp("last_asked").toInstant(),
+                    rs.getBoolean("this_round"),
+                )
+            }.list()
 
     /**
      * Attaches the spoken question once it has rendered, or marks it as never coming.
@@ -528,6 +609,13 @@ class SessionRepository(
             .query(Int::class.java)
             .single()
 
+    /**
+     * The report reads the pool row's `strong_answer_covers` for a turn asked from the AI
+     * pool (task 042/044) and hands it to the model as reference material for judging that
+     * answer — never as a sourced fact, since a pool question is not one (`PromptLibrary`,
+     * `report.md`). The join is left so a turn with no pool question, or an older pool row
+     * with nothing recorded, simply carries an empty list.
+     */
     fun listTranscript(
         sessionId: UUID,
         userId: UUID,
@@ -535,20 +623,24 @@ class SessionRepository(
         jdbcClient
             .sql(
                 """
-                select turn_index, question_text, question_audio_path,
-                       question_audio_status::text as question_audio_status,
-                       answer_transcript, answered_at,
-                       intervention::text as intervention, intervention_note,
-                       phase::text as phase, delivery_note, provenance::text as provenance,
-                       hint_requested_at, hint_text, hint_level::text as hint_level
-                  from public.session_turns
-                 where session_id = :s and user_id = :u
-                 order by turn_index
+                select t.turn_index, t.question_text, t.question_audio_path,
+                       t.question_audio_status::text as question_audio_status,
+                       t.answer_transcript, t.answered_at,
+                       t.intervention::text as intervention, t.intervention_note,
+                       t.phase::text as phase, t.delivery_note, t.provenance::text as provenance,
+                       t.hint_requested_at, t.hint_text, t.hint_level::text as hint_level,
+                       pq.strong_answer_covers
+                  from public.session_turns t
+                  left join public.pool_questions pq on pq.id = t.pool_question_id
+                 where t.session_id = :s and t.user_id = :u
+                 order by t.turn_index
                 """.trimIndent(),
             ).param("s", sessionId)
             .param("u", userId)
-            .query { rs, _ -> mapTurn(rs) }
-            .list()
+            .query { rs, _ ->
+                val covers = rs.getArray("strong_answer_covers")?.array as? Array<*>
+                mapTurn(rs).copy(poolStrongAnswerCovers = covers?.filterIsInstance<String>() ?: emptyList())
+            }.list()
 
     // -- reports --------------------------------------------------------------
 
@@ -726,6 +818,27 @@ data class TurnRow(
     val hintLevel: String? = null,
     /** Why this question was asked, as raw JSON. Null on turns recorded before provenance existed. */
     val provenanceJson: String? = null,
+    /**
+     * What a strong answer to this question covers, when it was asked from the AI question
+     * pool (`pool_question_id`) and that row carries `strong_answer_covers`. Empty for a
+     * bank question, a freeform follow-up, or a pool row with nothing recorded. Populated
+     * only by [listTranscript], not by [findTurn].
+     */
+    val poolStrongAnswerCovers: List<String> = emptyList(),
+)
+
+/** A bank question a candidate has been asked, for selection. */
+data class AskedBankQuestion(
+    val bankQuestionId: UUID,
+    val lastAskedAt: Instant,
+    val inThisRound: Boolean,
+)
+
+/** A pool question a candidate has been asked, for selection. The same shape as [AskedBankQuestion]. */
+data class AskedPoolQuestion(
+    val poolQuestionId: UUID,
+    val lastAskedAt: Instant,
+    val inThisRound: Boolean,
 )
 
 data class ReadinessRow(

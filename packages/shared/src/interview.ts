@@ -127,6 +127,12 @@ export interface CodingProblem {
   starterJava: string;
   stdinFormat: string;
   testCases: ProblemTestCase[];
+  /**
+   * True when every expected output came from running two independent solutions and
+   * getting the same answer. False, or absent on rounds from before the check existed,
+   * means the outputs are the model's own working and may be wrong — the room says so.
+   */
+  testsVerified?: boolean;
 }
 
 export interface ProblemExample {
@@ -310,6 +316,14 @@ export interface ReportCompetency {
   turnIndex: number | null;
 }
 
+/**
+ * One question the candidate was asked, and how they could have answered it better.
+ *
+ * The API now writes one of these for every answered, non-warm-up question — engine-side,
+ * not left to the model, so a turn is never silently missing its note. `strongerFraming` is
+ * nullable here only because a report stored before this existed may have none, or may have
+ * one only for its weaker answers; a fresh report always has it.
+ */
 export interface ReportAnnotation {
   turnIndex: number;
   question: string;

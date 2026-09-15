@@ -79,10 +79,26 @@ class OpenAiCompatibleInterviewAi(
     override fun extractQuestions(source: SourceDocument): AiResult<ExtractedQuestions> =
         complete(prompts.extractQuestions(source), "extract-questions", ExtractedQuestions::class.java)
 
+    override fun composeLoopPattern(
+        archetype: String,
+        roleFamily: String,
+        level: String,
+    ): AiResult<GeneralLoopPattern> =
+        complete(prompts.loopPattern(archetype, roleFamily, level), "general-loop-pattern", GeneralLoopPattern::class.java)
+
     override fun composeReport(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,
     ): AiResult<ReportContent> = complete(prompts.report(brief, transcript), "report", ReportContent::class.java)
+
+    override fun assessEmployerKnowledge(
+        companyName: String,
+        archetype: String,
+    ): AiResult<EmployerKnowledge> =
+        complete(prompts.employerKnowledge(companyName, archetype), "employer-knowledge", EmployerKnowledge::class.java)
+
+    override fun generatePoolQuestions(request: PoolQuestionRequest): AiResult<GeneratedQuestions> =
+        complete(prompts.poolQuestions(request), "pool-questions", GeneratedQuestions::class.java)
 
     private fun <T> complete(
         prompt: String,

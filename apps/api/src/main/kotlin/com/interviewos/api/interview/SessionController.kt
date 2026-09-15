@@ -73,6 +73,16 @@ class SessionController(
     ): SessionView = interviewService.view(callerOf(jwt), id)
 
     /**
+     * The candidate has entered the room: starts the round's clock, once. Returns the
+     * session with the deadline to count down to. Calling it again changes nothing.
+     */
+    @PostMapping("/sessions/{id}/begin")
+    fun begin(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable id: UUID,
+    ): SessionView = interviewService.begin(callerOf(jwt), id)
+
+    /**
      * Submits one spoken answer. Multipart because the browser sends captured audio and,
      * when the candidate consented, video.
      */
@@ -86,6 +96,8 @@ class SessionController(
         // See StartSessionRequest.speaksLocally. Sent per turn because it describes the
         // browser answering this turn, not the session.
         @RequestParam(required = false, defaultValue = "false") speaksLocally: Boolean,
+        // Submit pressed mid-answer: assess this one as the last and end the round.
+        @RequestParam(required = false, defaultValue = "false") endRound: Boolean,
     ): SubmitAnswerResponse {
         if (audio.isEmpty) {
             throw ApiException.badRequest("We did not receive any audio for that answer.", code = "empty_answer")
@@ -98,8 +110,19 @@ class SessionController(
             video = video?.takeIf { !it.isEmpty }?.bytes,
             videoContentType = video?.contentType,
             speaksLocally = speaksLocally,
+            endRound = endRound,
         )
     }
+
+    /**
+     * Ends the round now and completes it, so the report is written from what has been
+     * answered. Distinct from `abandon`, which forfeits the round and produces no report.
+     */
+    @PostMapping("/sessions/{id}/finish")
+    fun finish(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable id: UUID,
+    ): SubmitAnswerResponse = interviewService.finish(callerOf(jwt), id)
 
     /**
      * One question, so the room can collect the interviewer's voice once it has

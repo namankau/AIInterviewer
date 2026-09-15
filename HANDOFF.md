@@ -1,111 +1,160 @@
-# Handoff — 10 September 2026
+# Handoff — 15 September 2026
 
 ## Task
-Eight items from the owner after sitting a round, plus three decisions taken by them
-overnight. Plan: `tasks/task-030-rounds-and-room.md`.
+The hidden AI question pool, as you set it out on 15 September. Task files are
+`tasks/task-039-question-pool.md` to `tasks/task-043-generation-run.md`. The run log is
+`runs/2026-09-15-progress.md` (gitignored).
 
-You chose **"both rooms, rougher"**, so items 1, 2, 3 and 5 were to be left. Items 2, 3
-and 5 turned out to be small enough to finish anyway, so they are in.
+**Where it stands:**
+- 039, 040, 041 and 042 are merged into `develop`, with every migration applied.
+- 043 has not started. It spends money, so it needs your go-ahead.
+- Nothing has called Gemini, and no mock round was run.
 
-## What works when you open it
+## Your four fixes (after you looked at the running app)
+1. **The Questions tab was still showing** because 042 was waiting in PR #7. I took out
+   042's sign-in change, which you hadn't asked for and which was the only reason it needed
+   your review (`046ffa8`). CI passed, and I merged PR #7 at `753eec7` and applied its
+   migration. `/questions` is hidden unless `NEXT_PUBLIC_QUESTION_BANK_BROWSABLE=true`.
+   **Restart the API to see it.**
+2. **The loop brief said too much.** It stated the caveat three times, gave a whole block to
+   a sourced record that said nothing, and had a Question bank section that only said it
+   was empty. Now the caveat appears once, the Question bank section is gone, and a
+   content-free record becomes a quiet "Based in part on: …" citation. Merged at `add3447`.
+3. **Back navigation** (same merge). "← Back to how <Company> interviews" returns from round
+   setup to the brief, and "Edit the description this was built from" returns from the
+   brief to the one-line input.
+4. **A better answer for every question in the report.** The prompt only annotated "the
+   weaker answers", and the improvement field could come back empty. Now:
+   - every answered question gets a "How you could have answered it better" note, and the
+     field is required;
+   - the list of questions is built from the interview itself, so a question the model
+     skipped still appears, with "No note was written for this answer.";
+   - the prompt forbids inventing the candidate's experience;
+   - pool questions pass the model their "strong answer covers" points as reference only.
 
-Start a round and pick **Coding and practical problem solving** or **System or solution
-design**. Both now open into a real workspace. A **5 minute** length is in the dropdown —
-that is what it is for.
-
-| # | Item | State |
-|---|---|---|
-| 5 | Five-minute round | **Done** |
-| 2 | Fillers ("Okay, let me think about that") | **Done** — removed entirely |
-| 3 | Round ends abruptly | **Done** — it says goodbye out loud first |
-| 8 | System design room | **Done** — case, scale chips, phase rail, canvas |
-| 6 | DSA round shape | **Done** — opens by asking you to read the problem aloud |
-| 7 | Editor and compiler | **Editor yes. Python runs. Java does not — see below** |
-| 1 | Setup latency | **Partly** — one model call instead of two on these rounds, unmeasured |
-| 4 | Question bank with sources | **Not started** |
+   Merged at `4d3f749`; CI passed on the merged `develop` (run 34982216345). Warm-up
+   questions get no note. Old reports render as before, with the same fallback text.
+   **Needs a live check you haven't approved yet:** whether the notes are actually good,
+   and the cost, which I estimate at a few hundred extra output tokens per report.
+   Neither is measured.
 
 ## What I built
 
-- **`RoundWorkspace.kt`** — a DSA round composes a problem, a design round composes a
-  case, once, at the start, stored on the session. The opening line is templated *from*
-  it rather than asked of the model: one call, not two, on the path you already said was
-  too slow.
-- **`dsa-workspace.tsx`** — problem left, CodeMirror middle, cases underneath. No submit
-  to a judge, no score, no tick parade: a passing case is reported as a passing case and
-  what it *meant* is the interviewer's to say at the debrief.
-- **`design-workspace.tsx`** — Excalidraw board, case panel with the scale constraints as
-  chips, a phase rail (Requirements → High-level → Deep dive → Wrap) that paces without
-  gating. The board saves as you draw, debounced, so a reload does not lose it.
-- **`browser-python.ts`** — Python runs in your browser via Pyodide.
-- **`ClosingRemark.kt`** — the last thing the interviewer says.
-- **Backchannel deleted** — hook, generator script and four clips.
+**039 — pool foundation** (merged at `7e4e091`, migration applied)
+- `pool_questions` is its own table, kept apart from `bank_questions`. There is no code path
+  from the pool into the bank, so a generated question can never pick up a sourced company
+  tag. The table comment says why.
+- Runs and cells:
+  - `pool_generation_runs` and `pool_generation_cells` make the job resumable; a job that
+    dies restarts from its pending cells.
+  - `ai_calls.pool_run_id` means a run's spend is a query over the existing ledger.
+  - The spend cap is checked **before** each call.
+- Dedupe checks the exact fingerprint first, then embeddings (`gemini-embedding-001`, 768
+  dimensions, threshold 0.90). It also checks against the sourced bank, and the sourced
+  question always wins.
+- Admin-only routes under `/api/v1/admin/pool/runs` start or resume a run, show its status,
+  and **export it as JSONL**. The export is how you will review the sample.
+- Generation is off by default (`POOL_GENERATION_ENABLED`). With it off, starting a run only
+  plans it.
+- Code: `apps/api/src/main/kotlin/com/interviewos/api/pool/`.
 
-## Decisions I made without you
+**040 — coding and system design** (merged at `859d4de`, migration applied)
+- Coding reuses the existing `composeProblem` and `ProblemVerifier`. A problem whose own
+  reference solution fails its tests is never stored.
+- System design reuses `composeCase`. Each case is tagged `machine_coding` (entry and mid)
+  or `distributed_design` (senior and staff).
+- Both store their details in a new `pool_questions.payload jsonb` column, and both are
+  always `employer_kind`.
 
-- **Piston does not exist as a free hosted service any more.** You picked it; its public
-  API went whitelist-only on 15 February 2026 and answers `/execute` with a 401. Wandbox,
-  the obvious substitute, was returning `Failed to get uid` from its own sandbox when I
-  tested it at 03:00. So **Python runs in the browser** (free, no quota, no round trip,
-  and your code never leaves the machine — which for a place people try things they would
-  not push is a better answer than the original plan). **Java still needs a server
-  runner** and the room says so rather than offering a button that fails.
-  To turn Java on: `docker run -d -p 2000:2000 ghcr.io/engineer-man/piston`, then
-  `CODE_RUNNER_ENABLED=true CODE_RUNNER_BASE_URL=http://localhost:2000/api/v2`. The API is
-  already built against Piston precisely so this is a URL and nothing else.
-- **The backchannel went entirely** rather than being re-recorded. Its original
-  justification — that speaking into this felt like a void — is now served by the live
-  transcript, without a second voice that never matched the first.
-- **The closing line is written in code, not generated.** It is the one line where an
-  unlucky generation is least recoverable, and it must not praise a round the report is
-  about to score at 40%. There is a test that holds it to that.
-- **I did not scrape anything.** Item 4's question bank is agreed as `model_knowledge`,
-  labelled honestly. Nothing was taken from Glassdoor, LeetCode or AmbitionBox.
+**041 — behavioural, fundamentals, HR, case, techno-managerial** (merged at `e3f5715`)
+- Behavioural questions map to a company's values only when the knowledge check named that
+  value first.
+- Techno-managerial is generated sparsely at lower levels: entry gets ¼ of the batch, mid ⅔,
+  senior and staff the full batch.
+- **A fix I asked for before merging (it also changes 039's merged code):** a question that
+  claims to be about a specific company, and whose claim is refused, is now **dropped**.
+  Before, it was relabelled `employer_kind` and kept. The text had been written around the
+  claim, so relabelling left an invented value credited to a real employer, for example
+  "…Bias for Speed, one of Amazon's leadership principles". Drops are counted in the run's
+  note.
+
+**042 — rounds use the pool** (PR #7, not merged)
+- Rounds try the sourced bank first, then the AI pool, then live AI.
+- No candidate is asked the same question twice from either store, across sessions.
+- Pool coding problems are built from the stored, pre-verified payload, with no compose or
+  verify step.
+- The report label, as you specified: *"Generated by our AI interviewer from general
+  knowledge. Not a verified report of a question Amazon asked."* For a company the model
+  does not know well, the wording names the kind of employer instead.
+- `/questions` is behind `NEXT_PUBLIC_QUESTION_BANK_BROWSABLE`, which is off. The pages
+  return 404, and the nav entry, the loop-brief link and the list endpoints are gone.
+  Rounds still use the sourced bank.
+- It also fixes a bug in 039's `QuestionPoolRepository.find()` that let other companies of
+  the same archetype through.
+
+## Assumptions I made
+- **Coding and design write at most one question per company × role × level**, not the
+  configured 6. Each question is its own model call, and running several inside one cell
+  could spend past the cap before the job's next check. So coverage for those two round
+  types will be thin, and you may want to change this after seeing the sample.
+- The admin gate reuses the existing `ADMIN_EMAILS` allow-list rather than a new auth
+  scheme.
+- The 17 companies whose archetype is unset (Nvidia, Stripe, PhonePe and others) were left
+  unset. The resolver infers their archetype instead of a migration deciding it.
+- Role family and level for a round are inferred from the role title, then from the resume.
+  A title that matches no role family gets no pool question.
+- 042's employer-kind label swaps the company name for an archetype phrase. You only gave
+  the company sentence.
 
 ## What I could NOT verify
-
-- **Nobody has sat a round in either new room.** Typecheck, lint, 117 tests and the build
-  are green, and CI is green, but that is not the same as a person talking to it. The
-  first real DSA round is the test: whether the model's starter program actually runs,
-  and whether its test cases pipe in cleanly, is the part most likely to be wrong.
-- **Whether the composed problems are any good** — difficulty, variety, whether the
-  120-second read is right. That is your judgement, per CLAUDE.md.
-- **Pyodide's first load** is about 10MB from a CDN. It is fetched when the room opens
-  rather than on first Run, but I have not timed it on your connection.
+- **Anything live** (rule 7): whether the prompts produce realistic questions, whether the
+  knowledge check says "no" often enough, whether 0.90 is the right dedupe threshold, the
+  real latency saved on a pool coding round, and how English-only pool questions do in
+  Hindi-English rounds.
+- **The recorded spend is a floor, not an exact figure.** The embedding calls may not
+  report their token usage, so they may be logged at zero cost. Keep that in mind when you
+  read 043's costs.
+- **The pool's application wiring has never booted.** This repo has no `@SpringBootTest`,
+  so CI never assembles the new pool components into a running application.
+- **The admin gate is weak:**
+  - It is a flat list with no roles, so anyone on it can start spend.
+  - It trusts the email in the sign-in token, and that email can be changed at the identity
+    provider and need not be verified.
+  - Nothing records who started a run.
+  - Decide whether that is good enough before 043 spends money through it.
+- **A behavioural-generator drop is logged but not counted in the run report.** The
+  question is still never stored; you just won't see those drops in the run's count.
+- **Realism is your judgement** (CLAUDE.md, things that need a human).
 
 ## Verification status
-- typecheck / lint / tests / build: **pass**. 117 web tests, backend green.
-- CI green before every merge. Both migrations applied to the linked project.
+- CI passed (typecheck, lint, tests, build) on the exact commit of every merge or PR:
+  - 039: run 34938599299
+  - 040: run 34967080223
+  - 041: run 34967802965 (includes 040)
+  - 042: run 34970987146 (includes 041)
+- I checked the migrations for 039 and 040 against the remote database after applying them.
+  pgvector is enabled, `pool_questions.embedding` and `payload jsonb` exist, and
+  `ai_calls.pool_run_id` is there.
 
 ## Merge status
-All merged into `develop`:
-- `c52cb44` five-minute round · `c50c733` workspace composition · `14ec220` both rooms ·
-  `41d175a` + `b9a2133` two build fixes · `4e141a2` closing and fillers.
-
-Two failures worth knowing about, because both passed locally and failed on CI:
-1. **Two copies of React.** Excalidraw depends on `@radix-ui/*` whose peer ranges stop at
-   18, so npm put React 18 at the root beside apps/web's 19. It surfaced as "Objects are
-   not valid as a React child" in seventeen unrelated tests. Fixed by pinning React at the
-   workspace root. `overrides` did not work — the peer was being auto-installed.
-2. **A Windows-only lockfile.** Regenerating `package-lock.json` from scratch on Windows
-   dropped every non-Windows native binary (npm/cli#4828); CI could not start vitest.
-   Fixed by restoring the lockfile and letting `npm install` update it in place.
-   **Do not delete `package-lock.json` on this machine.**
-
-## New dependencies
-`@uiw/react-codemirror`, `@codemirror/lang-python`, `@codemirror/lang-java`,
-`@excalidraw/excalidraw`. All MIT. Excalidraw brings a chain with moderate/high advisories
-(`nanoid`, `lodash-es` via `mermaid-to-excalidraw`) — worth a look, not urgent, and
-separate from the pre-existing `critical` Next.js advisory that was already there.
+- 039: merged into `develop` at `7e4e091`, migration applied.
+- 040: merged at `859d4de`, migration applied.
+- 041: merged at `e3f5715`, no migration.
+- 042: merged at `753eec7` after its sign-in change was reverted, migration applied.
+- The loop-brief fix is merged at `add3447` and the report fix at `4d3f749`. Neither has a
+  migration.
+- **Every task came in over the ~800-line guidance:** 039 about 4,960 lines, 040 about 990,
+  041 about 1,140, 042 about 1,890. 039's admin endpoints and export, and 042's `/questions`
+  flag, should each have been their own task.
 
 ## Suggested next task
-Sit a five-minute DSA round and a five-minute design round. Then item 4, which is the
-largest thing left and the one you care most about.
+- 043 step 1: the Amazon, Google and Flipkart sample, under a tight spend cap, exported for
+  your review. Composing one real report at the same time would check the new
+  better-answer notes.
 
 ## Open questions for you
-1. **Item 4 needs a conversation.** Your actual complaint — "most questions are asked
-   from the project only" — is a prompt problem I can fix without any bank at all. The
-   bank is a separate, larger build. Do you want the cheap fix first?
-2. **Round narrowing, Natasha, and the CLAUDE.md rewrite are still undone.** You decided
-   all three; I ran out of night at the rooms. They are written up in
-   `tasks/task-030-rounds-and-room.md` and are a short session.
-3. `main` is still ~80 commits behind `develop` and only you can advance it.
+- **043:** do you approve the sample run? It makes live Gemini calls and spends real money,
+  though only a small amount under the cap. The full run of about ₹1,000 comes only after
+  you have reviewed the sample.
+- **The admin gate:** is it good enough to start spend through, or does it need a real role
+  first?

@@ -1,5 +1,6 @@
 package com.interviewos.api.ai
 
+import tools.jackson.databind.JsonNode
 import java.time.LocalDate
 
 /*
@@ -139,6 +140,30 @@ data class InterviewBrief(
     val targetLevel: String?,
     /** Archetype-level grounding; carries its own provenance so nothing is invented. */
     val grounding: String,
+    /**
+     * A question from the bank the engine has chosen for this turn, or for the problem or
+     * case a workspace round is set on. Null when there is none, which is the common case.
+     */
+    val plannedQuestion: PlannedQuestion? = null,
+)
+
+/**
+ * A reported question the interviewer is to ask, chosen server-side from the company's own
+ * questions in the bank. The model may lead into it and shape it for speech; the engine
+ * checks what was said against [text] and decides the provenance.
+ */
+data class PlannedQuestion(
+    val text: String,
+    /** The employer it is reported at, as the candidate named it. */
+    val company: String,
+    /** True when it must be asked on this turn; false when it waits for the next new topic. */
+    val askNow: Boolean,
+    /**
+     * True for a question from the sourced bank. False for one from the AI pool (task 042),
+     * which the model is told plainly is general knowledge that no source reports [company]
+     * asking — so it has nothing to pass on to the candidate as a report.
+     */
+    val reported: Boolean = true,
 )
 
 /** 24 kHz PCM as Gemini returns it, plus the mime type to store it under. */
@@ -189,6 +214,34 @@ data class ComposedProblem(
     val starterJava: String,
     val stdinFormat: String,
     val testCases: List<ProblemTestCase>,
+    /**
+     * A correct, efficient solution: [starterPython] with the stub filled in.
+     *
+     * With [bruteForcePython], this is how the expected outputs get checked — see
+     * `ProblemVerifier`. Both are cleared before the problem is stored, because the stored
+     * problem is sent to the candidate's browser and a solution in the page source is a
+     * solution handed over.
+     */
+    val referencePython: String? = null,
+    /** The most obviously correct solution, however slow, written independently of [referencePython]. */
+    val bruteForcePython: String? = null,
+    /**
+     * True when every expected output came from running two independent solutions and
+     * getting the same answer, rather than from the model working it out by hand.
+     * Set by `ProblemVerifier`, never by the model.
+     */
+    val testsVerified: Boolean = false,
+)
+
+/**
+ * What a code sandbox printed, one entry per program the provider actually executed.
+ *
+ * The output is the sandbox's own stdout, not the model's account of it. A model asked to
+ * report what a program prints can get it wrong the same way it gets expected outputs
+ * wrong; a sandbox cannot.
+ */
+data class SandboxRun(
+    val outputs: List<String>,
 )
 
 data class ProblemExample(
@@ -295,6 +348,14 @@ data class TurnTranscript(
     val warmUp: Boolean = false,
     /** How they came across on this turn, from the video when there was one. */
     val deliveryNote: String? = null,
+    /**
+     * What a strong answer to this question would cover, when it was asked from the AI
+     * question pool (task 042) and that pool row carries `strong_answer_covers`. Given to
+     * the report model as reference material for judging the answer and writing a better
+     * one — never shown to the candidate as though it were a sourced fact, because the
+     * pool question itself is not (`PlannedQuestion.reported`).
+     */
+    val referencePoints: List<String> = emptyList(),
 )
 
 /**
@@ -333,6 +394,11 @@ data class AnswerAssessment(
     val questionBasis: String? = null,
     val questionProbes: String? = null,
     val questionAskedBecause: String? = null,
+    /**
+     * The model's word that [nextQuestionText] asks the planned question. Advisory, like
+     * everything else here: the engine checks the text before it believes it.
+     */
+    val askedPlannedQuestion: Boolean? = null,
 )
 
 /**
@@ -388,7 +454,14 @@ data class AnswerAnnotation(
     val worked: String?,
     val vague: String?,
     val wouldProbe: String?,
-    val strongerFraming: String?,
+    /**
+     * How this specific answer could have been stronger — what to lead with, what was
+     * missing, how to structure it, and where useful a short example of the stronger
+     * version. Required: every answered question gets one, engine-side
+     * ([com.interviewos.api.interview.AnswerAnnotations]) fills in an honest placeholder
+     * when the model skipped a turn rather than letting the question go without a note.
+     */
+    val strongerFraming: String,
 )
 
 data class CommunicationAnalysis(
@@ -475,7 +548,12 @@ data class SourceDocument(
  */
 data class ExtractedQuestion(
     val questionText: String,
-    val companyName: String? = null,
+    /**
+     * Every employer the document says asked this, as it names them. Empty when it names
+     * none — never a group like "FAANG". The engine, not the model, falls back to the
+     * source's declared company (see `ReportPlan`).
+     */
+    val companies: List<String> = emptyList(),
     val roundType: String? = null,
     val seniority: String? = null,
     val roleFamily: String? = null,
@@ -483,6 +561,162 @@ data class ExtractedQuestion(
     val notes: String? = null,
 )
 
+/**
+ * One stage of an employer's interview loop, as a document reports it.
+ *
+ * [evidence] is a verbatim quote of at most about 300 characters. The engine — not the
+ * model — checks it actually occurs in the fetched text before this stage is ever
+ * written down; a stage whose evidence does not check out is dropped rather than kept
+ * with a warning, because a process claim nobody can verify is exactly the fabricated
+ * specificity `CLAUDE.md` calls out.
+ */
+data class ExtractedProcessStage(
+    /** Every employer the document says runs this stage. Empty when it names none. */
+    val companies: List<String> = emptyList(),
+    val roleFamily: String? = null,
+    /** Where this stage sits in the loop, if the document makes the order clear. */
+    val order: Int? = null,
+    /** The stage's name as the document gives it: "Online assessment", "Bar raiser". */
+    val stageName: String,
+    val format: String? = null,
+    val durationMinutes: Int? = null,
+    /** What the stage is testing, in the document's own account. */
+    val assesses: String? = null,
+    /** One of `RoundType`'s db values, or null for a stage we do not simulate. */
+    val roundType: String? = null,
+    val evidence: String,
+)
+
 data class ExtractedQuestions(
     val questions: List<ExtractedQuestion> = emptyList(),
+    val processStages: List<ExtractedProcessStage> = emptyList(),
+)
+
+// ---------------------------------------------------------------------------
+// The loop brief's general pattern (PRD 04, 08) — archetype-level, never given the
+// company's name while it is written, so it cannot invent a company-specific detail.
+// ---------------------------------------------------------------------------
+
+data class GeneralLoopStage(
+    val order: Int,
+    val stageName: String,
+    val format: String? = null,
+    val assesses: String? = null,
+    /** One of `RoundType`'s db values, or null for a stage this product does not simulate. */
+    val roundType: String? = null,
+)
+
+data class GeneralLoopPattern(
+    val stages: List<GeneralLoopStage> = emptyList(),
+)
+
+// ---------------------------------------------------------------------------
+// The hidden question pool (PRD 03, 04, 08) — task 039.
+//
+// Two calls, and the order between them is the whole provenance gate. The model is asked
+// first whether it genuinely knows an employer's interview process; only then is it asked
+// to write questions, and only an answer that claimed real knowledge can license a
+// question being labelled as being about that company rather than about its kind.
+// ---------------------------------------------------------------------------
+
+/**
+ * What the model says it knows about one employer's interview process, asked before any
+ * question is written and never in the same call.
+ *
+ * Separate so the claim can be stored, read back and argued with. A model asked "write
+ * Amazon questions and tell me whether they are really Amazon's" will answer the first
+ * part fluently and the second to match; asked only the second, with nothing yet invested
+ * in an answer, it is far likelier to say no.
+ *
+ * [knowsProcess] alone does not earn the stronger label — see `PoolAssociationGate`. The
+ * named specifics are what the gate weighs, because "yes, I know Amazon's process" with
+ * nothing behind it is precisely the failure this exists to catch.
+ */
+data class EmployerKnowledge(
+    val knowsProcess: Boolean = false,
+    /** The model's own account of what it knows, stored verbatim on every row it licenses. */
+    val basis: String? = null,
+    /** Rounds it can name for this employer: "bar raiser", "hiring manager loop". */
+    val namedRounds: List<String> = emptyList(),
+    /** Values or principles it can name: "Customer Obsession", "Googleyness". */
+    val namedValues: List<String> = emptyList(),
+    /** Formats it can name: "45-minute phone screen", "take-home", "onsite panel of four". */
+    val namedFormats: List<String> = emptyList(),
+) {
+    /** Whether the answer names anything at all, as opposed to asserting familiarity. */
+    val namesSomething: Boolean
+        get() = (namedRounds + namedValues + namedFormats).any { it.isNotBlank() }
+}
+
+/** One question the model wrote, before anything has decided what it may be labelled. */
+data class GeneratedQuestion(
+    val text: String = "",
+    /** Where the interviewer goes next. Two or three; the schema says so and the database checks it. */
+    val followUps: List<String> = emptyList(),
+    val strongAnswerCovers: List<String> = emptyList(),
+    /**
+     * The model's own claim that this question reflects the named employer specifically.
+     * A claim, not a decision: `PoolAssociationGate` decides, and the question is *dropped*
+     * — not written under a weaker label — whenever the knowledge check did not earn it,
+     * because [text] itself was written around the claim and relabelling the row would not
+     * remove it.
+     */
+    val companySpecific: Boolean = false,
+    /**
+     * Which of [EmployerKnowledge.namedValues] this question is built around, verbatim, or
+     * null when it is not a values question. Only ever a name the knowledge check licensed
+     * — task 041's behavioural generator checks it against that list and drops the whole
+     * question, rather than letting [companySpecific] stand, when it does not match, because
+     * a plausible-sounding value the check never named is exactly the fabricated
+     * leadership-principle failure CLAUDE.md calls out. Not itself a database column: the
+     * check is what stops the fabrication, and the value that survives it is already in
+     * [text] and cross-checked against the stored `knowledge_basis`.
+     */
+    val valueClaimed: String? = null,
+    /**
+     * Round-type-specific detail a generator wants stored alongside the question — a
+     * verified coding problem's test cases, a system-design case's constraints and deep
+     * dives. Null for round types with nothing beyond the question itself (task 040).
+     * Never set by the model directly: [GeneratedQuestion] is what a provider returns, and
+     * only [com.interviewos.api.pool.QuestionGenerator] implementations that build this
+     * value themselves (rather than deserialising it from the model) populate it.
+     */
+    val payload: JsonNode? = null,
+)
+
+data class GeneratedQuestions(
+    val questions: List<GeneratedQuestion> = emptyList(),
+)
+
+/**
+ * One cell's worth of work, as the provider sees it.
+ *
+ * [companyName] is null for an archetype-level cell, and when it is null the company's
+ * name never reaches the model at all — the same discipline `composeLoopPattern` keeps. A
+ * model that was never told the employer cannot invent a detail about it.
+ */
+data class PoolQuestionRequest(
+    val companyName: String?,
+    val archetype: String,
+    val roundType: String,
+    val roleFamily: String,
+    val level: String,
+    /** What this round is for, supplied by the generator for its own round type. */
+    val roundGuidance: String,
+    val count: Int,
+    /** Questions already held for this cell, so the model is not asked to repeat itself. */
+    val avoid: List<String> = emptyList(),
+    /** The knowledge check's answer, or null when there is no named employer to know about. */
+    val knowledge: EmployerKnowledge? = null,
+)
+
+/**
+ * Vectors for a batch of texts, in the order they were given.
+ *
+ * `FloatArray` rather than `List<Double>`: a 768-dimension vector per question, boxed, is
+ * most of a kilobyte of pointers for arithmetic that never needs double precision.
+ */
+data class TextEmbeddings(
+    val vectors: List<FloatArray>,
+    val model: String,
 )

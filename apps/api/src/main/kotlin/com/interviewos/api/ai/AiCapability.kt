@@ -28,4 +28,24 @@ enum class AiCapability {
 
     /** Speaking a question aloud. */
     SPEECH_SYNTHESIS,
+
+    /**
+     * Turning text into a vector, so two differently worded questions can be compared.
+     *
+     * Its own capability rather than a corner of [STRUCTURED_TEXT], because an embedding
+     * endpoint is a different endpoint with a different model behind it: a provider that
+     * answers chat completions perfectly well may have no embedding model at all, and
+     * routing an embedding call to it would fail every time. Only the question pool's
+     * deduplicator asks for this.
+     */
+    TEXT_EMBEDDING,
+
+    /**
+     * Running a Python program in the provider's own sandbox and reporting what it printed.
+     *
+     * Used to check a coding problem's expected outputs by executing solutions rather than
+     * trusting the model's arithmetic. The output is the sandbox's, not the model's
+     * account of it — which is the entire point.
+     */
+    CODE_EXECUTION,
 }

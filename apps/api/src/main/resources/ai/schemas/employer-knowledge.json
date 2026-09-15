@@ -1,0 +1,33 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "knowsProcess": {
+      "type": "BOOLEAN"
+    },
+    "basis": {
+      "type": "STRING",
+      "nullable": true
+    },
+    "namedRounds": {
+      "type": "ARRAY",
+      "items": {
+        "type": "STRING"
+      }
+    },
+    "namedValues": {
+      "type": "ARRAY",
+      "items": {
+        "type": "STRING"
+      }
+    },
+    "namedFormats": {
+      "type": "ARRAY",
+      "items": {
+        "type": "STRING"
+      }
+    }
+  },
+  "required": [
+    "knowsProcess"
+  ]
+}

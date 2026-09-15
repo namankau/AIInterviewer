@@ -54,12 +54,17 @@ function SiteHeader() {
             beta
           </span>
         </span>
-        <Link
-          href="/login"
-          className="rounded-md border border-line-strong px-4 py-2 text-caption font-medium text-ink transition-colors hover:bg-surface-sunken"
-        >
-          Sign in
-        </Link>
+        <nav className="flex items-center gap-5">
+          <Link href="/courses" className="text-caption text-ink-muted transition-colors hover:text-ink">
+            Courses
+          </Link>
+          <Link
+            href="/login"
+            className="rounded-md border border-line-strong px-4 py-2 text-caption font-medium text-ink transition-colors hover:bg-surface-sunken"
+          >
+            Sign in
+          </Link>
+        </nav>
       </div>
     </header>
   );

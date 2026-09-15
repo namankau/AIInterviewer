@@ -91,6 +91,15 @@ class OpenAiCompatibleInterviewAi(
         transcript: List<TurnTranscript>,
     ): AiResult<ReportContent> = complete(prompts.report(brief, transcript), "report", ReportContent::class.java)
 
+    override fun assessEmployerKnowledge(
+        companyName: String,
+        archetype: String,
+    ): AiResult<EmployerKnowledge> =
+        complete(prompts.employerKnowledge(companyName, archetype), "employer-knowledge", EmployerKnowledge::class.java)
+
+    override fun generatePoolQuestions(request: PoolQuestionRequest): AiResult<GeneratedQuestions> =
+        complete(prompts.poolQuestions(request), "pool-questions", GeneratedQuestions::class.java)
+
     private fun <T> complete(
         prompt: String,
         schemaName: String,

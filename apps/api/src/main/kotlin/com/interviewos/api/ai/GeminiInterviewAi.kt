@@ -54,6 +54,7 @@ class GeminiInterviewAi(
             AiCapability.DOCUMENT_UNDERSTANDING,
             AiCapability.SPEECH_SYNTHESIS,
             AiCapability.CODE_EXECUTION,
+            AiCapability.TEXT_EMBEDDING,
         )
 
     override fun parseResume(file: ResumeFile): AiResult<ParsedResume> {
@@ -262,6 +263,80 @@ class GeminiInterviewAi(
         return AiResult(objectMapper.treeToValue(node, ReportContent::class.java), usage)
     }
 
+    override fun assessEmployerKnowledge(
+        companyName: String,
+        archetype: String,
+    ): AiResult<EmployerKnowledge> {
+        val prompt = prompts.employerKnowledge(companyName, archetype)
+        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("employer-knowledge"))
+        return AiResult(objectMapper.treeToValue(node, EmployerKnowledge::class.java), usage)
+    }
+
+    override fun generatePoolQuestions(request: PoolQuestionRequest): AiResult<GeneratedQuestions> {
+        val prompt = prompts.poolQuestions(request)
+        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("pool-questions"))
+        return AiResult(objectMapper.treeToValue(node, GeneratedQuestions::class.java), usage)
+    }
+
+    /**
+     * Embeds a batch in one request.
+     *
+     * `SEMANTIC_SIMILARITY` rather than the retrieval task types, because the question
+     * being asked of these vectors is symmetric — is this question the same question as
+     * that one — rather than "does this document answer this query".
+     *
+     * **Token usage is best effort here, and that is a real gap.** The embed endpoints do
+     * not consistently report `usageMetadata`, so an embedding call can land in the ledger
+     * costing zero. It is the cheapest call the product makes by a wide margin, so a run's
+     * spend cap is still governed almost entirely by generation — but a pool run's
+     * recorded cost is a floor rather than an exact figure, and the ledger should be read
+     * that way.
+     */
+    override fun embed(
+        texts: List<String>,
+        model: String,
+        dimensions: Int,
+    ): AiResult<TextEmbeddings> {
+        requireConfigured()
+        if (texts.isEmpty()) return AiResult(TextEmbeddings(emptyList(), model), AiUsage.none(model))
+
+        val body =
+            mapOf(
+                "requests" to
+                    texts.map { text ->
+                        mapOf(
+                            "model" to "models/$model",
+                            "content" to mapOf("parts" to listOf(mapOf("text" to text))),
+                            "taskType" to "SEMANTIC_SIMILARITY",
+                            "outputDimensionality" to dimensions,
+                        )
+                    },
+            )
+        val response = call(model, body, method = "batchEmbedContents")
+        val vectors =
+            response.path("embeddings").map { embedding ->
+                val values = embedding.path("values")
+                if (!values.isArray || values.isEmpty) {
+                    throw AiUnavailableException("Gemini returned an empty embedding from $model.")
+                }
+                FloatArray(values.size()) { i -> values.path(i).asDouble(0.0).toFloat() }
+            }
+        if (vectors.size != texts.size) {
+            // Silently short would mis-pair every vector after the gap with the wrong
+            // question, and a deduplicator comparing the wrong things drops real questions
+            // and keeps duplicates — so this fails rather than guesses.
+            throw AiUnavailableException("Gemini embedded ${vectors.size} of ${texts.size} texts on $model.")
+        }
+        vectors.firstOrNull()?.let {
+            if (it.size != dimensions) {
+                throw AiUnavailableException(
+                    "Gemini returned ${it.size}-dimension embeddings from $model; the pool column holds $dimensions.",
+                )
+            }
+        }
+        return AiResult(TextEmbeddings(vectors, model), usageOf(response, model))
+    }
+
     // ---------------------------------------------------------------------------
     // HTTP + parsing
     // ---------------------------------------------------------------------------
@@ -305,14 +380,20 @@ class GeminiInterviewAi(
         return parsed to usageOf(response, model)
     }
 
+    /**
+     * @param method the model method to call. Everything in the interview loop is
+     *   `generateContent`; the pool's deduplicator is the one caller that needs another
+     *   endpoint on the same host, with the same key and the same error handling.
+     */
     private fun call(
         model: String,
         body: Map<String, Any>,
+        method: String = "generateContent",
     ): JsonNode =
         try {
             restClient
                 .post()
-                .uri("${properties.baseUrl}/models/$model:generateContent")
+                .uri("${properties.baseUrl}/models/$model:$method")
                 .header("x-goog-api-key", properties.apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)

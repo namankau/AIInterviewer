@@ -22,6 +22,14 @@ data class AiCallRecord(
     val microUsd: Long,
     val userId: UUID?,
     val sessionId: UUID?,
+    /**
+     * The question-pool generation run this call belongs to, or null for everything else.
+     *
+     * The run's spend cap is `sum(micro_usd)` over this field, checked before the next
+     * call rather than after it — which is why it is recorded in the existing ledger
+     * instead of in a second table the job keeps for itself.
+     */
+    val poolRunId: UUID? = null,
 )
 
 /**
@@ -45,6 +53,8 @@ object AiSpendContext {
     data class Attribution(
         val userId: UUID?,
         val sessionId: UUID?,
+        /** Set by [ofPoolRun]; null for everything a candidate is actually sitting in. */
+        val poolRunId: UUID? = null,
     )
 
     /**
@@ -60,6 +70,29 @@ object AiSpendContext {
     ): T {
         val previous = current.get()
         current.set(Attribution(userId, sessionId))
+        return try {
+            block()
+        } finally {
+            if (previous == null) current.remove() else current.set(previous)
+        }
+    }
+
+    /**
+     * Runs [block] with its model calls attributed to a question-pool generation run.
+     *
+     * Nothing in a generation run belongs to a user or a session — there is no candidate
+     * and no interview — so this deliberately clears both rather than nesting under
+     * whatever attribution the triggering request happened to carry. An admin starting a
+     * run must not have their own user id written against eight hundred generation calls;
+     * that would make one person's row in the ledger look like the most expensive
+     * candidate the product has ever had.
+     */
+    fun <T> ofPoolRun(
+        poolRunId: UUID,
+        block: () -> T,
+    ): T {
+        val previous = current.get()
+        current.set(Attribution(userId = null, sessionId = null, poolRunId = poolRunId))
         return try {
             block()
         } finally {

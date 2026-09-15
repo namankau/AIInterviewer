@@ -62,6 +62,11 @@ object AiPrices {
             // scales with how long the interviewer talks, not with how hard the question was.
             "gemini-2.5-flash-preview-tts" to Price(text = 0.50, audio = 10.00, output = 10.00, cached = 0.50),
             "gemini-3.1-flash-tts-preview" to Price(text = 1.00, audio = 20.00, output = 20.00, cached = 1.00),
+            // Embeddings, used only by the question pool's deduplicator. Input-priced;
+            // there is no output to bill, and the output rate is set to the input rate
+            // rather than to zero so that a provider that unexpectedly reports output
+            // tokens here is costed rather than treated as free.
+            "gemini-embedding-001" to Price(text = 0.15, audio = 0.15, output = 0.15, cached = 0.015),
         )
 
     fun of(model: String): Price = PRICES[model] ?: UNKNOWN

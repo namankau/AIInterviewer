@@ -587,3 +587,92 @@ data class GeneralLoopStage(
 data class GeneralLoopPattern(
     val stages: List<GeneralLoopStage> = emptyList(),
 )
+
+// ---------------------------------------------------------------------------
+// The hidden question pool (PRD 03, 04, 08) — task 039.
+//
+// Two calls, and the order between them is the whole provenance gate. The model is asked
+// first whether it genuinely knows an employer's interview process; only then is it asked
+// to write questions, and only an answer that claimed real knowledge can license a
+// question being labelled as being about that company rather than about its kind.
+// ---------------------------------------------------------------------------
+
+/**
+ * What the model says it knows about one employer's interview process, asked before any
+ * question is written and never in the same call.
+ *
+ * Separate so the claim can be stored, read back and argued with. A model asked "write
+ * Amazon questions and tell me whether they are really Amazon's" will answer the first
+ * part fluently and the second to match; asked only the second, with nothing yet invested
+ * in an answer, it is far likelier to say no.
+ *
+ * [knowsProcess] alone does not earn the stronger label — see `PoolAssociationGate`. The
+ * named specifics are what the gate weighs, because "yes, I know Amazon's process" with
+ * nothing behind it is precisely the failure this exists to catch.
+ */
+data class EmployerKnowledge(
+    val knowsProcess: Boolean = false,
+    /** The model's own account of what it knows, stored verbatim on every row it licenses. */
+    val basis: String? = null,
+    /** Rounds it can name for this employer: "bar raiser", "hiring manager loop". */
+    val namedRounds: List<String> = emptyList(),
+    /** Values or principles it can name: "Customer Obsession", "Googleyness". */
+    val namedValues: List<String> = emptyList(),
+    /** Formats it can name: "45-minute phone screen", "take-home", "onsite panel of four". */
+    val namedFormats: List<String> = emptyList(),
+) {
+    /** Whether the answer names anything at all, as opposed to asserting familiarity. */
+    val namesSomething: Boolean
+        get() = (namedRounds + namedValues + namedFormats).any { it.isNotBlank() }
+}
+
+/** One question the model wrote, before anything has decided what it may be labelled. */
+data class GeneratedQuestion(
+    val text: String = "",
+    /** Where the interviewer goes next. Two or three; the schema says so and the database checks it. */
+    val followUps: List<String> = emptyList(),
+    val strongAnswerCovers: List<String> = emptyList(),
+    /**
+     * The model's own claim that this question reflects the named employer specifically.
+     * A claim, not a decision: `PoolAssociationGate` decides, and downgrades it to
+     * archetype level whenever the knowledge check did not earn it.
+     */
+    val companySpecific: Boolean = false,
+)
+
+data class GeneratedQuestions(
+    val questions: List<GeneratedQuestion> = emptyList(),
+)
+
+/**
+ * One cell's worth of work, as the provider sees it.
+ *
+ * [companyName] is null for an archetype-level cell, and when it is null the company's
+ * name never reaches the model at all — the same discipline `composeLoopPattern` keeps. A
+ * model that was never told the employer cannot invent a detail about it.
+ */
+data class PoolQuestionRequest(
+    val companyName: String?,
+    val archetype: String,
+    val roundType: String,
+    val roleFamily: String,
+    val level: String,
+    /** What this round is for, supplied by the generator for its own round type. */
+    val roundGuidance: String,
+    val count: Int,
+    /** Questions already held for this cell, so the model is not asked to repeat itself. */
+    val avoid: List<String> = emptyList(),
+    /** The knowledge check's answer, or null when there is no named employer to know about. */
+    val knowledge: EmployerKnowledge? = null,
+)
+
+/**
+ * Vectors for a batch of texts, in the order they were given.
+ *
+ * `FloatArray` rather than `List<Double>`: a 768-dimension vector per question, boxed, is
+ * most of a kilobyte of pointers for arithmetic that never needs double precision.
+ */
+data class TextEmbeddings(
+    val vectors: List<FloatArray>,
+    val model: String,
+)

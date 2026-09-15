@@ -20,6 +20,13 @@ import { chapterInheritance } from "@/content/courses/java/19-inheritance-and-su
 import { chapterPolymorphism } from "@/content/courses/java/20-polymorphism";
 import { chapterAbstractInterfaces } from "@/content/courses/java/21-abstract-classes-and-interfaces";
 import { chapterPackages } from "@/content/courses/java/22-packages";
+import { chapterExceptions } from "@/content/courses/java/23-exceptions";
+import { chapterWrapperClasses } from "@/content/courses/java/24-wrapper-classes-autoboxing";
+import { chapterCollectionsOverview } from "@/content/courses/java/25-collections-overview";
+import { chapterArrayListVsLinkedList } from "@/content/courses/java/26-arraylist-vs-linkedlist";
+import { chapterHashMapHashSet } from "@/content/courses/java/27-hashmap-and-hashset";
+import { chapterGenerics } from "@/content/courses/java/28-generics";
+import { chapterComparableComparator } from "@/content/courses/java/29-comparable-and-comparator";
 import type { Course } from "@/content/courses/types";
 
 /**
@@ -62,6 +69,18 @@ export const javaCourse: Course = {
         chapterPolymorphism,
         chapterAbstractInterfaces,
         chapterPackages,
+      ],
+    },
+    {
+      title: "Core APIs",
+      chapters: [
+        chapterExceptions,
+        chapterWrapperClasses,
+        chapterCollectionsOverview,
+        chapterArrayListVsLinkedList,
+        chapterHashMapHashSet,
+        chapterGenerics,
+        chapterComparableComparator,
       ],
     },
   ],

@@ -4,6 +4,7 @@ import com.interviewos.api.ai.GeneralLoopStage
 import com.interviewos.api.bank.Company
 import com.interviewos.api.bank.CompanyCoverage
 import com.interviewos.api.bank.CompanyDirectory
+import com.interviewos.api.bank.QuestionBankProperties
 import com.interviewos.api.bank.QuestionBankRepository
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.interview.Archetype
@@ -28,6 +29,7 @@ class LoopBriefService(
     private val stages: SourceProcessStageRepository,
     private val patterns: GeneralLoopPatternCache,
     private val bank: QuestionBankRepository,
+    private val bankBrowsing: QuestionBankProperties,
 ) {
     fun brief(
         companyName: String,
@@ -102,7 +104,8 @@ class LoopBriefService(
                 ?.sortedBy { it.key?.ordinal ?: Int.MAX_VALUE }
                 ?.map { LoopBriefRoundCountView(it.key?.dbValue, it.value) }
                 .orEmpty(),
-        bankUrl = company?.let { "/questions/${it.slug}" },
+        // No link to a page that answers 404: null while the bank is not browsable (task 042).
+        bankUrl = company?.takeIf { bankBrowsing.browsable }?.let { "/questions/${it.slug}" },
     )
 
     private fun SourcedStage.toView() =

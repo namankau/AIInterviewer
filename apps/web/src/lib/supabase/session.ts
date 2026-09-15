@@ -2,9 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { env } from "@/lib/env";
+import { questionBankBrowsable } from "@/lib/flags";
 
-/** Routes that require a signed-in candidate. */
-const PROTECTED_PREFIXES = ["/dashboard", "/questions"];
+/**
+ * Routes that require a signed-in candidate. `/questions` only while the bank is browsable:
+ * hidden, it answers 404 to everyone, and a sign-in redirect would say the page exists.
+ */
+function protectedPrefixes(): string[] {
+  return questionBankBrowsable() ? ["/dashboard", "/questions"] : ["/dashboard"];
+}
 
 /** Routes a signed-in candidate has no reason to see. */
 const SIGNED_OUT_ONLY = ["/login"];
@@ -43,7 +49,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   const { pathname } = request.nextUrl;
 
-  if (!user && PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+  if (!user && protectedPrefixes().some((prefix) => pathname.startsWith(prefix))) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     redirectUrl.search = `?next=${encodeURIComponent(pathname)}`;

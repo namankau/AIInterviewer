@@ -35,17 +35,37 @@ object BankQuestionSelection {
         lastAsked: Map<UUID, Instant>,
         askedThisRound: Set<UUID>,
         random: Random,
-    ): BankQuestion? {
-        val available = rank(companyId, candidates).filter { it.id !in askedThisRound }
+    ): BankQuestion? = pick(rank(companyId, candidates), BankQuestion::id, lastAsked, askedThisRound, random, recycle = true)
+
+    /**
+     * The rule both stores choose by, over candidates already in rank order: never one asked
+     * in this round; a fresh one, drawn among the top few, while any is left.
+     *
+     * @param recycle what happens once every candidate has been asked before. The bank
+     *   brings back the one asked longest ago (task 038). The pool does not — it returns null
+     *   and the round falls through to live questions — because a pool question is general
+     *   knowledge a live question can equal, and a repeat is the one thing a candidate
+     *   notices (task 042).
+     */
+    fun <T> pick(
+        ranked: List<T>,
+        idOf: (T) -> UUID,
+        lastAsked: Map<UUID, Instant>,
+        askedThisRound: Set<UUID>,
+        random: Random,
+        recycle: Boolean,
+    ): T? {
+        val available = ranked.filter { idOf(it) !in askedThisRound }
         if (available.isEmpty()) return null
 
-        val fresh = available.filter { it.id !in lastAsked }
+        val fresh = available.filter { idOf(it) !in lastAsked }
         if (fresh.isNotEmpty()) return fresh.take(TOP_FEW).let { it[random.nextInt(it.size)] }
+        if (!recycle) return null
 
         // Every one has been asked before. The one asked longest ago comes back first, with
         // rank breaking ties, so a candidate going round again meets them in the order they
         // have had longest to forget.
-        return available.minWith(compareBy<BankQuestion> { lastAsked.getValue(it.id) })
+        return available.minWith(compareBy { lastAsked.getValue(idOf(it)) })
     }
 
     /** Most corroborated at this company first, then most recently reported. Stable otherwise. */
@@ -145,13 +165,30 @@ object PlannedQuestionCheck {
         modelSaysAsked: Boolean?,
         said: String,
     ): AskedTurn {
-        if (planned == null) return AskedTurn(said, null)
+        val resolved = resolveText(planned?.text, askNow, modelSaysAsked, said)
+        return AskedTurn(resolved.text, planned.takeIf { resolved.askedPlanned }, resolved.faithful)
+    }
+
+    /** What a turn asks, and whether that is the planned question — whichever store it came from. */
+    data class ResolvedTurn(
+        val text: String,
+        val askedPlanned: Boolean,
+        val faithful: Boolean = true,
+    )
+
+    /** [resolveTurn] over the planned question's text alone, so a pool question is held to the same rule. */
+    fun resolveText(
+        plannedText: String?,
+        askNow: Boolean,
+        modelSaysAsked: Boolean?,
+        said: String,
+    ): ResolvedTurn {
+        if (plannedText == null) return ResolvedTurn(said, askedPlanned = false)
         if (askNow || modelSaysAsked == true) {
-            val delivery = deliver(said, planned.text)
-            return AskedTurn(delivery.text, planned, delivery.faithful)
+            val delivery = deliver(said, plannedText)
+            return ResolvedTurn(delivery.text, askedPlanned = true, faithful = delivery.faithful)
         }
-        if (asks(said, planned.text)) return AskedTurn(said, planned)
-        return AskedTurn(said, null)
+        return ResolvedTurn(said, askedPlanned = asks(said, plannedText))
     }
 
     /**

@@ -232,10 +232,7 @@ class QuestionPoolRepository(
                    and role_family = cast(:role as public.role_family)
                    and level = cast(:level as public.experience_level)
                    and retired_at is null
-                   and (
-                         (cast(:company as uuid) is not null and company_id = cast(:company as uuid))
-                      or archetype = cast(:archetype as public.employer_archetype)
-                       )
+                   and $THIS_COMPANY_OR_ARCHETYPE_ROWS
                  order by (company_id is not null and company_id = cast(:company as uuid)) desc,
                           association,
                           reviewed_at desc nulls last,
@@ -248,6 +245,39 @@ class QuestionPoolRepository(
             .param("level", coordinate.level.dbValue)
             .param("company", coordinate.companyId)
             .param("archetype", coordinate.archetype.dbValue)
+            .param("limit", limit)
+            .query { rs, _ -> mapRow(rs) }
+            .list()
+
+    /**
+     * [find] at every level at once: what a round ranks when it falls back from the
+     * candidate's level to the nearest one (task 042, `PoolQuestionSelection`). One query
+     * rather than one per level, because a spoken round asks this on the turn the candidate
+     * is waiting for.
+     */
+    fun candidatesFor(
+        companyId: UUID?,
+        archetype: Archetype,
+        roundType: RoundType,
+        roleFamily: RoleFamily,
+        limit: Int,
+    ): List<PoolQuestion> =
+        jdbcClient
+            .sql(
+                """
+                select $COLUMNS
+                  from public.pool_questions
+                 where round_type = cast(:round as public.round_type)
+                   and role_family = cast(:role as public.role_family)
+                   and retired_at is null
+                   and $THIS_COMPANY_OR_ARCHETYPE_ROWS
+                 order by (company_id is not null) desc, created_at, id
+                 limit :limit
+                """.trimIndent(),
+            ).param("round", roundType.dbValue)
+            .param("role", roleFamily.dbValue)
+            .param("company", companyId)
+            .param("archetype", archetype.dbValue)
             .param("limit", limit)
             .query { rs, _ -> mapRow(rs) }
             .list()
@@ -383,6 +413,16 @@ class QuestionPoolRepository(
 
     private companion object {
         const val BANK_COMPARISON_LIMIT = 50
+
+        /**
+         * The rows a round for `:company` may be offered: that company's own, and the
+         * archetype-level rows written for no company at all. **Never another company's
+         * rows**, even one of the same archetype — a question written for Google is not
+         * offered for Microsoft, the rule `BankRoundPlanner` keeps for the bank.
+         */
+        const val THIS_COMPANY_OR_ARCHETYPE_ROWS =
+            "((cast(:company as uuid) is not null and company_id = cast(:company as uuid)) " +
+                "or (company_id is null and archetype = cast(:archetype as public.employer_archetype)))"
 
         /**
          * A `text[]` built from a JSON array parameter, in order.

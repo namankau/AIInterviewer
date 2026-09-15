@@ -58,6 +58,12 @@ data class QuestionProvenance(
     /** Why this candidate was asked it, referring to what they had already said. */
     val askedBecause: String,
     val sources: List<ProvenanceSource> = emptyList(),
+    /**
+     * What the report says about where this one question came from, in place of the tier's
+     * general [ProvenanceTier.disclosure]. Set only on a question drawn from the AI pool —
+     * see [PoolQuestionLabel] — and written by the engine, never the model.
+     */
+    val label: String? = null,
 ) {
     companion object {
         /**
@@ -140,6 +146,31 @@ data class QuestionProvenance(
                 sources = sources,
             )
         }
+
+        /**
+         * Provenance for a turn that asked a question from the AI pool (task 042).
+         *
+         * [ProvenanceTier.MODEL_KNOWLEDGE], always: a pool question is a model's writing, and
+         * no field on the pool row can raise it. The [label] is the whole of what the report
+         * says about its source, so there is no model-written basis beside it. [probes] and
+         * [askedBecause] are the model's, as for a bank question, and null when its wording
+         * was replaced.
+         */
+        fun fromPool(
+            label: String,
+            probes: String?,
+            askedBecause: String?,
+        ): QuestionProvenance =
+            QuestionProvenance(
+                tier = ProvenanceTier.MODEL_KNOWLEDGE,
+                basis = "",
+                probes = probes?.trim().orEmpty(),
+                askedBecause =
+                    askedBecause?.trim()?.takeIf { it.isNotEmpty() }
+                        ?: "It was the next question planned for this round.",
+                sources = emptyList(),
+                label = label,
+            )
     }
 }
 

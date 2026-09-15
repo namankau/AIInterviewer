@@ -255,6 +255,7 @@ class PoolGenerationJob(
                             generatorVersion = generator.version,
                             model = writingModel,
                             embedding = kept.embedding,
+                            payload = kept.question.payload,
                         )
                     }
                 }

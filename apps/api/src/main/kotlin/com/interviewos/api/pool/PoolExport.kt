@@ -56,6 +56,10 @@ class PoolExport(
             "strongAnswerCovers" to row.strongAnswerCovers,
             "model" to row.model,
             "generatorVersion" to row.generatorVersion,
+            // Round-type-specific detail — a coding problem's starters and tests, a design
+            // case's constraints and its LLD/distributed tag (task 040). Null for round
+            // types with nothing beyond the shared columns above.
+            "payload" to row.payload,
             "generatedAt" to row.createdAt.toString(),
             // Stated on every line rather than in a header the file format does not have.
             // Somebody will read one of these lines out of context, and when they do it has

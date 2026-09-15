@@ -211,6 +211,12 @@ create table public.pool_questions (
       or (company_id is not null and knowledge_basis is not null and length(btrim(knowledge_basis)) > 0)
     ),
 
+  -- Which unit of work produced this row. Nulls out rather than cascading: a run's
+  -- bookkeeping can be cleaned up without deleting the questions it wrote, which are the
+  -- valuable half. This is also what `GET /runs/{id}/export` reads -- the owner reviews a
+  -- run's output before the full pass, and "everything this run wrote" has to be a query.
+  cell_id uuid references public.pool_generation_cells (id) on delete set null,
+
   generator_version integer not null,
   -- Which model wrote it. `ai_calls` says what the generation cost; this says what produced
   -- the row, and the two are different questions -- a cell regenerated after a fall-through
@@ -255,6 +261,9 @@ create index pool_questions_archetype_lookup_idx
 -- those would leave a cell short. The deduplicator scopes its own check.
 create index pool_questions_fingerprint_idx
   on public.pool_questions (fingerprint);
+
+-- The export: everything one run wrote, in one read.
+create index pool_questions_cell_idx on public.pool_questions (cell_id);
 
 -- ---------------------------------------------------------------------------
 -- Embeddings -- best effort, because the extension may not be ours to create

@@ -126,18 +126,17 @@ class PromptLibrary(
                 "or any of its products, teams or values in a question."
         }
         val named =
-            buildList {
-                knowledge.namedRounds.filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }
-                    ?.let { add("Rounds you named: ${it.joinToString("; ")}") }
-                knowledge.namedValues.filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }
-                    ?.let { add("Values or principles you named: ${it.joinToString("; ")}") }
-                knowledge.namedFormats.filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }
-                    ?.let { add("Formats you named: ${it.joinToString("; ")}") }
-            }
+            listOfNotNull(
+                namedLine("Rounds you named", knowledge.namedRounds),
+                namedLine("Values or principles you named", knowledge.namedValues),
+                namedLine("Formats you named", knowledge.namedFormats),
+            )
+        val stated = knowledge.basis.orEmpty().trim()
+        val basis = stated.ifBlank { "(no detail given)" }
         return buildString {
             append("You were asked separately whether you know this employer's interview process, and you said ")
             append("you do. This is what you said:\n\n")
-            append(knowledge.basis?.trim().orEmpty().ifBlank { "(no detail given)" })
+            append(basis)
             if (named.isNotEmpty()) {
                 append("\n\n")
                 append(named.joinToString("\n") { "- $it" })
@@ -145,6 +144,15 @@ class PromptLibrary(
             append("\n\nThat list is the whole of what you may treat as known about this employer. Anything not ")
             append("on it is a general pattern, not a fact about them.")
         }
+    }
+
+    /** One line of what the model said it could name, or null when it named nothing. */
+    private fun namedLine(
+        label: String,
+        values: List<String>,
+    ): String? {
+        val kept = values.filter { it.isNotBlank() }
+        return if (kept.isEmpty()) null else "$label: ${kept.joinToString("; ")}"
     }
 
     fun loopPattern(

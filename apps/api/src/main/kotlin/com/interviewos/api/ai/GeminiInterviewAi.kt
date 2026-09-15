@@ -313,14 +313,15 @@ class GeminiInterviewAi(
                     },
             )
         val response = call(model, body, method = "batchEmbedContents")
-        val vectors =
-            response.path("embeddings").map { embedding ->
-                val values = embedding.path("values")
-                if (!values.isArray || values.isEmpty) {
-                    throw AiUnavailableException("Gemini returned an empty embedding from $model.")
-                }
-                FloatArray(values.size()) { i -> values.path(i).asDouble(0.0).toFloat() }
+        val embeddings = response.path("embeddings")
+        val vectors = ArrayList<FloatArray>(embeddings.size())
+        for (index in 0 until embeddings.size()) {
+            val values = embeddings.path(index).path("values")
+            if (!values.isArray || values.isEmpty) {
+                throw AiUnavailableException("Gemini returned an empty embedding from $model.")
             }
+            vectors += FloatArray(values.size()) { i -> values.path(i).asDouble(0.0).toFloat() }
+        }
         if (vectors.size != texts.size) {
             // Silently short would mis-pair every vector after the gap with the wrong
             // question, and a deduplicator comparing the wrong things drops real questions

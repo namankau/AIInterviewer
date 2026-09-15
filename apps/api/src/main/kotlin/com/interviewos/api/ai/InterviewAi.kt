@@ -171,8 +171,7 @@ interface InterviewAi {
         texts: List<String>,
         model: String,
         dimensions: Int,
-    ): AiResult<TextEmbeddings> =
-        throw AiUnavailableException("$providerName cannot embed text.", worthRetryingElsewhere = true)
+    ): AiResult<TextEmbeddings> = throw AiUnavailableException("$providerName cannot embed text.", worthRetryingElsewhere = true)
 }
 
 /**

@@ -135,6 +135,40 @@ interviewos:
     # INTERVIEWOS_RETENTION_REPORTSKEPTFOR, which outranks this file.
     reports-kept-for: 28d
 
+  pool:
+    # The hidden question pool: questions a model writes from its own knowledge, held
+    # apart from the sourced bank and read by a round when the bank has nothing for that
+    # company and round (PRD 03, 04, 08).
+    #
+    # `enabled: false` means a run can be planned and read but will not call a model. That
+    # is the default and it is deliberate: this is the only thing in the product that
+    # spends money with nobody waiting on the other end, so it starts when the owner says
+    # so, in a session, and not before (CLAUDE.md rule 7). Task 043 is the run itself.
+    enabled: ${POOL_GENERATION_ENABLED:false}
+    # Conservative on purpose. Being rate-limited by Gemini is not a delay, it is a price
+    # rise: a 429 on the lead model falls through to the model behind it at five to fifteen
+    # times the cost, and a job nobody is watching would do its whole run that way.
+    requests-per-minute: 20
+    concurrency: 2
+    questions-per-cell: 6
+    # Cosine similarity at or above which two questions are the same question. These are
+    # short texts in a narrow domain, where rephrasings sit high, so this is lower than a
+    # general-purpose threshold would be. Needs a live embedding run to tune (task 043).
+    duplicate-similarity: 0.90
+    # $2.00, in millionths of a dollar, when a request does not name its own cap. A run
+    # stops here and asks to be resumed rather than finishing whatever it was given.
+    default-spend-cap-micro-usd: 2000000
+    # What the cap check assumes the next call might cost, since its real cost is only
+    # knowable afterwards. Generous on purpose: a cap that stops slightly early is a cap,
+    # and one that stops slightly late is a report.
+    call-headroom-micro-usd: 20000
+    # 768 is a published Matryoshka truncation of gemini-embedding-001's native 3072. It
+    # MUST equal the width of pool_questions.embedding, and it sits under pgvector's
+    # 2000-dimension index ceiling, which 3072 does not.
+    embedding-model: gemini-embedding-001
+    embedding-dimensions: 768
+    max-attempts-per-cell: 2
+
   admin:
     # Who may curate the source library. The library decides what the interviewer treats
     # as fact about a named employer, so this is closer to write access to the product

@@ -1,7 +1,7 @@
 import type { LoopBrief, PrepPlan } from "@acemyinterview/shared";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoopBriefStep } from "./loop-brief-step";
 
@@ -82,6 +82,7 @@ describe("LoopBriefStep", () => {
         accessToken="token"
         onChooseRound={vi.fn()}
         onSkip={vi.fn()}
+        onEdit={vi.fn()}
       />,
     );
 
@@ -90,8 +91,126 @@ describe("LoopBriefStep", () => {
       "href",
       "https://amazon.jobs/content/en/how-we-hire/sde-ii-interview-prep",
     );
-    expect(screen.getByText(/usual for a global product company loop/i)).toBeInTheDocument();
+    expect(screen.getByText(/general pattern for a global product company loop/i)).toBeInTheDocument();
     expect(screen.getByText("Recruiter screen.")).toBeInTheDocument();
+  });
+
+  it("says the honesty caveat once for a company we only infer the archetype for", async () => {
+    fetchLoopBrief.mockResolvedValue({
+      ...sourcedBrief,
+      company: { ...sourcedBrief.company, slug: null, name: "Salesforce", archetypeConfidence: "inferred" },
+      hasSources: false,
+      sourcedStages: [],
+    });
+    fetchPrepPlan.mockResolvedValue(plan);
+
+    render(
+      <LoopBriefStep
+        companyName="Salesforce"
+        roleTitle="Staff Software Engineer"
+        accessToken="token"
+        onChooseRound={vi.fn()}
+        onSkip={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/we don't know salesforce specifically/i)).toBeInTheDocument(),
+    );
+    // Said exactly once — not again as a "no sourced account" paragraph, and the
+    // general-pattern label stays a short section header, not a repeat of the sentence.
+    expect(screen.getAllByText(/not a claim about this employer/i)).toHaveLength(1);
+    expect(screen.queryByText(/we don't hold a sourced account/i)).not.toBeInTheDocument();
+  });
+
+  it("has no Question bank section", async () => {
+    fetchLoopBrief.mockResolvedValue(sourcedBrief);
+    fetchPrepPlan.mockResolvedValue(plan);
+
+    render(
+      <LoopBriefStep
+        companyName="Amazon"
+        roleTitle="Backend Engineer"
+        accessToken="token"
+        onChooseRound={vi.fn()}
+        onSkip={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Online assessment")).toBeInTheDocument());
+    expect(screen.queryByText(/question bank/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /see them/i })).not.toBeInTheDocument();
+  });
+
+  it("folds a sourced stage with nothing to say into a quiet citation line, not its own block", async () => {
+    fetchLoopBrief.mockResolvedValue({
+      ...sourcedBrief,
+      sourcedStages: [
+        ...sourcedBrief.sourcedStages,
+        {
+          stageName: "First round interview",
+          roleFamily: null,
+          order: 2,
+          format: null,
+          durationMinutes: null,
+          assesses: null,
+          roundType: null,
+          citations: [
+            {
+              title: "Interview Experience with Salesforce, 2025",
+              publisher: "Prakash K (dev.to)",
+              url: "https://dev.to/prakash/salesforce-interview",
+              year: 2025,
+              origin: "author",
+            },
+          ],
+        },
+      ],
+    });
+    fetchPrepPlan.mockResolvedValue(plan);
+
+    render(
+      <LoopBriefStep
+        companyName="Amazon"
+        roleTitle="Backend Engineer"
+        accessToken="token"
+        onChooseRound={vi.fn()}
+        onSkip={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Online assessment")).toBeInTheDocument());
+    // Not its own labelled stage block...
+    expect(screen.queryByText("First round interview")).not.toBeInTheDocument();
+    // ...but the citation it carries is still there.
+    expect(screen.getByText(/based in part on/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /interview experience with salesforce, 2025/i }),
+    ).toHaveAttribute("href", "https://dev.to/prakash/salesforce-interview");
+  });
+
+  it("offers a way back to editing the description", async () => {
+    fetchLoopBrief.mockResolvedValue(sourcedBrief);
+    fetchPrepPlan.mockResolvedValue(plan);
+    const onEdit = vi.fn();
+
+    render(
+      <LoopBriefStep
+        companyName="Amazon"
+        roleTitle="Backend Engineer"
+        accessToken="token"
+        onChooseRound={vi.fn()}
+        onSkip={vi.fn()}
+        onEdit={onEdit}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Online assessment")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: /edit the description/i }));
+    expect(onEdit).toHaveBeenCalled();
   });
 
   it("starts the plan's first round on the primary action", async () => {
@@ -106,6 +225,7 @@ describe("LoopBriefStep", () => {
         accessToken="token"
         onChooseRound={onChooseRound}
         onSkip={vi.fn()}
+        onEdit={vi.fn()}
       />,
     );
 
@@ -127,6 +247,7 @@ describe("LoopBriefStep", () => {
         accessToken="token"
         onChooseRound={onChooseRound}
         onSkip={vi.fn()}
+        onEdit={vi.fn()}
       />,
     );
 
@@ -147,45 +268,12 @@ describe("LoopBriefStep", () => {
         accessToken="token"
         onChooseRound={vi.fn()}
         onSkip={vi.fn()}
+        onEdit={vi.fn()}
       />,
     );
 
     await waitFor(() =>
       expect(screen.getByText(/we don't hold a sourced account of amazon's process yet/i)).toBeInTheDocument(),
     );
-  });
-
-  describe("the link to the question bank (task 042)", () => {
-    afterEach(() => {
-      vi.unstubAllEnvs();
-    });
-
-    async function renderSourced() {
-      fetchLoopBrief.mockResolvedValue(sourcedBrief);
-      fetchPrepPlan.mockResolvedValue(plan);
-      render(
-        <LoopBriefStep
-          companyName="Amazon"
-          roleTitle="Backend Engineer"
-          accessToken="token"
-          onChooseRound={vi.fn()}
-          onSkip={vi.fn()}
-        />,
-      );
-      await waitFor(() => expect(screen.getByText(/23 sourced questions for amazon/i)).toBeInTheDocument());
-    }
-
-    it("is not offered while the bank is not browsable, and the count still is", async () => {
-      await renderSourced();
-
-      expect(screen.queryByRole("link", { name: /see them/i })).not.toBeInTheDocument();
-    });
-
-    it("is offered when the bank is browsable", async () => {
-      vi.stubEnv("NEXT_PUBLIC_QUESTION_BANK_BROWSABLE", "true");
-      await renderSourced();
-
-      expect(screen.getByRole("link", { name: /see them/i })).toHaveAttribute("href", "/questions/amazon");
-    });
   });
 });

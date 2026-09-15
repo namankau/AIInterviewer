@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { ApiRequestError, fetchLoopBrief, fetchPrepPlan } from "@/lib/api";
+import { questionBankBrowsable } from "@/lib/flags";
 import { ROUND_CATALOGUE } from "@/lib/rounds";
 
 /**
@@ -160,7 +161,7 @@ export function LoopBriefStep({
             <>
               {brief.bankCoverage.questionCount} sourced question
               {brief.bankCoverage.questionCount === 1 ? "" : "s"} for {brief.company.name}.{" "}
-              {brief.company.slug ? (
+              {brief.company.slug && questionBankBrowsable() ? (
                 <Link href={`/questions/${brief.company.slug}`} className="text-accent underline-offset-4 hover:underline">
                   See them
                 </Link>

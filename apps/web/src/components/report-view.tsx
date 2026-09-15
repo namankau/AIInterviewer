@@ -459,7 +459,8 @@ function QuestionSources({ sources }: { sources: ReportQuestionSources | undefin
               <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
                 Basis
               </span>
-              <p className="max-w-prose text-caption text-ink-muted">{entry.basis}</p>
+              {/* A pool question has no basis beside its label, which arrives as the disclosure. */}
+              {entry.basis ? <p className="max-w-prose text-caption text-ink-muted">{entry.basis}</p> : null}
               <p className="max-w-prose text-caption text-ink-subtle">{entry.tierDisclosure}</p>
             </div>
 

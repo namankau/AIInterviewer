@@ -142,7 +142,9 @@ for each row execute function public.set_updated_at();
 create unique index pool_generation_cells_coordinate_idx
   on public.pool_generation_cells (
     run_id,
-    coalesce(company_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    -- Parenthesised because an index element that is an expression rather than a plain
+    -- function call has to be, and `coalesce` is a SQL construct rather than a function.
+    (coalesce(company_id, '00000000-0000-0000-0000-000000000000'::uuid)),
     round_type,
     role_family,
     level
@@ -311,10 +313,7 @@ begin
       vector_schema := 'public';
     exception
       when others then
-        raise warning
-          'pgvector could not be enabled (%): the question pool will deduplicate on '
-          'fingerprints only. Enable the `vector` extension and re-run this block to add '
-          'pool_questions.embedding.', sqlerrm;
+        raise warning 'pgvector could not be enabled (%): the question pool will deduplicate on fingerprints only. Enable the vector extension and re-run this block to add pool_questions.embedding.', sqlerrm;
     end;
   end if;
 
@@ -325,10 +324,12 @@ begin
     );
     execute
       'comment on column public.pool_questions.embedding is '
-      '''gemini-embedding-001 at 768 dimensions (a published Matryoshka truncation of its '
-      'native 3072), L2-normalised on write so cosine distance and inner product agree. '
-      'Null until the question has been embedded; the deduplicator treats null as '
-      '"fingerprint only" rather than as "no match".''';
+      || quote_literal(
+           'gemini-embedding-001 at 768 dimensions (a published Matryoshka truncation of '
+           || 'its native 3072), L2-normalised on write so cosine distance and inner '
+           || 'product agree. Null until the question has been embedded; the deduplicator '
+           || 'treats null as "fingerprint only" rather than as "no match".'
+         );
   end if;
 end
 $$;

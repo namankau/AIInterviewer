@@ -145,7 +145,7 @@ export function NewInterviewForm() {
           maxLength={600}
           required
           placeholder="Infosys MR round next Tuesday. 5 years, Java backend."
-          className="w-full resize-none rounded-lg border border-line bg-surface-raised px-4 py-3.5 text-body text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
+          className="w-full resize-none rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] px-4 py-3.5 text-body text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
         />
 
         <div className="flex flex-wrap items-center gap-3">
@@ -413,7 +413,7 @@ function RoundSetup({
         </Field>
       </div>
 
-      <fieldset className="flex flex-col gap-4 rounded-lg border border-line bg-surface-raised p-5">
+      <fieldset className="flex flex-col gap-4 rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] p-5">
         <legend className="px-2 text-heading text-ink">Before we start</legend>
         <p className="text-caption text-ink-muted">
           This interview is spoken. Nothing is recorded until you agree, and everything

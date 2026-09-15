@@ -252,7 +252,7 @@ function EditorBar({
         type="button"
         onClick={onRun}
         disabled={running || !canRun}
-        className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-accent-contrast transition hover:bg-accent-strong disabled:opacity-50"
+        className="rounded-lg bg-accent px-3 py-1 text-xs font-medium text-accent-contrast transition hover:bg-accent-strong disabled:opacity-50"
       >
         {running ? "Running…" : "Run"}
       </button>

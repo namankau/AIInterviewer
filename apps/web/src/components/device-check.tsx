@@ -362,7 +362,7 @@ export function DeviceCheck({
       ) : null}
 
       <div className="flex flex-col gap-8 lg:col-start-1 lg:row-start-2">
-        <section aria-labelledby="preflight" className="rounded-lg border border-line bg-surface-raised">
+        <section aria-labelledby="preflight" className="rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)]">
           <div className="flex items-baseline justify-between gap-4 px-5 py-3">
             <h2 id="preflight" className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
               System check
@@ -404,7 +404,7 @@ export function DeviceCheck({
             type="button"
             onClick={onEnter}
             disabled={!ready}
-            className="self-start rounded-md bg-accent px-7 py-3.5 text-body font-medium text-accent-contrast transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+            className="self-start rounded-lg bg-accent px-7 py-3.5 text-body font-medium text-accent-contrast transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             Enter the room
           </button>

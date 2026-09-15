@@ -13,16 +13,21 @@ export default async function LoginPage({
   const { next } = await searchParams;
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-10 px-6 py-24">
-      <div className="flex flex-col gap-3">
-        <p className="text-caption tracking-wide text-ink-subtle uppercase">AceMyInterview</p>
-        <h1 className="text-title text-ink">Sign in</h1>
-        <p className="text-body text-ink-muted">
-          Google is the only way in for now. No password to remember on the morning of an interview.
-        </p>
-      </div>
+    <main className="flex min-h-dvh items-center justify-center bg-surface-sunken px-6 py-24">
+      <div className="card flex w-full max-w-md flex-col gap-10 p-10">
+        <div className="flex flex-col gap-3">
+          <p className="text-caption font-semibold tracking-wide text-accent uppercase">
+            AceMyInterview
+          </p>
+          <h1 className="text-title font-bold text-ink">Sign in</h1>
+          <p className="text-body text-ink-muted">
+            Google is the only way in for now. No password to remember on the morning of an
+            interview.
+          </p>
+        </div>
 
-      <SignInWithGoogle next={safeNext(next)} />
+        <SignInWithGoogle next={safeNext(next)} />
+      </div>
     </main>
   );
 }

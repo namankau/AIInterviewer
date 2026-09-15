@@ -69,7 +69,7 @@ export function ReportView({ sessionId }: { sessionId: string }) {
         <div className="flex flex-wrap items-center gap-5 pt-1">
           <Link
             href="/interview/new"
-            className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
+            className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
           >
             Sit this round again
           </Link>
@@ -259,7 +259,7 @@ export function ReportDocument({ report }: { report: SessionReport }) {
       ) : null}
 
       <Section title="If this had been the real thing" lead="A simulation, not a verdict.">
-        <div className="flex flex-col gap-3 rounded-lg border border-line bg-surface-raised p-6">
+        <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] p-6">
           <div className="flex items-baseline gap-3">
             <span className="text-heading text-ink">{report.outcomeSimulation.label}</span>
             <span className="text-caption text-ink-subtle">{report.outcomeSimulation.likelihood}</span>
@@ -275,7 +275,7 @@ export function ReportDocument({ report }: { report: SessionReport }) {
       <footer className="flex flex-wrap items-center gap-4 border-t border-line pt-10">
         <Link
           href="/interview/new"
-          className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
+          className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
         >
           Practise again
         </Link>
@@ -302,7 +302,7 @@ function AssistancePanel({ assistance }: { assistance: ReportAssistance }) {
   return (
     <section
       aria-labelledby="assistance"
-      className="flex flex-col gap-4 rounded-lg border border-line bg-surface-raised p-6"
+      className="flex flex-col gap-4 rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] p-6"
     >
       <div className="flex flex-col gap-1">
         <h2 id="assistance" className="text-heading text-ink">
@@ -471,9 +471,7 @@ function QuestionSources({ sources }: { sources: ReportQuestionSources | undefin
                 question {entry.turnIndex + 1}
               </span>
               {entry.phase === "warmup" ? (
-                <span className="rounded border border-line-strong px-1.5 py-0.5 font-mono text-micro text-ink-subtle">
-                  warm-up
-                </span>
+                <span className="pill pill-accent">warm-up</span>
               ) : null}
             </div>
 

@@ -5,13 +5,13 @@ import { cn } from "@/lib/cn";
 type Variant = "primary" | "secondary" | "quiet";
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-md text-body font-medium " +
+  "inline-flex items-center justify-center gap-2 rounded-lg text-body font-semibold " +
   "transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
 const SIZES = "px-5 py-2.5";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-accent text-accent-contrast hover:bg-accent-strong",
+  primary: "bg-accent text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-strong",
   secondary: "border border-line bg-surface-raised text-ink hover:bg-surface-sunken",
   quiet: "text-ink-muted hover:text-ink",
 };

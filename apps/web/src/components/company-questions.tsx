@@ -151,7 +151,7 @@ export function CompanyQuestionsView({
           <p className="pt-1">
             <Link
               href="/interview/new"
-              className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
+              className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
             >
               Set up a round
             </Link>
@@ -194,7 +194,7 @@ export function CompanyQuestionsView({
                 type="button"
                 onClick={onLoadMore}
                 disabled={loadingMore}
-                className="rounded-md border border-line-strong px-4 py-2 text-caption text-ink hover:border-ink disabled:opacity-50"
+                className="rounded-lg border border-line-strong px-4 py-2 text-caption text-ink hover:border-ink disabled:opacity-50"
               >
                 {loadingMore ? "Loading…" : `Show more (${total - questions.length} left)`}
               </button>

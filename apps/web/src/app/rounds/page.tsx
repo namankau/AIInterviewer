@@ -65,7 +65,7 @@ export default function RoundsPage() {
           </p>
           <Link
             href="/interview/new"
-            className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
+            className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
           >
             Set up a round
           </Link>

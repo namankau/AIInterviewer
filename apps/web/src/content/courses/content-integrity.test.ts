@@ -100,5 +100,37 @@ describe.each(courses)("course: $slug", (course: Course) => {
         }
       }
     });
+
+    // DSA-specific rules (task 046): every algorithm gets a dry-run trace and a complexity table, and
+    // ends with 3-5 practice problems in our own words, flagged by a "Practice problems" heading.
+    if (course.slug === "dsa") {
+      it("has at least one trace block (a dry run on a small input)", () => {
+        expect(blocksOf("trace", chapter).length).toBeGreaterThanOrEqual(1);
+      });
+
+      it("has at least one complexity table with a reason in every row", () => {
+        const tables = blocksOf("table", chapter) as Extract<Block, { kind: "table" }>[];
+        expect(tables.length).toBeGreaterThanOrEqual(1);
+        for (const table of tables) {
+          for (const row of table.rows) {
+            const reason = row[row.length - 1] ?? "";
+            expect(reason.trim().length).toBeGreaterThan(0);
+          }
+        }
+      });
+
+      it("ends with a 'Practice problems' heading followed by 3-5 problems in our own words", () => {
+        const headingIndex = chapter.blocks.findIndex((b) => b.kind === "h" && b.text === "Practice problems");
+        expect(headingIndex).toBeGreaterThanOrEqual(0);
+        const next = chapter.blocks[headingIndex + 1];
+        expect(next?.kind).toBe("list");
+        const practice = next as Extract<Block, { kind: "list" }>;
+        expect(practice.items.length).toBeGreaterThanOrEqual(3);
+        expect(practice.items.length).toBeLessThanOrEqual(5);
+        for (const item of practice.items) {
+          expect(item.trim().length).toBeGreaterThan(0);
+        }
+      });
+    }
   });
 });

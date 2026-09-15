@@ -259,7 +259,7 @@ function ResumeSummary({ resume }: { resume: ResumeView }) {
   const years = resume.totalExperienceMonths ? Math.round(resume.totalExperienceMonths / 12) : null;
 
   return (
-    <div className="flex flex-col gap-5 rounded-lg border border-line bg-surface-raised p-5">
+    <div className="flex flex-col gap-5 rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <span className="text-body text-ink">{resume.filename}</span>
         <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">

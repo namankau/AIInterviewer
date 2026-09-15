@@ -1,5 +1,5 @@
 import type { UsageCounts } from "@acemyinterview/shared";
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 
 import { fetchUsage } from "@/lib/api";
@@ -14,30 +14,31 @@ export const metadata: Metadata = {
 /**
  * The public landing page.
  *
- * Every claim here is one the product can actually demonstrate in the free session. No
- * gradient hero, no three identical feature cards, no adjectives standing in for
- * evidence — a candidate deciding whether to trust this with their career reads
- * specifics, and specifics are the only thing that separates us from the category.
+ * Rebuilt in the InterviewBit-style direction the owner asked for (task 044): a
+ * confident marketing page with a navy hero, clear promise and a hero visual, rather
+ * than a terminal-flavoured spec sheet. The claims underneath are unchanged from the
+ * previous pass and still true statements only — no invented user counts, ratings or
+ * testimonials (CLAUDE.md "quality bar").
  *
  * Server-rendered: organic search on "<employer> interview" is a primary acquisition
  * channel (PRD 11).
  */
 export default async function LandingPage() {
-  // Server-rendered along with everything else here: organic search is a primary channel
-  // (PRD 11), and a number that appears only after hydration is a number crawlers and
-  // slow connections never see. Null when the API is unreachable — the page does not
-  // depend on it.
   const usage = await fetchUsage();
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh bg-surface">
       <SiteHeader />
       <main>
         <Hero usage={usage} />
+        <EmployerStrip />
+        <VoiceSection />
         <TranscriptSample />
         <Coverage />
         <ReportContents />
-        <Pricing />
+        <Courses />
+        <HowItWorks />
+        <CtaBand />
       </main>
       <SiteFooter />
     </div>
@@ -46,20 +47,36 @@ export default async function LandingPage() {
 
 function SiteHeader() {
   return (
-    <header className="border-b border-line">
+    <header className="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
-        <span className="flex items-baseline gap-2">
-          <span className="text-heading font-semibold tracking-tight text-ink">AceMyInterview</span>
+        <Link href="/" className="flex items-baseline gap-2">
+          <span className="text-heading font-bold tracking-tight text-ink">AceMyInterview</span>
           <span className="hidden font-mono text-micro tracking-widest text-ink-subtle uppercase sm:inline">
             beta
           </span>
-        </span>
-        <Link
-          href="/login"
-          className="rounded-md border border-line-strong px-4 py-2 text-caption font-medium text-ink transition-colors hover:bg-surface-sunken"
-        >
-          Sign in
         </Link>
+        <nav aria-label="Site" className="hidden items-center gap-8 md:flex">
+          <Link href="/login" className="text-caption font-medium text-ink-muted hover:text-ink">
+            Mock interviews
+          </Link>
+          <Link href={"/courses" as Route} className="text-caption font-medium text-ink-muted hover:text-ink">
+            Courses
+          </Link>
+        </nav>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="hidden rounded-lg px-3 py-2 text-caption font-medium text-ink transition-colors hover:bg-surface-sunken sm:inline-block"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/login"
+            className="rounded-lg bg-accent px-4 py-2.5 text-caption font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong"
+          >
+            Start free
+          </Link>
+        </div>
       </div>
     </header>
   );
@@ -67,34 +84,41 @@ function SiteHeader() {
 
 function Hero({ usage }: { usage: UsageCounts | null }) {
   return (
-    <section className="bg-grid border-b border-line">
-      <div className="mx-auto grid max-w-6xl gap-12 px-6 py-20 lg:grid-cols-[1.15fr_1fr] lg:gap-16 lg:py-28">
+    <section className="bg-navy text-on-navy">
+      <div className="mx-auto grid max-w-6xl gap-14 px-6 py-20 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-10 lg:py-28">
         <div className="flex flex-col gap-7">
-          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-            Voice · a face across the table · scored against what you actually said
-          </p>
-          <h1 className="text-hero text-balance text-ink">A mock interview that interrupts you.</h1>
-          <p className="max-w-xl text-body text-ink-muted">
+          <span className="pill pill-navy w-fit">
+            Voice · a face across the table · scored on what you actually said
+          </span>
+          <h1 className="text-hero text-balance text-on-navy">
+            A mock interview that <span className="text-accent-strong">interrupts you.</span>
+          </h1>
+          <p className="max-w-xl text-body text-on-navy-muted">
             You speak your answers. It follows up on what you actually said, cuts in when you
             ramble, and pushes back on claims you cannot defend. Afterwards you get a report where
             every score is pinned to a sentence out of your own mouth.
           </p>
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4 pt-1">
             <Link
               href="/login"
-              className="rounded-md bg-accent px-6 py-3 text-body font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
+              className="rounded-lg bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-colors hover:bg-accent-strong"
             >
               Take a free interview
             </Link>
-            <span className="text-caption text-ink-subtle">
-              Every round free while we build. Full report included, no card.
-            </span>
+            <Link
+              href={"/courses" as Route}
+              className="rounded-lg border border-white/20 px-7 py-3.5 text-body font-semibold text-on-navy transition-colors hover:bg-white/10"
+            >
+              Explore free courses
+            </Link>
           </div>
-
+          <p className="text-caption text-on-navy-muted">
+            Every round free while we build. Full report included, no card.
+          </p>
           <UsageLine usage={usage} />
         </div>
 
-        <SpecPanel />
+        <HeroVisual />
       </div>
     </section>
   );
@@ -112,41 +136,131 @@ function UsageLine({ usage }: { usage: UsageCounts | null }) {
   if (!usage || usage.interviewsCompleted < MEANINGFUL) return null;
 
   return (
-    <p className="font-mono text-caption text-ink-subtle">
+    <p className="font-mono text-caption text-on-navy-muted">
       {usage.interviewsCompleted.toLocaleString()} interviews sat ·{" "}
       {usage.reportsGenerated.toLocaleString()} reports written
     </p>
   );
 }
 
-/** Reads as a spec sheet rather than a marketing card — this is a tool. */
-function SpecPanel() {
-  const rows: Array<[string, string]> = [
-    ["Modality", "Spoken. Your camera optional, never uploaded."],
-    ["Adapts on", "Your previous answer"],
-    ["Interrupts", "Rambling, unsupported claims"],
-    ["Helps", "Hints, then records that it did"],
-    ["Scores", "Against a function + level rubric"],
-    ["Evidence", "A quote per competency"],
-    ["Round length", "Up to 8 exchanges"],
-  ];
-
+/**
+ * The hero visual: a mock interview card with a waveform and a report score, built in
+ * plain SVG/HTML. Not a stock abstract blob — it is a small, honest picture of the two
+ * things the product actually does (listen to a spoken answer, score it with evidence).
+ */
+function HeroVisual() {
+  const bars = [6, 14, 9, 22, 12, 28, 16, 10, 24, 14, 8, 18, 11, 26, 15, 9, 20, 13, 7, 17];
   return (
-    <aside className="self-start rounded-lg border border-line bg-surface-raised">
-      <div className="border-b border-line px-5 py-3">
-        <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-          How the round runs
-        </span>
+    <div className="relative mx-auto w-full max-w-sm lg:mx-0">
+      <div className="card relative flex flex-col gap-5 bg-surface-raised p-6 shadow-[var(--shadow-lg)]">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+            Live round · turn 4
+          </span>
+          <span className="flex items-center gap-1.5 text-micro font-semibold text-positive">
+            <span className="h-1.5 w-1.5 rounded-full bg-positive" aria-hidden="true" />
+            Speaking
+          </span>
+        </div>
+
+        <div className="flex h-16 items-end gap-1" role="img" aria-label="A candidate's voice waveform">
+          {bars.map((h, i) => (
+            <span
+              key={i}
+              className="w-full rounded-full bg-accent/70"
+              style={{ height: `${h * 2.2}px` }}
+            />
+          ))}
+        </div>
+
+        <p className="text-caption text-ink-muted">
+          &ldquo;We polled the ledger table every few seconds and retried on failure.&rdquo;
+        </p>
+
+        <div className="flex items-center justify-between border-t border-line pt-4">
+          <span className="text-caption text-ink-subtle">Operational depth</span>
+          <span className="font-mono text-title font-bold text-ink">2<span className="text-caption text-ink-subtle">/5</span></span>
+        </div>
       </div>
-      <dl className="divide-y divide-line">
-        {rows.map(([term, detail]) => (
-          <div key={term} className="flex items-baseline justify-between gap-6 px-5 py-3">
-            <dt className="text-caption text-ink-subtle">{term}</dt>
-            <dd className="text-right text-caption text-ink">{detail}</dd>
-          </div>
-        ))}
-      </dl>
-    </aside>
+
+      <div className="card absolute -bottom-8 -left-8 hidden w-52 flex-col gap-2 bg-surface-raised p-4 shadow-[var(--shadow-md)] sm:flex">
+        <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+          Report score
+        </span>
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-mono text-display font-bold text-accent">78</span>
+          <span className="text-caption text-ink-subtle">/100</span>
+        </div>
+        <span className="pill pill-positive w-fit">Ready for the next round</span>
+      </div>
+    </div>
+  );
+}
+
+/** True employer names we cover, as text wordmarks — no logos we do not own the rights to. */
+function EmployerStrip() {
+  const employers = [
+    "TCS",
+    "Infosys",
+    "Accenture",
+    "Deloitte",
+    "Google",
+    "Amazon",
+    "Microsoft",
+    "Zoho",
+    "SAP",
+    "Razorpay",
+  ];
+  return (
+    <section className="border-b border-line bg-surface-sunken">
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <p className="pb-4 text-center font-mono text-micro tracking-widest text-ink-subtle uppercase">
+          Rounds built for interviews at
+        </p>
+        <ul className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3">
+          {employers.map((name) => (
+            <li key={name} className="text-heading font-bold text-ink-muted">
+              {name}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function VoiceSection() {
+  const points = [
+    {
+      title: "You speak, it listens",
+      body: "Browser recording straight to Gemini — no separate voice vendor. It hears the answer and speaks the next question back.",
+    },
+    {
+      title: "A face across the table",
+      body: "A drawn interviewer, never photoreal and never named, so nobody mistakes it for a person. Your own camera is optional and never leaves your browser.",
+    },
+    {
+      title: "It interrupts",
+      body: "Rambling gets cut in on. A claim you cannot defend gets a follow-up. That is the difference from a question bank on a timer.",
+    },
+  ];
+  return (
+    <section className="border-b border-line">
+      <div className="mx-auto max-w-6xl px-6 py-20">
+        <div className="flex flex-col gap-3 pb-10">
+          <span className="pill pill-accent w-fit">Voice mock interviews</span>
+          <h2 className="text-display text-balance text-ink">Practice by talking, not by typing.</h2>
+        </div>
+        <ul className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3">
+          {points.map((p) => (
+            <li key={p.title} className="flex flex-col gap-2 bg-surface-raised p-6">
+              <h3 className="text-heading font-bold text-ink">{p.title}</h3>
+              <p className="text-caption text-ink-muted">{p.body}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }
 
@@ -156,7 +270,7 @@ function SpecPanel() {
  */
 function TranscriptSample() {
   return (
-    <section className="border-b border-line">
+    <section className="border-b border-line bg-surface-sunken">
       <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
         <div className="flex flex-col gap-4">
           <h2 className="text-display text-balance text-ink">It listens to the answer.</h2>
@@ -167,7 +281,7 @@ function TranscriptSample() {
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-line bg-surface-raised">
+        <div className="card overflow-hidden">
           <div className="flex items-center justify-between border-b border-line px-5 py-3">
             <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
               Project deep-dive · service-based IT
@@ -213,11 +327,7 @@ function Exchange({
         <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
           {speaker}
         </span>
-        {tag ? (
-          <span className="rounded border border-line-strong px-1.5 py-0.5 font-mono text-micro text-ink-muted">
-            {tag}
-          </span>
-        ) : null}
+        {tag ? <span className="pill pill-accent">{tag}</span> : null}
       </div>
       <p className="text-body text-ink">{body}</p>
     </div>
@@ -260,7 +370,7 @@ function Coverage() {
   ];
 
   return (
-    <section className="border-b border-line bg-surface-sunken">
+    <section className="border-b border-line">
       <div className="mx-auto max-w-6xl px-6 py-20">
         <div className="flex flex-col gap-3 pb-10">
           <h2 className="text-display text-balance text-ink">The loops most tools skip.</h2>
@@ -271,10 +381,10 @@ function Coverage() {
           </p>
         </div>
 
-        <ul className="grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {archetypes.map((item) => (
-            <li key={item.label} className="flex flex-col gap-2 bg-surface-raised p-5">
-              <span className="text-heading text-ink">{item.label}</span>
+            <li key={item.label} className="card flex flex-col gap-2 p-5">
+              <span className="text-heading font-bold text-ink">{item.label}</span>
               <span className="font-mono text-caption text-ink-subtle">{item.examples}</span>
               <span className="text-caption text-ink-muted">{item.rounds}</span>
             </li>
@@ -321,9 +431,10 @@ function ReportContents() {
   ];
 
   return (
-    <section className="border-b border-line">
+    <section className="border-b border-line bg-surface-sunken">
       <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
         <div className="flex flex-col gap-4">
+          <span className="pill pill-accent w-fit">The feedback report</span>
           <h2 className="text-display text-balance text-ink">The report is the product.</h2>
           <p className="max-w-md text-body text-ink-muted">
             Encouraging summaries are worthless and candidates know it. Everything here is either
@@ -331,14 +442,72 @@ function ReportContents() {
           </p>
         </div>
 
-        <ol className="flex flex-col divide-y divide-line border-y border-line">
+        <ol className="card flex flex-col divide-y divide-line">
           {sections.map((section) => (
-            <li key={section.n} className="flex gap-5 py-5">
-              <span className="pt-0.5 font-mono text-caption text-ink-subtle">{section.n}</span>
+            <li key={section.n} className="flex gap-5 p-5">
+              <span className="pt-0.5 font-mono text-caption text-accent">{section.n}</span>
               <div className="flex flex-col gap-1">
-                <h3 className="text-heading text-ink">{section.title}</h3>
+                <h3 className="text-heading font-bold text-ink">{section.title}</h3>
                 <p className="max-w-xl text-body text-ink-muted">{section.body}</p>
               </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+/** Free courses, built in parallel (task 045). Links out even if the route isn't live yet. */
+function Courses() {
+  const courses = [
+    { title: "Java for interviews", body: "Language fundamentals through the lens of what a panel actually probes." },
+    { title: "Data structures & algorithms", body: "The patterns that keep coming back across coding rounds, worked from first principles." },
+  ];
+  return (
+    <section className="border-b border-line">
+      <div className="mx-auto max-w-6xl px-6 py-20">
+        <div className="flex flex-col gap-3 pb-10">
+          <span className="pill pill-highlight w-fit">Free courses</span>
+          <h2 className="text-display text-balance text-ink">Study before you sit the round.</h2>
+          <p className="max-w-2xl text-body text-ink-muted">
+            Free, self-paced material for the two things a coding round tests most.
+          </p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          {courses.map((c) => (
+            <Link
+              key={c.title}
+              href={"/courses" as Route}
+              className="card flex flex-col gap-2 p-6 transition-shadow hover:shadow-[var(--shadow-md)]"
+            >
+              <h3 className="text-heading font-bold text-ink">{c.title}</h3>
+              <p className="text-caption text-ink-muted">{c.body}</p>
+              <span className="pt-2 text-caption font-semibold text-accent">Start course →</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HowItWorks() {
+  const steps = [
+    { n: "01", title: "Pick company and role", body: "Chosen fresh for this session — no setup, no target list to maintain." },
+    { n: "02", title: "Take the round", body: "Up to 8 spoken exchanges. It adapts to what you say and interrupts when it needs to." },
+    { n: "03", title: "Read the report", body: "Every score quotes your own transcript. Free, in full, every time." },
+  ];
+  return (
+    <section className="border-b border-line bg-surface-sunken">
+      <div className="mx-auto max-w-6xl px-6 py-20">
+        <h2 className="pb-10 text-display text-balance text-ink">How it works.</h2>
+        <ol className="grid gap-8 sm:grid-cols-3">
+          {steps.map((s) => (
+            <li key={s.n} className="flex flex-col gap-2">
+              <span className="font-mono text-display font-bold text-accent">{s.n}</span>
+              <h3 className="text-heading font-bold text-ink">{s.title}</h3>
+              <p className="text-caption text-ink-muted">{s.body}</p>
             </li>
           ))}
         </ol>
@@ -352,19 +521,19 @@ function ReportContents() {
  * free, while it is being built. Saying "free trial" or naming a future price would be
  * selling something that does not exist.
  */
-function Pricing() {
+function CtaBand() {
   return (
-    <section>
+    <section className="bg-navy text-on-navy">
       <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-6 py-20">
-        <h2 className="text-display text-balance text-ink">Every round is free right now.</h2>
-        <p className="max-w-xl text-body text-ink-muted">
+        <h2 className="text-display text-balance text-on-navy">Every round is free right now.</h2>
+        <p className="max-w-xl text-body text-on-navy-muted">
           Not a trial round, and not a sample report — the whole thing, as many times as you
           want, while we are still building it. No card. When there is something worth charging
           for, we will say so before we charge for it.
         </p>
         <Link
           href="/login"
-          className="rounded-md bg-accent px-6 py-3 text-body font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
+          className="rounded-lg bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-colors hover:bg-accent-strong"
         >
           Start an interview
         </Link>
@@ -376,13 +545,29 @@ function Pricing() {
 function SiteFooter() {
   return (
     <footer className="border-t border-line">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-8">
-        <span className="text-caption text-ink-subtle">
-          AceMyInterview — practice interviews, not interview help.
-        </span>
-        <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-          Recorded with consent · deletable at any time
-        </span>
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <span className="text-heading font-bold text-ink">AceMyInterview</span>
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
+            <Link href="/login" className="text-caption text-ink-muted hover:text-ink">
+              Mock interviews
+            </Link>
+            <Link href={"/courses" as Route} className="text-caption text-ink-muted hover:text-ink">
+              Courses
+            </Link>
+            <Link href="/login" className="text-caption text-ink-muted hover:text-ink">
+              Sign in
+            </Link>
+          </nav>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
+          <span className="text-caption text-ink-subtle">
+            AceMyInterview — practice interviews, not interview help.
+          </span>
+          <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+            Recorded with consent · deletable at any time
+          </span>
+        </div>
       </div>
     </footer>
   );

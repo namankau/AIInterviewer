@@ -6,6 +6,7 @@ import com.interviewos.api.ai.AnswerAssessment
 import com.interviewos.api.ai.ComposedCase
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
+import com.interviewos.api.ai.ReportContent
 import com.interviewos.api.bank.BankQuestion
 import com.interviewos.api.bank.CompanyDirectory
 import com.interviewos.api.bank.QuestionBankRepository
@@ -47,6 +48,7 @@ class BankRoundHarness {
     val briefs = mutableListOf<InterviewBrief>()
     var case: ComposedCase? = null
     var assessment: AnswerAssessment? = null
+    var report: ReportContent? = null
 
     val ai: InterviewAi =
         mock(InterviewAi::class.java) { invocation ->
@@ -55,6 +57,7 @@ class BankRoundHarness {
             when (invocation.method.name) {
                 "composeCase" -> AiResult(checkNotNull(case), AiUsage.none("test"))
                 "assessAnswer" -> AiResult(checkNotNull(assessment), AiUsage.none("test"))
+                "composeReport" -> AiResult(checkNotNull(report), AiUsage.none("test"))
                 else -> RETURNS_DEFAULTS.answer(invocation)
             }
         }

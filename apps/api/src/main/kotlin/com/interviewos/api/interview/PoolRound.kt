@@ -351,23 +351,65 @@ object PoolRoundCoordinate {
         listOf(
             RoleFamily.ML_AI to
                 listOf(
-                    "machine learning", "ml", "ai", "mlops", "llm", "nlp", "computer vision", "deep learning",
-                    "data scientist", "applied scientist", "research scientist",
+                    "machine learning",
+                    "ml",
+                    "ai",
+                    "mlops",
+                    "llm",
+                    "nlp",
+                    "computer vision",
+                    "deep learning",
+                    "data scientist",
+                    "applied scientist",
+                    "research scientist",
                 ),
             RoleFamily.DATA_ENGINEERING to
                 listOf("data engineer", "data engineering", "etl", "big data", "analytics engineer", "data platform"),
             RoleFamily.SRE to
                 listOf("sre", "site reliability", "devops", "dev ops", "platform engineer", "infrastructure engineer", "cloud engineer"),
             RoleFamily.QA_AUTOMATION to
-                listOf("qa", "sdet", "test automation", "automation test", "automation tester", "quality assurance", "test engineer", "tester"),
+                listOf(
+                    "qa",
+                    "sdet",
+                    "test automation",
+                    "automation test",
+                    "automation tester",
+                    "quality assurance",
+                    "test engineer",
+                    "tester",
+                ),
             RoleFamily.MOBILE to listOf("android", "ios", "mobile", "flutter", "react native"),
             RoleFamily.FULLSTACK_FRONTEND to
-                listOf("frontend", "front end", "full stack", "fullstack", "ui engineer", "ui developer", "web developer", "react", "angular"),
+                listOf(
+                    "frontend",
+                    "front end",
+                    "full stack",
+                    "fullstack",
+                    "ui engineer",
+                    "ui developer",
+                    "web developer",
+                    "react",
+                    "angular",
+                ),
             RoleFamily.BACKEND to
                 listOf(
-                    "backend", "back end", "software engineer", "software developer", "software development engineer",
-                    "sde", "sde1", "sde2", "sde3", "swe", "developer", "programmer", "programmer analyst",
-                    "member of technical staff", "mts", "systems engineer", "system engineer",
+                    "backend",
+                    "back end",
+                    "software engineer",
+                    "software developer",
+                    "software development engineer",
+                    "sde",
+                    "sde1",
+                    "sde2",
+                    "sde3",
+                    "swe",
+                    "developer",
+                    "programmer",
+                    "programmer analyst",
+                    "member of technical staff",
+                    "mts",
+                    "systems engineer",
+                    "system engineer",
                 ),
         )
 
@@ -375,8 +417,20 @@ object PoolRoundCoordinate {
     private val SENIOR_WORDS = listOf("senior", "sr", "lead", "sde 3", "sde3", "sde iii")
     private val ENTRY_WORDS =
         listOf(
-            "intern", "internship", "graduate", "grad", "fresher", "junior", "jr", "entry", "trainee",
-            "apprentice", "associate", "sde 1", "sde1", "sde i",
+            "intern",
+            "internship",
+            "graduate",
+            "grad",
+            "fresher",
+            "junior",
+            "jr",
+            "entry",
+            "trainee",
+            "apprentice",
+            "associate",
+            "sde 1",
+            "sde1",
+            "sde i",
         )
     private val MID_WORDS = listOf("mid", "intermediate", "sde 2", "sde2", "sde ii")
 }

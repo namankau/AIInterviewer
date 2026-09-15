@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { updateSession } from "./session";
 
@@ -26,10 +26,6 @@ describe("updateSession", () => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
   it("sends a signed-out visitor from the dashboard to sign in", async () => {
     signedOut();
 
@@ -42,7 +38,6 @@ describe("updateSession", () => {
   });
 
   it("sends a signed-out visitor from a company's questions to sign in", async () => {
-    vi.stubEnv("NEXT_PUBLIC_QUESTION_BANK_BROWSABLE", "true");
     signedOut();
 
     const response = await updateSession(requestFor("/questions/amazon"));
@@ -51,14 +46,6 @@ describe("updateSession", () => {
     const location = new URL(response.headers.get("location") ?? "");
     expect(location.pathname).toBe("/login");
     expect(location.searchParams.get("next")).toBe("/questions/amazon");
-  });
-
-  it("does not redirect from the question bank while it is hidden, so the page can answer 404", async () => {
-    signedOut();
-
-    const response = await updateSession(requestFor("/questions/amazon"));
-
-    expect(response.headers.get("location")).toBeNull();
   });
 
   it("lets a signed-in candidate through to the dashboard", async () => {

@@ -6,6 +6,9 @@ import { chapterTwoPointers } from "@/content/courses/dsa/05-two-pointers";
 import { chapterSlidingWindow } from "@/content/courses/dsa/06-sliding-window";
 import { chapterPrefixSums } from "@/content/courses/dsa/07-prefix-sums";
 import { chapterStringTechniques } from "@/content/courses/dsa/08-string-techniques";
+import { chapterHashing } from "@/content/courses/dsa/09-hashing";
+import { chapterRecursionDsa } from "@/content/courses/dsa/10-recursion";
+import { chapterBacktracking } from "@/content/courses/dsa/11-backtracking";
 import type { Course } from "@/content/courses/types";
 
 /**
@@ -31,6 +34,10 @@ export const dsaCourse: Course = {
         chapterPrefixSums,
         chapterStringTechniques,
       ],
+    },
+    {
+      title: "Hashing and recursion",
+      chapters: [chapterHashing, chapterRecursionDsa, chapterBacktracking],
     },
   ],
 };

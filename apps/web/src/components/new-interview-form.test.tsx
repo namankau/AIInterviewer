@@ -233,4 +233,47 @@ describe("NewInterviewForm", () => {
     expect(screen.getByRole("button", { name: /begin interview/i })).toBeDisabled();
     expect(screen.getByText(/voice recording is required/i)).toBeInTheDocument();
   });
+
+  describe("getting back to the loop brief", () => {
+    it("offers a Back button on setup when the candidate came from the brief, and it returns there", async () => {
+      composeRound.mockResolvedValue(draft);
+      render(<NewInterviewForm />);
+
+      await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys MR round");
+      await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+      await skipBrief();
+      await waitFor(() => expect(screen.getByDisplayValue("Infosys")).toBeInTheDocument());
+
+      const back = screen.getByRole("button", { name: /back to how infosys interviews/i });
+      await userEvent.click(back);
+
+      // Back on the brief, not the setup form.
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: /how infosys interviews/i })).toBeInTheDocument(),
+      );
+      expect(screen.queryByDisplayValue("Infosys")).not.toBeInTheDocument();
+    });
+
+    it("has no Back button when the candidate never saw a brief", async () => {
+      render(<NewInterviewForm />);
+      await userEvent.click(screen.getByRole("button", { name: /fill it in yourself/i }));
+
+      expect(screen.queryByRole("button", { name: /back to how/i })).not.toBeInTheDocument();
+    });
+
+    it("returns from the brief to editing the description", async () => {
+      composeRound.mockResolvedValue(draft);
+      render(<NewInterviewForm />);
+
+      await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys MR round");
+      await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: /how infosys interviews/i })).toBeInTheDocument(),
+      );
+      await userEvent.click(screen.getByRole("button", { name: /edit the description/i }));
+
+      expect(screen.getByLabelText(/describe the interview/i)).toBeInTheDocument();
+    });
+  });
 });

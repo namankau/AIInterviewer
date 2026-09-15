@@ -380,15 +380,17 @@ class SessionRepository(
         provenanceJson: String?,
         /** The bank question this turn asked, when it asked one. See [askedBankQuestions]. */
         bankQuestionId: UUID? = null,
+        /** The pool question this turn asked, when it asked one. See [askedPoolQuestions]. */
+        poolQuestionId: UUID? = null,
     ) {
         jdbcClient
             .sql(
                 """
                 insert into public.session_turns
                        (session_id, user_id, turn_index, question_text, phase, question_audio_status, provenance,
-                        bank_question_id)
+                        bank_question_id, pool_question_id)
                 values (:s, :u, :i, :q, cast(:phase as public.turn_phase), cast(:speech as public.speech_status),
-                        cast(:provenance as jsonb), :bank)
+                        cast(:provenance as jsonb), :bank, :pool)
                 on conflict (session_id, turn_index) do nothing
                 """.trimIndent(),
             ).param("s", sessionId)
@@ -399,6 +401,7 @@ class SessionRepository(
             .param("speech", speechStatus.dbValue)
             .param("provenance", provenanceJson)
             .param("bank", bankQuestionId)
+            .param("pool", poolQuestionId)
             .update()
     }
 
@@ -410,22 +413,38 @@ class SessionRepository(
         userId: UUID,
         sessionId: UUID,
     ): List<AskedBankQuestion> =
+        askedFrom("bank_question_id", userId, sessionId) { id, at, thisRound -> AskedBankQuestion(id, at, thisRound) }
+
+    /** [askedBankQuestions], for the AI pool: the same query over `pool_question_id`. */
+    fun askedPoolQuestions(
+        userId: UUID,
+        sessionId: UUID,
+    ): List<AskedPoolQuestion> =
+        askedFrom("pool_question_id", userId, sessionId) { id, at, thisRound -> AskedPoolQuestion(id, at, thisRound) }
+
+    /** [column] is one of two literals above, never caller input. */
+    private fun <T : Any> askedFrom(
+        column: String,
+        userId: UUID,
+        sessionId: UUID,
+        row: (UUID, Instant, Boolean) -> T,
+    ): List<T> =
         jdbcClient
             .sql(
                 """
-                select bank_question_id, max(created_at) as last_asked, bool_or(session_id = :s) as this_round
+                select $column as question_id, max(created_at) as last_asked, bool_or(session_id = :s) as this_round
                   from public.session_turns
                  where user_id = :u
-                   and bank_question_id is not null
-                 group by bank_question_id
+                   and $column is not null
+                 group by $column
                 """.trimIndent(),
             ).param("u", userId)
             .param("s", sessionId)
             .query { rs, _ ->
-                AskedBankQuestion(
-                    bankQuestionId = rs.getObject("bank_question_id", UUID::class.java),
-                    lastAskedAt = rs.getTimestamp("last_asked").toInstant(),
-                    inThisRound = rs.getBoolean("this_round"),
+                row(
+                    rs.getObject("question_id", UUID::class.java),
+                    rs.getTimestamp("last_asked").toInstant(),
+                    rs.getBoolean("this_round"),
                 )
             }.list()
 
@@ -793,6 +812,13 @@ data class TurnRow(
 /** A bank question a candidate has been asked, for selection. */
 data class AskedBankQuestion(
     val bankQuestionId: UUID,
+    val lastAskedAt: Instant,
+    val inThisRound: Boolean,
+)
+
+/** A pool question a candidate has been asked, for selection. The same shape as [AskedBankQuestion]. */
+data class AskedPoolQuestion(
+    val poolQuestionId: UUID,
     val lastAskedAt: Instant,
     val inThisRound: Boolean,
 )

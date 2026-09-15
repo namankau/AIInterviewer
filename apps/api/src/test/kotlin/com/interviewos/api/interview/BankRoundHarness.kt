@@ -6,9 +6,13 @@ import com.interviewos.api.ai.AnswerAssessment
 import com.interviewos.api.ai.ComposedCase
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
+import com.interviewos.api.ai.ReportContent
 import com.interviewos.api.bank.BankQuestion
 import com.interviewos.api.bank.CompanyDirectory
 import com.interviewos.api.bank.QuestionBankRepository
+import com.interviewos.api.pool.PoolQuestion
+import com.interviewos.api.pool.QuestionPoolRepository
+import com.interviewos.api.pool.RoleFamily
 import com.interviewos.api.resume.ResumeService
 import com.interviewos.api.storage.ObjectStorage
 import com.interviewos.api.storage.StorageProperties
@@ -36,12 +40,15 @@ class BankRoundHarness {
     val repository: SessionRepository = mock(SessionRepository::class.java)
     val directory: CompanyDirectory = mock(CompanyDirectory::class.java)
     val bank: QuestionBankRepository = mock(QuestionBankRepository::class.java)
+    val pool: QuestionPoolRepository = mock(QuestionPoolRepository::class.java)
     val archetypes = ArchetypeResolver()
+    val poolMaterial = PoolMaterial(mapper)
 
     /** What the model is asked, in order. */
     val briefs = mutableListOf<InterviewBrief>()
     var case: ComposedCase? = null
     var assessment: AnswerAssessment? = null
+    var report: ReportContent? = null
 
     val ai: InterviewAi =
         mock(InterviewAi::class.java) { invocation ->
@@ -50,6 +57,7 @@ class BankRoundHarness {
             when (invocation.method.name) {
                 "composeCase" -> AiResult(checkNotNull(case), AiUsage.none("test"))
                 "assessAnswer" -> AiResult(checkNotNull(assessment), AiUsage.none("test"))
+                "composeReport" -> AiResult(checkNotNull(report), AiUsage.none("test"))
                 else -> RETURNS_DEFAULTS.answer(invocation)
             }
         }
@@ -68,8 +76,9 @@ class BankRoundHarness {
             retentionProperties = RetentionProperties(),
             roundMedia = RoundMediaProperties(),
             bankRounds = BankRoundPlanner(directory, bank, repository),
+            poolRounds = PoolRoundPlanner(directory, pool, repository, poolMaterial),
             resumeService = mock(ResumeService::class.java),
-            roundWorkspaceComposer = RoundWorkspaceComposer(ai, mapper, ProblemVerifier(ai, mapper)),
+            roundWorkspaceComposer = RoundWorkspaceComposer(ai, mapper, ProblemVerifier(ai, mapper), poolMaterial),
             codeRunner = mock(CodeRunner::class.java),
             transactionManager =
                 mock(PlatformTransactionManager::class.java) { invocation ->
@@ -88,12 +97,23 @@ class BankRoundHarness {
         given(bank.countFor(BankFixtures.amazon.id, roundType, false)).willReturn(questions.size)
     }
 
+    /** The pool holds [questions] for [roundType] and the backend family — the rows the repository would return. */
+    fun poolHolds(
+        roundType: RoundType,
+        vararg questions: PoolQuestion,
+        companyId: UUID? = BankFixtures.amazon.id,
+    ) {
+        given(pool.candidatesFor(companyId, Archetype.GLOBAL_PRODUCT, roundType, RoleFamily.BACKEND, 200))
+            .willReturn(questions.toList())
+    }
+
     /** A turn as the service wrote it. */
     data class InsertedTurn(
         val turnIndex: Int,
         val questionText: String,
         val provenance: QuestionProvenance?,
         val bankQuestionId: UUID?,
+        val poolQuestionId: UUID?,
     )
 
     /** Every turn the service inserted, read off the mock rather than matched, so no matcher meets a Kotlin non-null. */
@@ -108,6 +128,7 @@ class BankRoundHarness {
                     questionText = args[3] as String,
                     provenance = (args[6] as String?)?.let { mapper.readValue(it, QuestionProvenance::class.java) },
                     bankQuestionId = args[7] as UUID?,
+                    poolQuestionId = args[8] as UUID?,
                 )
             }
 }

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { QuestionBankIndex } from "@/components/question-bank-index";
+import { questionBankBrowsable } from "@/lib/flags";
 
 export const metadata: Metadata = {
   title: "Questions employers have asked",
@@ -17,8 +19,12 @@ export const metadata: Metadata = {
  * Every entry is a question a document we fetched says an employer asked, and every
  * company here has at least one. Where they come from is stated before the list, because
  * a candidate should know what a tag means before trusting one.
+ *
+ * Not found unless the bank is browsable (task 042; off by default).
  */
 export default function QuestionsPage() {
+  if (!questionBankBrowsable()) notFound();
+
   return (
     <AppShell breadcrumb="questions">
       <div className="flex max-w-4xl flex-col gap-12">

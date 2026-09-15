@@ -8,10 +8,12 @@ import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.Mockito.verifyNoInteractions
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt
+import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -19,9 +21,14 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
-/** `GET /api/v1/question-bank/companies` and `GET /api/v1/question-bank` — signed in only. */
+/**
+ * `GET /api/v1/question-bank/companies` and `GET /api/v1/question-bank` — signed in only, with
+ * the bank browsable. [QuestionBankControllerHiddenTest] covers the default, where it is not.
+ */
 @WebMvcTest(QuestionBankController::class)
 @Import(SecurityConfig::class, ApiErrorWriter::class, ApiExceptionHandler::class, ApiSecurityTestConfiguration::class)
+@EnableConfigurationProperties(QuestionBankProperties::class)
+@TestPropertySource(properties = ["interviewos.question-bank.browsable=true"])
 class QuestionBankControllerTest {
     @Autowired
     private lateinit var mockMvc: MockMvc

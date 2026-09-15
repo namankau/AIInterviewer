@@ -158,6 +158,12 @@ data class PlannedQuestion(
     val company: String,
     /** True when it must be asked on this turn; false when it waits for the next new topic. */
     val askNow: Boolean,
+    /**
+     * True for a question from the sourced bank. False for one from the AI pool (task 042),
+     * which the model is told plainly is general knowledge that no source reports [company]
+     * asking — so it has nothing to pass on to the candidate as a report.
+     */
+    val reported: Boolean = true,
 )
 
 /** 24 kHz PCM as Gemini returns it, plus the mime type to store it under. */

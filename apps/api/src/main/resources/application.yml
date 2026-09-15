@@ -135,6 +135,13 @@ interviewos:
     # INTERVIEWOS_RETENTION_REPORTSKEPTFOR, which outranks this file.
     reports-kept-for: 28d
 
+  question-bank:
+    # Whether candidates can browse the sourced bank at /questions (task 042). Off, the two
+    # list endpoints answer 404 and the web app hides the pages, the nav entry and the loop
+    # brief's link; rounds keep asking from the bank either way. The same env var the web
+    # app reads, so one switch moves both.
+    browsable: ${NEXT_PUBLIC_QUESTION_BANK_BROWSABLE:false}
+
   pool:
     # The hidden question pool: questions a model writes from its own knowledge, held
     # apart from the sourced bank and read by a round when the bank has nothing for that

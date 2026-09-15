@@ -27,7 +27,7 @@ import kotlin.test.assertTrue
 class RoundWorkspaceComposerTest {
     private val mapper = JsonMapper.builder().build()
     private val ai: InterviewAi = mock(InterviewAi::class.java)
-    private val composer = RoundWorkspaceComposer(ai, mapper, ProblemVerifier(ai, mapper))
+    private val composer = RoundWorkspaceComposer(ai, mapper, ProblemVerifier(ai, mapper), PoolMaterial(mapper))
 
     private val brief =
         InterviewBrief(

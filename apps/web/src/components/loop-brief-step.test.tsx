@@ -1,7 +1,7 @@
 import type { LoopBrief, PrepPlan } from "@acemyinterview/shared";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoopBriefStep } from "./loop-brief-step";
 
@@ -153,5 +153,39 @@ describe("LoopBriefStep", () => {
     await waitFor(() =>
       expect(screen.getByText(/we don't hold a sourced account of amazon's process yet/i)).toBeInTheDocument(),
     );
+  });
+
+  describe("the link to the question bank (task 042)", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    async function renderSourced() {
+      fetchLoopBrief.mockResolvedValue(sourcedBrief);
+      fetchPrepPlan.mockResolvedValue(plan);
+      render(
+        <LoopBriefStep
+          companyName="Amazon"
+          roleTitle="Backend Engineer"
+          accessToken="token"
+          onChooseRound={vi.fn()}
+          onSkip={vi.fn()}
+        />,
+      );
+      await waitFor(() => expect(screen.getByText(/23 sourced questions for amazon/i)).toBeInTheDocument());
+    }
+
+    it("is not offered while the bank is not browsable, and the count still is", async () => {
+      await renderSourced();
+
+      expect(screen.queryByRole("link", { name: /see them/i })).not.toBeInTheDocument();
+    });
+
+    it("is offered when the bank is browsable", async () => {
+      vi.stubEnv("NEXT_PUBLIC_QUESTION_BANK_BROWSABLE", "true");
+      await renderSourced();
+
+      expect(screen.getByRole("link", { name: /see them/i })).toHaveAttribute("href", "/questions/amazon");
+    });
   });
 });

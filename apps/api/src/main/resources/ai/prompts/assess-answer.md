@@ -55,19 +55,20 @@ Two specific failures to avoid, both real:
 
 {{plannedQuestionWhen}}
 
-A planned question is one a source we hold reports {{company}} asking in this kind of round,
-chosen for this candidate by the engine. When you ask it, **ask that question**: you may lead
-into it and say it the way you would out loud, but do not change what it asks, narrow it,
-swap its example, or fold a second question into it. Set `askedPlannedQuestion` to true when
-`nextQuestionText` asks it, and false when it does not. Your wording is checked against the
-report, and a question that has drifted is replaced with the report's own words. If it will
-not fit in the length limit with a lead-in, drop the lead-in; if it will not fit on its own,
-say it in the fewest words that keep everything it asks.
+A planned question is chosen for this candidate by the engine. The line above says which kind
+it is: one a source we hold reports {{company}} asking in this kind of round, or one written
+ahead of time from general knowledge, which no source reports {{company}} asking. When you ask
+it, **ask that question**: you may lead into it and say it the way you would out loud, but do
+not change what it asks, narrow it, swap its example, or fold a second question into it. Set
+`askedPlannedQuestion` to true when `nextQuestionText` asks it, and false when it does not.
+Your wording is checked against the planned question, and a question that has drifted is
+replaced with its own words. If it will not fit in the length limit with a lead-in, drop the
+lead-in; if it will not fit on its own, say it in the fewest words that keep everything it asks.
 
 Every other question you ask is your own — follow-ups, probes, and anything you write when
 there is no planned question. Do not present any of them as something {{company}} asks, and do
-not ask questions you remember being reported for {{company}}: only the planned one has a
-source behind it that the candidate can check.
+not ask questions you remember being reported for {{company}}: only a planned question marked
+as reported has a source behind it that the candidate can check.
 
 ## Interview like a person, not a form
 

@@ -59,6 +59,7 @@ class InterviewService(
     private val retentionProperties: RetentionProperties,
     private val roundMedia: RoundMediaProperties,
     private val bankRounds: BankRoundPlanner,
+    private val poolRounds: PoolRoundPlanner,
     private val resumeService: ResumeService,
     private val roundWorkspaceComposer: RoundWorkspaceComposer,
     private val codeRunner: CodeRunner,
@@ -264,15 +265,27 @@ class InterviewService(
         // A DSA or design round is conducted around material — a problem, or a case — and
         // its opening is templated from that rather than asked of the model separately.
         // One call, not two, on the path the candidate is already waiting on. When the bank
-        // holds this company's questions for the round, the material *is* one of them.
-        val seed =
-            if (roundType in RoundWorkspaceComposer.ROUND_TYPES) {
-                bankRounds.forRound(request.companyName.trim(), roundType)?.let { bankRounds.next(userId, sessionId, it) }
+        // holds this company's questions for the round, the material *is* one of them. When
+        // it holds none, a problem or case from the pool is used as it stands — no call at all.
+        val workspaceRound = roundType in RoundWorkspaceComposer.ROUND_TYPES
+        val bankRound = if (workspaceRound) bankRounds.forRound(request.companyName.trim(), roundType) else null
+        val seed = bankRound?.let { bankRounds.next(userId, sessionId, it) }
+        val fromPool =
+            if (workspaceRound && bankRound == null) {
+                poolRounds
+                    .forRound(
+                        request.companyName.trim(),
+                        resolution.archetype,
+                        roundType,
+                        request.roleTitle,
+                        background?.tenure?.totalExperienceMonths,
+                    )?.let { poolRounds.next(userId, sessionId, it) }
+                    ?.let { roundWorkspaceComposer.fromPool(it, roundType, request.durationMinutes) }
             } else {
                 null
             }
         val workspace =
-            AiSpendContext.of(userId, sessionId) {
+            fromPool ?: AiSpendContext.of(userId, sessionId) {
                 roundWorkspaceComposer.compose(brief, roundType, request.durationMinutes, seed)
             }
         val plan = InterviewPlan.opening(request.durationMinutes, hasWarmup = workspace == null)
@@ -316,8 +329,10 @@ class InterviewService(
                         probes = opening.questionProbes,
                         askedBecause = opening.questionAskedBecause,
                         bankQuestion = workspace?.bankQuestion,
+                        poolQuestion = workspace?.poolQuestion,
                     ),
                 bankQuestionId = workspace?.bankQuestion?.id,
+                poolQuestionId = workspace?.poolQuestion?.question?.id,
             )
             // Registered inside the transaction so it runs once the turn has committed —
             // the background renderer writes to the row this has just inserted.
@@ -403,18 +418,17 @@ class InterviewService(
         val roundType = RoundType.fromDbValue(session.roundType)
         val resolution =
             ArchetypeResolution(Archetype.fromDbValue(session.archetype), confidenceOf(session.archetypeConfidence))
-        // The bank question planned for the next turn, if the round has one to offer. Never in
-        // the warm-up or once the round is closing, and never in a workspace round, whose
-        // material already is the question. The first question of the round proper must be it.
+        // The question planned for the next turn, if the round has one to offer. Never in the
+        // warm-up or once the round is closing, and never in a workspace round, whose material
+        // already is the question. The first question of the round proper must be it.
         val askNow = plan.briefTheCandidate
+        val background = resumeService.backgroundFor(userId)
         val planned =
-            bankRounds
-                .takeIf {
-                    session.workspace == null &&
-                        !plan.mustConclude &&
-                        (plan.phase == TurnPhase.MAIN || askNow)
-                }?.forRound(session.companyName, roundType)
-                ?.let { bankRounds.next(userId, sessionId, it) }
+            if (session.workspace == null && !plan.mustConclude && (plan.phase == TurnPhase.MAIN || askNow)) {
+                plannedQuestion(userId, session, roundType, resolution.archetype, background?.tenure?.totalExperienceMonths)
+            } else {
+                null
+            }
         val brief =
             briefFor(
                 company = session.companyName,
@@ -422,8 +436,8 @@ class InterviewService(
                 role = session.roleTitle,
                 roundType = roundType,
                 language = session.language,
-                background = resumeService.backgroundFor(userId),
-                planned = planned?.let { PlannedQuestion(it.text, session.companyName, askNow) },
+                background = background,
+                planned = planned?.let { PlannedQuestion(it.text, session.companyName, askNow, reported = it is PlannedFrom.Bank) },
             )
         val priorTurns =
             repository
@@ -515,9 +529,10 @@ class InterviewService(
             )
         }
 
-        // Whether this turn asks the planned bank question is the engine's call, checked
-        // against the bank's wording; a drifted question is replaced after its lead-in.
-        val asked = PlannedQuestionCheck.resolveTurn(planned, askNow, assessment.value.askedPlannedQuestion, modelText)
+        // Whether this turn asks the planned question is the engine's call, checked against
+        // its stored wording; a drifted question is replaced after its lead-in.
+        val asked = PlannedQuestionCheck.resolveText(planned?.text, askNow, assessment.value.askedPlannedQuestion, modelText)
+        val askedFrom = planned?.takeIf { asked.askedPlanned }
         val nextText = asked.text
         val nextIndex = turnIndex + 1
         repository.insertTurn(
@@ -535,9 +550,11 @@ class InterviewService(
                     basis = assessment.value.questionBasis,
                     probes = assessment.value.questionProbes.takeIf { asked.faithful },
                     askedBecause = assessment.value.questionAskedBecause.takeIf { asked.faithful },
-                    bankQuestion = asked.bankQuestion,
+                    bankQuestion = (askedFrom as? PlannedFrom.Bank)?.question,
+                    poolQuestion = askedFrom as? PlannedFrom.Pool,
                 ),
-            bankQuestionId = asked.bankQuestion?.id,
+            bankQuestionId = (askedFrom as? PlannedFrom.Bank)?.question?.id,
+            poolQuestionId = (askedFrom as? PlannedFrom.Pool)?.question?.id,
         )
         // Nothing to synthesise when the room is going to say it: that call is the single
         // most expensive thing in a turn and it would be thrown away.
@@ -811,11 +828,32 @@ class InterviewService(
     }
 
     /**
+     * The question a spoken round plans next, in the task-042 order: the sourced bank when
+     * it holds anything for this company and round type — it keeps first claim, exactly as
+     * before — and the AI pool only when it holds nothing. Null means live questions.
+     */
+    private fun plannedQuestion(
+        userId: UUID,
+        session: SessionRow,
+        roundType: RoundType,
+        archetype: Archetype,
+        experienceMonths: Int?,
+    ): PlannedFrom? {
+        bankRounds.forRound(session.companyName, roundType)?.let { round ->
+            return bankRounds.next(userId, session.id, round)?.let { PlannedFrom.Bank(it) }
+        }
+        return poolRounds
+            .forRound(session.companyName, archetype, roundType, session.roleTitle, experienceMonths)
+            ?.let { poolRounds.next(userId, session.id, it) }
+    }
+
+    /**
      * Why a question was asked, ready to store.
      *
      * Decided per turn: [bankQuestion] is the bank question this turn asked, or null. A
      * turn that asked one is `published_source`, citing that question's sources and no
-     * others; every other turn — follow-ups included, in a round full of bank questions —
+     * others; a turn that asked [poolQuestion] is `model_knowledge` with that question's
+     * label; every other turn — follow-ups included, in a round full of bank questions —
      * is `model_knowledge`. The model never gets a vote either way.
      */
     private fun provenanceJson(
@@ -824,12 +862,13 @@ class InterviewService(
         probes: String?,
         askedBecause: String?,
         bankQuestion: BankQuestion?,
+        poolQuestion: PlannedFrom.Pool? = null,
     ): String? {
         val provenance =
-            if (bankQuestion != null) {
-                QuestionProvenance.fromBank(bankQuestion, company, probes, askedBecause)
-            } else {
-                QuestionProvenance.fromModel(basis, probes, askedBecause)
+            when {
+                bankQuestion != null -> QuestionProvenance.fromBank(bankQuestion, company, probes, askedBecause)
+                poolQuestion != null -> QuestionProvenance.fromPool(poolQuestion.label, probes, askedBecause)
+                else -> QuestionProvenance.fromModel(basis, probes, askedBecause)
             }
         return provenance?.let { objectMapper.writeValueAsString(it) }
     }

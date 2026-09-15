@@ -9,6 +9,10 @@ import { chapterStringTechniques } from "@/content/courses/dsa/08-string-techniq
 import { chapterHashing } from "@/content/courses/dsa/09-hashing";
 import { chapterRecursionDsa } from "@/content/courses/dsa/10-recursion";
 import { chapterBacktracking } from "@/content/courses/dsa/11-backtracking";
+import { chapterSimpleSorts } from "@/content/courses/dsa/12-simple-sorts";
+import { chapterMergeSort } from "@/content/courses/dsa/13-merge-sort";
+import { chapterQuickSort } from "@/content/courses/dsa/14-quick-sort";
+import { chapterBinarySearch } from "@/content/courses/dsa/15-binary-search";
 import type { Course } from "@/content/courses/types";
 
 /**
@@ -38,6 +42,10 @@ export const dsaCourse: Course = {
     {
       title: "Hashing and recursion",
       chapters: [chapterHashing, chapterRecursionDsa, chapterBacktracking],
+    },
+    {
+      title: "Sorting and searching",
+      chapters: [chapterSimpleSorts, chapterMergeSort, chapterQuickSort, chapterBinarySearch],
     },
   ],
 };

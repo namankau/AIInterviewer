@@ -20,6 +20,10 @@ import { chapterTreeBasicsAndTraversals } from "@/content/courses/dsa/19-tree-ba
 import { chapterBinarySearchTrees } from "@/content/courses/dsa/20-binary-search-trees";
 import { chapterHeapsAndPriorityQueues } from "@/content/courses/dsa/21-heaps-and-priority-queues";
 import { chapterTries } from "@/content/courses/dsa/22-tries";
+import { chapterGraphRepresentationBfsDfs } from "@/content/courses/dsa/23-graph-representation-bfs-dfs";
+import { chapterShortestPaths } from "@/content/courses/dsa/24-shortest-paths";
+import { chapterTopologicalSort } from "@/content/courses/dsa/25-topological-sort";
+import { chapterUnionFind } from "@/content/courses/dsa/26-union-find";
 import type { Course } from "@/content/courses/types";
 
 /**
@@ -66,6 +70,15 @@ export const dsaCourse: Course = {
         chapterBinarySearchTrees,
         chapterHeapsAndPriorityQueues,
         chapterTries,
+      ],
+    },
+    {
+      title: "Graphs",
+      chapters: [
+        chapterGraphRepresentationBfsDfs,
+        chapterShortestPaths,
+        chapterTopologicalSort,
+        chapterUnionFind,
       ],
     },
   ],

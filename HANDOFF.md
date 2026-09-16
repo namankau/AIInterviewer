@@ -1,160 +1,93 @@
-# Handoff — 15 September 2026
+# Handoff — 16 September 2026
 
 ## Task
-The hidden AI question pool, as you set it out on 15 September. Task files are
-`tasks/task-039-question-pool.md` to `tasks/task-043-generation-run.md`. The run log is
-`runs/2026-09-15-progress.md` (gitignored).
-
-**Where it stands:**
-- 039, 040, 041 and 042 are merged into `develop`, with every migration applied.
-- 043 has not started. It spends money, so it needs your go-ahead.
-- Nothing has called Gemini, and no mock round was run.
-
-## Your four fixes (after you looked at the running app)
-1. **The Questions tab was still showing** because 042 was waiting in PR #7. I took out
-   042's sign-in change, which you hadn't asked for and which was the only reason it needed
-   your review (`046ffa8`). CI passed, and I merged PR #7 at `753eec7` and applied its
-   migration. `/questions` is hidden unless `NEXT_PUBLIC_QUESTION_BANK_BROWSABLE=true`.
-   **Restart the API to see it.**
-2. **The loop brief said too much.** It stated the caveat three times, gave a whole block to
-   a sourced record that said nothing, and had a Question bank section that only said it
-   was empty. Now the caveat appears once, the Question bank section is gone, and a
-   content-free record becomes a quiet "Based in part on: …" citation. Merged at `add3447`.
-3. **Back navigation** (same merge). "← Back to how <Company> interviews" returns from round
-   setup to the brief, and "Edit the description this was built from" returns from the
-   brief to the one-line input.
-4. **A better answer for every question in the report.** The prompt only annotated "the
-   weaker answers", and the improvement field could come back empty. Now:
-   - every answered question gets a "How you could have answered it better" note, and the
-     field is required;
-   - the list of questions is built from the interview itself, so a question the model
-     skipped still appears, with "No note was written for this answer.";
-   - the prompt forbids inventing the candidate's experience;
-   - pool questions pass the model their "strong answer covers" points as reference only.
-
-   Merged at `4d3f749`; CI passed on the merged `develop` (run 34982216345). Warm-up
-   questions get no note. Old reports render as before, with the same fallback text.
-   **Needs a live check you haven't approved yet:** whether the notes are actually good,
-   and the cost, which I estimate at a few hundred extra output tokens per report.
-   Neither is measured.
+Overnight, unattended: revamp the site in the style of interviewbit.com with a new colour
+theme site-wide, then lay out Java and DSA courses whose explanations teach a class-12
+student. `tasks/task-044-interviewbit-style-revamp.md`, `task-045-courses-framework-and-java.md`,
+`task-046-dsa-course.md`.
 
 ## What I built
+All merged into `develop`, latest `c1c39b5`. **65 chapters, ~10k lines of content.**
 
-**039 — pool foundation** (merged at `7e4e091`, migration applied)
-- `pool_questions` is its own table, kept apart from `bank_questions`. There is no code path
-  from the pool into the bank, so a generated question can never pick up a sourced company
-  tag. The table comment says why.
-- Runs and cells:
-  - `pool_generation_runs` and `pool_generation_cells` make the job resumable; a job that
-    dies restarts from its pending cells.
-  - `ai_calls.pool_run_id` means a run's spend is a query over the existing ledger.
-  - The spend cap is checked **before** each call.
-- Dedupe checks the exact fingerprint first, then embeddings (`gemini-embedding-001`, 768
-  dimensions, threshold 0.90). It also checks against the sourced bank, and the sourced
-  question always wins.
-- Admin-only routes under `/api/v1/admin/pool/runs` start or resume a run, show its status,
-  and **export it as JSONL**. The export is how you will review the sample.
-- Generation is off by default (`POOL_GENERATION_ENABLED`). With it off, starting a run only
-  plans it.
-- Code: `apps/api/src/main/kotlin/com/interviewos/api/pool/`.
+**The look (task 044)**
+- `apps/web/src/app/globals.css` — new palette on the same token names, so every page
+  re-themed at once: blue `#1a64f0` accent, navy hero/footer bands, soft-blue sections,
+  white cards, green and amber for meaning. Dark mode retuned. New `.card` / `.pill` classes.
+- `apps/web/src/app/layout.tsx` — Plus Jakarta Sans via `next/font` (no new dependency);
+  the old serif headings are gone.
+- `apps/web/src/app/page.tsx` — landing page rebuilt: sticky nav, navy hero with an
+  SVG mock-interview visual, employer strip, sections on voice rounds / the report /
+  courses, "how it works", CTA band, footer.
+- Dashboard, rounds, login, profile, report, device check and the round setup re-skinned.
+  The live interview room was only recoloured, per CLAUDE.md.
 
-**040 — coding and system design** (merged at `859d4de`, migration applied)
-- Coding reuses the existing `composeProblem` and `ProblemVerifier`. A problem whose own
-  reference solution fails its tests is never stored.
-- System design reuses `composeCase`. Each case is tagged `machine_coding` (entry and mid)
-  or `distributed_design` (senior and staff).
-- Both store their details in a new `pool_questions.payload jsonb` column, and both are
-  always `employer_kind`.
-
-**041 — behavioural, fundamentals, HR, case, techno-managerial** (merged at `e3f5715`)
-- Behavioural questions map to a company's values only when the knowledge check named that
-  value first.
-- Techno-managerial is generated sparsely at lower levels: entry gets ¼ of the batch, mid ⅔,
-  senior and staff the full batch.
-- **A fix I asked for before merging (it also changes 039's merged code):** a question that
-  claims to be about a specific company, and whose claim is refused, is now **dropped**.
-  Before, it was relabelled `employer_kind` and kept. The text had been written around the
-  claim, so relabelling left an invented value credited to a real employer, for example
-  "…Bias for Speed, one of Amazon's leadership principles". Drops are counted in the run's
-  note.
-
-**042 — rounds use the pool** (PR #7, not merged)
-- Rounds try the sourced bank first, then the AI pool, then live AI.
-- No candidate is asked the same question twice from either store, across sessions.
-- Pool coding problems are built from the stored, pre-verified payload, with no compose or
-  verify step.
-- The report label, as you specified: *"Generated by our AI interviewer from general
-  knowledge. Not a verified report of a question Amazon asked."* For a company the model
-  does not know well, the wording names the kind of employer instead.
-- `/questions` is behind `NEXT_PUBLIC_QUESTION_BANK_BROWSABLE`, which is off. The pages
-  return 404, and the nav entry, the loop-brief link and the list endpoints are gone.
-  Rounds still use the sourced bank.
-- It also fixes a bug in 039's `QuestionPoolRepository.find()` that let other companies of
-  the same archetype through.
+**The courses (tasks 045, 046)**
+- Framework: `apps/web/src/content/courses/` (typed `Block`/`Chapter`/`Module`/`Course`,
+  registry, prev/next), routes `/courses`, `/courses/[course]`, `/courses/[course]/[chapter]`
+  with a sidebar TOC, an "on this page" rail, prev/next and per-page SEO metadata. All
+  statically generated and public — no sign-in.
+- **Java, 35 chapters**, 6 modules: getting started → control flow → arrays/strings/methods
+  → OOP → core APIs → file I/O, memory and GC, threads, lambdas, streams, records.
+- **DSA, 30 chapters**, 8 modules: foundations and Big-O → arrays and strings → hashing,
+  recursion, backtracking → sorting and searching → linked lists, stacks, queues → trees,
+  heaps, tries → graphs, Dijkstra, topological sort, union-find → greedy, DP, bit tricks.
+- Every chapter: a hook, one everyday analogy plus a line on where the analogy breaks,
+  a dry run, complete Java programs, common mistakes, a "remember this" box, 2–3 quizzes,
+  and the interview angle. **Every complete program was compiled and run with the local
+  JDK; the output shown is real captured output.**
+- `fix/course-inline-markup` (merged `1307334`): chapter text uses `*word*` for emphasis
+  and backticked code in titles, which the reader printed raw. Inline formatting now
+  handles italics and is applied to titles, headings and the TOC; page titles strip it.
+  I found this by screenshotting the running pages.
 
 ## Assumptions I made
-- **Coding and design write at most one question per company × role × level**, not the
-  configured 6. Each question is its own model call, and running several inside one cell
-  could spend past the cap before the job's next check. So coverage for those two round
-  types will be thin, and you may want to change this after seeing the sample.
-- The admin gate reuses the existing `ADMIN_EMAILS` allow-list rather than a new auth
-  scheme.
-- The 17 companies whose archetype is unset (Nvidia, Stripe, PhonePe and others) were left
-  unset. The resolver infers their archetype instead of a migration deciding it.
-- Role family and level for a round are inferred from the role title, then from the resume.
-  A title that matches no role family gets no pool question.
-- 042's employer-kind label swaps the company name for an archetype phrase. You only gave
-  the company sentence.
+- **CLAUDE.md's design section was rewritten** (`9e2d302`) to record your new direction,
+  because otherwise the next agent would read the old "plain, ink on paper" rules and
+  undo this. I kept two things from it: the live interview screen stays near-empty, and
+  no invented user counts or testimonials on the landing page.
+- Course content lives in the web app as typed TypeScript data, not behind the API. It is
+  static teaching material, not interview logic, and static generation is what makes it
+  rank in search. If courses later need progress tracking or personalisation, that part
+  belongs in the backend.
+- One chapter per sub-topic listed in the task files, hence 35 + 30 rather than a dozen
+  long chapters.
+- DSA's recursion chapter takes a different angle from Java's (counting calls to read off
+  complexity) rather than repeating it.
+- Courses use their own public header and footer, not the signed-in app shell, which would
+  have shown an account error to logged-out visitors.
 
 ## What I could NOT verify
-- **Anything live** (rule 7): whether the prompts produce realistic questions, whether the
-  knowledge check says "no" often enough, whether 0.90 is the right dedupe threshold, the
-  real latency saved on a pool coding round, and how English-only pool questions do in
-  Hindi-English rounds.
-- **The recorded spend is a floor, not an exact figure.** The embedding calls may not
-  report their token usage, so they may be logged at zero cost. Keep that in mind when you
-  read 043's costs.
-- **The pool's application wiring has never booted.** This repo has no `@SpringBootTest`,
-  so CI never assembles the new pool components into a running application.
-- **The admin gate is weak:**
-  - It is a flat list with no roles, so anyone on it can start spend.
-  - It trusts the email in the sign-in token, and that email can be changed at the identity
-    provider and need not be verified.
-  - Nothing records who started a run.
-  - Decide whether that is good enough before 043 spends money through it.
-- **A behavioural-generator drop is logged but not counted in the run report.** The
-  question is still never stored; you just won't see those drops in the run's count.
-- **Realism is your judgement** (CLAUDE.md, things that need a human).
+- **Whether you like it.** Colour, typography and tone are yours to judge. I checked the
+  home page, catalogue, a Java chapter and a DSA chapter in a headless browser at desktop
+  and phone width; they render correctly, but that is not a design opinion.
+- Nobody has read the 65 chapters end to end for teaching quality. The code in them runs
+  and the structure is enforced by tests; the prose is not human-reviewed.
+- No live AI calls, no mock rounds (rule 7). The interview flow itself is untouched, but
+  I did not run a round to confirm the re-skin feels right in a live session.
+- Quiz interaction, the mobile TOC drawer and the copy-code button are covered by tests,
+  not by hand.
 
 ## Verification status
-- CI passed (typecheck, lint, tests, build) on the exact commit of every merge or PR:
-  - 039: run 34938599299
-  - 040: run 34967080223
-  - 041: run 34967802965 (includes 040)
-  - 042: run 34970987146 (includes 041)
-- I checked the migrations for 039 and 040 against the remote database after applying them.
-  pgvector is enabled, `pool_questions.embedding` and `payload jsonb` exist, and
-  `ai_calls.pool_run_id` is there.
+- typecheck / lint / tests / build: pass. 776 tests across 23 files.
+- CI green on every branch and on `develop` after each merge — last run on `c1c39b5`.
+- `npm run supabase -- migration list --linked`: no pending migrations; this run added no
+  schema changes.
 
 ## Merge status
-- 039: merged into `develop` at `7e4e091`, migration applied.
-- 040: merged at `859d4de`, migration applied.
-- 041: merged at `e3f5715`, no migration.
-- 042: merged at `753eec7` after its sign-in change was reverted, migration applied.
-- The loop-brief fix is merged at `add3447` and the report fix at `4d3f749`. Neither has a
-  migration.
-- **Every task came in over the ~800-line guidance:** 039 about 4,960 lines, 040 about 990,
-  041 about 1,140, 042 about 1,890. 039's admin endpoints and export, and 042's `/questions`
-  flag, should each have been their own task.
+- Merged into `develop`: `27ca51e` (revamp), `41be8c0` (framework + Java 1–3),
+  `0ea252a` (DSA 1–4), `c171501` (Java 4–6), `1307334` (italics fix), `c1c39b5` (DSA 5–8).
+- `main` untouched, as always.
+- Each course branch ran to roughly 4,000 lines, well over the ~800-line PR guidance.
+  That is content, not logic, and the task files set the batch size; worth splitting per
+  module if you would rather review these in smaller pieces.
 
 ## Suggested next task
-- 043 step 1: the Amazon, Google and Flipkart sample, under a tight spend cap, exported for
-  your review. Composing one real report at the same time would check the new
-  better-answer notes.
+- Read three or four chapters (try `/courses/java/loops` and `/courses/dsa/dp-intuition`)
+  and tell me whether the teaching voice is right. Tone is much cheaper to change now
+  than after a third course exists.
 
 ## Open questions for you
-- **043:** do you approve the sample run? It makes live Gemini calls and spends real money,
-  though only a small amount under the cap. The full run of about ₹1,000 comes only after
-  you have reviewed the sample.
-- **The admin gate:** is it good enough to start spend through, or does it need a real role
-  first?
+- Should courses link into mock interviews — for example, a "practise this in a round"
+  button on DSA chapters? That crosses from content into product and is your call.
+- Do you want a third course next (SQL, system design, aptitude), or depth on these two
+  (practice problems with solutions, a code runner)?

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { courses, getCourse, totalChapters, totalMinutes } from "@/content/courses";
+import { InlineText } from "@/components/courses/inline-text";
 
 export function generateStaticParams() {
   return courses.map((course) => ({ course: course.slug }));
@@ -77,7 +78,7 @@ export default async function CoursePage({ params }: { params: Promise<{ course:
                         <span className="font-mono text-micro text-ink-subtle">
                           {String(mi + 1)}.{String(ci + 1)}
                         </span>
-                        <span className="text-caption text-ink">{chapter.title}</span>
+                        <span className="text-caption text-ink"><InlineText text={chapter.title} /></span>
                       </span>
                       <span className="font-mono text-micro text-ink-subtle">{chapter.minutes} min</span>
                     </Link>

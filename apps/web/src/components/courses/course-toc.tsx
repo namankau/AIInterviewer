@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import type { Course } from "@/content/courses/types";
+import { InlineText } from "@/components/courses/inline-text";
 
 /**
  * The reader's left sidebar: modules -> chapters, current chapter highlighted. Collapses
@@ -44,7 +45,7 @@ export function CourseToc({ course, currentSlug }: { course: Course; currentSlug
                             : "border-transparent text-ink-muted hover:border-line-strong hover:text-ink"
                         }`}
                       >
-                        {chapter.title}
+                        <InlineText text={chapter.title} />
                       </Link>
                     </li>
                   );

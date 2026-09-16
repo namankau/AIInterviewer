@@ -2,6 +2,7 @@ import { anchorId } from "@/content/courses/anchor";
 import type { Block } from "@/content/courses/types";
 import { QuizBlock } from "@/components/courses/quiz-block";
 import { CopyCodeButton } from "@/components/courses/copy-code-button";
+import { InlineText } from "@/components/courses/inline-text";
 
 /**
  * Renders one chapter's blocks in order, each block kind styled deliberately (task 045).
@@ -37,7 +38,7 @@ function BlockView({ block }: { block: Block }) {
           id={anchorId(block.text)}
           className="scroll-mt-24 text-title text-ink"
         >
-          {block.text}
+          <InlineText text={block.text} />
         </h2>
       );
 
@@ -45,7 +46,7 @@ function BlockView({ block }: { block: Block }) {
       return (
         <aside className="rounded-md border border-line bg-accent-wash px-5 py-4">
           <p className="font-mono text-micro tracking-widest text-accent uppercase">The picture</p>
-          <p className="mt-2 text-heading text-ink">{block.title}</p>
+          <p className="mt-2 text-heading text-ink"><InlineText text={block.title} /></p>
           <p className="mt-2 text-body leading-relaxed text-ink-muted">
             <InlineText text={block.text} />
           </p>
@@ -126,7 +127,7 @@ function BlockView({ block }: { block: Block }) {
       return (
         <div className="rounded-md border border-line">
           <p className="border-b border-line bg-surface-sunken px-4 py-2 text-caption font-medium text-ink">
-            {block.title}
+            <InlineText text={block.title} />
           </p>
           <ol className="flex flex-col gap-2.5 px-4 py-4">
             {block.steps.map((step, i) => (
@@ -188,54 +189,4 @@ function BlockView({ block }: { block: Block }) {
     case "quiz":
       return <QuizBlock block={block} />;
   }
-}
-
-/**
- * `` `code` `` and `**bold**` inside paragraph-like text, per the block type's documented
- * inline support. Deliberately not a markdown parser — two patterns, split by hand.
- */
-function InlineText({ text }: { text: string }) {
-  const tokens = tokenize(text);
-  return (
-    <>
-      {tokens.map((token, i) =>
-        token.kind === "code" ? (
-          <code key={i} className="rounded bg-surface-sunken px-1.5 py-0.5 font-mono text-[0.9em] text-ink">
-            {token.text}
-          </code>
-        ) : token.kind === "bold" ? (
-          <strong key={i} className="font-semibold text-ink">
-            {token.text}
-          </strong>
-        ) : (
-          <span key={i}>{token.text}</span>
-        ),
-      )}
-    </>
-  );
-}
-
-type Token = { kind: "text" | "code" | "bold"; text: string };
-
-function tokenize(text: string): Token[] {
-  const tokens: Token[] = [];
-  const pattern = /`([^`]+)`|\*\*([^*]+)\*\*/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = pattern.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      tokens.push({ kind: "text", text: text.slice(lastIndex, match.index) });
-    }
-    if (match[1] !== undefined) {
-      tokens.push({ kind: "code", text: match[1] });
-    } else if (match[2] !== undefined) {
-      tokens.push({ kind: "bold", text: match[2] });
-    }
-    lastIndex = pattern.lastIndex;
-  }
-  if (lastIndex < text.length) {
-    tokens.push({ kind: "text", text: text.slice(lastIndex) });
-  }
-  return tokens;
 }

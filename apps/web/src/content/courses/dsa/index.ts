@@ -24,12 +24,16 @@ import { chapterGraphRepresentationBfsDfs } from "@/content/courses/dsa/23-graph
 import { chapterShortestPaths } from "@/content/courses/dsa/24-shortest-paths";
 import { chapterTopologicalSort } from "@/content/courses/dsa/25-topological-sort";
 import { chapterUnionFind } from "@/content/courses/dsa/26-union-find";
+import { chapterGreedy } from "@/content/courses/dsa/27-greedy";
+import { chapterDpIntuition } from "@/content/courses/dsa/28-dp-intuition";
+import { chapterDpPatterns } from "@/content/courses/dsa/29-dp-patterns";
+import { chapterBitManipulation } from "@/content/courses/dsa/30-bit-manipulation";
 import type { Course } from "@/content/courses/types";
 
 /**
  * Data Structures & Algorithms (task 046). Modules 1-4 — foundations; arrays and strings; hashing and
- * recursion; sorting and searching — are written in feat/courses-dsa-1; modules 5-8 — linear structures;
- * trees; graphs; paradigms — are written here (feat/courses-dsa-2).
+ * recursion; sorting and searching — were written in feat/courses-dsa-1. Modules 5-8 — linear structures;
+ * trees; graphs; paradigms — complete the course (feat/courses-dsa-2).
  */
 export const dsaCourse: Course = {
   slug: "dsa",
@@ -80,6 +84,10 @@ export const dsaCourse: Course = {
         chapterTopologicalSort,
         chapterUnionFind,
       ],
+    },
+    {
+      title: "Paradigms",
+      chapters: [chapterGreedy, chapterDpIntuition, chapterDpPatterns, chapterBitManipulation],
     },
   ],
 };

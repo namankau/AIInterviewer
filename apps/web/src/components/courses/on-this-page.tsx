@@ -1,5 +1,6 @@
 import { anchorId } from "@/content/courses/anchor";
 import type { Block } from "@/content/courses/types";
+import { InlineText } from "@/components/courses/inline-text";
 
 /** Right-rail anchor list, built from a chapter's `h` blocks — wide screens only. */
 export function OnThisPage({ blocks }: { blocks: Block[] }) {
@@ -16,7 +17,7 @@ export function OnThisPage({ blocks }: { blocks: Block[] }) {
               href={`#${anchorId(h.text)}`}
               className="block text-caption text-ink-muted transition-colors hover:text-ink"
             >
-              {h.text}
+              <InlineText text={h.text} />
             </a>
           </li>
         ))}

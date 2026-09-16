@@ -14,6 +14,7 @@ import {
   getCourse,
   getModuleForChapter,
 } from "@/content/courses";
+import { InlineText, plainText } from "@/components/courses/inline-text";
 
 export function generateStaticParams() {
   return courses.flatMap((course) =>
@@ -30,8 +31,8 @@ export async function generateMetadata({
   const chapter = getChapter(courseSlug, chapterSlug);
   if (!chapter) return {};
   return {
-    title: `${chapter.title} — AceMyInterview`,
-    description: chapter.summary,
+    title: `${plainText(chapter.title)} — AceMyInterview`,
+    description: plainText(chapter.summary),
   };
 }
 
@@ -77,7 +78,7 @@ export default async function ChapterPage({
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
             {chapterModule ? chapterModule.title : course.title} · {chapter.minutes} min
           </p>
-          <h1 className="mt-3 text-display text-balance text-ink">{chapter.title}</h1>
+          <h1 className="mt-3 text-display text-balance text-ink"><InlineText text={chapter.title} /></h1>
           <p className="mt-3 text-body text-ink-muted">{chapter.summary}</p>
 
           <div className="mt-10">
@@ -91,7 +92,7 @@ export default async function ChapterPage({
                 className="flex flex-col rounded-md border border-line px-4 py-3 text-caption transition-colors hover:border-line-strong sm:max-w-[48%]"
               >
                 <span className="font-mono text-micro text-ink-subtle uppercase">Previous</span>
-                <span className="text-ink">{prev.title}</span>
+                <span className="text-ink"><InlineText text={prev.title} /></span>
               </Link>
             ) : (
               <span />
@@ -102,7 +103,7 @@ export default async function ChapterPage({
                 className="flex flex-col rounded-md border border-line px-4 py-3 text-right text-caption transition-colors hover:border-line-strong sm:ml-auto sm:max-w-[48%]"
               >
                 <span className="font-mono text-micro text-ink-subtle uppercase">Next</span>
-                <span className="text-ink">{next.title}</span>
+                <span className="text-ink"><InlineText text={next.title} /></span>
               </Link>
             ) : (
               <span />

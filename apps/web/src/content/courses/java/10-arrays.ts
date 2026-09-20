@@ -127,16 +127,49 @@ export const chapterArrays: Chapter = {
       output: "Row 1, Col 2: 6\n1 2 3 \n4 5 6",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why seating[1][2] is 6, not 3",
-      steps: [
-        "seating[0] is the first row: {1, 2, 3}. seating[1] is the second row: {4, 5, 6}. Row indices " +
-          "start at 0, exactly like a 1D array.",
-        "seating[1][2] means: go to row index 1 (that's {4, 5, 6}), then take the element at index 2 " +
-          "within that row.",
-        "Within {4, 5, 6}, index 0 is 4, index 1 is 5, index 2 is 6.",
-        "So seating[1][2] is 6 — the second row's third value, both indices counted from zero.",
-      ],
+      caption: "A 2D array is an array of arrays — the row index picks a row, the column index picks within it.",
+      viz: {
+        type: "table",
+        frames: [
+          {
+            rows: [
+              [1, 2, 3],
+              [4, 5, 6],
+            ],
+            rowLabels: ["row 0", "row 1"],
+            colLabels: ["col 0", "col 1", "col 2"],
+            note: "seating[0] is {1, 2, 3}. seating[1] is {4, 5, 6}. Row indices start at 0, exactly like a 1D array.",
+          },
+          {
+            rows: [
+              [1, 2, 3],
+              [4, 5, 6],
+            ],
+            rowLabels: ["row 0", "row 1"],
+            colLabels: ["col 0", "col 1", "col 2"],
+            highlight: [
+              [1, 0],
+              [1, 1],
+              [1, 2],
+            ],
+            note: "seating[1][2] means: go to row index 1 (that's {4, 5, 6}), then take the element at index 2 within that row.",
+          },
+          {
+            rows: [
+              [1, 2, 3],
+              [4, 5, 6],
+            ],
+            rowLabels: ["row 0", "row 1"],
+            colLabels: ["col 0", "col 1", "col 2"],
+            highlight: [[1, 2]],
+            note:
+              "Within {4, 5, 6}, index 0 is 4, index 1 is 5, index 2 is 6 — so seating[1][2] is 6, both " +
+              "indices counted from zero.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

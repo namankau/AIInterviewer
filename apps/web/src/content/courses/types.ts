@@ -71,6 +71,7 @@ export interface ListNode {
   /** id of the next node, or `null` for the end of the list. */
   next: string | null;
   pointers?: string[];
+  state?: CellState;
 }
 export interface ListFrame {
   /** Nodes in list order, starting from the head. */

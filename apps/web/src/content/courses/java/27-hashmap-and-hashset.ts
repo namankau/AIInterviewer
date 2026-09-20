@@ -132,6 +132,62 @@ export const chapterHashMapHashSet: Chapter = {
         "their identity.",
     },
     {
+      kind: "viz",
+      title: "wordCount's buckets, filling up as {the, cat, sat, the, mat, the} is inserted",
+      caption:
+        "Bucket numbers here are illustrative, not real Java hash codes — the point is that the same key " +
+        "always lands in the same bucket, so get() can jump straight there.",
+      viz: {
+        type: "table",
+        frames: [
+          {
+            rowLabels: ["bucket 0", "bucket 1", "bucket 2", "bucket 3", "bucket 4"],
+            colLabels: ["contents"],
+            rows: [[null], [null], ["the:1"], [null], [null]],
+            highlight: [[2, 0]],
+            note: "\"the\" hashes to bucket 2. wordCount is now {the:1}.",
+          },
+          {
+            rowLabels: ["bucket 0", "bucket 1", "bucket 2", "bucket 3", "bucket 4"],
+            colLabels: ["contents"],
+            rows: [["cat:1"], [null], ["the:1"], [null], [null]],
+            highlight: [[0, 0]],
+            note: "\"cat\" hashes to bucket 0. wordCount is now {the:1, cat:1}.",
+          },
+          {
+            rowLabels: ["bucket 0", "bucket 1", "bucket 2", "bucket 3", "bucket 4"],
+            colLabels: ["contents"],
+            rows: [["cat:1, sat:1"], [null], ["the:1"], [null], [null]],
+            highlight: [[0, 0]],
+            note: "\"sat\" also hashes to bucket 0 — a collision. Both keys are stored side by side in that bucket.",
+          },
+          {
+            rowLabels: ["bucket 0", "bucket 1", "bucket 2", "bucket 3", "bucket 4"],
+            colLabels: ["contents"],
+            rows: [["cat:1, sat:1"], [null], ["the:2"], [null], [null]],
+            highlight: [[2, 0]],
+            note: "\"the\" is seen again: getOrDefault bumps its count to 2, in the same bucket — no new entry is created.",
+          },
+          {
+            rowLabels: ["bucket 0", "bucket 1", "bucket 2", "bucket 3", "bucket 4"],
+            colLabels: ["contents"],
+            rows: [["cat:1, sat:1"], [null], ["the:2"], [null], ["mat:1"]],
+            highlight: [[4, 0]],
+            note: "\"mat\" hashes to bucket 4.",
+          },
+          {
+            rowLabels: ["bucket 0", "bucket 1", "bucket 2", "bucket 3", "bucket 4"],
+            colLabels: ["contents"],
+            rows: [["cat:1, sat:1"], [null], ["the:3"], [null], ["mat:1"]],
+            highlight: [[2, 0]],
+            note:
+              "Final: \"the\" seen a third time, count 3. get(\"the\") jumps straight to bucket 2 instead of " +
+              "scanning every entry — that's why lookup stays fast regardless of size.",
+          },
+        ],
+      },
+    },
+    {
       kind: "pitfall",
       items: [
         "Overriding `equals()` without also overriding `hashCode()` — this actively breaks HashMap/HashSet: " +

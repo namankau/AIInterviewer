@@ -1,4 +1,5 @@
 import type { ListFrame } from "@/content/courses/types";
+import { STATE_FILL, STATE_LABEL, STATE_STROKE } from "@/components/courses/viz/viz-tokens";
 
 const BOX_W = 64;
 const BOX_H = 40;
@@ -26,15 +27,22 @@ export function ListViz({ frame }: { frame: ListFrame }) {
         const x = i * (BOX_W + GAP);
         const y = TOP_PAD;
         const targetIndex = node.next ? indexOf.get(node.next) : undefined;
+        const fill = node.state ? STATE_FILL[node.state] : "var(--surface-raised)";
+        const stroke = node.state ? STATE_STROKE[node.state] : "var(--line-strong)";
         return (
           <g key={node.id}>
-            <rect x={x} y={y} width={BOX_W} height={BOX_H} rx={7} fill="var(--surface-raised)" stroke="var(--line-strong)" strokeWidth={1.5} />
+            <rect x={x} y={y} width={BOX_W} height={BOX_H} rx={7} fill={fill} stroke={stroke} strokeWidth={1.5} />
             <text x={x + BOX_W / 2} y={y + BOX_H / 2 + 5} textAnchor="middle" className="font-mono" fontSize={14} fill="var(--ink)">
               {node.value}
             </text>
             {node.pointers?.length ? (
               <text x={x + BOX_W / 2} y={y - 8} textAnchor="middle" fontSize={10} fontWeight={600} fill="var(--accent-strong)">
                 {node.pointers.join(" / ")}
+              </text>
+            ) : null}
+            {node.state ? (
+              <text x={x + BOX_W / 2} y={y + BOX_H + 14} textAnchor="middle" fontSize={9} fill="var(--ink-subtle)">
+                {STATE_LABEL[node.state]}
               </text>
             ) : null}
             {targetIndex !== undefined ? (

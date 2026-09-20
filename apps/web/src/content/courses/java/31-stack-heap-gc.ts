@@ -106,17 +106,43 @@ export const chapterStackHeapGC: Chapter = {
         "reachable, and its value is still `100`.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "When would the first Node actually become eligible for garbage collection?",
-      steps: [
-        "Right now: first is null, reference1 is null, but reference2 still points at the Node holding value 100.",
-        "The garbage collector only reclaims an object once NOTHING in the program can reach it anymore " +
-          "— through any variable, any field, any chain of references.",
-        "As long as reference2 exists and still points at it, the object remains reachable and is never collected.",
-        "Only after a statement like reference2 = null; (with no other variable pointing at it) does the " +
-          "object become unreachable — and only then is it a candidate for the garbage collector to reclaim, " +
-          "at a time of its own choosing, not necessarily immediately.",
-      ],
+      caption: "An object is only reclaimed once NOTHING — no variable, no field, no chain of references — can reach it.",
+      viz: {
+        type: "list",
+        frames: [
+          {
+            nodes: [
+              { id: "n1", value: 100, next: "n2", pointers: ["first", "reference1", "reference2"] },
+              { id: "n2", value: 2, next: "n3" },
+              { id: "n3", value: 3, next: null },
+            ],
+            note: "Before clearing anything: first, reference1, and reference2 all point at the same Node.",
+          },
+          {
+            nodes: [
+              { id: "n1", value: 100, next: "n2", pointers: ["reference2"] },
+              { id: "n2", value: 2, next: "n3" },
+              { id: "n3", value: 3, next: null },
+            ],
+            note:
+              "first = null; reference1 = null; — but reference2 still points at the Node holding value 100. " +
+              "As long as any variable reaches it, it remains reachable and is never collected.",
+          },
+          {
+            nodes: [
+              { id: "n1", value: 100, next: "n2", state: "done" },
+              { id: "n2", value: 2, next: "n3", state: "done" },
+              { id: "n3", value: 3, next: null, state: "done" },
+            ],
+            note:
+              "Only after reference2 = null; (no other variable pointing at it) does the whole chain become " +
+              "unreachable — and only then is it a candidate for the garbage collector, at a time of its own " +
+              "choosing, not necessarily immediately.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

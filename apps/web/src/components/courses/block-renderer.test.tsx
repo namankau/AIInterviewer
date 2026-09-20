@@ -37,9 +37,9 @@ const ALL_KINDS: Block[] = [
   {
     kind: "playground",
     language: "java",
-    starter: "System.out.println(1);",
+    starter: "System.out.println(2);",
     prompt: "A prompt line.",
-    expectedOutput: "1",
+    expectedOutput: "2",
   },
 ];
 
@@ -62,6 +62,7 @@ describe("BlockRenderer", () => {
     expect(screen.getByText("A step-through array")).toBeInTheDocument();
     expect(screen.getByText("Frame one note.")).toBeInTheDocument();
     expect(screen.getByText("A prompt line.")).toBeInTheDocument();
+    expect(screen.getByText("System.out.println(2);")).toBeInTheDocument();
     expect(screen.getByText(/Running Java in the browser isn.t available yet/)).toBeInTheDocument();
   });
 

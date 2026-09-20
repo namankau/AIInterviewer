@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ChangeEvent } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Playground } from "@/components/courses/playground";
@@ -19,6 +20,26 @@ vi.mock("@/lib/course-code-runner", () => ({
   getRunner: (language: string) => (language === "python" ? { prepare, run } : null),
 }));
 
+/**
+ * CodeMirror's real view does its own text measurement (`getClientRects`, animation-frame
+ * layout passes) that jsdom does not implement, which makes simulated typing into the real
+ * editor flaky and occasionally throws async, unrelated to anything this component does.
+ * Standing in a plain, controlled textarea tests exactly what this component owns — that
+ * it wires `value`/`onChange` correctly and reacts to Reset — without re-testing
+ * CodeMirror's own (separately maintained) editing behaviour.
+ */
+vi.mock("@uiw/react-codemirror", () => ({
+  default: ({
+    value,
+    onChange,
+    ["aria-label"]: ariaLabel,
+  }: {
+    value: string;
+    onChange: (next: string) => void;
+    "aria-label": string;
+  }) => <textarea aria-label={ariaLabel} value={value} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)} />,
+}));
+
 type PlaygroundBlock = Extract<Block, { kind: "playground" }>;
 
 const pythonBlock: PlaygroundBlock = {
@@ -34,12 +55,6 @@ const javaBlock: PlaygroundBlock = {
   language: "java",
   starter: "System.out.println(\"hi\");",
 };
-
-function cmContent(container: HTMLElement): HTMLElement {
-  const el = container.querySelector(".cm-content");
-  if (!el) throw new Error("CodeMirror content element not found");
-  return el as HTMLElement;
-}
 
 describe("Playground", () => {
   beforeEach(() => {
@@ -112,19 +127,32 @@ describe("Playground", () => {
   });
 
   it("edits the source in the editor and Reset restores the original starter", async () => {
+    const user = userEvent.setup();
+    render(<Playground block={pythonBlock} />);
+
+    const editor = screen.getByLabelText("Editable python code") as HTMLTextAreaElement;
+    expect(editor.value).toBe(pythonBlock.starter);
+
+    await user.type(editor, "!");
+    expect(editor.value).toBe(`${pythonBlock.starter}!`);
+
+    await user.click(screen.getByRole("button", { name: "Reset to original" }));
+    expect(editor.value).toBe(pythonBlock.starter);
+  });
+
+  it("Run uses whatever is currently in the editor, not the original starter", async () => {
     prepare.mockResolvedValue(true);
     run.mockResolvedValue({ stdout: "hi!", stderr: "", available: true, timedOut: false, message: null });
 
     const user = userEvent.setup();
-    const { container } = render(<Playground block={pythonBlock} />);
+    render(<Playground block={pythonBlock} />);
 
-    const editor = cmContent(container);
-    await user.click(editor);
+    const editor = screen.getByLabelText("Editable python code") as HTMLTextAreaElement;
     await user.type(editor, "!");
-    expect(editor.textContent).toContain("!");
+    await user.click(screen.getByRole("button", { name: "Run" }));
 
-    await user.click(screen.getByRole("button", { name: "Reset to original" }));
-    expect(editor.textContent).toBe(pythonBlock.starter);
+    expect(await screen.findByText("hi!")).toBeInTheDocument();
+    expect(run).toHaveBeenCalledWith(`${pythonBlock.starter}!`);
   });
 
   it("labels the editor and the output region accessibly", () => {

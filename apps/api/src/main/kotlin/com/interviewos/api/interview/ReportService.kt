@@ -87,7 +87,12 @@ class ReportService(
         // and a prompt told to score "against what this function and level demands" was
         // given neither — so a final-year student was marked against nothing in
         // particular, which in practice means against a working engineer.
-        val stage = CandidateStage.of(session.roleTitle, resumeService.backgroundFor(userId)?.tenure?.totalExperienceMonths)
+        val stage =
+            CandidateStage.of(
+                session.roleTitle,
+                resumeService.backgroundFor(userId)?.tenure?.totalExperienceMonths,
+                declaredStage = session.declaredStage,
+            )
         val brief =
             InterviewBrief(
                 company = session.companyName,

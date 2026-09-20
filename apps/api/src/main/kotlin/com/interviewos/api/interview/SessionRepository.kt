@@ -86,6 +86,13 @@ class SessionRepository(
         consentAudio: Boolean,
         consentVideo: Boolean,
         durationMinutes: Int,
+        /**
+         * What the candidate said about their own stage (task 051), stored with the
+         * session rather than re-typed later — the report has to score against the same
+         * bar the round ran at, and the round's role title or the candidate's resume can
+         * both change after the fact while this must not. Null when they said nothing.
+         */
+        declaredStage: DeclaredStage?,
     ): UUID =
         jdbcClient
             .sql(
@@ -93,14 +100,14 @@ class SessionRepository(
                 insert into public.sessions (
                     user_id, company_name, company_archetype, role_title, round_type, language,
                     status, started_at, consent_audio_at, consent_video_at, archetype_confidence,
-                    duration_minutes
+                    duration_minutes, stated_level
                 ) values (
                     :u, :company, cast(:archetype as public.employer_archetype), :role,
                     cast(:round as public.round_type), cast(:language as public.interview_language),
                     'in_progress', now(),
                     case when :consentAudio then now() end,
                     case when :consentVideo then now() end,
-                    :confidence, :durationMinutes
+                    :confidence, :durationMinutes, :statedLevel
                 )
                 returning id
                 """.trimIndent(),
@@ -114,6 +121,7 @@ class SessionRepository(
             .param("consentVideo", consentVideo)
             .param("durationMinutes", durationMinutes)
             .param("confidence", confidence.dbValue)
+            .param("statedLevel", declaredStage?.wireValue)
             .query(UUID::class.java)
             .single()
 
@@ -129,7 +137,7 @@ class SessionRepository(
                        status::text as status, started_at, ended_at, report_expired_at,
                        (consent_video_at is not null) as consent_video, duration_minutes,
                        coalesce(archetype_confidence, 'inferred') as archetype_confidence,
-                       workspace::text as workspace, board::text as board
+                       workspace::text as workspace, board::text as board, stated_level
                   from public.sessions
                  where id = :id and user_id = :u
                 """.trimIndent(),
@@ -723,6 +731,7 @@ class SessionRepository(
             reportExpiredAt = rs.getTimestamp("report_expired_at")?.toInstant(),
             workspace = rs.getString("workspace"),
             board = rs.getString("board"),
+            declaredStage = DeclaredStage.parseOrNull(rs.getString("stated_level")),
         )
 
     private fun mapTurn(rs: ResultSet) =
@@ -768,6 +777,12 @@ data class SessionRow(
     val workspace: String? = null,
     /** What the candidate drew or wrote, as raw JSON. Null until they touch the board. */
     val board: String? = null,
+    /**
+     * What the candidate said about their own stage when this round started (task 051).
+     * Null when they said nothing, which is the common case and reproduces the derivation
+     * in [CandidateStage.of] exactly.
+     */
+    val declaredStage: DeclaredStage? = null,
 )
 
 /**

@@ -163,20 +163,62 @@ data class CandidateStage(
          * or the round composer supplied ("fresher", "2026 batch"), matched the same way as
          * the title.
          *
-         * A candidate with no resume and an unremarkable title is mid level, as before —
-         * guessing "fresher" from an empty profile would pitch a working engineer's round
-         * at a student, which is the mirror image of the bug this fixes.
+         * [declaredStage] is different from all three: it is the candidate answering a
+         * direct question about where they are (task 051), and it wins over everything
+         * above rather than feeding into the same keyword match. The title and resume are a
+         * guess; an answer the candidate actually gave is not, in either direction — a
+         * stated professional is not read as a fresher because their resume is thin, and a
+         * stated student is not read as mid-level because their title says "Software
+         * Engineer" with nothing else behind it.
+         *
+         * A candidate with no resume and an unremarkable title, who stated nothing, is mid
+         * level, as before — guessing "fresher" from an empty profile would pitch a working
+         * engineer's round at a student, which is the mirror image of the bug this fixes.
          */
         fun of(
             roleTitle: String,
             experienceMonths: Int?,
             statedLevel: String? = null,
+            declaredStage: DeclaredStage? = null,
         ): CandidateStage {
             val title = listOfNotNull(roleTitle.takeIf { it.isNotBlank() }, statedLevel?.takeIf { it.isNotBlank() }).joinToString(" ")
             val level = PoolRoundCoordinate.level(title, experienceMonths)
-            val campus = level == Level.ENTRY && (experienceMonths == null || experienceMonths < CAMPUS_BELOW_MONTHS)
-            return CandidateStage(level, campus)
+            return when (declaredStage) {
+                DeclaredStage.STUDENT, DeclaredStage.RECENT_GRADUATE -> CandidateStage(Level.ENTRY, campusFresher = true)
+                DeclaredStage.PROFESSIONAL -> CandidateStage(level, campusFresher = false)
+                null -> {
+                    val campus = level == Level.ENTRY && (experienceMonths == null || experienceMonths < CAMPUS_BELOW_MONTHS)
+                    CandidateStage(level, campus)
+                }
+            }
         }
+    }
+}
+
+/**
+ * A candidate saying, in as many words, where they are (task 051).
+ *
+ * `StartSessionRequest` has no other way for someone to correct the derivation in
+ * [CandidateStage.of] — the round type, company and role are the only things it captures
+ * about who is sitting the round. Optional, and matched exactly: an unrecognised value is
+ * a `400`, the same treatment `RoundType.parseOrNull` gives an unknown round, rather than
+ * being silently ignored.
+ */
+enum class DeclaredStage(
+    val wireValue: String,
+) {
+    /** Still studying — a final-year or earlier student. */
+    STUDENT("student"),
+
+    /** Graduated, no professional job yet. Read the same as [STUDENT]: no work history to interview about. */
+    RECENT_GRADUATE("recent_graduate"),
+
+    /** Currently working. Read as *not* a campus fresher even when the title or resume alone would suggest one. */
+    PROFESSIONAL("professional"),
+    ;
+
+    companion object {
+        fun parseOrNull(value: String?): DeclaredStage? = value?.let { v -> entries.firstOrNull { it.wireValue == v } }
     }
 }
 

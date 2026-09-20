@@ -1,6 +1,7 @@
 import { anchorId } from "@/content/courses/anchor";
 import type { Block } from "@/content/courses/types";
 import { QuizBlock } from "@/components/courses/quiz-block";
+import { VizBlock } from "@/components/courses/viz-block";
 import { CopyCodeButton } from "@/components/courses/copy-code-button";
 import { InlineText } from "@/components/courses/inline-text";
 
@@ -188,5 +189,8 @@ function BlockView({ block }: { block: Block }) {
 
     case "quiz":
       return <QuizBlock block={block} />;
+
+    case "viz":
+      return <VizBlock block={block} />;
   }
 }

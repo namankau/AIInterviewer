@@ -23,6 +23,14 @@ const ALL_KINDS: Block[] = [
     answer: 1,
     why: "Basic arithmetic.",
   },
+  {
+    kind: "viz",
+    title: "A step-through array",
+    viz: {
+      type: "array",
+      frames: [{ cells: [{ value: 1 }, { value: 2 }], note: "Frame one note." }],
+    },
+  },
 ];
 
 describe("BlockRenderer", () => {
@@ -41,6 +49,8 @@ describe("BlockRenderer", () => {
     expect(screen.getByText("Remember this")).toBeInTheDocument();
     expect(screen.getByText("Comes up as X")).toBeInTheDocument();
     expect(screen.getByText("What is 2 + 2?")).toBeInTheDocument();
+    expect(screen.getByText("A step-through array")).toBeInTheDocument();
+    expect(screen.getByText("Frame one note.")).toBeInTheDocument();
   });
 
   it("renders inline `code` and **bold** markers as their own elements", () => {

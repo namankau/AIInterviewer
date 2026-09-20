@@ -90,15 +90,24 @@ export const chapterStacks: Chapter = {
         'isBalanced("{[()]}") = true\nisBalanced("{[(])}") = false\nnextGreater: 4 2 4 -1 -1',
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "isBalanced(\"{[(])}\") — a bracket sequence that looks close but isn't",
-      steps: [
-        "'{' -> push. Stack (top last): {",
-        "'[' -> push. Stack: { [",
-        "'(' -> push. Stack: { [ (",
-        "']' -> pop, get '('. Closing ']' needs an open '[', but popped '(' — mismatch. Return false " +
-          "immediately.",
-      ],
+      caption: "The most recently opened bracket must be the next one closed — that's LIFO by definition.",
+      viz: {
+        type: "stack",
+        frames: [
+          { items: ["{"], highlight: 0, note: "'{' -> push. Stack (top last): {" },
+          { items: ["{", "["], highlight: 1, note: "'[' -> push. Stack: { [" },
+          { items: ["{", "[", "("], highlight: 2, note: "'(' -> push. Stack: { [ (" },
+          {
+            items: ["{", "["],
+            highlight: 1,
+            note:
+              "']' -> pop, get '('. Closing ']' needs an open '[', but popped '(' — mismatch. Return false " +
+              "immediately.",
+          },
+        ],
+      },
     },
     {
       kind: "p",
@@ -123,19 +132,49 @@ export const chapterStacks: Chapter = {
         "would cost.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "nextGreater({2, 1, 2, 4, 3}) — the index stack, values shown for clarity",
-      steps: [
-        "i=0 (val 2). Stack empty, nothing to pop. Push 0. Stack (indices): [0]",
-        "i=1 (val 1). Top is index 0 (val 2); 2 is not < 1, so don't pop. Push 1. Stack: [0, 1]",
-        "i=2 (val 2). Top is index 1 (val 1); 1 < 2, so pop 1, result[1] = 2. New top is index 0 (val 2); " +
-          "2 is not < 2, so stop popping. Push 2. Stack: [0, 2]",
-        "i=3 (val 4). Top is index 2 (val 2); 2 < 4, pop 2, result[2] = 4. New top is index 0 (val 2); " +
-          "2 < 4, pop 0, result[0] = 4. Stack now empty. Push 3. Stack: [3]",
-        "i=4 (val 3). Top is index 3 (val 4); 4 is not < 3, don't pop. Push 4. Stack: [3, 4]",
-        "Array exhausted. Remaining stack indices (3, 4) have no next greater element to their right — " +
-          "result[3] = -1, result[4] = -1. Final: {4, 2, 4, -1, -1}.",
-      ],
+      caption: "Each stack entry is 'index=value'. The stack only ever holds values still waiting for a bigger neighbour.",
+      viz: {
+        type: "stack",
+        frames: [
+          {
+            items: ["i0=2"],
+            highlight: 0,
+            note: "i=0 (val 2). Stack empty, nothing to pop. Push 0.",
+          },
+          {
+            items: ["i0=2", "i1=1"],
+            highlight: 1,
+            note: "i=1 (val 1). Top is index 0 (val 2); 2 is not < 1, so don't pop. Push 1.",
+          },
+          {
+            items: ["i0=2", "i2=2"],
+            highlight: 1,
+            note:
+              "i=2 (val 2). Top is index 1 (val 1); 1 < 2, pop it, result[1] = 2. New top is index 0 (val 2); " +
+              "2 is not < 2, stop popping. Push 2.",
+          },
+          {
+            items: ["i3=4"],
+            highlight: 0,
+            note:
+              "i=3 (val 4). Pop index 2 (val 2 < 4), result[2] = 4. Pop index 0 (val 2 < 4), result[0] = 4. " +
+              "Stack now empty. Push 3.",
+          },
+          {
+            items: ["i3=4", "i4=3"],
+            highlight: 1,
+            note: "i=4 (val 3). Top is index 3 (val 4); 4 is not < 3, don't pop. Push 4.",
+          },
+          {
+            items: ["i3=4", "i4=3"],
+            note:
+              "Array exhausted. Remaining indices (3, 4) have no next greater element — result[3] = -1, " +
+              "result[4] = -1. Final: {4, 2, 4, -1, -1}.",
+          },
+        ],
+      },
     },
     {
       kind: "table",

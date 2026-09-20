@@ -80,22 +80,83 @@ export const chapterRecursionDsa: Chapter = {
         "powerLinear(2, 10) = 1024\npowerFast(2, 10) = 1024\npowerFast(3, 13) = 1594323\narraySumRecursive = 19",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "powerFast(2, 10) — the exponent halving each call",
-      steps: [
-        "powerFast(2, 10) needs powerFast(2, 5) first (10/2=5). Call, and wait.",
-        "powerFast(2, 5) needs powerFast(2, 2) first (5/2=2, integer division). Call, and wait.",
-        "powerFast(2, 2) needs powerFast(2, 1) first (2/2=1). Call, and wait.",
-        "powerFast(2, 1) needs powerFast(2, 0) first (1/2=0). Call, and wait.",
-        "powerFast(2, 0) hits the base case directly: returns 1.",
-        "powerFast(2, 1) resumes: half=1, exp is odd, returns half*half*base = 1*1*2 = 2.",
-        "powerFast(2, 2) resumes: half=2, exp is even, returns half*half = 2*2 = 4.",
-        "powerFast(2, 5) resumes: half=4, exp is odd, returns half*half*base = 4*4*2 = 32.",
-        "powerFast(2, 10) resumes: half=32, exp is even, returns half*half = 32*32 = 1024. Final answer.",
-        "Total calls: 5 (for exp values 10, 5, 2, 1, 0) — matching log₂(10) ≈ 3.3, rounded up to " +
-          "account for the extra base-case call, versus powerLinear's 11 calls (one per unit from 10 down " +
-          "to 0).",
-      ],
+      caption: "The call stack grows on the way down, then resumes and computes on the way back up.",
+      viz: {
+        type: "callstack",
+        frames: [
+          {
+            stack: [{ label: "powerFast(2, 10)", state: "active" }],
+            note: "powerFast(2, 10) needs powerFast(2, 5) first (10/2=5). Call, and wait.",
+          },
+          {
+            stack: [{ label: "powerFast(2, 10)" }, { label: "powerFast(2, 5)", state: "active" }],
+            note: "powerFast(2, 5) needs powerFast(2, 2) first (5/2=2, integer division). Call, and wait.",
+          },
+          {
+            stack: [
+              { label: "powerFast(2, 10)" },
+              { label: "powerFast(2, 5)" },
+              { label: "powerFast(2, 2)", state: "active" },
+            ],
+            note: "powerFast(2, 2) needs powerFast(2, 1) first (2/2=1). Call, and wait.",
+          },
+          {
+            stack: [
+              { label: "powerFast(2, 10)" },
+              { label: "powerFast(2, 5)" },
+              { label: "powerFast(2, 2)" },
+              { label: "powerFast(2, 1)", state: "active" },
+            ],
+            note: "powerFast(2, 1) needs powerFast(2, 0) first (1/2=0). Call, and wait.",
+          },
+          {
+            stack: [
+              { label: "powerFast(2, 10)" },
+              { label: "powerFast(2, 5)" },
+              { label: "powerFast(2, 2)" },
+              { label: "powerFast(2, 1)" },
+              { label: "powerFast(2, 0) -> returns 1", state: "returning" },
+            ],
+            note: "powerFast(2, 0) hits the base case directly: returns 1.",
+          },
+          {
+            stack: [
+              { label: "powerFast(2, 10)" },
+              { label: "powerFast(2, 5)" },
+              { label: "powerFast(2, 2)" },
+              { label: "powerFast(2, 1) -> returns 2", state: "returning" },
+            ],
+            note: "powerFast(2, 1) resumes: half=1, exp is odd, returns half*half*base = 1*1*2 = 2.",
+          },
+          {
+            stack: [
+              { label: "powerFast(2, 10)" },
+              { label: "powerFast(2, 5)" },
+              { label: "powerFast(2, 2) -> returns 4", state: "returning" },
+            ],
+            note: "powerFast(2, 2) resumes: half=2, exp is even, returns half*half = 2*2 = 4.",
+          },
+          {
+            stack: [
+              { label: "powerFast(2, 10)" },
+              { label: "powerFast(2, 5) -> returns 32", state: "returning" },
+            ],
+            note: "powerFast(2, 5) resumes: half=4, exp is odd, returns half*half*base = 4*4*2 = 32.",
+          },
+          {
+            stack: [{ label: "powerFast(2, 10) -> returns 1024", state: "returning" }],
+            note: "powerFast(2, 10) resumes: half=32, exp is even, returns half*half = 32*32 = 1024. Final answer.",
+          },
+          {
+            stack: [],
+            note:
+              "Total calls: 5 (for exp values 10, 5, 2, 1, 0) — matching log₂(10) ≈ 3.3 rounded up, versus " +
+              "powerLinear's 11 calls (one per unit from 10 down to 0).",
+          },
+        ],
+      },
     },
     {
       kind: "table",

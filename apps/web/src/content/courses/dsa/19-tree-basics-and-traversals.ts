@@ -122,19 +122,107 @@ export const chapterTreeBasicsAndTraversals: Chapter = {
         "levelOrder: [4, 2, 6, 1, 3, 5, 7]",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "inorder() on the tree above — left, self, right at every node",
-      steps: [
-        "inorder(4): first recurse left into inorder(2).",
-        "inorder(2): first recurse left into inorder(1).",
-        "inorder(1): recurse left (null, nothing), visit 1 -> add 1, recurse right (null, nothing). Return.",
-        "Back in inorder(2): visit 2 -> add 2, then recurse right into inorder(3).",
-        "inorder(3): both children null, visit 3 -> add 3. Return.",
-        "Back in inorder(4): visit 4 -> add 4 (output so far: [1, 2, 3, 4]), then recurse right into " +
-          "inorder(6).",
-        "inorder(6) mirrors the left side: visits 5, then 6, then 7. Final output: [1, 2, 3, 4, 5, 6, 7] " +
-          "— every value in sorted order, because this particular tree happens to be a binary search tree.",
-      ],
+      caption: "'Visiting' means the call is entered; 'done' means the value has already been added to the output.",
+      viz: {
+        type: "tree",
+        frames: [
+          {
+            rootId: "n4",
+            nodes: [
+              { id: "n4", value: 4, left: "n2", right: "n6", state: "visiting" },
+              { id: "n2", value: 2, left: "n1", right: "n3" },
+              { id: "n6", value: 6, left: "n5", right: "n7" },
+              { id: "n1", value: 1, left: null, right: null },
+              { id: "n3", value: 3, left: null, right: null },
+              { id: "n5", value: 5, left: null, right: null },
+              { id: "n7", value: 7, left: null, right: null },
+            ],
+            note: "inorder(4): first recurse left into inorder(2).",
+          },
+          {
+            rootId: "n4",
+            nodes: [
+              { id: "n4", value: 4, left: "n2", right: "n6" },
+              { id: "n2", value: 2, left: "n1", right: "n3", state: "visiting" },
+              { id: "n6", value: 6, left: "n5", right: "n7" },
+              { id: "n1", value: 1, left: null, right: null },
+              { id: "n3", value: 3, left: null, right: null },
+              { id: "n5", value: 5, left: null, right: null },
+              { id: "n7", value: 7, left: null, right: null },
+            ],
+            note: "inorder(2): first recurse left into inorder(1).",
+          },
+          {
+            rootId: "n4",
+            nodes: [
+              { id: "n4", value: 4, left: "n2", right: "n6" },
+              { id: "n2", value: 2, left: "n1", right: "n3" },
+              { id: "n6", value: 6, left: "n5", right: "n7" },
+              { id: "n1", value: 1, left: null, right: null, state: "done" },
+              { id: "n3", value: 3, left: null, right: null },
+              { id: "n5", value: 5, left: null, right: null },
+              { id: "n7", value: 7, left: null, right: null },
+            ],
+            note: "inorder(1): both children null, visit 1 -> add 1. Output so far: [1]. Return.",
+          },
+          {
+            rootId: "n4",
+            nodes: [
+              { id: "n4", value: 4, left: "n2", right: "n6" },
+              { id: "n2", value: 2, left: "n1", right: "n3", state: "done" },
+              { id: "n6", value: 6, left: "n5", right: "n7" },
+              { id: "n1", value: 1, left: null, right: null, state: "done" },
+              { id: "n3", value: 3, left: null, right: null, state: "visiting" },
+              { id: "n5", value: 5, left: null, right: null },
+              { id: "n7", value: 7, left: null, right: null },
+            ],
+            note: "Back in inorder(2): visit 2 -> add 2 ([1, 2]), then recurse right into inorder(3).",
+          },
+          {
+            rootId: "n4",
+            nodes: [
+              { id: "n4", value: 4, left: "n2", right: "n6" },
+              { id: "n2", value: 2, left: "n1", right: "n3", state: "done" },
+              { id: "n6", value: 6, left: "n5", right: "n7" },
+              { id: "n1", value: 1, left: null, right: null, state: "done" },
+              { id: "n3", value: 3, left: null, right: null, state: "done" },
+              { id: "n5", value: 5, left: null, right: null },
+              { id: "n7", value: 7, left: null, right: null },
+            ],
+            note: "inorder(3): both children null, visit 3 -> add 3. Output so far: [1, 2, 3]. Return.",
+          },
+          {
+            rootId: "n4",
+            nodes: [
+              { id: "n4", value: 4, left: "n2", right: "n6", state: "done" },
+              { id: "n2", value: 2, left: "n1", right: "n3", state: "done" },
+              { id: "n6", value: 6, left: "n5", right: "n7", state: "visiting" },
+              { id: "n1", value: 1, left: null, right: null, state: "done" },
+              { id: "n3", value: 3, left: null, right: null, state: "done" },
+              { id: "n5", value: 5, left: null, right: null },
+              { id: "n7", value: 7, left: null, right: null },
+            ],
+            note: "Back in inorder(4): visit 4 -> add 4 ([1, 2, 3, 4]), then recurse right into inorder(6).",
+          },
+          {
+            rootId: "n4",
+            nodes: [
+              { id: "n4", value: 4, left: "n2", right: "n6", state: "done" },
+              { id: "n2", value: 2, left: "n1", right: "n3", state: "done" },
+              { id: "n6", value: 6, left: "n5", right: "n7", state: "done" },
+              { id: "n1", value: 1, left: null, right: null, state: "done" },
+              { id: "n3", value: 3, left: null, right: null, state: "done" },
+              { id: "n5", value: 5, left: null, right: null, state: "done" },
+              { id: "n7", value: 7, left: null, right: null, state: "done" },
+            ],
+            note:
+              "inorder(6) mirrors the left side: visits 5, then 6, then 7. Final output: [1, 2, 3, 4, 5, 6, 7] " +
+              "— sorted order, because this tree happens to be a binary search tree.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

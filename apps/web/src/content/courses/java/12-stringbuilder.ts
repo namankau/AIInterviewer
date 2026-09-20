@@ -92,19 +92,38 @@ export const chapterStringBuilder: Chapter = {
       ],
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Following sb2 through append, insert, reverse",
-      steps: [
-        "sb2 starts as \"Hello\" (StringBuilder, not String).",
-        "sb2.append(\", World\") adds to the end, in place: sb2 is now \"Hello, World\".",
-        "sb2.insert(0, \">> \") inserts at position 0, pushing everything else right: sb2 is now " +
-          "\">> Hello, World\".",
-        "sb2.reverse() reverses every character currently held: \">> Hello, World\" backwards is " +
-          "\"dlroW ,olleH >>\".",
-        "Every one of these three calls modified the *same* sb2 object — no new object was created at " +
-          "any step, unlike the equivalent String operations, which would each return a separate new " +
-          "String.",
-      ],
+      caption: "Same underlying buffer, modified in place at every step — nothing here is ever a new object.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [..."Hello"].map((c) => ({ value: c })),
+            note: "sb2 starts as \"Hello\" (a StringBuilder, not a String).",
+          },
+          {
+            cells: [
+              ...[..."Hello"].map((c) => ({ value: c })),
+              ...[...", World"].map((c) => ({ value: c, state: "active" as const })),
+            ],
+            note: "sb2.append(\", World\") adds to the end, in place: sb2 is now \"Hello, World\".",
+          },
+          {
+            cells: [
+              ...[...">> "].map((c) => ({ value: c, state: "active" as const })),
+              ...[..."Hello, World"].map((c) => ({ value: c })),
+            ],
+            note: "sb2.insert(0, \">> \") inserts at position 0, pushing everything else right: sb2 is now \">> Hello, World\".",
+          },
+          {
+            cells: [..."dlroW ,olleH >>"].map((c) => ({ value: c, state: "done" as const })),
+            note:
+              "sb2.reverse() reverses every character currently held: \">> Hello, World\" backwards is " +
+              "\"dlroW ,olleH >>\". All three calls modified the same sb2 object — no new object was ever created.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

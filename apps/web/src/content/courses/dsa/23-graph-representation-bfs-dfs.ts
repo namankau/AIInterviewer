@@ -117,20 +117,100 @@ export const chapterGraphRepresentationBfsDfs: Chapter = {
       output: "BFS from 0: [0, 1, 2, 3, 4]\nDFS from 0: [0, 1, 3, 4, 2]",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "BFS from vertex 0 on the graph 0-1, 0-2, 1-3, 1-4, 2-4",
-      steps: [
-        "Start: visited={0}, queue=[0].",
-        "Poll 0. Add 0 to order. Neighbours of 0: 1 and 2, both unvisited — mark visited, enqueue both. " +
-          "visited={0,1,2}, queue=[1,2]. order=[0].",
-        "Poll 1. Add 1 to order. Neighbours of 1: 0 (visited, skip), 3 (unvisited, mark+enqueue), 4 " +
-          "(unvisited, mark+enqueue). visited={0,1,2,3,4}, queue=[2,3,4]. order=[0,1].",
-        "Poll 2. Add 2 to order. Neighbours of 2: 0 (visited), 4 (visited) — nothing new to enqueue. " +
-          "queue=[3,4]. order=[0,1,2].",
-        "Poll 3. Add 3. Its only neighbour, 1, is visited. queue=[4]. order=[0,1,2,3].",
-        "Poll 4. Add 4. Its neighbours 1 and 2 are both visited. queue=[]. order=[0,1,2,3,4]. Queue empty, " +
-          "done — every vertex reached exactly once, level by level: {0}, then {1,2}, then {3,4}.",
-      ],
+      caption: "'Visiting' means enqueued but not yet polled; 'done' means already polled and added to order.",
+      viz: {
+        type: "graph",
+        frames: [
+          {
+            nodes: [
+              { id: "0", label: "0", state: "visiting" },
+              { id: "1", label: "1" },
+              { id: "2", label: "2" },
+              { id: "3", label: "3" },
+              { id: "4", label: "4" },
+            ],
+            edges: [
+              { from: "0", to: "1" }, { from: "0", to: "2" }, { from: "1", to: "3" },
+              { from: "1", to: "4" }, { from: "2", to: "4" },
+            ],
+            note: "Start: visited={0}, queue=[0].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0", state: "done" },
+              { id: "1", label: "1", state: "visiting" },
+              { id: "2", label: "2", state: "visiting" },
+              { id: "3", label: "3" },
+              { id: "4", label: "4" },
+            ],
+            edges: [
+              { from: "0", to: "1" }, { from: "0", to: "2" }, { from: "1", to: "3" },
+              { from: "1", to: "4" }, { from: "2", to: "4" },
+            ],
+            note: "Poll 0, add to order. Neighbours 1 and 2 are unvisited — mark visited, enqueue both. order=[0].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0", state: "done" },
+              { id: "1", label: "1", state: "done" },
+              { id: "2", label: "2", state: "visiting" },
+              { id: "3", label: "3", state: "visiting" },
+              { id: "4", label: "4", state: "visiting" },
+            ],
+            edges: [
+              { from: "0", to: "1" }, { from: "0", to: "2" }, { from: "1", to: "3" },
+              { from: "1", to: "4" }, { from: "2", to: "4" },
+            ],
+            note: "Poll 1, add to order. 0 is already visited (skip); 3 and 4 are new — mark and enqueue. order=[0,1].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0", state: "done" },
+              { id: "1", label: "1", state: "done" },
+              { id: "2", label: "2", state: "done" },
+              { id: "3", label: "3", state: "visiting" },
+              { id: "4", label: "4", state: "visiting" },
+            ],
+            edges: [
+              { from: "0", to: "1" }, { from: "0", to: "2" }, { from: "1", to: "3" },
+              { from: "1", to: "4" }, { from: "2", to: "4" },
+            ],
+            note: "Poll 2, add to order. Both neighbours (0 and 4) already visited — nothing new to enqueue. order=[0,1,2].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0", state: "done" },
+              { id: "1", label: "1", state: "done" },
+              { id: "2", label: "2", state: "done" },
+              { id: "3", label: "3", state: "done" },
+              { id: "4", label: "4", state: "visiting" },
+            ],
+            edges: [
+              { from: "0", to: "1" }, { from: "0", to: "2" }, { from: "1", to: "3" },
+              { from: "1", to: "4" }, { from: "2", to: "4" },
+            ],
+            note: "Poll 3, add to order. Its only neighbour, 1, is already visited. order=[0,1,2,3].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0", state: "done" },
+              { id: "1", label: "1", state: "done" },
+              { id: "2", label: "2", state: "done" },
+              { id: "3", label: "3", state: "done" },
+              { id: "4", label: "4", state: "done" },
+            ],
+            edges: [
+              { from: "0", to: "1" }, { from: "0", to: "2" }, { from: "1", to: "3" },
+              { from: "1", to: "4" }, { from: "2", to: "4" },
+            ],
+            note:
+              "Poll 4, add to order. Queue empty, done — every vertex reached exactly once, level by level: " +
+              "{0}, then {1,2}, then {3,4}. order=[0,1,2,3,4].",
+          },
+        ],
+      },
     },
     {
       kind: "p",

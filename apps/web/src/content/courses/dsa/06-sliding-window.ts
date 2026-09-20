@@ -84,16 +84,46 @@ export const chapterSlidingWindow: Chapter = {
         'maxSumWindow(k=3): 9\nlongestNoRepeat("abcabcbb"): 3\nlongestNoRepeat("bbbbb"): 1',
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "maxSumWindow({2, 1, 5, 1, 3, 2}, k=3)",
-      steps: [
-        "Build the first window directly: nums[0]+nums[1]+nums[2] = 2+1+5 = 8. windowSum = 8, best = 8.",
-        "end=3: windowSum += nums[3] - nums[0] = 1 - 2 = -1. windowSum = 7. best stays 8 (7 < 8).",
-        "end=4: windowSum += nums[4] - nums[1] = 3 - 1 = 2. windowSum = 9. best becomes 9.",
-        "end=5: windowSum += nums[5] - nums[2] = 2 - 5 = -3. windowSum = 6. best stays 9.",
-        "Result: 9, from the window {5, 1, 3} — found without ever re-summing 3 elements from scratch " +
-          "after the first window.",
-      ],
+      caption: "The window slides one step at a time: one value leaves, one enters.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: 2 }, { value: 1 }, { value: 5 }, { value: 1 }, { value: 3 }, { value: 2 }],
+            range: [0, 2],
+            note: "Build the first window directly: nums[0]+nums[1]+nums[2] = 2+1+5 = 8. windowSum = 8, best = 8.",
+          },
+          {
+            cells: [{ value: 2 }, { value: 1 }, { value: 5 }, { value: 1 }, { value: 3 }, { value: 2 }],
+            range: [1, 3],
+            note: "end=3: windowSum += nums[3] - nums[0] = 1 - 2 = -1. windowSum = 7. best stays 8.",
+          },
+          {
+            cells: [{ value: 2 }, { value: 1 }, { value: 5 }, { value: 1 }, { value: 3 }, { value: 2 }],
+            range: [2, 4],
+            note: "end=4: windowSum += nums[4] - nums[1] = 3 - 1 = 2. windowSum = 9. best becomes 9.",
+          },
+          {
+            cells: [{ value: 2 }, { value: 1 }, { value: 5 }, { value: 1 }, { value: 3 }, { value: 2 }],
+            range: [3, 5],
+            note: "end=5: windowSum += nums[5] - nums[2] = 2 - 5 = -3. windowSum = 6. best stays 9.",
+          },
+          {
+            cells: [
+              { value: 2 },
+              { value: 1 },
+              { value: 5, state: "done" },
+              { value: 1, state: "done" },
+              { value: 3, state: "done" },
+              { value: 2 },
+            ],
+            range: [2, 4],
+            note: "Result: 9, from the window {5, 1, 3} — found without ever re-summing 3 elements from scratch.",
+          },
+        ],
+      },
     },
     {
       kind: "p",
@@ -108,18 +138,102 @@ export const chapterSlidingWindow: Chapter = {
         "measured.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: 'longestNoRepeat("abcabcbb") — where the window shrinks',
-      steps: [
-        "right=0 ('a'): not in window. Add 'a'. Window = {a}, size 1. best = 1.",
-        "right=1 ('b'): not in window. Add 'b'. Window = {a,b}, size 2. best = 2.",
-        "right=2 ('c'): not in window. Add 'c'. Window = {a,b,c}, size 3. best = 3.",
-        "right=3 ('a'): 'a' IS in the window. Shrink from the left: remove s[left]='a', left becomes 1. " +
-          "Now 'a' is gone from the window ({b,c}), the while loop stops. Add 'a'. Window = {b,c,a}, size 3.",
-        "right continues similarly for 'b', 'c' — each time the repeat is found, left shrinks past exactly " +
-          "the old occurrence and stops.",
-        "The longest window ever reached has size 3 (\"abc\", or any of its later repeats) — the final answer.",
-      ],
+      caption: "right always advances; left only moves when a repeat forces it to.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [
+              { value: "a", pointers: ["left", "right"] },
+              { value: "b" },
+              { value: "c" },
+              { value: "a" },
+              { value: "b" },
+              { value: "c" },
+              { value: "b" },
+              { value: "b" },
+            ],
+            range: [0, 0],
+            note: "right=0 ('a'): not in window. Add 'a'. Window = {a}, size 1. best = 1.",
+          },
+          {
+            cells: [
+              { value: "a", pointers: ["left"] },
+              { value: "b", pointers: ["right"] },
+              { value: "c" },
+              { value: "a" },
+              { value: "b" },
+              { value: "c" },
+              { value: "b" },
+              { value: "b" },
+            ],
+            range: [0, 1],
+            note: "right=1 ('b'): not in window. Add 'b'. Window = {a,b}, size 2. best = 2.",
+          },
+          {
+            cells: [
+              { value: "a", pointers: ["left"] },
+              { value: "b" },
+              { value: "c", pointers: ["right"] },
+              { value: "a" },
+              { value: "b" },
+              { value: "c" },
+              { value: "b" },
+              { value: "b" },
+            ],
+            range: [0, 2],
+            note: "right=2 ('c'): not in window. Add 'c'. Window = {a,b,c}, size 3. best = 3.",
+          },
+          {
+            cells: [
+              { value: "a", state: "swap" },
+              { value: "b", pointers: ["left"] },
+              { value: "c" },
+              { value: "a", pointers: ["right"] },
+              { value: "b" },
+              { value: "c" },
+              { value: "b" },
+              { value: "b" },
+            ],
+            range: [1, 3],
+            note:
+              "right=3 ('a'): 'a' IS in the window. Shrink: remove s[left]='a', left becomes 1 — now 'a' is " +
+              "gone from {b,c}, so the while loop stops. Add 'a'. Window = {b,c,a}, size 3.",
+          },
+          {
+            cells: [
+              { value: "a" },
+              { value: "b", state: "swap" },
+              { value: "c" },
+              { value: "a" },
+              { value: "b", pointers: ["left"] },
+              { value: "c", pointers: ["right"] },
+              { value: "b" },
+              { value: "b" },
+            ],
+            range: [4, 5],
+            note:
+              "right continues similarly for 'b', 'c' — each time the repeat is found, left shrinks past " +
+              "exactly the old occurrence and stops.",
+          },
+          {
+            cells: [
+              { value: "a", state: "done" },
+              { value: "b", state: "done" },
+              { value: "c", state: "done" },
+              { value: "a" },
+              { value: "b" },
+              { value: "c" },
+              { value: "b" },
+              { value: "b" },
+            ],
+            range: [0, 2],
+            note: 'The longest window ever reached has size 3 ("abc", or any of its later repeats) — the final answer.',
+          },
+        ],
+      },
     },
     {
       kind: "table",

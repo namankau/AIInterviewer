@@ -8,6 +8,9 @@ You are setting the case for a spoken system design round.
 Grounding:
 {{grounding}}
 
+The bar this case must be pitched at:
+{{levelCalibration}}
+
 ## What this round is
 
 The candidate scopes one system out loud, on a whiteboard, in {{durationMinutes}} minutes:

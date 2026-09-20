@@ -161,5 +161,8 @@ object PrepPlanBuilder {
             RoundType.TECHNO_MANAGERIAL to 30,
             RoundType.BEHAVIOURAL_COMPETENCY to 30,
             RoundType.HR_FIT_CLOSING to 20,
+            // Short on purpose: an aptitude round is a series of self-contained problems,
+            // so it stops being informative long before a design case would.
+            RoundType.APTITUDE to 25,
         )
 }

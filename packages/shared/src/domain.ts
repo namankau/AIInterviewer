@@ -26,6 +26,7 @@ export type EmployerArchetype = (typeof EMPLOYER_ARCHETYPES)[number];
 
 /** PRD 06. */
 export const ROUND_TYPES = [
+  "aptitude",
   "technical_fundamentals",
   "project_deep_dive",
   "coding_practical",

@@ -8,6 +8,9 @@ You are setting a coding problem for a spoken mock interview.
 Grounding:
 {{grounding}}
 
+The bar this problem must be pitched at:
+{{levelCalibration}}
+
 ## What this round is
 
 The candidate talks through the problem before they write anything, then implements it,

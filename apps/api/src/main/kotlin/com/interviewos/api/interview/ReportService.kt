@@ -8,6 +8,7 @@ import com.interviewos.api.ai.InterviewBrief
 import com.interviewos.api.ai.ReportContent
 import com.interviewos.api.ai.TurnTranscript
 import com.interviewos.api.common.ApiException
+import com.interviewos.api.resume.ResumeService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -29,6 +30,7 @@ class ReportService(
     private val objectMapper: ObjectMapper,
     private val roundMedia: RoundMediaProperties,
     private val retention: RetentionProperties,
+    private val resumeService: ResumeService,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -79,6 +81,13 @@ class ReportService(
 
         val archetype = Archetype.fromDbValue(session.archetype)
         val roundType = RoundType.fromDbValue(session.roundType)
+        // Derived the same way the round itself derived it, from the same two inputs, so
+        // the report scores against the bar the interview was actually conducted at
+        // (task 048). Until this existed the level reached the report as "unspecified",
+        // and a prompt told to score "against what this function and level demands" was
+        // given neither — so a final-year student was marked against nothing in
+        // particular, which in practice means against a working engineer.
+        val stage = CandidateStage.of(session.roleTitle, resumeService.backgroundFor(userId)?.tenure?.totalExperienceMonths)
         val brief =
             InterviewBrief(
                 company = session.companyName,
@@ -89,11 +98,12 @@ class ReportService(
                 // coverage — an interview that never left one topic is a fact about the
                 // round, and the candidate should not be marked down for ground the
                 // interviewer never took them to.
-                roundCovers = roundType.covers.joinToString("\n") { "- $it" },
+                roundCovers = stage.covers(roundType).joinToString("\n") { "- $it" },
                 language = session.language,
                 candidateFunction = null,
-                candidateLevel = null,
-                targetLevel = null,
+                candidateLevel = stage.candidateDescription,
+                targetLevel = stage.targetDescription,
+                levelCalibration = stage.reportCalibration(),
                 grounding = archetype.roundEmphasis,
             )
 

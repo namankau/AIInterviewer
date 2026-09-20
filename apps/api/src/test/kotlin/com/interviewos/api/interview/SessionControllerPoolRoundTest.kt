@@ -201,9 +201,16 @@ class SessionControllerPoolRoundTest {
                 recommendedNextSession = "",
                 outcomeSimulation = OutcomeSimulation("Simulation", "", ""),
             )
-        val report =
-            ReportService(harness.repository, harness.ai, harness.mapper, RoundMediaProperties(), RetentionProperties())
-                .report(candidate, sessionId)
+        val reports =
+            ReportService(
+                harness.repository,
+                harness.ai,
+                harness.mapper,
+                RoundMediaProperties(),
+                RetentionProperties(),
+                harness.resumeService,
+            )
+        val report = reports.report(candidate, sessionId)
         val sources = report["questionSources"] as Map<*, *>
         return (sources["entries"] as List<*>).single() as Map<*, *>
     }

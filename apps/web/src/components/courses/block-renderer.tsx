@@ -1,22 +1,10 @@
-import dynamic from "next/dynamic";
-
 import { anchorId } from "@/content/courses/anchor";
 import type { Block } from "@/content/courses/types";
 import { QuizBlock } from "@/components/courses/quiz-block";
 import { VizBlock } from "@/components/courses/viz-block";
+import { PlaygroundLazy } from "@/components/courses/playground-lazy";
 import { CopyCodeButton } from "@/components/courses/copy-code-button";
 import { InlineText } from "@/components/courses/inline-text";
-
-/**
- * CodeMirror plus both language grammars is the heaviest thing this file can pull in —
- * dynamic() gives it its own chunk, fetched only by a page whose rendered tree actually
- * contains a `playground` block, rather than being folded into the one shared bundle every
- * chapter under this route loads (task 049's stated main risk). A plain static import of
- * `Playground` measured identically whether or not the page had a playground block at all,
- * because Next's client manifest is built from the module graph, not from which branch of
- * this switch a given chapter's data happens to hit.
- */
-const Playground = dynamic(() => import("@/components/courses/playground").then((mod) => mod.Playground));
 
 /**
  * Renders one chapter's blocks in order, each block kind styled deliberately (task 045).
@@ -248,7 +236,7 @@ function BlockView({ block, highlightedHtml }: { block: Block; highlightedHtml: 
             ) : null}
           </figure>
 
-          <Playground block={block} />
+          <PlaygroundLazy block={block} />
         </div>
       );
   }

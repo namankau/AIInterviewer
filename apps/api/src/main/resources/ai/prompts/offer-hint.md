@@ -12,6 +12,9 @@ Interview brief:
 Grounding on how this employer and round actually run:
 {{grounding}}
 
+The bar this round is pitched at:
+{{levelCalibration}}
+
 The question they are stuck on:
 {{currentQuestion}}
 

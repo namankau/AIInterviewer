@@ -336,9 +336,25 @@ data class CandidateBackground(
                 appendLine("Skills evidenced by the resume: ${resume.detectedSkills.joinToString(", ")}")
             }
 
+            // Parsed since the first version and passed on to nobody, which for a student
+            // meant the interviewer knew their degree, their branch and their graduating
+            // year and was told none of it — the only context a fresher actually has
+            // (task 048).
+            if (resume.education.isNotEmpty()) {
+                appendLine()
+                appendLine("Education, as the resume states it:")
+                resume.education.forEach { study ->
+                    append("- ${study.qualification?.takeIf { it.isNotBlank() } ?: "qualification not stated"}")
+                    study.field?.takeIf { it.isNotBlank() }?.let { append(" in $it") }
+                    append(" at ${study.institution}")
+                    study.endYear?.let { append(" (class of $it)") }
+                    appendLine()
+                }
+            }
+
             appendLine()
             appendLine("Derived from the dates (computed by us, not claimed by the resume):")
-            appendLine("- About ${tenure.totalExperienceMonths / 12} years of experience.")
+            appendLine(experienceLine())
             if (tenure.gaps.isNotEmpty()) {
                 appendLine("- ${tenure.gaps.size} gap(s) between roles of two months or more.")
             }
@@ -368,6 +384,23 @@ data class CandidateBackground(
                     "in an HR or techno-managerial round it is fair, in a system design round it is not.",
             )
         }
+
+    /**
+     * Professional experience, said the way it should be read.
+     *
+     * "About 0 years of experience" was true of every fresher who ever used this and told
+     * a model nothing it acted on — it reads as a number, not as an instruction to stop
+     * asking about production incidents. A student is now described as one, which is what
+     * [com.interviewos.api.interview.CandidateStage] then pitches the whole round at.
+     */
+    private fun experienceLine(): String {
+        val months = tenure.totalExperienceMonths
+        return when {
+            months <= 0 -> "- No professional work history on the resume: this is a student or a new graduate."
+            months < 12 -> "- $months month(s) of professional experience — an internship or a first few months, not a career yet."
+            else -> "- About ${months / 12} years of experience."
+        }
+    }
 
     /**
      * What this round is supposed to do with the CV.

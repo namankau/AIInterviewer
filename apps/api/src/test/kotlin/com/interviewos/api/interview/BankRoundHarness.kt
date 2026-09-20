@@ -44,6 +44,9 @@ class BankRoundHarness {
     val archetypes = ArchetypeResolver()
     val poolMaterial = PoolMaterial(mapper)
 
+    /** Returns null for every candidate unless a test says otherwise: no resume, as most rounds run. */
+    val resumeService: ResumeService = mock(ResumeService::class.java)
+
     /** What the model is asked, in order. */
     val briefs = mutableListOf<InterviewBrief>()
     var case: ComposedCase? = null
@@ -73,11 +76,12 @@ class BankRoundHarness {
             objectMapper = mapper,
             questionSpeech = mock(QuestionSpeech::class.java),
             entitlementProperties = EntitlementProperties(),
+            roundsProperties = RoundsProperties(),
             retentionProperties = RetentionProperties(),
             roundMedia = RoundMediaProperties(),
             bankRounds = BankRoundPlanner(directory, bank, repository),
             poolRounds = PoolRoundPlanner(directory, pool, repository, poolMaterial),
-            resumeService = mock(ResumeService::class.java),
+            resumeService = resumeService,
             roundWorkspaceComposer = RoundWorkspaceComposer(ai, mapper, ProblemVerifier(ai, mapper), poolMaterial),
             codeRunner = mock(CodeRunner::class.java),
             transactionManager =

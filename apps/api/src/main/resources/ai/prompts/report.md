@@ -8,6 +8,10 @@ Interview brief:
 - Round: {{roundType}}
 - Candidate function / level: {{candidateFunction}} / {{candidateLevel}}, targeting {{targetLevel}}
 
+## The bar to score against
+
+{{levelCalibration}}
+
 Full transcript (question then answer, in order):
 {{transcript}}
 

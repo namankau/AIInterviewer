@@ -44,7 +44,7 @@ const ALL_KINDS: Block[] = [
 ];
 
 describe("BlockRenderer", () => {
-  it("renders every block kind without crashing, accessibly", () => {
+  it("renders every block kind without crashing, accessibly", async () => {
     render(<BlockRenderer blocks={ALL_KINDS} />);
 
     expect(screen.getByText(/A paragraph with/)).toBeInTheDocument();
@@ -61,9 +61,11 @@ describe("BlockRenderer", () => {
     expect(screen.getByText("What is 2 + 2?")).toBeInTheDocument();
     expect(screen.getByText("A step-through array")).toBeInTheDocument();
     expect(screen.getByText("Frame one note.")).toBeInTheDocument();
-    expect(screen.getByText("A prompt line.")).toBeInTheDocument();
     expect(screen.getByText("System.out.println(2);")).toBeInTheDocument();
-    expect(screen.getByText(/Running Java in the browser isn.t available yet/)).toBeInTheDocument();
+    // The playground itself is code-split (next/dynamic) so a chapter with no playground
+    // block never fetches it — its own content resolves asynchronously here.
+    expect(await screen.findByText("A prompt line.")).toBeInTheDocument();
+    expect(await screen.findByText(/Running Java in the browser isn.t available yet/)).toBeInTheDocument();
   });
 
   it("renders inline `code` and **bold** markers as their own elements", () => {

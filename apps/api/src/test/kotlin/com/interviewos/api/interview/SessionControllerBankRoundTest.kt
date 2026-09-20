@@ -150,6 +150,33 @@ class SessionControllerBankRoundTest {
         assertTrue(provenance.basis.contains("Amazon"))
     }
 
+    /**
+     * The same endpoint, the same round, a fresher asking for it (task 048). Refused
+     * before anything is written: no session row, and nothing asked of the bank or the
+     * model. The candidate is told why rather than quietly given a different round.
+     */
+    @Test
+    fun `refuses a system design round for a campus fresher, and starts nothing`() {
+        val fresher =
+            """
+            {"companyName":"Infosys","roleTitle":"Graduate Engineer Trainee","roundType":"system_design",
+             "language":"english","consentAudio":true,"consentVideo":false,"durationMinutes":45}
+            """.trimIndent()
+
+        mockMvc
+            .perform(
+                post("/api/v1/sessions")
+                    .with(tokenFor(candidate))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(fresher),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("round_not_run_at_this_level"))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("campus or new-graduate")))
+
+        verifyNoInteractions(harness.bank)
+        assertTrue(harness.insertedTurns().isEmpty(), "nothing may be written for a round that is refused")
+    }
+
     @Test
     fun `rejects a start with no token`() {
         mockMvc

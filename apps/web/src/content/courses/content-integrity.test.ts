@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { courses, flattenChapters, getAdjacentChapters } from "@/content/courses";
-import type { Block, Chapter, Course } from "@/content/courses/types";
+import type {
+  ArrayFrame,
+  Block,
+  Chapter,
+  Course,
+  GraphFrame,
+  GridFrame,
+  ListFrame,
+  TreeFrame,
+} from "@/content/courses/types";
 
 /**
  * Every registered chapter, of every course, is held to the same bar (task 045): the
@@ -101,11 +110,81 @@ describe.each(courses)("course: $slug", (course: Course) => {
       }
     });
 
+    it("every viz block has non-empty frames, each with a note, and in-range references", () => {
+      const vizBlocks = blocksOf("viz", chapter) as Extract<Block, { kind: "viz" }>[];
+      for (const block of vizBlocks) {
+        expect(block.title.trim().length).toBeGreaterThan(0);
+        const frames = block.viz.frames;
+        expect(frames.length).toBeGreaterThan(0);
+        for (const frame of frames) {
+          expect(frame.note.trim().length).toBeGreaterThan(0);
+
+          if (block.viz.type === "array") {
+            const arrayFrame = frame as ArrayFrame;
+            expect(arrayFrame.cells.length).toBeGreaterThan(0);
+            if (arrayFrame.range) {
+              const [start, end] = arrayFrame.range;
+              expect(start).toBeGreaterThanOrEqual(0);
+              expect(end).toBeLessThan(arrayFrame.cells.length);
+              expect(start).toBeLessThanOrEqual(end);
+            }
+          }
+
+          if (block.viz.type === "list") {
+            const listFrame = frame as ListFrame;
+            expect(listFrame.nodes.length).toBeGreaterThan(0);
+            const ids = new Set(listFrame.nodes.map((n) => n.id));
+            for (const node of listFrame.nodes) {
+              if (node.next !== null) {
+                expect(ids.has(node.next)).toBe(true);
+              }
+            }
+          }
+
+          if (block.viz.type === "tree") {
+            const treeFrame = frame as TreeFrame;
+            const ids = new Set(treeFrame.nodes.map((n) => n.id));
+            expect(ids.has(treeFrame.rootId)).toBe(true);
+            for (const node of treeFrame.nodes) {
+              if (node.left !== null) expect(ids.has(node.left)).toBe(true);
+              if (node.right !== null) expect(ids.has(node.right)).toBe(true);
+            }
+          }
+
+          if (block.viz.type === "graph") {
+            const graphFrame = frame as GraphFrame;
+            const ids = new Set(graphFrame.nodes.map((n) => n.id));
+            for (const edge of graphFrame.edges) {
+              expect(ids.has(edge.from)).toBe(true);
+              expect(ids.has(edge.to)).toBe(true);
+            }
+          }
+
+          if (block.viz.type === "table") {
+            const gridFrame = frame as GridFrame;
+            expect(gridFrame.rows.length).toBeGreaterThan(0);
+            if (gridFrame.highlight) {
+              for (const [r, c] of gridFrame.highlight) {
+                expect(r).toBeGreaterThanOrEqual(0);
+                expect(r).toBeLessThan(gridFrame.rows.length);
+                const row = gridFrame.rows[r];
+                expect(row).toBeDefined();
+                expect(c).toBeGreaterThanOrEqual(0);
+                expect(c).toBeLessThan((row ?? []).length);
+              }
+            }
+          }
+        }
+      }
+    });
+
     // DSA-specific rules (task 046): every algorithm gets a dry-run trace and a complexity table, and
     // ends with 3-5 practice problems in our own words, flagged by a "Practice problems" heading.
     if (course.slug === "dsa") {
-      it("has at least one trace block (a dry run on a small input)", () => {
-        expect(blocksOf("trace", chapter).length).toBeGreaterThanOrEqual(1);
+      // A `viz` block is the picture the same dry run would otherwise be told in prose
+      // (task 047) — either satisfies "walks through a small input step by step".
+      it("has at least one trace or viz block (a dry run on a small input)", () => {
+        expect(blocksOf("trace", chapter).length + blocksOf("viz", chapter).length).toBeGreaterThanOrEqual(1);
       });
 
       it("has at least one complexity table with a reason in every row", () => {

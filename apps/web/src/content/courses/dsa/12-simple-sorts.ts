@@ -108,19 +108,58 @@ export const chapterSimpleSorts: Chapter = {
         "insertionSort: [1, 2, 5, 5, 6, 9]",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "insertionSort({5, 2, 9, 1, 5, 6}) — sliding each card into the sorted prefix",
-      steps: [
-        "i=1, key=2. Sorted prefix so far: [5]. 5 > 2, so shift 5 right: [5,5,9,1,5,6] with a gap at j=0. " +
-          "Place key: [2,5,9,1,5,6].",
-        "i=2, key=9. Sorted prefix: [2,5]. 5 is not > 9, no shift needed. Array unchanged: [2,5,9,1,5,6].",
-        "i=3, key=1. Sorted prefix: [2,5,9]. 9>1 shift, 5>1 shift, 2>1 shift — 1 moves all the way to the " +
-          "front: [1,2,5,9,5,6].",
-        "i=4, key=5. Sorted prefix: [1,2,5,9]. 9>5 shift; 5 is not > 5, stop. Place key after the first 5: " +
-          "[1,2,5,5,9,6].",
-        "i=5, key=6. Sorted prefix: [1,2,5,5,9]. 9>6 shift; 5 is not > 6... wait, 5 is not greater than 6, " +
-          "stop. Place key: [1,2,5,5,6,9] — fully sorted.",
-      ],
+      caption: "The highlighted range is the sorted prefix built so far; the marked cell is where key just landed.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: 5 }, { value: 2 }, { value: 9 }, { value: 1 }, { value: 5 }, { value: 6 }],
+            note: "i=1, key=2. Sorted prefix so far: [5]. 5 > 2, so shift 5 right, then place key.",
+          },
+          {
+            cells: [
+              { value: 2, state: "done" }, { value: 5, state: "done" },
+              { value: 9 }, { value: 1 }, { value: 5 }, { value: 6 },
+            ],
+            range: [0, 1],
+            note: "Placed: [2,5,9,1,5,6]. Sorted prefix is now [2,5].",
+          },
+          {
+            cells: [
+              { value: 2, state: "done" }, { value: 5, state: "done" }, { value: 9, state: "compare" },
+              { value: 1 }, { value: 5 }, { value: 6 },
+            ],
+            range: [0, 2],
+            note: "i=2, key=9. Sorted prefix: [2,5]. 5 is not > 9, no shift needed — 9 stays right where it was.",
+          },
+          {
+            cells: [
+              { value: 1, state: "done" }, { value: 2, state: "done" }, { value: 5, state: "done" }, { value: 9, state: "done" },
+              { value: 5 }, { value: 6 },
+            ],
+            range: [0, 3],
+            note: "i=3, key=1. 9>1, 5>1, 2>1 all shift — 1 moves all the way to the front: [1,2,5,9,5,6].",
+          },
+          {
+            cells: [
+              { value: 1, state: "done" }, { value: 2, state: "done" }, { value: 5, state: "done" }, { value: 5, state: "done" },
+              { value: 9 }, { value: 6 },
+            ],
+            range: [0, 4],
+            note: "i=4, key=5. 9>5 shifts; the first 5 is not > 5, so it stops there: [1,2,5,5,9,6].",
+          },
+          {
+            cells: [
+              { value: 1, state: "done" }, { value: 2, state: "done" }, { value: 5, state: "done" },
+              { value: 5, state: "done" }, { value: 6, state: "done" }, { value: 9, state: "done" },
+            ],
+            range: [0, 5],
+            note: "i=5, key=6. 9>6 shifts; the second 5 is not > 6, so it stops there: [1,2,5,5,6,9] — fully sorted.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

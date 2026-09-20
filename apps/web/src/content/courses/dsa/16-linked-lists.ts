@@ -115,14 +115,48 @@ export const chapterLinkedLists: Chapter = {
       output: "original: 1 -> 2 -> 3 -> 4 -> 5\nreversed: 5 -> 4 -> 3 -> 2 -> 1\nhas cycle: true\nhas cycle: false",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "reverse() on 1 -> 2 -> 3 -> null",
-      steps: [
-        "prev=null, curr=1. next=2. curr(1).next = prev(null), so node 1 now points to null. prev=1, curr=2.",
-        "prev=1, curr=2. next=3. curr(2).next = prev(1), so node 2 now points to 1. prev=2, curr=3.",
-        "prev=2, curr=3. next=null. curr(3).next = prev(2), so node 3 now points to 2. prev=3, curr=null.",
-        "curr is null, loop ends. Return prev, which is node 3 — the new head. List is now 3 -> 2 -> 1 -> null.",
-      ],
+      caption: "Each node's single arrow flips exactly once, from pointing forward to pointing back.",
+      viz: {
+        type: "list",
+        frames: [
+          {
+            nodes: [
+              { id: "n1", value: 1, next: "n2", pointers: ["curr"] },
+              { id: "n2", value: 2, next: "n3" },
+              { id: "n3", value: 3, next: null },
+            ],
+            note: "prev=null, curr=1. next=2. About to flip node 1's arrow to point at prev (null).",
+          },
+          {
+            nodes: [
+              { id: "n1", value: 1, next: null, pointers: ["prev"] },
+              { id: "n2", value: 2, next: "n3", pointers: ["curr"] },
+              { id: "n3", value: 3, next: null },
+            ],
+            note: "curr(1).next = prev(null), so node 1 now points to null. prev=1, curr=2.",
+          },
+          {
+            nodes: [
+              { id: "n1", value: 1, next: null },
+              { id: "n2", value: 2, next: "n1", pointers: ["prev"] },
+              { id: "n3", value: 3, next: null, pointers: ["curr"] },
+            ],
+            note: "curr(2).next = prev(1), so node 2 now points to 1. prev=2, curr=3.",
+          },
+          {
+            nodes: [
+              { id: "n1", value: 1, next: null },
+              { id: "n2", value: 2, next: "n1" },
+              { id: "n3", value: 3, next: "n2", pointers: ["prev"] },
+            ],
+            note:
+              "curr(3).next = prev(2), so node 3 now points to 2. curr becomes null, the loop ends — prev " +
+              "(node 3) is the new head. List is now 3 -> 2 -> 1 -> null.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

@@ -85,14 +85,40 @@ export const chapterBinarySearch: Chapter = {
         "smallestSquareRootAtLeast(36): 6",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "binarySearch({2,5,8,12,16,23,38,45,56,72}, target=23)",
-      steps: [
-        "low=0, high=9. mid=4, sorted[4]=16. 16 < 23, so low = mid+1 = 5.",
-        "low=5, high=9. mid=7, sorted[7]=45. 45 > 23, so high = mid-1 = 6.",
-        "low=5, high=6. mid=5, sorted[5]=23. Match! Return 5.",
-        "Only 3 comparisons needed to search 10 elements — matching roughly log₂(10) ≈ 3.3.",
-      ],
+      caption: "Each comparison discards one whole half of the remaining range.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [
+              { value: 2, pointers: ["low"] }, { value: 5 }, { value: 8 }, { value: 12 },
+              { value: 16, pointers: ["mid"] }, { value: 23 }, { value: 38 }, { value: 45 }, { value: 56 },
+              { value: 72, pointers: ["high"] },
+            ],
+            note: "low=0, high=9. mid=4, sorted[4]=16. 16 < 23, so low = mid+1 = 5.",
+          },
+          {
+            cells: [
+              { value: 2 }, { value: 5 }, { value: 8 }, { value: 12 }, { value: 16 },
+              { value: 23, pointers: ["low"] }, { value: 38 }, { value: 45, pointers: ["mid"] }, { value: 56 },
+              { value: 72, pointers: ["high"] },
+            ],
+            range: [5, 9],
+            note: "low=5, high=9. mid=7, sorted[7]=45. 45 > 23, so high = mid-1 = 6.",
+          },
+          {
+            cells: [
+              { value: 2 }, { value: 5 }, { value: 8 }, { value: 12 }, { value: 16 },
+              { value: 23, state: "done", pointers: ["low", "mid", "high"] }, { value: 38 }, { value: 45 }, { value: 56 },
+              { value: 72 },
+            ],
+            range: [5, 6],
+            note: "low=5, high=6. mid=5, sorted[5]=23. Match! Return 5 — only 3 comparisons for 10 elements.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

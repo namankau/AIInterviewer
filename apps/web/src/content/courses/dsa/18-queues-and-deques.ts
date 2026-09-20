@@ -92,22 +92,45 @@ export const chapterQueuesAndDeques: Chapter = {
       output: "slidingWindowMax: 3 3 5 5 6 7\nqueue poll order: 1 2 3",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "slidingWindowMax({1, 3, -1, -3, 5, 3, 6, 7}, k=3) — first few steps",
-      steps: [
-        "i=0 (val 1). Deque empty. Push 0. Deque: [0]. i < k-1, no output yet.",
-        "i=1 (val 3). Front (0) not out of window. Back value nums[0]=1 < 3, pop it. Deque empty, push 1. " +
-          "Deque: [1]. Still i < k-1.",
-        "i=2 (val -1). Front (1) in window. Back value nums[1]=3 is not < -1, don't pop. Push 2. Deque: " +
-          "[1, 2]. i=k-1=2, so output result[0] = nums[front=1] = 3.",
-        "i=3 (val -3). Front index 1 is <= i-k=0? 1 <= 0 is false, stays. Back value nums[2]=-1 is not < " +
-          "-3. Push 3. Deque: [1, 2, 3]. result[1] = nums[1] = 3.",
-        "i=4 (val 5). Front index 1 <= i-k=1? Yes, 1<=1, pop it. New front is 2, 2<=1? No, stays. Back " +
-          "value nums[3]=-3 < 5, pop. Back now nums[2]=-1 < 5, pop. Deque empty, push 4. Deque: [4]. " +
-          "result[2] = nums[4] = 5.",
-        "... the pattern continues: each index enters the deque once and leaves at most once, front always " +
-          "holding the current window's maximum index. Final result: {3, 3, 5, 5, 6, 7}.",
-      ],
+      caption: "Each entry is 'index=value'. Front (left) is always the current window's maximum index.",
+      viz: {
+        type: "queue",
+        frames: [
+          { items: ["i0=1"], highlight: 0, note: "i=0 (val 1). Deque empty. Push 0. i < k-1, no output yet." },
+          {
+            items: ["i1=3"],
+            highlight: 0,
+            note: "i=1 (val 3). Back value nums[0]=1 < 3, pop it. Deque empty, push 1. Still i < k-1.",
+          },
+          {
+            items: ["i1=3", "i2=-1"],
+            highlight: 1,
+            note:
+              "i=2 (val -1). Front (1) in window; back value nums[1]=3 is not < -1, don't pop. Push 2. " +
+              "i=k-1=2, so output result[0] = nums[front=1] = 3.",
+          },
+          {
+            items: ["i1=3", "i2=-1", "i3=-3"],
+            highlight: 2,
+            note: "i=3 (val -3). Front index 1 not yet out of window. Back value -1 is not < -3. Push 3. result[1] = nums[1] = 3.",
+          },
+          {
+            items: ["i4=5"],
+            highlight: 0,
+            note:
+              "i=4 (val 5). Front index 1 has fallen out of the window, pop it. Back values -3 and -1 are " +
+              "both < 5, pop both. Deque empty, push 4. result[2] = nums[4] = 5.",
+          },
+          {
+            items: ["i4=5"],
+            note:
+              "The pattern continues: each index enters the deque once and leaves at most once, front always " +
+              "holding the current window's maximum index. Final result: {3, 3, 5, 5, 6, 7}.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

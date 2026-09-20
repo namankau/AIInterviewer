@@ -4,6 +4,7 @@ import com.interviewos.api.ai.AiResult
 import com.interviewos.api.ai.AiUsage
 import com.interviewos.api.ai.AnswerAssessment
 import com.interviewos.api.ai.ComposedCase
+import com.interviewos.api.ai.ComposedRound
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
 import com.interviewos.api.ai.ReportContent
@@ -53,12 +54,16 @@ class BankRoundHarness {
     var assessment: AnswerAssessment? = null
     var report: ReportContent? = null
 
+    /** What the model reads out of a candidate's one-line query, when a test exercises the round composer. */
+    var composedRound: ComposedRound? = null
+
     val ai: InterviewAi =
         mock(InterviewAi::class.java) { invocation ->
             val brief = invocation.arguments.firstOrNull() as? InterviewBrief
             brief?.let { briefs += it }
             when (invocation.method.name) {
                 "composeCase" -> AiResult(checkNotNull(case), AiUsage.none("test"))
+                "composeRound" -> AiResult(checkNotNull(composedRound), AiUsage.none("test"))
                 "assessAnswer" -> AiResult(checkNotNull(assessment), AiUsage.none("test"))
                 "composeReport" -> AiResult(checkNotNull(report), AiUsage.none("test"))
                 else -> RETURNS_DEFAULTS.answer(invocation)

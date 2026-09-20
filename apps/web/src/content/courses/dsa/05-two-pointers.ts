@@ -226,6 +226,31 @@ export const chapterTwoPointers: Chapter = {
           "answer.",
       ],
     },
+    {
+      kind: "playground",
+      language: "python",
+      prompt:
+        "Add `print(left, right, total)` inside the loop and re-run to watch the two pointers converge on " +
+        "each target.",
+      starter:
+        "def has_pair_with_sum(nums, target):\n" +
+        "    left, right = 0, len(nums) - 1\n" +
+        "    while left < right:\n" +
+        "        total = nums[left] + nums[right]\n" +
+        "        if total == target:\n" +
+        "            return True\n" +
+        "        if total < target:\n" +
+        "            left += 1\n" +
+        "        else:\n" +
+        "            right -= 1\n" +
+        "    return False\n" +
+        "\n" +
+        "\n" +
+        "nums = [1, 3, 5, 7, 9, 11]\n" +
+        "print(has_pair_with_sum(nums, 12))\n" +
+        "print(has_pair_with_sum(nums, 2))\n",
+      expectedOutput: "True\nFalse",
+    },
     { kind: "h", text: "Practice problems" },
     {
       kind: "list",

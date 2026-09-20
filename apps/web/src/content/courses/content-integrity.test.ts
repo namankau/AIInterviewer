@@ -178,6 +178,17 @@ describe.each(courses)("course: $slug", (course: Course) => {
       }
     });
 
+    it("every playground block has non-empty starter source, and Python ones a runnable-looking expected output", () => {
+      const playgrounds = blocksOf("playground", chapter) as Extract<Block, { kind: "playground" }>[];
+      for (const block of playgrounds) {
+        expect(block.starter.trim().length).toBeGreaterThan(0);
+        expect(["python", "java"]).toContain(block.language);
+        if (block.expectedOutput !== undefined) {
+          expect(block.expectedOutput.length).toBeGreaterThan(0);
+        }
+      }
+    });
+
     // DSA-specific rules (task 046): every algorithm gets a dry-run trace and a complexity table, and
     // ends with 3-5 practice problems in our own words, flagged by a "Practice problems" heading.
     if (course.slug === "dsa") {

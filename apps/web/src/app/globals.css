@@ -303,3 +303,28 @@
     animation: none;
   }
 }
+
+/*
+ * Shiki's build-time output (task 049) — the `code` and `playground` static blocks. Shiki
+ * bakes both a light and a dark colour into every token as `--shiki-light`/`--shiki-dark`
+ * custom properties (`defaultColor: false`), and leaves picking one to us; since this
+ * product has no class-based theme switch, the same `prefers-color-scheme` query that
+ * drives every other token in this file drives this too, rather than a second mechanism.
+ * The background stays ours (`bg-surface-raised` on the wrapping figure) — only the token
+ * colours come from Shiki.
+ */
+.shiki-wrap .shiki,
+.shiki-wrap .shiki span {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  background-color: transparent !important;
+  color: var(--shiki-light);
+}
+
+@media (prefers-color-scheme: dark) {
+  .shiki-wrap .shiki,
+  .shiki-wrap .shiki span {
+    color: var(--shiki-dark);
+  }
+}

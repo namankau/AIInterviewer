@@ -193,6 +193,20 @@ export const chapterArraysInMemory: Chapter = {
           "trade-off: fast indexed access versus fast insertion/deletion away from the ends.",
       ],
     },
+    {
+      kind: "playground",
+      language: "python",
+      prompt:
+        "`values[2]` reads one slot directly, no matter how long the list is. Inserting at the front shifts " +
+        "every existing element along. Try `values.append(60)` instead of the insert and compare.",
+      starter:
+        "values = [10, 20, 30, 40, 50]\n" +
+        'print("values[2] =", values[2])\n' +
+        "\n" +
+        "values.insert(0, 5)\n" +
+        'print("after inserting 5 at the front:", values)\n',
+      expectedOutput: "values[2] = 30\nafter inserting 5 at the front: [5, 10, 20, 30, 40, 50]",
+    },
     { kind: "h", text: "Practice problems" },
     {
       kind: "list",

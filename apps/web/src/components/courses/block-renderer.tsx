@@ -2,6 +2,7 @@ import { anchorId } from "@/content/courses/anchor";
 import type { Block } from "@/content/courses/types";
 import { QuizBlock } from "@/components/courses/quiz-block";
 import { VizBlock } from "@/components/courses/viz-block";
+import { Playground } from "@/components/courses/playground";
 import { CopyCodeButton } from "@/components/courses/copy-code-button";
 import { InlineText } from "@/components/courses/inline-text";
 
@@ -13,18 +14,37 @@ import { InlineText } from "@/components/courses/inline-text";
  * treatment rather than falling back to generic article styling. An analogy reads as a
  * tinted aside; a pitfall reads as a warning; a remember box is the one thing on the page
  * that's meant to be skimmable on its own, after everything else is forgotten.
+ *
+ * `highlightedCode`, when given, is server/build-time Shiki HTML for the `code` and
+ * `playground` blocks, aligned by index with `blocks` (task 049) — computed once by the
+ * page before this renders, so this component itself stays a plain, synchronous function
+ * that a test can render directly. A missing entry (or no `highlightedCode` at all, as in
+ * every existing test) falls back to a plain `<pre>` — the same degrade-gracefully path an
+ * unrecognised language takes.
  */
-export function BlockRenderer({ blocks }: { blocks: Block[] }) {
+export function BlockRenderer({ blocks, highlightedCode }: { blocks: Block[]; highlightedCode?: Array<string | null> }) {
   return (
     <div className="flex flex-col gap-8">
       {blocks.map((block, index) => (
-        <BlockView key={index} block={block} />
+        <BlockView key={index} block={block} highlightedHtml={highlightedCode?.[index] ?? null} />
       ))}
     </div>
   );
 }
 
-function BlockView({ block }: { block: Block }) {
+function StaticCode({ code, html }: { code: string; html: string | null }) {
+  return html ? (
+    // Shiki's own HTML — trusted, generated at build time from our own content files,
+    // never from anything a reader submits.
+    <div className="shiki-wrap overflow-x-auto px-4 py-4" dangerouslySetInnerHTML={{ __html: html }} />
+  ) : (
+    <pre className="overflow-x-auto bg-surface-raised px-4 py-4 font-mono text-caption text-ink">
+      <code>{code}</code>
+    </pre>
+  );
+}
+
+function BlockView({ block, highlightedHtml }: { block: Block; highlightedHtml: string | null }) {
   switch (block.kind) {
     case "p":
       return (
@@ -63,9 +83,7 @@ function BlockView({ block }: { block: Block }) {
             </figcaption>
           ) : null}
           <div className="relative">
-            <pre className="overflow-x-auto bg-surface-raised px-4 py-4 font-mono text-caption text-ink">
-              <code>{block.code}</code>
-            </pre>
+            <StaticCode code={block.code} html={highlightedHtml} />
             <CopyCodeButton code={block.code} />
           </div>
           {block.output ? (
@@ -192,5 +210,34 @@ function BlockView({ block }: { block: Block }) {
 
     case "viz":
       return <VizBlock block={block} />;
+
+    case "playground":
+      return (
+        <div className="flex flex-col gap-4">
+          {/*
+            The server-rendered copy: a reader with JS off, or a crawler, sees the real
+            starter code and expected output here regardless of what the editor below
+            does. The playground is layered on top of this, never a replacement for it
+            (task 049).
+          */}
+          <figure className="flex flex-col gap-0 overflow-hidden rounded-md border border-line-strong">
+            <figcaption className="border-b border-line-strong bg-surface-sunken px-4 py-2 text-caption text-ink-muted">
+              Starter code · {block.language === "python" ? "Python" : "Java"}
+            </figcaption>
+            <div className="relative">
+              <StaticCode code={block.starter} html={highlightedHtml} />
+              <CopyCodeButton code={block.starter} />
+            </div>
+            {block.expectedOutput ? (
+              <div className="border-t border-line-strong bg-surface-sunken px-4 py-3">
+                <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Expected output</p>
+                <pre className="mt-1 overflow-x-auto font-mono text-caption text-ink-muted">{block.expectedOutput}</pre>
+              </div>
+            ) : null}
+          </figure>
+
+          <Playground block={block} />
+        </div>
+      );
   }
 }

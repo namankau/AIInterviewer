@@ -32,7 +32,30 @@ export type Block =
    * carry structured state (cells, pointers, nodes, edges) instead of sentences, so a
    * renderer can draw each frame instead of the reader imagining it (task 047).
    */
-  | { kind: "viz"; title: string; caption?: string; viz: Viz };
+  | { kind: "viz"; title: string; caption?: string; viz: Viz }
+  /**
+   * An editable, runnable "try it yourself" block (task 049) — separate from `code`
+   * rather than a flag on it, because the two are rendered by entirely different paths:
+   * `code` is highlighted once at build time and shipped as static HTML, while a
+   * `playground` seeds a client-side editor and (for Python) an in-browser interpreter.
+   * Keeping them apart means a static `code` sample never accidentally pulls in the
+   * editor bundle, and a chapter can mix "read this" snippets with "try this" ones freely.
+   *
+   * Only `language: "python"` can actually run — see `getRunner` in
+   * `lib/course-code-runner.ts`. A `java` playground still renders (editable, copyable)
+   * but shows an honest explanation in place of Run; there is no free, unencumbered way
+   * to execute Java in the browser as of Feb 2026 (see `browser-python.ts` and task 049).
+   */
+  | {
+      kind: "playground";
+      language: "python" | "java";
+      /** Seed source. "Reset to original" restores exactly this string. */
+      starter: string;
+      /** A short task line shown above the editor, e.g. "Change `nums` and run again." */
+      prompt?: string;
+      /** What a correct, unmodified run should print — compared loosely (trailing whitespace only). */
+      expectedOutput?: string;
+    };
 
 /**
  * One visualisation and its frames. Every shape's frame is *state*, never coordinates —

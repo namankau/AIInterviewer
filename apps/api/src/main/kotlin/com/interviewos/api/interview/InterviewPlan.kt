@@ -28,23 +28,49 @@ enum class TurnPhase(
 enum class WarmupFocus(
     /** Handed to the model as the instruction for this turn. */
     val instruction: String,
+    /**
+     * The same beat asked of a student (task 048).
+     *
+     * The professional wording is not merely unhelpful to a fresher, it is unanswerable:
+     * the third beat asks what they work in day to day, the size of their team and how
+     * much of it they own, and a final-year student has none of those. It was the first
+     * thing they heard in the round.
+     */
+    val campusInstruction: String,
 ) {
     INTRODUCTION(
         "Ask them to introduce themselves — background, how long they have been doing this, and what " +
             "they are working on at the moment. This is the opening question of the interview.",
+        campusInstruction =
+            "Ask them to introduce themselves — what they are studying, where they are up to in it, and " +
+                "what they have been building or working on lately. This is the opening question of the " +
+                "interview, and for most of them it is the first interview they have sat.",
     ),
     PROJECT(
         "Pick something concrete they just mentioned and ask them to walk you through it: what the " +
             "system or project actually did, and what their own part in it was. You are after the shape " +
             "of real work, not an assessment yet. If they mentioned nothing specific, ask for the piece " +
             "of work they are most proud of.",
+        campusInstruction =
+            "Pick something concrete they just mentioned — a course project, a final-year project, an " +
+                "internship, something they built for themselves — and ask them to walk you through it: " +
+                "what it did, and which part was theirs. Not an assessment yet. If they mentioned nothing " +
+                "specific, ask what they have most enjoyed building.",
     ),
     STACK_AND_EXPERIENCE(
         "Ask what they work in day to day — the stack, the kind of problems, the size of the team, how " +
             "much of it they own. This is the last warm-up question, and it is where you find the ground " +
             "the rest of the round will stand on.",
+        campusInstruction =
+            "Ask what they actually know their way around — the language they are most comfortable in, " +
+                "the subjects they have covered, what they have used outside a classroom. Do not ask about " +
+                "a team, a stack they own or what they do day to day: they have no job. This is the last " +
+                "warm-up question and it is where you find the ground the rest of the round stands on.",
     ),
     ;
+
+    /** The wording for this beat, given who is in the room. */
+    fun instructionFor(campusFresher: Boolean): String = if (campusFresher) campusInstruction else instruction
 
     companion object {
         /** The beats in order. The nth warm-up turn gets the nth focus. */

@@ -139,6 +139,28 @@ class CandidateStageTest {
         assertTrue(calibration.contains("fabricated evidence"))
     }
 
+    /**
+     * The first thing a candidate hears. The professional third beat asks what they work
+     * in day to day, how big their team is and how much of it they own — a student has
+     * none of those, so the round opened by asking them something they cannot answer.
+     */
+    @Test
+    fun `the warm-up asks a student something a student can answer`() {
+        val campus = WarmupFocus.STACK_AND_EXPERIENCE.instructionFor(campusFresher = true)
+
+        assertTrue(campus.contains("they have no job"))
+        assertTrue(!campus.contains("the size of the team"))
+        assertEquals(
+            WarmupFocus.STACK_AND_EXPERIENCE.instruction,
+            WarmupFocus.STACK_AND_EXPERIENCE.instructionFor(campusFresher = false),
+            "somebody with a job is asked the same question as before",
+        )
+        for (beat in WarmupFocus.entries) {
+            assertTrue(beat.campusInstruction.isNotBlank(), "$beat has no campus wording")
+            assertTrue(beat.campusInstruction != beat.instruction, "$beat is not actually calibrated")
+        }
+    }
+
     @Test
     fun `every level says something about the bar, so no round is left uncalibrated`() {
         for (level in Level.entries) {

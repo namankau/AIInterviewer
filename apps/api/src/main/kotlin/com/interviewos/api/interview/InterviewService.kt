@@ -220,7 +220,7 @@ class InterviewService(
         // back — it has to be recorded. Without this a round that died mid-setup would sit
         // `in_progress` with no question in it, and block the candidate's next start.
         return try {
-            composeAndOpen(userId, sessionId, request, roundType, resolution, background)
+            composeAndOpen(userId, sessionId, request, roundType, resolution, background, stage)
         } catch (e: RuntimeException) {
             runCatching { repository.markSessionStatus(sessionId, userId, "failed") }
             throw e
@@ -302,6 +302,7 @@ class InterviewService(
         roundType: RoundType,
         resolution: ArchetypeResolution,
         background: CandidateBackground?,
+        stage: CandidateStage,
     ): SessionView {
         val brief =
             briefFor(
@@ -351,7 +352,7 @@ class InterviewService(
             } ?: try {
                 AiSpendContext
                     .of(userId, sessionId) {
-                        interviewAi.composeOpeningQuestion(brief, plan.toContext())
+                        interviewAi.composeOpeningQuestion(brief, plan.toContext(stage))
                     }.value
             } catch (e: AiUnavailableException) {
                 repository.markSessionStatus(sessionId, userId, "failed")
@@ -500,7 +501,7 @@ class InterviewService(
                 AiSpendContext.of(userId, sessionId) {
                     interviewAi.assessAnswer(
                         brief = brief,
-                        round = plan.toContext(),
+                        round = plan.toContext(CandidateStage.of(session.roleTitle, background?.tenure?.totalExperienceMonths)),
                         priorTurns = priorTurns,
                         currentQuestion = turn.questionText,
                         answer = audio,
@@ -673,6 +674,8 @@ class InterviewService(
             ArchetypeResolution(Archetype.fromDbValue(session.archetype), confidenceOf(session.archetypeConfidence))
         // The resume is read here too, so a hint is pitched at the same candidate the
         // round is: a student asking for help should not be handed a mid-level nudge.
+        val background = resumeService.backgroundFor(userId)
+        val stage = CandidateStage.of(session.roleTitle, background?.tenure?.totalExperienceMonths)
         val brief =
             briefFor(
                 company = session.companyName,
@@ -680,7 +683,7 @@ class InterviewService(
                 role = session.roleTitle,
                 roundType = roundType,
                 language = session.language,
-                background = resumeService.backgroundFor(userId),
+                background = background,
             )
         val plan =
             InterviewPlan.forTurn(
@@ -700,7 +703,7 @@ class InterviewService(
         val offered =
             try {
                 AiSpendContext.of(userId, sessionId) {
-                    interviewAi.offerHint(brief, plan.toContext(), priorTurns, turn.questionText)
+                    interviewAi.offerHint(brief, plan.toContext(stage), priorTurns, turn.questionText)
                 }
             } catch (e: AiUnavailableException) {
                 log.warn("Hint unavailable for session {} turn {}", sessionId, turnIndex, e)
@@ -1068,7 +1071,12 @@ class InterviewService(
         )
     }
 
-    private fun TurnPlan.toContext() =
+    /**
+     * @param stage who is in the room, so the warm-up beat is asked in words they can
+     *   answer. Null where the caller has not derived it, which reads as the professional
+     *   wording — the behaviour before task 048.
+     */
+    private fun TurnPlan.toContext(stage: CandidateStage? = null) =
         RoundContext(
             phase =
                 when (phase) {
@@ -1079,7 +1087,7 @@ class InterviewService(
             minutesElapsed = minutesElapsed,
             minutesRemaining = minutesRemaining,
             durationMinutes = durationMinutes,
-            warmupInstruction = warmupFocus?.instruction,
+            warmupInstruction = warmupFocus?.instructionFor(stage?.campusFresher == true),
             briefTheCandidate = briefTheCandidate,
             mustConclude = mustConclude,
         )

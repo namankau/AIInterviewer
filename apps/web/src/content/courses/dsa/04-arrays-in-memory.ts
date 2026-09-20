@@ -72,16 +72,64 @@ export const chapterArraysInMemory: Chapter = {
         "data[4] lives at address 1016",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "insertAt({10, 20, 30, 40, 0}, usedLength=4, index=2, value=25)",
-      steps: [
-        "i starts at usedLength (4). i(4) > index(2), so data[4] = data[3] = 40. Array is now " +
-          "{10, 20, 30, 40, 40}.",
-        "i becomes 3. i(3) > index(2), so data[3] = data[2] = 30. Array is now {10, 20, 30, 30, 40}.",
-        "i becomes 2. i(2) is not > index(2) — the shifting loop stops.",
-        "data[2] = value (25). Array is now {10, 20, 25, 30, 40} — everything from index 2 onward moved " +
-          "one slot right, and 25 landed in the gap that opened up.",
-      ],
+      caption: "Shifting right to open a gap at index 2, then dropping 25 into it.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [
+              { value: 10 },
+              { value: 20 },
+              { value: 30, pointers: ["index"] },
+              { value: 40 },
+              { value: 0, pointers: ["i"] },
+            ],
+            note: "Start: i = usedLength = 4, index = 2 is where 25 needs to land. Nothing has moved yet.",
+          },
+          {
+            cells: [
+              { value: 10 },
+              { value: 20 },
+              { value: 30, pointers: ["index"] },
+              { value: 40 },
+              { value: 40, state: "active", pointers: ["i"] },
+            ],
+            note: "i(4) > index(2): data[4] = data[3] = 40. The last slot now holds a copy of 40.",
+          },
+          {
+            cells: [
+              { value: 10 },
+              { value: 20 },
+              { value: 30, pointers: ["index"] },
+              { value: 30, state: "active", pointers: ["i"] },
+              { value: 40 },
+            ],
+            note: "i becomes 3. i(3) > index(2): data[3] = data[2] = 30 -> {10, 20, 30, 30, 40}.",
+          },
+          {
+            cells: [
+              { value: 10 },
+              { value: 20 },
+              { value: 30, pointers: ["index", "i"] },
+              { value: 30 },
+              { value: 40 },
+            ],
+            note: "i becomes 2. i(2) is not greater than index(2) — the shifting loop stops. The gap is ready.",
+          },
+          {
+            cells: [
+              { value: 10 },
+              { value: 20 },
+              { value: 25, state: "done", pointers: ["index"] },
+              { value: 30 },
+              { value: 40 },
+            ],
+            note: "data[2] = 25. Final: {10, 20, 25, 30, 40} — everything from index 2 shifted one slot right.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

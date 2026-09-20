@@ -69,19 +69,81 @@ export const chapterPrefixSums: Chapter = {
       output: "prefix: 0 4 6 13 14 19 22\nsum[1..3]: 10\nsum[0..5]: 22\nsum[2..2]: 7",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "buildPrefix({4, 2, 7, 1, 5, 3}) — accumulating once",
-      steps: [
-        "prefix[0] = 0 by definition — the sum of zero elements.",
-        "prefix[1] = prefix[0] + nums[0] = 0 + 4 = 4.",
-        "prefix[2] = prefix[1] + nums[1] = 4 + 2 = 6.",
-        "prefix[3] = prefix[2] + nums[2] = 6 + 7 = 13.",
-        "prefix[4] = prefix[3] + nums[3] = 13 + 1 = 14.",
-        "prefix[5] = prefix[4] + nums[4] = 14 + 5 = 19.",
-        "prefix[6] = prefix[5] + nums[5] = 19 + 3 = 22.",
-        "rangeSum(1, 3) asks for nums[1]+nums[2]+nums[3] = 2+7+1 = 10, and prefix[4]-prefix[1] = 14-4 = 10 " +
-          "— matches, without re-adding those three numbers directly.",
-      ],
+      caption: "Each cell is the running total up to (not including) its index. '?' means not built yet.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [
+              { value: 0, state: "done" },
+              { value: "?" }, { value: "?" }, { value: "?" }, { value: "?" }, { value: "?" }, { value: "?" },
+            ],
+            note: "prefix[0] = 0 by definition — the sum of zero elements.",
+          },
+          {
+            cells: [
+              { value: 0, state: "done" },
+              { value: 4, state: "active" },
+              { value: "?" }, { value: "?" }, { value: "?" }, { value: "?" }, { value: "?" },
+            ],
+            note: "prefix[1] = prefix[0] + nums[0] = 0 + 4 = 4.",
+          },
+          {
+            cells: [
+              { value: 0, state: "done" }, { value: 4, state: "done" },
+              { value: 6, state: "active" },
+              { value: "?" }, { value: "?" }, { value: "?" }, { value: "?" },
+            ],
+            note: "prefix[2] = prefix[1] + nums[1] = 4 + 2 = 6.",
+          },
+          {
+            cells: [
+              { value: 0, state: "done" }, { value: 4, state: "done" }, { value: 6, state: "done" },
+              { value: 13, state: "active" },
+              { value: "?" }, { value: "?" }, { value: "?" },
+            ],
+            note: "prefix[3] = prefix[2] + nums[2] = 6 + 7 = 13.",
+          },
+          {
+            cells: [
+              { value: 0, state: "done" }, { value: 4, state: "done" }, { value: 6, state: "done" }, { value: 13, state: "done" },
+              { value: 14, state: "active" },
+              { value: "?" }, { value: "?" },
+            ],
+            note: "prefix[4] = prefix[3] + nums[3] = 13 + 1 = 14.",
+          },
+          {
+            cells: [
+              { value: 0, state: "done" }, { value: 4, state: "done" }, { value: 6, state: "done" }, { value: 13, state: "done" }, { value: 14, state: "done" },
+              { value: 19, state: "active" },
+              { value: "?" },
+            ],
+            note: "prefix[5] = prefix[4] + nums[4] = 14 + 5 = 19.",
+          },
+          {
+            cells: [
+              { value: 0, state: "done" }, { value: 4, state: "done" }, { value: 6, state: "done" }, { value: 13, state: "done" }, { value: 14, state: "done" }, { value: 19, state: "done" },
+              { value: 22, state: "active" },
+            ],
+            note: "prefix[6] = prefix[5] + nums[5] = 19 + 3 = 22.",
+          },
+          {
+            cells: [
+              { value: 0 },
+              { value: 4, pointers: ["left"] },
+              { value: 6 }, { value: 13 },
+              { value: 14, pointers: ["right+1"] },
+              { value: 19 }, { value: 22 },
+            ],
+            range: [1, 4],
+            note:
+              "rangeSum(1, 3) asks for nums[1]+nums[2]+nums[3] = 2+7+1 = 10, and prefix[4]-prefix[1] = 14-4 = " +
+              "10 — matches, without re-adding those three numbers directly.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

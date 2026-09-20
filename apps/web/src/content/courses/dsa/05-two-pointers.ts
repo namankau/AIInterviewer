@@ -89,15 +89,69 @@ export const chapterTwoPointers: Chapter = {
       output: "pair indices: [2, 3] -> 7 + 11 = 18\nreversed: 5 4 3 2 1",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "pairWithSum({2, 4, 7, 11, 15, 20}, target=18)",
-      steps: [
-        "left=0 (2), right=5 (20). sum = 22. 22 > 18, so right-- to shrink the sum.",
-        "left=0 (2), right=4 (15). sum = 17. 17 < 18, so left++ to grow the sum.",
-        "left=1 (4), right=4 (15). sum = 19. 19 > 18, so right--.",
-        "left=1 (4), right=3 (11). sum = 15. 15 < 18, so left++.",
-        "left=2 (7), right=3 (11). sum = 18. Match — return {2, 3}.",
-      ],
+      caption: "Converging pointers rule out a whole set of pairs with every step.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [
+              { value: 2, pointers: ["left"] },
+              { value: 4 },
+              { value: 7 },
+              { value: 11 },
+              { value: 15 },
+              { value: 20, pointers: ["right"] },
+            ],
+            note: "left=0 (2), right=5 (20). sum = 22. 22 > 18, so right-- to shrink the sum.",
+          },
+          {
+            cells: [
+              { value: 2, pointers: ["left"] },
+              { value: 4 },
+              { value: 7 },
+              { value: 11 },
+              { value: 15, pointers: ["right"] },
+              { value: 20 },
+            ],
+            note: "left=0 (2), right=4 (15). sum = 17. 17 < 18, so left++ to grow the sum.",
+          },
+          {
+            cells: [
+              { value: 2 },
+              { value: 4, pointers: ["left"] },
+              { value: 7 },
+              { value: 11 },
+              { value: 15, pointers: ["right"] },
+              { value: 20 },
+            ],
+            note: "left=1 (4), right=4 (15). sum = 19. 19 > 18, so right--.",
+          },
+          {
+            cells: [
+              { value: 2 },
+              { value: 4, pointers: ["left"] },
+              { value: 7 },
+              { value: 11, pointers: ["right"] },
+              { value: 15 },
+              { value: 20 },
+            ],
+            note: "left=1 (4), right=3 (11). sum = 15. 15 < 18, so left++.",
+          },
+          {
+            cells: [
+              { value: 2 },
+              { value: 4 },
+              { value: 7, state: "done", pointers: ["left"] },
+              { value: 11, state: "done", pointers: ["right"] },
+              { value: 15 },
+              { value: 20 },
+            ],
+            note: "left=2 (7), right=3 (11). sum = 18. Match — return {2, 3}.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

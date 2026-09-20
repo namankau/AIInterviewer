@@ -63,6 +63,63 @@ class CandidateStageTest {
         assertTrue(stage.campusFresher)
     }
 
+    /**
+     * The hole task 051 closes: a plain title with no resume behind it derives mid level
+     * (see the test above), but a candidate who says outright that they are a student
+     * must be believed over that guess.
+     */
+    @Test
+    fun `a stated student beats a plain title and no resume`() {
+        val stage =
+            CandidateStage.of("Software Engineer", experienceMonths = null, declaredStage = DeclaredStage.STUDENT)
+
+        assertEquals(Level.ENTRY, stage.level)
+        assertTrue(stage.campusFresher)
+    }
+
+    @Test
+    fun `a stated recent graduate is read the same way as a stated student`() {
+        val stage =
+            CandidateStage.of("Software Engineer", experienceMonths = null, declaredStage = DeclaredStage.RECENT_GRADUATE)
+
+        assertEquals(Level.ENTRY, stage.level)
+        assertTrue(stage.campusFresher)
+    }
+
+    /**
+     * The other direction: a resume that reads as a fresher's, or none at all, must not
+     * override a candidate who says they are already working.
+     */
+    @Test
+    fun `a stated professional is not read as a campus fresher even with a student-looking resume`() {
+        val stage =
+            CandidateStage.of("Graduate Engineer Trainee", experienceMonths = 0, declaredStage = DeclaredStage.PROFESSIONAL)
+
+        assertFalse(stage.campusFresher, "a stated professional must not be pitched a campus round")
+    }
+
+    @Test
+    fun `saying nothing reproduces the derivation exactly`() {
+        for (title in listOf("Graduate Engineer Trainee", "Software Engineer", "Senior Software Engineer")) {
+            for (experience in listOf(null, 0, 18)) {
+                assertEquals(
+                    CandidateStage.of(title, experience),
+                    CandidateStage.of(title, experience, declaredStage = null),
+                    "$title / $experience months",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `an unrecognised declared stage does not parse`() {
+        assertEquals(null, DeclaredStage.parseOrNull("fresher"))
+        assertEquals(null, DeclaredStage.parseOrNull(null))
+        assertEquals(DeclaredStage.STUDENT, DeclaredStage.parseOrNull("student"))
+        assertEquals(DeclaredStage.RECENT_GRADUATE, DeclaredStage.parseOrNull("recent_graduate"))
+        assertEquals(DeclaredStage.PROFESSIONAL, DeclaredStage.parseOrNull("professional"))
+    }
+
     @Test
     fun `a fresher is described as one rather than as zero years of experience`() {
         val stage = CandidateStage.of("Graduate Trainee", experienceMonths = 0)

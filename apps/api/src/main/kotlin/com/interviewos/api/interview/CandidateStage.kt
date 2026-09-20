@@ -184,8 +184,14 @@ data class CandidateStage(
             val title = listOfNotNull(roleTitle.takeIf { it.isNotBlank() }, statedLevel?.takeIf { it.isNotBlank() }).joinToString(" ")
             val level = PoolRoundCoordinate.level(title, experienceMonths)
             return when (declaredStage) {
-                DeclaredStage.STUDENT, DeclaredStage.RECENT_GRADUATE -> CandidateStage(Level.ENTRY, campusFresher = true)
-                DeclaredStage.PROFESSIONAL -> CandidateStage(level, campusFresher = false)
+                DeclaredStage.STUDENT, DeclaredStage.RECENT_GRADUATE -> {
+                    CandidateStage(Level.ENTRY, campusFresher = true)
+                }
+
+                DeclaredStage.PROFESSIONAL -> {
+                    CandidateStage(level, campusFresher = false)
+                }
+
                 null -> {
                     val campus = level == Level.ENTRY && (experienceMonths == null || experienceMonths < CAMPUS_BELOW_MONTHS)
                     CandidateStage(level, campus)

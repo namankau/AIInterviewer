@@ -92,7 +92,7 @@ class SessionRepository(
          * bar the round ran at, and the round's role title or the candidate's resume can
          * both change after the fact while this must not. Null when they said nothing.
          */
-        declaredStage: DeclaredStage?,
+        declaredStage: DeclaredStage? = null,
     ): UUID =
         jdbcClient
             .sql(

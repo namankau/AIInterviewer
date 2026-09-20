@@ -26,7 +26,110 @@ export type Block =
   /** How the topic is commonly tested in interviews. Never a named company's specific question. */
   | { kind: "interview"; items: string[] }
   /** Tests understanding, not recall. Reveals `why` on interaction. */
-  | { kind: "quiz"; question: string; options: string[]; answer: number; why: string };
+  | { kind: "quiz"; question: string; options: string[]; answer: number; why: string }
+  /**
+   * A step-through visual: the same "dry run, step by step" job as `trace`, but the steps
+   * carry structured state (cells, pointers, nodes, edges) instead of sentences, so a
+   * renderer can draw each frame instead of the reader imagining it (task 047).
+   */
+  | { kind: "viz"; title: string; caption?: string; viz: Viz };
+
+/**
+ * One visualisation and its frames. Every shape's frame is *state*, never coordinates —
+ * layout is the renderer's job, not the content author's, which is what keeps this
+ * declarative and keeps a frame reviewable as data.
+ */
+export type Viz =
+  | { type: "array"; frames: ArrayFrame[] }
+  | { type: "list"; frames: ListFrame[] }
+  | { type: "stack" | "queue"; frames: SeqFrame[] }
+  | { type: "tree"; frames: TreeFrame[] }
+  | { type: "graph"; frames: GraphFrame[] }
+  | { type: "table"; frames: GridFrame[] }
+  | { type: "callstack"; frames: CallFrame[] };
+
+/** Visual state of one element within a frame. Never the only signal — always paired
+ * with a label, a pointer name, or position, per CLAUDE.md (never colour alone). */
+export type CellState = "active" | "window" | "done" | "compare" | "swap" | "visiting";
+
+export interface ArrayCell {
+  value: string | number;
+  /** Named pointers landing on this index, e.g. `["left"]`, `["i", "j"]`. */
+  pointers?: string[];
+  state?: CellState;
+}
+export interface ArrayFrame {
+  cells: ArrayCell[];
+  note: string;
+  /** Optional highlighted contiguous range (a window), inclusive indices into `cells`. */
+  range?: [number, number];
+}
+
+export interface ListNode {
+  id: string;
+  value: string | number;
+  /** id of the next node, or `null` for the end of the list. */
+  next: string | null;
+  pointers?: string[];
+}
+export interface ListFrame {
+  /** Nodes in list order, starting from the head. */
+  nodes: ListNode[];
+  note: string;
+}
+
+export interface SeqFrame {
+  items: (string | number)[];
+  note: string;
+  /** Index of the item just pushed/popped/enqueued/dequeued this frame. */
+  highlight?: number;
+}
+
+export interface TreeNode {
+  id: string;
+  value: string | number;
+  left: string | null;
+  right: string | null;
+  state?: CellState;
+}
+export interface TreeFrame {
+  nodes: TreeNode[];
+  rootId: string;
+  note: string;
+}
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  state?: CellState;
+}
+export interface GraphEdge {
+  from: string;
+  to: string;
+  directed?: boolean;
+  state?: CellState;
+}
+export interface GraphFrame {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  note: string;
+}
+
+export interface GridFrame {
+  /** `null` marks an empty cell (e.g. an unfilled DP table entry). */
+  rows: (string | number | null)[][];
+  rowLabels?: string[];
+  colLabels?: string[];
+  /** `[row, col]` pairs to highlight this frame. */
+  highlight?: [number, number][];
+  note: string;
+}
+
+export interface CallFrame {
+  /** The call stack, bottom to top. */
+  stack: { label: string; state?: "active" | "returning" }[];
+  note: string;
+}
 
 export interface Chapter {
   slug: string;

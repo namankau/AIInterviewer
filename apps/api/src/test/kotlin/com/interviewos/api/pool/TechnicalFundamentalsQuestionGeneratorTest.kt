@@ -98,6 +98,32 @@ class TechnicalFundamentalsQuestionGeneratorTest {
         assertThat(staffGuidance).containsIgnoringCase("failure modes")
     }
 
+    /**
+     * Task 048. A fresher has studied a syllabus and has not run anything, so entry level
+     * is examined on operating systems, DBMS, networks and OOP — not on the production
+     * concerns of whichever role family the cell happens to be.
+     */
+    @Test
+    fun `entry level is examined on the degree syllabus`() {
+        val ai = ScriptedAi(listOf(wellFormed))
+        val generator = TechnicalFundamentalsQuestionGenerator(ai)
+
+        generator.generate(
+            PoolGenerationRequest(cell(RoleFamily.SRE, Level.ENTRY), count = 2, avoid = emptyList(), knowledge = null),
+        )
+        val entry = ai.lastRequest?.roundGuidance.orEmpty()
+
+        for (subject in listOf("operating systems", "DBMS", "computer networks", "object-oriented")) {
+            assertThat(entry).containsIgnoringCase(subject)
+        }
+        assertThat(entry).containsIgnoringCase("Assume nothing they could only know from having a job")
+
+        generator.generate(
+            PoolGenerationRequest(cell(RoleFamily.SRE, Level.SENIOR), count = 2, avoid = emptyList(), knowledge = null),
+        )
+        assertThat(ai.lastRequest?.roundGuidance.orEmpty()).doesNotContainIgnoringCase("degree syllabus")
+    }
+
     @Test
     fun `a malformed response with an empty text is still returned for the sanitiser to catch`() {
         val blank = wellFormed.copy(text = "")

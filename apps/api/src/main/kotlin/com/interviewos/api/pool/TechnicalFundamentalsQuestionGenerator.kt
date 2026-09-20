@@ -25,7 +25,10 @@ class TechnicalFundamentalsQuestionGenerator(
 ) : QuestionGenerator {
     override val roundType: RoundType = RoundType.TECHNICAL_FUNDAMENTALS
 
-    override val version: Int = 1
+    // Bumped for task 048: entry level is now examined on the degree syllabus rather than
+    // on a role family's production concerns, so its questions are not comparable with
+    // what version 1 wrote.
+    override val version: Int = 2
 
     override fun generate(request: PoolGenerationRequest): AiResult<GeneratedQuestions> =
         ai.generatePoolQuestions(
@@ -110,9 +113,20 @@ class TechnicalFundamentalsQuestionGenerator(
     private fun levelDepth(level: Level): String =
         when (level) {
             Level.ENTRY -> {
+                // Task 048. "Entry" here is campus hiring, and a campus fundamentals round
+                // is examined on a syllabus rather than on a stack somebody has worked in:
+                // a student has studied operating systems, DBMS, networks and OOP, and has
+                // not run a service. A question pitched at the role family alone asks them
+                // about caching strategy they have never had to choose.
                 "Level: entry. Ask what a concept is and why it exists — the reasoning behind the standard " +
                     "approach, not yet its edge cases. A definition recited with no grasp of why it matters " +
-                    "should fail to satisfy the follow-ups."
+                    "should fail to satisfy the follow-ups.\n\n" +
+                    "This is campus and new-graduate hiring, so the ground is the degree syllabus and not a " +
+                    "production stack: operating systems (processes and threads, scheduling, deadlock, memory), " +
+                    "DBMS (normalisation, keys, transactions, indexes, a query they can reason about), computer " +
+                    "networks (the layers, TCP against UDP, what happens when a URL is typed), object-oriented " +
+                    "programming, and core data structures. Where the role family above has an equivalent, ask " +
+                    "the syllabus version of it. Assume nothing they could only know from having a job."
             }
 
             Level.MID -> {

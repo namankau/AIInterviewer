@@ -223,6 +223,57 @@ describe("NewInterviewForm", () => {
     );
   });
 
+  /**
+   * The default state of the field, and the one most candidates will leave it in — it
+   * must not change what is sent to the server (task 051).
+   */
+  it("sends no candidateStage when the career question is left alone", async () => {
+    composeRound.mockResolvedValue(draft);
+    startSession.mockResolvedValue({ id: "8b0d1e2f-3a4b-4c5d-9e6f-7a8b9c0d1e2f" });
+    render(<NewInterviewForm />);
+
+    await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys MR round");
+    await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+    await skipBrief();
+    await waitFor(() => expect(screen.getByDisplayValue("Infosys")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("checkbox", { name: /record my voice/i }));
+    await userEvent.click(screen.getByRole("button", { name: /begin interview/i }));
+
+    await waitFor(() =>
+      expect(startSession).toHaveBeenCalledWith(
+        "token",
+        expect.objectContaining({ candidateStage: undefined }),
+      ),
+    );
+  });
+
+  /** A candidate who does answer has it carried through to the request, unaltered. */
+  it("sends what the candidate said about their own stage", async () => {
+    composeRound.mockResolvedValue(draft);
+    startSession.mockResolvedValue({ id: "8b0d1e2f-3a4b-4c5d-9e6f-7a8b9c0d1e2f" });
+    render(<NewInterviewForm />);
+
+    await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys MR round");
+    await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+    await skipBrief();
+    await waitFor(() => expect(screen.getByDisplayValue("Infosys")).toBeInTheDocument());
+
+    await userEvent.selectOptions(
+      screen.getByLabelText(/where are you in your career/i),
+      "student",
+    );
+    await userEvent.click(screen.getByRole("checkbox", { name: /record my voice/i }));
+    await userEvent.click(screen.getByRole("button", { name: /begin interview/i }));
+
+    await waitFor(() =>
+      expect(startSession).toHaveBeenCalledWith(
+        "token",
+        expect.objectContaining({ candidateStage: "student" }),
+      ),
+    );
+  });
+
   it("will not start without consent to record the candidate's voice", async () => {
     render(<NewInterviewForm />);
     await userEvent.click(screen.getByRole("button", { name: /fill it in yourself/i }));

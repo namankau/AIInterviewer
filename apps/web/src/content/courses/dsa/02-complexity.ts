@@ -183,6 +183,32 @@ export const chapterComplexity: Chapter = {
           "interview arcs there is — it's exactly what the rest of this course trains for.",
       ],
     },
+    {
+      kind: "playground",
+      language: "python",
+      prompt:
+        "Run this as-is, then change the list `[10, 20, 40]` to `[10, 20, 40, 80]` and watch the quadratic " +
+        "count grow far faster than the linear one — that gap is what Big-O is naming.",
+      starter:
+        "def linear_work(n):\n" +
+        "    count = 0\n" +
+        "    for _ in range(n):\n" +
+        "        count += 1\n" +
+        "    return count\n" +
+        "\n" +
+        "\n" +
+        "def quadratic_work(n):\n" +
+        "    count = 0\n" +
+        "    for _ in range(n):\n" +
+        "        for _ in range(n):\n" +
+        "            count += 1\n" +
+        "    return count\n" +
+        "\n" +
+        "\n" +
+        "for n in [10, 20, 40]:\n" +
+        '    print(f"n={n}: linear={linear_work(n)}, quadratic={quadratic_work(n)}")\n',
+      expectedOutput: "n=10: linear=10, quadratic=100\nn=20: linear=20, quadratic=400\nn=40: linear=40, quadratic=1600",
+    },
     { kind: "h", text: "Practice problems" },
     {
       kind: "list",

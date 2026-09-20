@@ -15,6 +15,7 @@ import {
   getModuleForChapter,
 } from "@/content/courses";
 import { InlineText, plainText } from "@/components/courses/inline-text";
+import { highlightChapterBlocks } from "@/lib/highlight-code";
 
 export function generateStaticParams() {
   return courses.flatMap((course) =>
@@ -53,6 +54,10 @@ export default async function ChapterPage({
 
   const chapterModule = getModuleForChapter(course, chapterSlug);
   const { prev, next } = getAdjacentChapters(course, chapterSlug);
+  // Shiki runs here, at build time (this page is statically generated via
+  // generateStaticParams), so the highlighted HTML ships with the page and zero
+  // highlighting JS reaches the browser (task 049).
+  const highlightedCode = await highlightChapterBlocks(chapter.blocks);
 
   return (
     <div className="min-h-dvh">
@@ -82,7 +87,7 @@ export default async function ChapterPage({
           <p className="mt-3 text-body text-ink-muted">{chapter.summary}</p>
 
           <div className="mt-10">
-            <BlockRenderer blocks={chapter.blocks} />
+            <BlockRenderer blocks={chapter.blocks} highlightedCode={highlightedCode} />
           </div>
 
           <nav aria-label="Chapter navigation" className="mt-14 flex flex-col gap-3 border-t border-line pt-8 sm:flex-row sm:justify-between">

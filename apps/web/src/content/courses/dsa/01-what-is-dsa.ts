@@ -175,6 +175,36 @@ export const chapterWhatIsDsa: Chapter = {
       ],
     },
     {
+      kind: "playground",
+      language: "python",
+      prompt:
+        "The Java example above ran both approaches once. Here they are in Python, where you can change " +
+        "the numbers and re-run instantly. Try removing the repeated 7 from `nums` and see both answers " +
+        "flip together.",
+      starter:
+        "def has_duplicate_slow(nums):\n" +
+        "    for i in range(len(nums)):\n" +
+        "        for j in range(i + 1, len(nums)):\n" +
+        "            if nums[i] == nums[j]:\n" +
+        "                return True\n" +
+        "    return False\n" +
+        "\n" +
+        "\n" +
+        "def has_duplicate_fast(nums):\n" +
+        "    seen = set()\n" +
+        "    for n in nums:\n" +
+        "        if n in seen:\n" +
+        "            return True\n" +
+        "        seen.add(n)\n" +
+        "    return False\n" +
+        "\n" +
+        "\n" +
+        "nums = [4, 7, 2, 9, 7, 1]\n" +
+        'print("slow:", has_duplicate_slow(nums))\n' +
+        'print("fast:", has_duplicate_fast(nums))\n',
+      expectedOutput: "slow: True\nfast: True",
+    },
+    {
       kind: "h",
       text: "Practice problems",
     },

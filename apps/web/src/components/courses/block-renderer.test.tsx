@@ -31,10 +31,20 @@ const ALL_KINDS: Block[] = [
       frames: [{ cells: [{ value: 1 }, { value: 2 }], note: "Frame one note." }],
     },
   },
+  // Java, deliberately: getRunner("java") is null with no mocking needed, so this
+  // exercises the real Playground component (real CodeMirror, no Worker involved) in the
+  // same no-mock smoke test as every other block kind.
+  {
+    kind: "playground",
+    language: "java",
+    starter: "System.out.println(2);",
+    prompt: "A prompt line.",
+    expectedOutput: "2",
+  },
 ];
 
 describe("BlockRenderer", () => {
-  it("renders every block kind without crashing, accessibly", () => {
+  it("renders every block kind without crashing, accessibly", async () => {
     render(<BlockRenderer blocks={ALL_KINDS} />);
 
     expect(screen.getByText(/A paragraph with/)).toBeInTheDocument();
@@ -51,6 +61,11 @@ describe("BlockRenderer", () => {
     expect(screen.getByText("What is 2 + 2?")).toBeInTheDocument();
     expect(screen.getByText("A step-through array")).toBeInTheDocument();
     expect(screen.getByText("Frame one note.")).toBeInTheDocument();
+    expect(screen.getByText("System.out.println(2);")).toBeInTheDocument();
+    // The playground itself is code-split (next/dynamic) so a chapter with no playground
+    // block never fetches it — its own content resolves asynchronously here.
+    expect(await screen.findByText("A prompt line.")).toBeInTheDocument();
+    expect(await screen.findByText(/Running Java in the browser isn.t available yet/)).toBeInTheDocument();
   });
 
   it("renders inline `code` and **bold** markers as their own elements", () => {
@@ -109,5 +124,24 @@ describe("BlockRenderer", () => {
     await user.click(screen.getByRole("radio", { name: "Wrong" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent(/Not quite\./);
+  });
+
+  it("renders pre-highlighted Shiki HTML for a code block when given, instead of plain text", () => {
+    const { container } = render(
+      <BlockRenderer
+        blocks={[{ kind: "code", code: "int x = 1;" }]}
+        highlightedCode={['<pre class="shiki" tabindex="0"><code>marked up</code></pre>']}
+      />,
+    );
+
+    expect(container.querySelector(".shiki")).toBeInTheDocument();
+    expect(screen.getByText("marked up")).toBeInTheDocument();
+  });
+
+  it("falls back to a plain, unhighlighted <pre> when no highlighted HTML is given", () => {
+    const { container } = render(<BlockRenderer blocks={[{ kind: "code", code: "int x = 1;" }]} />);
+
+    expect(container.querySelector(".shiki")).not.toBeInTheDocument();
+    expect(screen.getByText("int x = 1;")).toBeInTheDocument();
   });
 });

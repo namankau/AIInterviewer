@@ -181,6 +181,22 @@ export const chapterHashing: Chapter = {
           "is tested, using a HashMap<computed key, List<items>>.",
       ],
     },
+    {
+      kind: "playground",
+      language: "python",
+      prompt:
+        "Add a repeated word of your own to the sentence and run again — the dictionary catches it without " +
+        "a second pass over the whole list.",
+      starter:
+        'words = "the quick brown fox jumps over the lazy dog the fox runs".split()\n' +
+        "counts = {}\n" +
+        "for word in words:\n" +
+        "    counts[word] = counts.get(word, 0) + 1\n" +
+        "\n" +
+        "for word, count in sorted(counts.items()):\n" +
+        "    print(word, count)\n",
+      expectedOutput: "brown 1\ndog 1\nfox 2\njumps 1\nlazy 1\nover 1\nquick 1\nruns 1\nthe 3",
+    },
     { kind: "h", text: "Practice problems" },
     {
       kind: "list",

@@ -26,6 +26,26 @@ export interface CatalogueRound {
 
 export const ROUND_CATALOGUE: CatalogueRound[] = [
   {
+    value: "aptitude",
+    eyebrow: "Campus placement",
+    label: "Aptitude and reasoning, spoken",
+    blurb:
+      "Quantitative, logical reasoning, data interpretation and verbal ability — worked out " +
+      "loud, with nothing to write on. No options to pick from, because the method is the answer.",
+    listeningFor:
+      "how you set a problem up before you start computing, and what you do when you notice " +
+      "halfway through that you have gone wrong.",
+    // Deliberately no employer names and no test structure. Which companies run a
+    // reasoning gate, how long it lasts and how many sections it has are claims we cannot
+    // source — the employers do not publish them, and the figures in circulation come from
+    // prep aggregators. What is true at archetype level is that high-volume graduate
+    // hiring usually screens on reasoning before anything technical, so that is what this
+    // says. (CLAUDE.md: never fabricate employer-specific detail; task 048.)
+    whoRunsIt:
+      "service-based IT, consulting and other high-volume graduate hiring, where a reasoning " +
+      "gate usually comes before any technical round",
+  },
+  {
     value: "project_deep_dive",
     eyebrow: "Your own work",
     label: "Project deep-dive",

@@ -199,11 +199,22 @@ class InterviewService(
             RoundType.parseOrNull(request.roundType)
                 ?: throw ApiException.badRequest("That is not a round type we run.", code = "unknown_round_type")
 
+        // Optional, and rejected outright when it does not parse rather than silently
+        // dropped — the same treatment an unrecognised round type gets above.
+        val declaredStage =
+            request.candidateStage?.let {
+                DeclaredStage.parseOrNull(it)
+                    ?: throw ApiException.badRequest(
+                        "That is not a stage we recognise. Leave it blank if none of the options fit.",
+                        code = "unknown_candidate_stage",
+                    )
+            }
+
         // Read before the session row is written, because it decides whether this round may
         // run at all — and read once, then carried, rather than fetched again inside
         // `composeAndOpen`.
         val background = resumeService.backgroundFor(userId)
-        val stage = CandidateStage.of(request.roleTitle, background?.tenure?.totalExperienceMonths)
+        val stage = CandidateStage.of(request.roleTitle, background?.tenure?.totalExperienceMonths, declaredStage = declaredStage)
         refuseRoundAboveStage(roundType, stage)
 
         val resolution = archetypeResolver.resolve(request.companyName)
@@ -213,14 +224,14 @@ class InterviewService(
                 // before that endpoint had ever been called failed on the users foreign key.
                 // Any entry point that creates user-owned rows has to stand on its own.
                 userRepository.provision(identity)
-                admitAndInsert(userId, request, roundType, resolution)
+                admitAndInsert(userId, request, roundType, resolution, declaredStage)
             }
 
         // The session row has committed, so a failure from here on can no longer be rolled
         // back — it has to be recorded. Without this a round that died mid-setup would sit
         // `in_progress` with no question in it, and block the candidate's next start.
         return try {
-            composeAndOpen(userId, sessionId, request, roundType, resolution, background, stage)
+            composeAndOpen(userId, sessionId, request, roundType, resolution, background, stage, declaredStage)
         } catch (e: RuntimeException) {
             runCatching { repository.markSessionStatus(sessionId, userId, "failed") }
             throw e
@@ -262,6 +273,7 @@ class InterviewService(
         request: StartSessionRequest,
         roundType: RoundType,
         resolution: ArchetypeResolution,
+        declaredStage: DeclaredStage?,
     ): UUID {
         val decision =
             Entitlement.evaluate(
@@ -288,6 +300,7 @@ class InterviewService(
             consentAudio = request.consentAudio,
             consentVideo = request.consentVideo,
             durationMinutes = request.durationMinutes,
+            declaredStage = declaredStage,
         )
     }
 
@@ -303,6 +316,7 @@ class InterviewService(
         resolution: ArchetypeResolution,
         background: CandidateBackground?,
         stage: CandidateStage,
+        declaredStage: DeclaredStage?,
     ): SessionView {
         val brief =
             briefFor(
@@ -312,6 +326,7 @@ class InterviewService(
                 roundType = roundType,
                 language = request.language,
                 background = background,
+                declaredStage = declaredStage,
             )
         // A DSA or design round is conducted around material — a problem, or a case — and
         // its opening is templated from that rather than asked of the model separately.
@@ -489,6 +504,7 @@ class InterviewService(
                 language = session.language,
                 background = background,
                 planned = planned?.let { PlannedQuestion(it.text, session.companyName, askNow, reported = it is PlannedFrom.Bank) },
+                declaredStage = session.declaredStage,
             )
         val priorTurns =
             repository
@@ -501,7 +517,14 @@ class InterviewService(
                 AiSpendContext.of(userId, sessionId) {
                     interviewAi.assessAnswer(
                         brief = brief,
-                        round = plan.toContext(CandidateStage.of(session.roleTitle, background?.tenure?.totalExperienceMonths)),
+                        round =
+                            plan.toContext(
+                                CandidateStage.of(
+                                    session.roleTitle,
+                                    background?.tenure?.totalExperienceMonths,
+                                    declaredStage = session.declaredStage,
+                                ),
+                            ),
                         priorTurns = priorTurns,
                         currentQuestion = turn.questionText,
                         answer = audio,
@@ -675,7 +698,7 @@ class InterviewService(
         // The resume is read here too, so a hint is pitched at the same candidate the
         // round is: a student asking for help should not be handed a mid-level nudge.
         val background = resumeService.backgroundFor(userId)
-        val stage = CandidateStage.of(session.roleTitle, background?.tenure?.totalExperienceMonths)
+        val stage = CandidateStage.of(session.roleTitle, background?.tenure?.totalExperienceMonths, declaredStage = session.declaredStage)
         val brief =
             briefFor(
                 company = session.companyName,
@@ -684,6 +707,7 @@ class InterviewService(
                 roundType = roundType,
                 language = session.language,
                 background = background,
+                declaredStage = session.declaredStage,
             )
         val plan =
             InterviewPlan.forTurn(
@@ -1041,8 +1065,9 @@ class InterviewService(
         language: String,
         background: CandidateBackground? = null,
         planned: PlannedQuestion? = null,
+        declaredStage: DeclaredStage? = null,
     ): InterviewBrief {
-        val stage = CandidateStage.of(role, background?.tenure?.totalExperienceMonths)
+        val stage = CandidateStage.of(role, background?.tenure?.totalExperienceMonths, declaredStage = declaredStage)
         return InterviewBrief(
             company = company,
             archetype = resolution.archetype.label,

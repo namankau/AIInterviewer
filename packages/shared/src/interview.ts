@@ -1,4 +1,4 @@
-import type { ResumeParseStatus, RoundType } from "./domain.js";
+import type { CandidateStage, ResumeParseStatus, RoundType } from "./domain.js";
 
 /**
  * How much interviewing this product has done, across everyone.
@@ -247,6 +247,12 @@ export interface StartSessionRequest {
    * the default lives there so every client gets the same round, not just this one.
    */
   durationMinutes?: number;
+  /**
+   * Where the candidate says they are (task 051), so they can correct the server's own
+   * guess rather than sit whatever round it derived from the role title and resume alone.
+   * Optional: omitted, the guess stands exactly as it did before this field existed.
+   */
+  candidateStage?: CandidateStage;
 }
 
 /**

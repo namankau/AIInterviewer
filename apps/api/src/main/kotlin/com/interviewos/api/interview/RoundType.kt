@@ -121,6 +121,39 @@ enum class RoundType(
             ),
         resumeUse = ResumeUse.SITUATIONS,
     ),
+
+    /**
+     * The gate most Indian campus candidates meet first, and the one that eliminates most
+     * of them before any technical round (task 048, PRD §06).
+     *
+     * **Deliberately not a timed multiple-choice test.** A real aptitude test is sat in
+     * silence against a clock, and an aggregator can already give a student one of those.
+     * What this product can do, and they cannot, is make somebody say the working out loud:
+     * how they set the problem up, which quantity they solved for first, what they did when
+     * the arithmetic came out wrong. That is also the part a written test never reveals and
+     * the part that transfers to the interview after it.
+     *
+     * So the round is spoken reasoning about aptitude material. An MCQ engine would be a
+     * different product surface, and building one was explicitly left out of the task that
+     * added this.
+     */
+    APTITUDE(
+        "aptitude",
+        "Aptitude and reasoning",
+        "Quantitative, logical reasoning, data interpretation and verbal ability, worked out loud. Assess the " +
+            "method, the assumptions stated, and the arithmetic they can carry in their head — not a marked " +
+            "answer sheet. Give them nothing to write on that they would not have in the room.",
+        covers =
+            listOf(
+                "a quantitative problem set up aloud: what they are solving for, before any arithmetic",
+                "the arithmetic itself, carried in their head, including where they round and why that is safe",
+                "a logical reasoning problem: what actually follows from what they were told, and what does not",
+                "a small table or set of figures read aloud, and the one conclusion it supports",
+                "an estimate with no exact answer, where the method is the entire assessment",
+                "what they do when they notice halfway through that they have gone wrong",
+            ),
+        resumeUse = ResumeUse.CONTEXT,
+    ),
     HR_FIT_CLOSING(
         "hr_fit_closing",
         "HR, fit and closing",

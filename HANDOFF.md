@@ -3,159 +3,141 @@
 ## Task
 Make the courses stop being pure theory (visuals + somewhere to try things out), and make
 mock interviews much better for freshers facing campus placements — reusing open source
-rather than reinventing it. Tasks `tasks/task-047` through `tasks/task-051`.
+rather than reinventing it. Then a second pass after you looked at the live pages and said
+the reader was still congested and theoretical and the report was a wall of text.
+Tasks `tasks/task-047` through `tasks/task-054`.
 
-## What I built
+---
 
-**Courses — visuals (task 047, merged `1c08197`)**
-- `apps/web/src/content/courses/types.ts` — a `viz` block kind with a declarative union:
-  `array | list | stack | queue | tree | graph | table | callstack`. Content describes state
-  per frame, never SVG coordinates. Every frame carries a `note` — that is what makes it
-  teaching rather than decoration.
-- `apps/web/src/components/courses/viz/*.tsx` — hand-rolled inline SVG per shape;
-  `viz-block.tsx` adds previous/next/play/reset and a step slider.
-- `apps/web/src/lib/courses/viz-layout.ts` — unit-tested binary-tree and radial-graph layout.
-- **16 chapters converted** (12 DSA, 4 Java). Where a `trace` block existed it was *replaced*
-  by the picture it was describing.
-- Frame 0 server-renders, so the diagram is in the HTML for search and for JS-off readers.
-  Colour is never the only signal — every state carries a text label too.
+## Round 2 — what you asked for after seeing it running
 
-**Courses — try it yourself (task 049, merged `4893a2c`)**
-- `playground` block kind, deliberately separate from `code` so a read-only sample can never
-  pull in the editor bundle.
-- `apps/web/src/lib/course-code-runner.ts` — the pluggable runner seam. `getRunner("python")`
-  wraps the existing Pyodide worker; `getRunner("java")` is `null`.
-- `apps/web/src/components/courses/playground.tsx` — CodeMirror, Reset, Run, distinct
-  stdout/stderr, explicit timeout message. For Java: an honest line saying browser execution
-  is not available yet. No fake Run, no unexplained disabled control.
-- `apps/web/src/lib/highlight-code.ts` — Shiki at build time, dual light/dark, degrades to a
-  plain `<pre>` on any error.
-- 5 DSA chapters got a Python playground as proof; all 5 outputs were produced by running the
-  code, not predicted.
+**The navigation bug was real.** Both landing-page course cards had `href="/courses"`, so
+clicking either one landed on the same catalogue. The comment above them said "links out
+even if the route isn't live yet" — true when written, quietly false once the courses
+shipped. Fixed, and the cards now read their titles and taglines from the course content, so
+the landing page cannot drift out of step again. (`de2656c`)
 
-**Interviews — freshers and campus placement (task 048, merged `fbdd27f`)**
-- `CandidateStage.kt` — derives campus-fresher status server-side, deliberately narrower than
-  `Level.ENTRY` (someone 18 months into a first job is ENTRY and not campus).
-- A `levelCalibration` brief threaded through `opening-question.md`, `assess-answer.md`,
-  `offer-hint.md`, `compose-problem.md`, `compose-case.md` and `report.md`. It says in words:
-  judge against what a final-year student can know; do not ask what happened when it broke in
-  production, about on-call, or about a team they led.
-- `CampusRounds` — replaces, not appends to, the round ground for the five round types whose
-  professional version is unanswerable by a student.
-- System design is refused for a campus fresher, before any row is written or model called —
-  and refused loudly rather than silently swapped when they chose it explicitly. Configurable
-  via `interviewos.rounds.not-for-campus-freshers`.
-- `RoundType.APTITUDE` + `AptitudeQuestionGenerator.kt` — spoken reasoning, not a timed MCQ.
-- `ReportService` scores against the bar the round actually ran at, and is instructive for a
-  student: name the topic to study next.
+**The reader now uses the screen** (`9ea8d5a`, task 052). Container 1152px → 1600px, and the
+middle grid track is fluid instead of capped at 70ch. The mechanism that matters: each block
+declares its own width in `block-renderer.tsx` — prose stays at 70ch, while `viz`, `code`,
+playgrounds, tables, `compare` and `steps` go full width. Done per block kind rather than
+with negative margins, so it cannot collide with the sticky rails.
 
-**Interviews — let a candidate say so (task 051, merged `2315016`)**
-- One optional field at session start: "Where are you in your career?" A stated answer beats
-  the derivation; saying nothing runs the pre-051 path unedited.
+| Width | Diagram column before | After |
+|---|---|---|
+| 1280px | ~608px | ~608px (unchanged) |
+| 1440px | ~630px | ~700–750px |
+| 1920px | ~630px | ~1000–1050px |
 
-**Courses — Python alongside Java (task 050, merged `a83c871`)**
-- **All 30 DSA chapters** gain a Python equivalent on every code block. The Java course stays
-  Java — it is a course *about* Java.
-- `code-language-context.tsx` — one page-wide Java/Python choice, backed by
-  `useSyncExternalStore` rather than a Context plus an effect. SSR always renders one
-  language, so there is no hydration mismatch, and `localStorage` is reconciled through the
-  store's snapshot rather than inside an effect's setState.
-- Both languages are highlighted by Shiki at build time.
-- **Every one of the 31 Python snippets was executed locally and its real output pasted** —
-  the same bar `types.ts` already set for Java.
-- Two divergences were kept honest rather than forced to match: `groupAnagrams` prints in a
-  different order because Python dicts preserve insertion order and Java's `HashMap` does
-  not; and the raw-memory-address half of the arrays chapter has no honest Python parallel,
-  because CPython lists hold pointers rather than values.
-- Idiomatic Python throughout — `enumerate`, tuple swap, `deque`, `heapq`, `Counter`,
-  `defaultdict`, comprehensions — and the Java scaffolding Python does not need (manual heap
-  `grow()`, a `swap()` helper, the checked-exception dance) was removed rather than
-  transliterated.
+**The visual vocabulary you asked for** — the "coloured circles and boxes":
+`concept` cards, `compare` columns (2–3, stacking below `sm`), `steps` strips with SVG
+chevrons, `{{O(n)}}` → complexity pill, `~~term~~` → key-term chip. All built on
+`color-mix()` over the existing CSS variables, so dark mode needed no new tokens. Colour is
+only ever a scan aid — the label always carries the meaning.
+
+**Every chapter is now a picture, not a list of sentences** (`b287a8f`, task 054). All
+remaining `trace` blocks became `viz` — tree viz for the fib call tree, BSTs and tries; graph
+viz with live distance and in-degree labels for Dijkstra and topological sort; a table viz
+filling the LCS table row by row; callstack viz for recursion and constructor chaining — or
+a `steps` strip where the thing traced was control flow rather than data state.
+**Exactly one `trace` survives**, in binary-search-on-the-answer: it narrows a scalar over an
+implicit range with nothing concrete to draw, and 31 cells would be clutter on desktop and
+illegible on mobile. A content-integrity test pins the count at one so it cannot creep back.
+
+**The report is readable in five seconds** (`4160e7f`, task 053). A summary band leads with
+the overall score beside strongest and weakest competencies (ranked by score *ratio*, so
+different rubric maxima compare fairly). The score-scale essay moved, word for word, behind
+a native "How this is scored" disclosure; each competency's rationale behind "Why this
+score". **The evidence quote was pulled out in front of both** and a test pins that it is
+never inside a disclosure — it is the most valuable thing on the page and it was buried. The
+practice plan moved from near the bottom to near the top. Widened to `max-w-6xl`, but every
+paragraph keeps its own `max-w-prose`, so line length is unchanged.
+
+---
+
+## Round 1 — what was built first
+
+- **Course visuals** (`1c08197`, task 047): the `viz` block kind and hand-rolled inline-SVG
+  renderers for eight shapes, with a step control. Frame 0 server-renders, so the diagram is
+  in the HTML for search and for JS-off readers.
+- **Try it yourself** (`4893a2c`, task 049): a `playground` block over a pluggable runner.
+  Python runs today through the Pyodide worker already in the repo; Java shows an honest line
+  saying browser execution is not available yet. Shiki highlighting at build time.
+- **Python alongside Java** (`a83c871`, task 050): all 30 DSA chapters, switchable page-wide.
+  Every one of the 31 snippets was executed and its real output pasted.
+- **Fresher and campus calibration** (`fbdd27f`, task 048): `CandidateStage`, a
+  `levelCalibration` brief through every prompt, campus round ground, `RoundType.APTITUDE` as
+  spoken reasoning, and system design refused for a campus fresher.
+- **Let a candidate say so** (`2315016`, task 051): one optional field at session start.
+
+---
 
 ## Assumptions I made
-- **"Campus fresher" is derived, not declared, by default** — `Level.ENTRY` and under 12
-  months of resume experience, or no resume with a title saying fresher/intern/graduate.
-  Guessing "student" from an empty profile would be the same bug mirrored. Task 051 then
-  added the optional field so a student can correct it.
-- **Aptitude is a spoken, reason-aloud round, not a timed MCQ.** An aggregator can already
-  give a student a timed multiple-choice test; talking through the set-up is what a
-  voice-first product can uniquely do. No MCQ engine was built.
-- **Refusing rather than substituting** an explicitly-chosen system-design round for a
-  fresher. A silent swap would leave them practising something they did not pick.
-- **The DSA course gets Python, the Java course stays Java** — the latter is a course *about*
-  Java. C++ was considered and rejected: it needs a server runner, same as Java.
-- Visualisation is hand-rolled SVG with **no new dependency** — the pre-approved `dagre`
-  fallback went unused because hand-rolled layout was sufficient at course scale.
+- **"Campus fresher" is derived by default** (ENTRY and under 12 months, or no resume with a
+  student-ish title). Guessing "student" from an empty profile would be the same bug
+  mirrored; task 051 then let a student correct it.
+- **Aptitude is spoken reason-aloud, not a timed MCQ.** An aggregator can already give a
+  student a timed test; talking through the set-up is what a voice-first product can do.
+- **Refusing rather than substituting** an explicitly-chosen system-design round.
+- **The DSA course gets Python, the Java course stays Java.** C++ was rejected — it needs a
+  server runner, same as Java.
+- **1600px as the reader's container ceiling** — a judgement call, not a measured constraint.
+- **`steps` rather than a forced `viz`** for control-flow and compile-time sequences.
 
 ## What I could NOT verify
-- **Nobody has looked at any of this rendered, in a browser.** CI green means it compiles and
-  passes tests. The visuals, the playground panel, Shiki's colours in dark mode, mobile
-  layout and the step-control feel are all unverified by eye. Worth a look at
-  `/courses/dsa/sliding-window`, `/courses/dsa/tree-basics-and-traversals` and
-  `/courses/dsa/graph-representation-bfs-dfs`.
-- **Nobody has clicked Run.** The lazy-load contract is unit-tested (the interpreter is never
-  fetched merely by rendering), but real Pyodide load time and Worker behaviour against the
-  CDN build are untested in a real browser.
+- **Nothing has been looked at in a browser.** I have no browser automation in this session,
+  so I can compile it and test it but not see it. Every "unverified by eye" note is literal.
+- **Nobody has clicked Run.** The lazy-load contract is unit-tested; real Pyodide load time
+  in a browser is not.
 - **No live AI call was made anywhere** (rule 7). So nobody knows whether a fresher round
-  actually *sounds* like one, whether the calibration block changes Gemini's questions, or
-  whether the aptitude generator produces questions solvable aloud — **it has never produced
-  a real question.** This is the single highest-value thing to spend on: one cheap generation
-  run, reviewed by eye.
-- Copy tone: whether "Prefer not to say" reads as a calibration aid or a demographic question.
-- Play-through pacing (1.6s/1.4s per frame) is a guess, not measured against reading speed.
-- Aptitude round length is set at 25 minutes — also a guess.
+  sounds like one, or whether the aptitude generator produces questions solvable aloud —
+  **it has never produced a real question.** Still the highest-value thing to spend on.
+- Dark mode on any of the new components; mobile layout of `steps`/`compare` (there is a
+  structural test, but jsdom cannot measure real overflow).
+- The densest new diagrams: `dsa/28-dp-intuition` (a 15-node fib call tree) and the
+  Dijkstra / topological-sort graphs. Worth confirming they read as clarity, not clutter.
 
 ## Verification status
 - typecheck / lint / tests / build: **pass**, verified on CI for every merged branch, with
-  the run's `headSha` checked against the branch head each time rather than trusting the
-  latest green run.
-- Migrations: **both applied and confirmed remote**, each in the same step as its merge.
-  - `20260920000000_aptitude_round.sql` — adds the `aptitude` enum value.
-  - `20260921000000_stated_candidate_level.sql` — adds `sessions.stated_level`. This one is
-    the `report_expired_at` shape: the column is *selected* on every session read, so an
-    unapplied migration would have broken every session, not just the new feature. Applied
-    locally before `develop` was pushed, so the remote never existed without it.
+  each run's `headSha` checked against the branch head rather than trusting the latest green
+  run for the branch.
+- Migrations: **all 22 applied and confirmed remote**, each in the same step as its merge.
+  `20260921000000_stated_candidate_level.sql` was the dangerous one — the column is
+  *selected* on every session read, so it was applied before the code reached `develop`.
 
 ## Merge status
-- **All five workstreams merged into `develop`:** `1c08197` (047), `fbdd27f` (048),
-  `4893a2c` (049), `2315016` (051), `a83c871` (050). Handoff at `07cdac2`.
-- Every merge was gated on a CI run whose `headSha` I checked against the branch head, not
-  merely on the latest green run for the branch.
-- **Process deviation, owned:** the task-051 file was committed straight to `develop`
-  (`17ead13`) rather than via a branch. Docs-only and CI went green after, but rule 1 says
-  branch-then-merge and I did not.
-- Nothing was pushed to `main`, and no PR was opened — none of this touched auth, payments,
-  data deletion or permissions.
+- All eight tasks merged into `develop`. Final: `b287a8f`.
+- Nothing pushed to `main`. **PR #9 (`develop` → `main`) is open and deliberately unmerged** —
+  it predates round 2, so its description is now understated. Worth refreshing before merging.
+- **Process deviations, owned:** the task-051 file (`17ead13`) and the task-054 file
+  (`5dc63ab`) were committed straight to `develop` rather than via a branch. Docs-only, CI
+  green after each, but rule 1 says branch-then-merge and I did not.
 
-## Interruptions during the run
-Three agents were killed mid-task — two by the plan's usage limit, one by a network drop —
+## Dependency
+**One added across all eight tasks: Shiki (MIT)**, build/server-time only, verified absent
+from every client chunk the course route requires. The editor, the Python runtime and the
+whiteboard were already in the repo, and the visualisations are hand-rolled because task
+047's research found d3/mermaid/react-flow all heavier than the problem.
+
+## Interruptions
+Four agents were killed mid-task — three by the plan's usage limit, one by a network drop —
 and **none lost work**, because every brief required pushing after each coherent step. Each
-was resumed with `SendMessage` (keeping its context) rather than restarted cold, per
-CLAUDE.md's restart protocol. `runs/2026-09-20-progress.md` carried the state across.
-
-## New dependency
-- **Shiki (MIT)**, build/server-time only, for static code highlighting. Verified absent from
-  every client chunk the course route requires. Nothing else was added: the editor, the
-  Python runtime and the whiteboard were all already in the repo.
+was resumed with `SendMessage` rather than restarted cold.
 
 ## Suggested next task
-- Spend a little on one live generation run to check the aptitude questions and the fresher
-  calibration actually land — it is the only remaining way to know. After that, look at the
-  rendered course pages with your own eyes; nothing in this run has been seen.
+1. One live generation run, to check the aptitude questions and fresher calibration land.
+2. Look at the new pages and the report with your own eyes.
 
 ## Open questions for you
-- **The DSA course now defaults to the Python tab, not Java.** The reasoning was that the
-  audience is DSA-first students prepping in Python/C++, and that Python is the only
-  language a reader can actually execute in the playground. It is a product call and easy to
-  flip — say so if you disagree.
-- **The Java runner.** Every route costs money or security sign-off: self-hosting Piston
-  (MIT) needs a `privileged: true` Docker sidecar; Judge0 is GPLv3 with an unresolved
-  API-use question; CheerpJ needs a commercial licence. Piston is the recommendation, but
-  the spend and the arbitrary-code-execution surface are yours to approve.
-- **Group discussion** is a real part of campus placement and is not built. It needs multiple
-  simultaneous speakers — a different interaction model from the turn-based voice loop. It
-  wants its own task, and possibly its own decision about whether it belongs at all.
+- **A dev-only report preview route.** There is no way to view a report without running a
+  live interview — no preview route, no storybook. To see one you must temporarily point
+  `app/report/[id]/page.tsx` at the fixture exported from `report-view.test.tsx`.
+  This is *why* "nobody has looked at it" keeps recurring. ~30 lines would fix it permanently.
+- **The Java runner.** Self-hosted Piston (MIT) is the recommendation; it needs a
+  `privileged: true` Docker sidecar, so hosting spend and an arbitrary-code-execution surface
+  are yours to approve.
+- **Is 1600px the right ceiling** for the reader, or do you want it wider?
+- **Group discussion** is unbuilt — it needs multiple simultaneous speakers, a different
+  interaction model from the turn-based voice loop. Its own task, if it belongs at all.
 - **No open corpus exists** for Indian campus placement, aptitude, or DSA problem statements
-  that a commercial product may use. CSES and Project Euler are CC BY-NC-SA (NonCommercial);
-  Codeforces forbids republishing. `docs/third-party-sources.md` records this. It means that
-  content has to be generated, not ingested — which is why the aptitude generator matters.
+  that a commercial product may use. `docs/third-party-sources.md` records this.

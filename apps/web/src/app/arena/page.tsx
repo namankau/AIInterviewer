@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ArenaDailyQuest } from "@/components/arena/arena-daily-quest";
 import { ProgressSummary } from "@/components/arena/progress-summary";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { courses } from "@/content/courses";
 import { allArenaChallenges, challengesForCourse } from "@/lib/arena/corpus";
@@ -24,6 +25,7 @@ export default function ArenaPage() {
   return (
     <div className="min-h-dvh">
       <CourseSiteHeader />
+      <Breadcrumbs items={[{ label: "home", href: "/dashboard" }, { label: "arena" }]} />
       <main className="mx-auto max-w-6xl px-6 py-14 md:py-20">
         <header className="flex flex-col gap-4">
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Free, always</p>

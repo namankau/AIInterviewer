@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { courses, getCourse, totalChapters, totalMinutes } from "@/content/courses";
 import { InlineText } from "@/components/courses/inline-text";
@@ -35,6 +36,9 @@ export default async function CoursePage({ params }: { params: Promise<{ course:
   return (
     <div className="min-h-dvh">
       <CourseSiteHeader />
+      <Breadcrumbs
+        items={[{ label: "home", href: "/dashboard" }, { label: "courses", href: "/courses" }, { label: course.title.toLowerCase() }]}
+      />
       <section className="bg-grid border-b border-line">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-16 md:py-20">
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">

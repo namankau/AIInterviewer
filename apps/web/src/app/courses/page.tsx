@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { courses, totalChapters, totalMinutes } from "@/content/courses";
 
@@ -20,6 +21,7 @@ export default function CoursesPage() {
   return (
     <div className="min-h-dvh">
       <CourseSiteHeader />
+      <Breadcrumbs items={[{ label: "home", href: "/dashboard" }, { label: "courses" }]} />
       <main className="mx-auto max-w-6xl px-6 py-14 md:py-20">
         <header className="flex flex-col gap-4">
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Free, always</p>

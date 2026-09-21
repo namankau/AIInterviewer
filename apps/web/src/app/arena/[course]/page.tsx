@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { ArenaCoursePractice } from "@/components/arena/arena-course-practice";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { courses, getCourse } from "@/content/courses";
 import { challengesForCourse } from "@/lib/arena/corpus";
@@ -48,6 +49,9 @@ export default async function ArenaCoursePage({ params }: { params: Promise<{ co
   return (
     <div className="min-h-dvh">
       <CourseSiteHeader />
+      <Breadcrumbs
+        items={[{ label: "home", href: "/dashboard" }, { label: "arena", href: "/arena" }, { label: course.title.toLowerCase() }]}
+      />
       <div className="border-b border-line px-6 py-3 md:px-12">
         <p className="mx-auto max-w-6xl font-mono text-micro tracking-widest text-ink-subtle lowercase">
           <Link href="/arena" className="hover:text-ink">

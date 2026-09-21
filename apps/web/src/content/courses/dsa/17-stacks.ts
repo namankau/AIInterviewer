@@ -88,6 +88,37 @@ export const chapterStacks: Chapter = {
         "}\n",
       output:
         'isBalanced("{[()]}") = true\nisBalanced("{[(])}") = false\nnextGreater: 4 2 4 -1 -1',
+      python:
+        "def is_balanced(s):\n" +
+        '    pairs = {")": "(", "]": "[", "}": "{"}\n' +
+        "    stack = []\n" +
+        "    for ch in s:\n" +
+        '        if ch in "([{":\n' +
+        "            stack.append(ch)\n" +
+        '        elif ch in ")]}":\n' +
+        "            if not stack or stack.pop() != pairs[ch]:\n" +
+        "                return False\n" +
+        "    return not stack\n" +
+        "\n" +
+        "\n" +
+        "def next_greater(nums):\n" +
+        "    result = [-1] * len(nums)\n" +
+        "    indices = []  # monotonic decreasing stack of indices\n" +
+        "    for i, num in enumerate(nums):\n" +
+        "        while indices and nums[indices[-1]] < num:\n" +
+        "            result[indices.pop()] = num\n" +
+        "        indices.append(i)\n" +
+        "    return result\n" +
+        "\n" +
+        "\n" +
+        "print('isBalanced(\"{[()]}\") =', is_balanced(\"{[()]}\"))\n" +
+        "print('isBalanced(\"{[(])}\") =', is_balanced(\"{[(])}\"))\n" +
+        "\n" +
+        "nums = [2, 1, 2, 4, 3]\n" +
+        "result = next_greater(nums)\n" +
+        'print("nextGreater:", " ".join(str(v) for v in result))\n',
+      pythonOutput:
+        'isBalanced("{[()]}") = True\nisBalanced("{[(])}") = False\nnextGreater: 4 2 4 -1 -1',
     },
     {
       kind: "viz",

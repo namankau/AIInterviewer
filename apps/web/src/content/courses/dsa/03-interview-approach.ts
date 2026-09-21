@@ -17,6 +17,16 @@ export const chapterInterviewApproach: Chapter = {
         "half-understood problem, usually has to backtrack halfway through. This chapter is one routine, " +
         "practised on one problem, in full.",
     },
+    {
+      kind: "steps",
+      title: "The four-step routine, in order, every time",
+      steps: [
+        { label: "Clarify", text: "Restate the problem and ask about the edges the statement left vague, before writing any code." },
+        { label: "Brute force", text: "Write the most obvious correct solution, even knowing it isn't the best one." },
+        { label: "Optimise", text: "Name the brute force's cost out loud, then find what work it re-derives that could be remembered instead." },
+        { label: "Test", text: "Trace at least one normal case and the edge cases raised in clarification, by hand." },
+      ],
+    },
     { kind: "h", text: "The building-a-house-extension analogy" },
     {
       kind: "analogy",
@@ -158,13 +168,36 @@ export const chapterInterviewApproach: Chapter = {
       pythonOutput: "brute: [0, 1]\nfast:  [0, 1]",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "twoSumFast([2, 7, 11, 15, 3], target = 9)",
-      steps: [
-        "i=0, nums[0]=2. need = 9-2 = 7. seenIndexOf is empty, 7 not in it. Store 2 -> 0. seenIndexOf = {2: 0}.",
-        "i=1, nums[1]=7. need = 9-7 = 2. 2 IS in seenIndexOf, at index 0.",
-        "Return {0, 1} immediately — nums[0] + nums[1] = 2 + 7 = 9. No need to look further.",
-      ],
+      caption: "A done cell has been stored in seenIndexOf; the compare pair is the match that ends the scan.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [
+              { value: 2, state: "active", pointers: ["i"] },
+              { value: 7 },
+              { value: 11 },
+              { value: 15 },
+              { value: 3 },
+            ],
+            note: "i=0, nums[0]=2. need = 9-2 = 7. seenIndexOf is empty, 7 not in it. Store 2 -> 0. seenIndexOf = {2: 0}.",
+          },
+          {
+            cells: [
+              { value: 2, state: "compare" },
+              { value: 7, state: "compare", pointers: ["i"] },
+              { value: 11 },
+              { value: 15 },
+              { value: 3 },
+            ],
+            note:
+              "i=1, nums[1]=7. need = 9-7 = 2. 2 IS in seenIndexOf, at index 0. Return {0, 1} immediately — " +
+              "nums[0] + nums[1] = 2 + 7 = 9. Indices 2, 3, 4 are never looked at.",
+          },
+        ],
+      },
     },
     {
       kind: "table",
@@ -185,8 +218,8 @@ export const chapterInterviewApproach: Chapter = {
       text:
         "Before declaring done, walk through at least one normal case and the edge cases raised during " +
         "clarification: an array with no valid pair, an array with duplicate values, the smallest possible " +
-        "input. Do this out loud, on paper or the whiteboard, tracing the code exactly the way the trace " +
-        "above does — it's the single most effective way to catch an off-by-one error before the " +
+        "input. Do this out loud, on paper or the whiteboard, tracing the code exactly the way the frames " +
+        "above do — it's the single most effective way to catch an off-by-one error before the " +
         "interviewer does.",
     },
     {

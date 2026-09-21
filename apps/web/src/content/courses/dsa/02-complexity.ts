@@ -12,7 +12,7 @@ export const chapterComplexity: Chapter = {
       kind: "p",
       text:
         "The last chapter showed two solutions to the same problem costing very different amounts of work, " +
-        "but \"costs more work\" was still vague. **Big-O notation** is how that vagueness is fixed: a " +
+        "but \"costs more work\" was still vague. ~~Big-O notation~~ is how that vagueness is fixed: a " +
         "precise, language-independent way to describe how the *amount of work* a piece of code does grows " +
         "as the input grows — not how many milliseconds it takes on one particular laptop, which depends on " +
         "the processor, the language, even what else is running.",
@@ -157,19 +157,67 @@ export const chapterComplexity: Chapter = {
         "10000  1          13       10000    130000     100000000",
     },
     {
-      kind: "trace",
-      title: "logOps(100): halving until 1",
-      steps: [
-        "i = 100, count = 0. 100 > 1, so continue.",
-        "i = 100 / 2 = 50, count = 1. 50 > 1, continue.",
-        "i = 50 / 2 = 25, count = 2. 25 > 1, continue.",
-        "i = 25 / 2 = 12, count = 3. 12 > 1, continue.",
-        "i = 12 / 2 = 6, count = 4. 6 > 1, continue.",
-        "i = 6 / 2 = 3, count = 5. 3 > 1, continue.",
-        "i = 3 / 2 = 1, count = 6. 1 is not > 1 — stop.",
-        "Result: 6 halvings to shrink 100 down to 1, matching log₂(100) ≈ 6.6, rounded down by " +
-          "integer division.",
-      ],
+      kind: "viz",
+      title: "logOps(100) — each step halves what's left",
+      caption: "One cell per value `i` takes on; the count of active cells at the end is the function's answer.",
+      viz: {
+        type: "array",
+        frames: [
+          { cells: [{ value: 100, state: "active", pointers: ["i"] }], note: "i=100, count=0. 100 > 1, continue." },
+          {
+            cells: [{ value: 100, state: "done" }, { value: 50, state: "active", pointers: ["i"] }],
+            note: "i = 100/2 = 50, count=1. 50 > 1, continue.",
+          },
+          {
+            cells: [{ value: 100, state: "done" }, { value: 50, state: "done" }, { value: 25, state: "active", pointers: ["i"] }],
+            note: "i = 50/2 = 25, count=2. 25 > 1, continue.",
+          },
+          {
+            cells: [
+              { value: 100, state: "done" },
+              { value: 50, state: "done" },
+              { value: 25, state: "done" },
+              { value: 12, state: "active", pointers: ["i"] },
+            ],
+            note: "i = 25/2 = 12 (integer division), count=3. 12 > 1, continue.",
+          },
+          {
+            cells: [
+              { value: 100, state: "done" },
+              { value: 50, state: "done" },
+              { value: 25, state: "done" },
+              { value: 12, state: "done" },
+              { value: 6, state: "active", pointers: ["i"] },
+            ],
+            note: "i = 12/2 = 6, count=4. 6 > 1, continue.",
+          },
+          {
+            cells: [
+              { value: 100, state: "done" },
+              { value: 50, state: "done" },
+              { value: 25, state: "done" },
+              { value: 12, state: "done" },
+              { value: 6, state: "done" },
+              { value: 3, state: "active", pointers: ["i"] },
+            ],
+            note: "i = 6/2 = 3, count=5. 3 > 1, continue.",
+          },
+          {
+            cells: [
+              { value: 100, state: "done" },
+              { value: 50, state: "done" },
+              { value: 25, state: "done" },
+              { value: 12, state: "done" },
+              { value: 6, state: "done" },
+              { value: 3, state: "done" },
+              { value: 1, state: "active", pointers: ["i"] },
+            ],
+            note:
+              "i = 3/2 = 1, count=6. 1 is not > 1 — stop. Result: 6 halvings to shrink 100 down to 1, " +
+              "matching log₂(100) ≈ 6.6, rounded down by integer division.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

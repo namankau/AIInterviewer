@@ -89,14 +89,27 @@ export const chapterArrayListVsLinkedList: Chapter = {
         "commonly used to implement a queue or a deque.",
     },
     {
-      kind: "table",
-      head: ["Operation", "ArrayList", "LinkedList"],
-      rows: [
-        ["get(index) — random access", "Fast — jumps straight to the memory slot", "Slow — walks node by node from the nearest end"],
-        ["add/remove at the end", "Fast (occasionally resizes the backing array)", "Fast"],
-        ["add/remove at the front or middle", "Slow — shifts every following element", "Fast, if you already have a reference to that node; still requires a walk to reach it by index"],
-        ["Memory overhead per element", "Low — just the elements, contiguous", "Higher — each node also stores two link references"],
-        ["Best used as", "The default choice for most lists, especially when you read a lot", "A queue/deque, or when you insert/remove heavily at the ends and rarely read by index"],
+      kind: "compare",
+      title: "ArrayList vs LinkedList",
+      columns: [
+        {
+          label: "ArrayList",
+          items: [
+            "`get(index)` is fast — jumps straight to the memory slot",
+            "Add/remove at the front or middle is slow — shifts every following element",
+            "Low memory overhead — just the elements, contiguous",
+            "The default choice for most lists, especially when you read a lot",
+          ],
+        },
+        {
+          label: "LinkedList",
+          items: [
+            "`get(index)` is slow — walks node by node from the nearest end",
+            "Add/remove at the ends is fast; in the middle, fast once you're there, but reaching it by index still walks",
+            "Higher memory overhead — each node also stores two link references",
+            "Best as a queue/deque, or when you insert/remove heavily at the ends and rarely read by index",
+          ],
+        },
       ],
     },
     {

@@ -90,6 +90,16 @@ export const chapterWhatIsJava: Chapter = {
         "runs directly — which is exactly what buys write-once-run-anywhere.",
     },
     {
+      kind: "steps",
+      title: "Source code to a running program",
+      steps: [
+        { label: "Source", text: "`Hello.java` — plain text you wrote, in Java syntax." },
+        { label: "Compile", text: "`javac` checks it for errors and produces `Hello.class`." },
+        { label: "Bytecode", text: "`Hello.class` — instructions for a JVM, not for any one processor." },
+        { label: "JVM", text: "`java Hello` loads the bytecode, verifies it, and runs it on this machine." },
+      ],
+    },
+    {
       kind: "trace",
       title: "What happens when you run `java Hello`",
       steps: [

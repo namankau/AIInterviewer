@@ -48,6 +48,49 @@ describe("updateSession", () => {
     expect(location.searchParams.get("next")).toBe("/questions/amazon");
   });
 
+  it.each([
+    "/courses",
+    "/courses/java",
+    "/courses/dsa/11-backtracking",
+    "/arena",
+    "/arena/dsa",
+    "/interview/new",
+    "/interview/3f2a",
+    "/rounds",
+    "/profile",
+    "/report/3f2a",
+  ])("sends a signed-out visitor from %s to sign in, remembering where they were going", async (path) => {
+    signedOut();
+
+    const response = await updateSession(requestFor(path));
+
+    expect(response.status).toBe(307);
+    const location = new URL(response.headers.get("location") ?? "");
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("next")).toBe(path);
+  });
+
+  it.each(["/courses", "/courses/dsa/11-backtracking", "/arena", "/interview/new", "/report/3f2a"])(
+    "lets a signed-in candidate through to %s",
+    async (path) => {
+      signedIn();
+
+      expect((await updateSession(requestFor(path))).headers.get("location")).toBeNull();
+    },
+  );
+
+  it("does not treat a look-alike path as protected", async () => {
+    signedOut();
+
+    expect((await updateSession(requestFor("/arenas"))).headers.get("location")).toBeNull();
+  });
+
+  it("keeps the login page itself reachable when signed out", async () => {
+    signedOut();
+
+    expect((await updateSession(requestFor("/login"))).headers.get("location")).toBeNull();
+  });
+
   it("lets a signed-in candidate through to the dashboard", async () => {
     signedIn();
 

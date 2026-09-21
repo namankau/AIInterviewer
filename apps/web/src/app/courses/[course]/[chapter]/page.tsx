@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { BlockRenderer } from "@/components/courses/block-renderer";
 import { CodeLanguageProvider } from "@/components/courses/code-language-context";
+import { MarkCompleteButton } from "@/components/courses/course-progress";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { CourseToc } from "@/components/courses/course-toc";
@@ -121,7 +122,12 @@ export default async function ChapterPage({
             </CodeLanguageProvider>
           </div>
 
-          <nav aria-label="Chapter navigation" className="mt-14 flex flex-col gap-3 border-t border-line pt-8 sm:flex-row sm:justify-between">
+          <div className="mt-14 flex flex-col items-start gap-2 rounded-md border border-line bg-surface-raised px-5 py-4">
+            <p className="text-caption text-ink-muted">Finished this chapter? Tick it off to track your progress.</p>
+            <MarkCompleteButton courseSlug={course.slug} chapterSlug={chapter.slug} />
+          </div>
+
+          <nav aria-label="Chapter navigation" className="mt-8 flex flex-col gap-3 border-t border-line pt-8 sm:flex-row sm:justify-between">
             {prev ? (
               <Link
                 href={`/courses/${course.slug}/${prev.slug}`}

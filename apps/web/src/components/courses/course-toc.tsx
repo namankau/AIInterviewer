@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 
 import type { Course } from "@/content/courses/types";
+import { useCourseProgress } from "@/lib/use-course-progress";
+import { CheckIcon } from "@/components/courses/course-progress";
 import { InlineText } from "@/components/courses/inline-text";
 
 /**
@@ -12,6 +14,7 @@ import { InlineText } from "@/components/courses/inline-text";
  */
 export function CourseToc({ course, currentSlug }: { course: Course; currentSlug: string }) {
   const [open, setOpen] = useState(false);
+  const { completed } = useCourseProgress(course.slug);
 
   return (
     <nav aria-label="Chapters" className="md:sticky md:top-8 md:self-start">
@@ -45,7 +48,15 @@ export function CourseToc({ course, currentSlug }: { course: Course; currentSlug
                             : "border-transparent text-ink-muted hover:border-line-strong hover:text-ink"
                         }`}
                       >
-                        <InlineText text={chapter.title} />
+                        <span className="flex items-center justify-between gap-2">
+                          <InlineText text={chapter.title} />
+                          {completed.has(chapter.slug) ? (
+                            <span className="shrink-0 text-positive">
+                              <CheckIcon className="size-3.5" />
+                              <span className="sr-only">Completed</span>
+                            </span>
+                          ) : null}
+                        </span>
                       </Link>
                     </li>
                   );

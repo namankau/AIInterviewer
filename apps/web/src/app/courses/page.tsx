@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { CourseCardProgress } from "@/components/courses/course-progress";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { courses, totalChapters, totalMinutes } from "@/content/courses";
@@ -45,9 +46,15 @@ export default function CoursesPage() {
                   <h2 className="text-title text-ink group-hover:text-accent">{course.title}</h2>
                   <p className="text-caption text-ink-muted">{course.tagline}</p>
                 </div>
-                <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-                  {totalChapters(course)} chapters · {totalMinutes(course)} min
-                </p>
+                <div className="flex flex-col gap-3">
+                  <CourseCardProgress
+                    courseSlug={course.slug}
+                    chapters={course.modules.flatMap((m) => m.chapters.map((c) => ({ slug: c.slug, title: c.title })))}
+                  />
+                  <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+                    {totalChapters(course)} chapters · {totalMinutes(course)} min
+                  </p>
+                </div>
               </Link>
             </li>
           ))}

@@ -83,6 +83,42 @@ export const chapterBinarySearch: Chapter = {
         "binarySearch(24): -1\n" +
         "smallestSquareRootAtLeast(30): 6\n" +
         "smallestSquareRootAtLeast(36): 6",
+      python:
+        "def binary_search(sorted_nums, target):\n" +
+        "    low, high = 0, len(sorted_nums) - 1\n" +
+        "    while low <= high:\n" +
+        "        mid = low + (high - low) // 2\n" +
+        "        if sorted_nums[mid] == target:\n" +
+        "            return mid\n" +
+        "        elif sorted_nums[mid] < target:\n" +
+        "            low = mid + 1\n" +
+        "        else:\n" +
+        "            high = mid - 1\n" +
+        "    return -1\n" +
+        "\n" +
+        "\n" +
+        "def smallest_square_root_at_least(n):\n" +
+        "    low, high = 0, n\n" +
+        "    while low < high:\n" +
+        "        mid = low + (high - low) // 2\n" +
+        "        if mid * mid >= n:\n" +
+        "            high = mid\n" +
+        "        else:\n" +
+        "            low = mid + 1\n" +
+        "    return low\n" +
+        "\n" +
+        "\n" +
+        "sorted_nums = [2, 5, 8, 12, 16, 23, 38, 45, 56, 72]\n" +
+        'print("binarySearch(23):", binary_search(sorted_nums, 23))\n' +
+        'print("binarySearch(24):", binary_search(sorted_nums, 24))\n' +
+        "\n" +
+        'print("smallestSquareRootAtLeast(30):", smallest_square_root_at_least(30))\n' +
+        'print("smallestSquareRootAtLeast(36):", smallest_square_root_at_least(36))\n',
+      pythonOutput:
+        "binarySearch(23): 5\n" +
+        "binarySearch(24): -1\n" +
+        "smallestSquareRootAtLeast(30): 6\n" +
+        "smallestSquareRootAtLeast(36): 6",
     },
     {
       kind: "viz",

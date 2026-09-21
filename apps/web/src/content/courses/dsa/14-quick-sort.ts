@@ -79,6 +79,30 @@ export const chapterQuickSort: Chapter = {
         "    }\n" +
         "}\n",
       output: "sorted: [1, 2, 3, 4, 7, 8, 9]",
+      python:
+        "def quick_sort(arr, low, high):\n" +
+        "    if low >= high:\n" +
+        "        return\n" +
+        "    pivot_index = partition(arr, low, high)\n" +
+        "    quick_sort(arr, low, pivot_index - 1)\n" +
+        "    quick_sort(arr, pivot_index + 1, high)\n" +
+        "\n" +
+        "\n" +
+        "def partition(arr, low, high):\n" +
+        "    pivot = arr[high]\n" +
+        "    boundary = low - 1\n" +
+        "    for i in range(low, high):\n" +
+        "        if arr[i] < pivot:\n" +
+        "            boundary += 1\n" +
+        "            arr[boundary], arr[i] = arr[i], arr[boundary]\n" +
+        "    arr[boundary + 1], arr[high] = arr[high], arr[boundary + 1]\n" +
+        "    return boundary + 1\n" +
+        "\n" +
+        "\n" +
+        "arr = [8, 3, 7, 4, 2, 9, 1]\n" +
+        "quick_sort(arr, 0, len(arr) - 1)\n" +
+        'print("sorted:", arr)\n',
+      pythonOutput: "sorted: [1, 2, 3, 4, 7, 8, 9]",
     },
     {
       kind: "trace",

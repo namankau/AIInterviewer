@@ -78,6 +78,36 @@ export const chapterRecursionDsa: Chapter = {
         "}\n",
       output:
         "powerLinear(2, 10) = 1024\npowerFast(2, 10) = 1024\npowerFast(3, 13) = 1594323\narraySumRecursive = 19",
+      python:
+        "def power_linear(base, exp):\n" +
+        "    if exp == 0:\n" +
+        "        return 1\n" +
+        "    return base * power_linear(base, exp - 1)\n" +
+        "\n" +
+        "\n" +
+        "def power_fast(base, exp):\n" +
+        "    if exp == 0:\n" +
+        "        return 1\n" +
+        "    half = power_fast(base, exp // 2)\n" +
+        "    if exp % 2 == 0:\n" +
+        "        return half * half\n" +
+        "    return half * half * base\n" +
+        "\n" +
+        "\n" +
+        "def array_sum_recursive(nums, index):\n" +
+        "    if index == len(nums):\n" +
+        "        return 0\n" +
+        "    return nums[index] + array_sum_recursive(nums, index + 1)\n" +
+        "\n" +
+        "\n" +
+        'print("powerLinear(2, 10) =", power_linear(2, 10))\n' +
+        'print("powerFast(2, 10) =", power_fast(2, 10))\n' +
+        'print("powerFast(3, 13) =", power_fast(3, 13))\n' +
+        "\n" +
+        "nums = [4, 2, 7, 1, 5]\n" +
+        'print("arraySumRecursive =", array_sum_recursive(nums, 0))\n',
+      pythonOutput:
+        "powerLinear(2, 10) = 1024\npowerFast(2, 10) = 1024\npowerFast(3, 13) = 1594323\narraySumRecursive = 19",
     },
     {
       kind: "viz",

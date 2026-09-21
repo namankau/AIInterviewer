@@ -151,6 +151,85 @@ export const chapterBacktracking: Chapter = {
         "Q...\n" +
         "..Q.\n" +
         "4-queens solutions found: 2",
+      python:
+        "def subsets(nums):\n" +
+        "    result = []\n" +
+        "\n" +
+        "    def backtrack(start, current):\n" +
+        "        result.append(list(current))\n" +
+        "        for i in range(start, len(nums)):\n" +
+        "            current.append(nums[i])\n" +
+        "            backtrack(i + 1, current)\n" +
+        "            current.pop()\n" +
+        "\n" +
+        "    backtrack(0, [])\n" +
+        "    return result\n" +
+        "\n" +
+        "\n" +
+        "def permutations(nums):\n" +
+        "    result = []\n" +
+        "    used = [False] * len(nums)\n" +
+        "\n" +
+        "    def backtrack(current):\n" +
+        "        if len(current) == len(nums):\n" +
+        "            result.append(list(current))\n" +
+        "            return\n" +
+        "        for i, num in enumerate(nums):\n" +
+        "            if used[i]:\n" +
+        "                continue\n" +
+        "            used[i] = True\n" +
+        "            current.append(num)\n" +
+        "            backtrack(current)\n" +
+        "            current.pop()\n" +
+        "            used[i] = False\n" +
+        "\n" +
+        "    backtrack([])\n" +
+        "    return result\n" +
+        "\n" +
+        "\n" +
+        "def solve_n_queens(n):\n" +
+        "    col_in_row = [0] * n\n" +
+        "    count = 0\n" +
+        "    first = None\n" +
+        "\n" +
+        "    def is_safe(row, col):\n" +
+        "        for r in range(row):\n" +
+        "            c = col_in_row[r]\n" +
+        "            if c == col or abs(c - col) == abs(r - row):\n" +
+        "                return False\n" +
+        "        return True\n" +
+        "\n" +
+        "    def backtrack(row):\n" +
+        "        nonlocal count, first\n" +
+        "        if row == n:\n" +
+        "            count += 1\n" +
+        "            if first is None:\n" +
+        "                first = list(col_in_row)\n" +
+        "            return\n" +
+        "        for col in range(n):\n" +
+        "            if is_safe(row, col):\n" +
+        "                col_in_row[row] = col\n" +
+        "                backtrack(row + 1)\n" +
+        "\n" +
+        "    backtrack(0)\n" +
+        "    if first is not None:\n" +
+        "        for r in range(n):\n" +
+        '            print("".join("Q" if first[r] == c else "." for c in range(n)))\n' +
+        "    return count\n" +
+        "\n" +
+        "\n" +
+        "nums = [1, 2, 3]\n" +
+        'print(f"subsets of [1,2,3]: {subsets(nums)}")\n' +
+        'print(f"permutations of [1,2,3]: {permutations(nums)}")\n' +
+        'print(f"4-queens solutions found: {solve_n_queens(4)}")\n',
+      pythonOutput:
+        "subsets of [1,2,3]: [[], [1], [1, 2], [1, 2, 3], [1, 3], [2], [2, 3], [3]]\n" +
+        "permutations of [1,2,3]: [[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]]\n" +
+        ".Q..\n" +
+        "...Q\n" +
+        "Q...\n" +
+        "..Q.\n" +
+        "4-queens solutions found: 2",
     },
     {
       kind: "trace",

@@ -97,16 +97,31 @@ export const chapterConstructorsAndThis: Chapter = {
         "as `Student()` does above.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why s2's constructor prints appear in this exact order",
-      steps: [
-        "new Student() calls the no-arg constructor.",
-        "Its first line, this(\"Unnamed\", 0), immediately hands control to the two-arg constructor — the " +
-          "no-arg constructor's own code pauses right there.",
-        "The two-arg constructor runs fully: sets fields, then prints 'Two-arg constructor ran for Unnamed'.",
-        "Control returns to the no-arg constructor, which resumes on its next line and prints its own message.",
-        "Only now is the Student object considered fully constructed and returned to s2.",
-      ],
+      caption: "The no-arg constructor's own frame stays on the stack, paused, for as long as the two-arg constructor it delegated to is running.",
+      viz: {
+        type: "callstack",
+        frames: [
+          { stack: [{ label: "no-arg Student()", state: "active" }], note: "new Student() calls the no-arg constructor." },
+          {
+            stack: [{ label: "no-arg Student()" }, { label: "this(\"Unnamed\", 0)", state: "active" }],
+            note: "Its first line, this(\"Unnamed\", 0), immediately hands control to the two-arg constructor — the no-arg constructor's own code pauses right there.",
+          },
+          {
+            stack: [{ label: "no-arg Student()" }, { label: "this(\"Unnamed\", 0)", state: "returning" }],
+            note: "The two-arg constructor runs fully: sets fields, then prints 'Two-arg constructor ran for Unnamed'.",
+          },
+          {
+            stack: [{ label: "no-arg Student()", state: "active" }],
+            note: "Control returns to the no-arg constructor, which resumes on its next line and prints its own message.",
+          },
+          {
+            stack: [{ label: "no-arg Student()", state: "returning" }],
+            note: "Only now is the Student object considered fully constructed and returned to s2.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

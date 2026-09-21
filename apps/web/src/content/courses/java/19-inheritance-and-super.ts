@@ -108,17 +108,31 @@ export const chapterInheritance: Chapter = {
         "some of the benefit of multiple inheritance without its problems.)",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "What runs, in order, when new Manager(\"Priya\", 60000, 15000) executes",
-      steps: [
-        "Manager's constructor starts, sees super(name, baseSalary) as its first line, and pauses to run it.",
-        "Employee's constructor runs: this.name = \"Priya\"; this.baseSalary = 60000; — these fields now " +
-          "exist and are set, inherited into the Manager object being built.",
-        "Control returns to Manager's constructor, which resumes and sets this.teamBonus = 15000.",
-        "The object is now fully constructed: a Manager with name, baseSalary, and teamBonus all set.",
-        "m.printPaySlip() (inherited, unchanged) calls computePay() — which, on a Manager object, resolves " +
-          "to Manager's overridden version: 60000 + 15000 = 75000.",
-      ],
+      caption: "The superclass constructor always finishes first, exactly like any other call on the stack — Manager's own fields aren't set until Employee's are.",
+      viz: {
+        type: "callstack",
+        frames: [
+          { stack: [{ label: "Manager(...)", state: "active" }], note: "Manager's constructor starts, sees super(name, baseSalary) as its first line, and pauses to run it." },
+          {
+            stack: [{ label: "Manager(...)" }, { label: "super: Employee(...)", state: "active" }],
+            note: "Employee's constructor runs: this.name = \"Priya\"; this.baseSalary = 60000; — these fields now exist and are set, inherited into the Manager object being built.",
+          },
+          {
+            stack: [{ label: "Manager(...)", state: "active" }],
+            note: "Control returns to Manager's constructor, which resumes and sets this.teamBonus = 15000.",
+          },
+          {
+            stack: [{ label: "Manager(...)", state: "returning" }],
+            note: "The object is now fully constructed: a Manager with name, baseSalary, and teamBonus all set.",
+          },
+          {
+            stack: [{ label: "m.printPaySlip()" }, { label: "Manager.computePay()", state: "returning" }],
+            note: "m.printPaySlip() (inherited, unchanged) calls computePay() — which, on a Manager object, resolves to Manager's overridden version: 60000 + 15000 = 75000.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

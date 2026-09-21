@@ -184,22 +184,111 @@ export const chapterBinarySearchTrees: Chapter = {
         "inorder after delete(3): 1 4 6 7 8 10 13 14",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "delete(3) on the tree built from {8, 3, 10, 1, 6, 14, 4, 7, 13} — node 3 has two children",
-      steps: [
-        "The tree built by the inserts: 8 is root; 8.left=3, 8.right=10; 3.left=1, 3.right=6; 6.left=4, " +
-          "6.right=7; 10.right=14; 14.left=13.",
-        "delete(8, 3): 3 < 8, recurse into delete(node=3, 3).",
-        "At node 3, val==3 matches. Both left (1) and right (6) children exist, so this is the two-children " +
-          "case: find the successor, the smallest value in the right subtree.",
-        "successor starts at node 6, walks left while possible: 6.left=4, and 4.left is null, so " +
-          "successor=4.",
-        "Copy successor's value into this node: node.val = 4 (the node originally holding 3 now holds 4).",
-        "Delete 4 from the right subtree: delete(node=6, 4). 4 < 6, recurse into delete(node=4, 4). Node 4 " +
-          "has no children, so node.left == null returns node.right (null). 6.left is set to null.",
-        "Final tree: 8.left is the node now valued 4, with left=1, right=6 (6.left=null, 6.right=7). " +
-          "Inorder confirms: 1 4 6 7 8 10 13 14 — still fully sorted, the BST property preserved.",
-      ],
+      caption: "The two-children case never just removes a node — it copies a safe replacement value up, then deletes that value's original, easier, spot further down.",
+      viz: {
+        type: "tree",
+        frames: [
+          {
+            rootId: "n8",
+            nodes: [
+              { id: "n8", value: 8, left: "n3", right: "n10" },
+              { id: "n3", value: 3, left: "n1", right: "n6" },
+              { id: "n1", value: 1, left: null, right: null },
+              { id: "n6", value: 6, left: "n4", right: "n7" },
+              { id: "n4", value: 4, left: null, right: null },
+              { id: "n7", value: 7, left: null, right: null },
+              { id: "n10", value: 10, left: null, right: "n14" },
+              { id: "n14", value: 14, left: "n13", right: null },
+              { id: "n13", value: 13, left: null, right: null },
+            ],
+            note:
+              "The tree built by the inserts: 8 is root; 8.left=3, 8.right=10; 3.left=1, 3.right=6; " +
+              "6.left=4, 6.right=7; 10.right=14; 14.left=13.",
+          },
+          {
+            rootId: "n8",
+            nodes: [
+              { id: "n8", value: 8, left: "n3", right: "n10" },
+              { id: "n3", value: 3, left: "n1", right: "n6", state: "active" },
+              { id: "n1", value: 1, left: null, right: null },
+              { id: "n6", value: 6, left: "n4", right: "n7" },
+              { id: "n4", value: 4, left: null, right: null },
+              { id: "n7", value: 7, left: null, right: null },
+              { id: "n10", value: 10, left: null, right: "n14" },
+              { id: "n14", value: 14, left: "n13", right: null },
+              { id: "n13", value: 13, left: null, right: null },
+            ],
+            note:
+              "delete(8, 3): 3 < 8, recurse into delete(node=3, 3). At node 3, val==3 matches. Both left " +
+              "(1) and right (6) children exist, so this is the two-children case: find the successor, " +
+              "the smallest value in the right subtree.",
+          },
+          {
+            rootId: "n8",
+            nodes: [
+              { id: "n8", value: 8, left: "n3", right: "n10" },
+              { id: "n3", value: 3, left: "n1", right: "n6", state: "active" },
+              { id: "n1", value: 1, left: null, right: null },
+              { id: "n6", value: 6, left: "n4", right: "n7", state: "visiting" },
+              { id: "n4", value: 4, left: null, right: null, state: "compare" },
+              { id: "n7", value: 7, left: null, right: null },
+              { id: "n10", value: 10, left: null, right: "n14" },
+              { id: "n14", value: 14, left: "n13", right: null },
+              { id: "n13", value: 13, left: null, right: null },
+            ],
+            note: "successor starts at node 6, walks left while possible: 6.left=4, and 4.left is null, so successor=4.",
+          },
+          {
+            rootId: "n8",
+            nodes: [
+              { id: "n8", value: 8, left: "n3", right: "n10" },
+              { id: "n3", value: 4, left: "n1", right: "n6", state: "compare" },
+              { id: "n1", value: 1, left: null, right: null },
+              { id: "n6", value: 6, left: "n4", right: "n7" },
+              { id: "n4", value: 4, left: null, right: null, state: "compare" },
+              { id: "n7", value: 7, left: null, right: null },
+              { id: "n10", value: 10, left: null, right: "n14" },
+              { id: "n14", value: 14, left: "n13", right: null },
+              { id: "n13", value: 13, left: null, right: null },
+            ],
+            note: "Copy successor's value into this node: node.val = 4 (the node originally holding 3 now holds 4).",
+          },
+          {
+            rootId: "n8",
+            nodes: [
+              { id: "n8", value: 8, left: "n3", right: "n10" },
+              { id: "n3", value: 4, left: "n1", right: "n6" },
+              { id: "n1", value: 1, left: null, right: null },
+              { id: "n6", value: 6, left: null, right: "n7", state: "active" },
+              { id: "n7", value: 7, left: null, right: null },
+              { id: "n10", value: 10, left: null, right: "n14" },
+              { id: "n14", value: 14, left: "n13", right: null },
+              { id: "n13", value: 13, left: null, right: null },
+            ],
+            note:
+              "Delete 4 from the right subtree: delete(node=6, 4). 4 < 6, recurse into delete(node=4, 4). " +
+              "Node 4 has no children, so node.left == null returns node.right (null). 6.left is set to null.",
+          },
+          {
+            rootId: "n8",
+            nodes: [
+              { id: "n8", value: 8, left: "n3", right: "n10" },
+              { id: "n3", value: 4, left: "n1", right: "n6", state: "done" },
+              { id: "n1", value: 1, left: null, right: null },
+              { id: "n6", value: 6, left: null, right: "n7" },
+              { id: "n7", value: 7, left: null, right: null },
+              { id: "n10", value: 10, left: null, right: "n14" },
+              { id: "n14", value: 14, left: "n13", right: null },
+              { id: "n13", value: 13, left: null, right: null },
+            ],
+            note:
+              "Final tree: 8.left is the node now valued 4, with left=1, right=6 (6.left=null, 6.right=7). " +
+              "Inorder confirms: 1 4 6 7 8 10 13 14 — still fully sorted, the BST property preserved.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

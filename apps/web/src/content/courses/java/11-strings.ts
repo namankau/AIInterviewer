@@ -147,15 +147,27 @@ export const chapterStrings: Chapter = {
       ],
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why substring(1, 3) on \"Priya\" gives \"ri\", not \"Pr\" or \"riy\"",
-      steps: [
-        "\"Priya\" indexed: P=0, r=1, i=2, y=3, a=4.",
-        "substring(start, end) means: start at index `start`, stop right *before* index `end` — end " +
-          "itself is excluded.",
-        "substring(1, 3): begin at index 1 ('r'), take characters up to but not including index 3.",
-        "That gives indices 1 and 2: 'r' and 'i' — the result is \"ri\".",
-      ],
+      caption: "The window covers exactly the indices substring(1, 3) includes — start is inside it, end is not.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: "P" }, { value: "r" }, { value: "i" }, { value: "y" }, { value: "a" }],
+            note: "\"Priya\" indexed: P=0, r=1, i=2, y=3, a=4.",
+          },
+          {
+            cells: [{ value: "P" }, { value: "r", pointers: ["start"] }, { value: "i" }, { value: "y", pointers: ["end"] }, { value: "a" }],
+            note: "substring(start, end) means: start at index `start`, stop right *before* index `end` — end itself is excluded.",
+          },
+          {
+            cells: [{ value: "P" }, { value: "r", state: "active", pointers: ["start"] }, { value: "i", state: "active" }, { value: "y", pointers: ["end"] }, { value: "a" }],
+            range: [1, 2],
+            note: "substring(1, 3): begin at index 1 ('r'), take characters up to but not including index 3. That gives indices 1 and 2: 'r' and 'i' — the result is \"ri\".",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

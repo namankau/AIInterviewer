@@ -133,16 +133,26 @@ export const chapterRecordsModernJava: Chapter = {
       ],
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why area(new Rectangle(3.0, 4.0)) matches the Rectangle branch, not Circle",
-      steps: [
-        "shape's actual runtime type is Rectangle (created via new Rectangle(3.0, 4.0)).",
-        "The switch expression checks shape's type against each case pattern in order: case Circle c — " +
-          "does not match, shape isn't a Circle.",
-        "case Rectangle r — matches; r is bound to the same Rectangle object, with r.width() and " +
-          "r.height() directly accessible.",
-        "The matching arm evaluates: r.width() * r.height() = 3.0 * 4.0 = 12.0, formatted to 12.00 by printf.",
-      ],
+      caption: "Java checks each case pattern in order against shape's actual runtime type — a done rung is where the match happened.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: "case Circle c", state: "active" }, { value: "case Rectangle r" }],
+            note: "shape's actual runtime type is Rectangle (created via new Rectangle(3.0, 4.0)). The switch expression checks shape's type against each case pattern in order: case Circle c — does not match, shape isn't a Circle.",
+          },
+          {
+            cells: [{ value: "case Circle c", state: "compare" }, { value: "case Rectangle r", state: "done" }],
+            note: "case Rectangle r — matches; r is bound to the same Rectangle object, with r.width() and r.height() directly accessible.",
+          },
+          {
+            cells: [{ value: "case Circle c", state: "compare" }, { value: "case Rectangle r", state: "done" }],
+            note: "The matching arm evaluates: r.width() * r.height() = 3.0 * 4.0 = 12.0, formatted to 12.00 by printf.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

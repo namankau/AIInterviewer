@@ -124,14 +124,13 @@ export const chapterGenerics: Chapter = {
         "discover in production.",
     },
     {
-      kind: "trace",
+      kind: "steps",
       title: "Why `stringBox.put(42);` would fail to compile, if it were written",
       steps: [
-        "stringBox's declared type is Box<String> — the compiler substitutes T with String throughout Box for this variable.",
-        "put(T item) becomes, for this specific box, put(String item).",
-        "42 is an int literal (autoboxes to Integer, not String).",
-        "Passing an Integer where a String is required is a type mismatch — the compiler rejects the line " +
-          "before the program can even be built, let alone run.",
+        { label: "Substitute", text: "stringBox's declared type is Box<String> — the compiler substitutes T with String throughout Box for this variable." },
+        { label: "Specialise", text: "put(T item) becomes, for this specific box, put(String item)." },
+        { label: "Infer", text: "42 is an int literal (autoboxes to Integer, not String)." },
+        { label: "Reject", text: "Passing an Integer where a String is required is a type mismatch — the compiler rejects the line before the program can even be built, let alone run." },
       ],
     },
     {

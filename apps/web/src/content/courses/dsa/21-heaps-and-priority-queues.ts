@@ -235,18 +235,36 @@ export const chapterHeapsAndPriorityQueues: Chapter = {
       pythonOutput: "MinHeap pop order: 1 2 3 5 8 9\n3 largest, ascending: 5 11 12",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "push(1) onto a heap already holding [3, 5, 8] (indices 0, 1, 2) — sift up",
-      steps: [
-        "data = [3, 5, 8, ...], size=3. Place 1 at index 3 (the next free slot): data = [3, 5, 8, 1]. " +
-          "size becomes 4.",
-        "i=3. parent = (3-1)/2 = 1, which holds 5. Is data[1]=5 <= data[3]=1? No — violates the heap rule, " +
-          "so swap. data = [3, 1, 8, 5]. i becomes 1.",
-        "i=1. parent = (1-1)/2 = 0, which holds 3. Is data[0]=3 <= data[1]=1? No — swap again. " +
-          "data = [1, 3, 8, 5]. i becomes 0.",
-        "i=0 has no parent (i > 0 is false), loop ends. The new smallest value, 1, has 'floated' all the " +
-          "way to the root in exactly 2 swaps — one per level it needed to rise.",
-      ],
+      caption: "The new value starts at the next free leaf and swaps upward with its parent one level at a time, stopping the moment its parent is no longer bigger.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: 3 }, { value: 5 }, { value: 8 }, { value: 1, state: "active", pointers: ["i"] }],
+            note: "data = [3, 5, 8, ...], size=3. Place 1 at index 3 (the next free slot): data = [3, 5, 8, 1]. size becomes 4.",
+          },
+          {
+            cells: [{ value: 3 }, { value: 1, state: "swap" }, { value: 8 }, { value: 5, state: "swap" }],
+            note:
+              "i=3. parent = (3-1)/2 = 1, which holds 5. Is data[1]=5 <= data[3]=1? No — violates the heap " +
+              "rule, so swap. data = [3, 1, 8, 5]. i becomes 1.",
+          },
+          {
+            cells: [{ value: 1, state: "swap" }, { value: 3, state: "swap" }, { value: 8 }, { value: 5 }],
+            note:
+              "i=1. parent = (1-1)/2 = 0, which holds 3. Is data[0]=3 <= data[1]=1? No — swap again. " +
+              "data = [1, 3, 8, 5]. i becomes 0.",
+          },
+          {
+            cells: [{ value: 1, state: "done", pointers: ["i"] }, { value: 3 }, { value: 8 }, { value: 5 }],
+            note:
+              "i=0 has no parent (i > 0 is false), loop ends. The new smallest value, 1, has 'floated' all " +
+              "the way to the root in exactly 2 swaps — one per level it needed to rise.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

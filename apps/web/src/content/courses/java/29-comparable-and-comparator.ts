@@ -110,14 +110,32 @@ export const chapterComparableComparator: Chapter = {
       ],
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why Collections.sort(students) orders Vikram, Priya, Arjun (ascending marks)",
-      steps: [
-        "Collections.sort calls compareTo repeatedly to determine relative order between pairs of Students.",
-        "Comparing Vikram(78) and Priya(87): Integer.compare(78, 87) is negative, so Vikram sorts before Priya.",
-        "Comparing Priya(87) and Arjun(91): Integer.compare(87, 91) is negative, so Priya sorts before Arjun.",
-        "The sort settles into ascending order of marks: Vikram(78), Priya(87), Arjun(91) — exactly what compareTo defines as \"natural\" for this class.",
-      ],
+      caption: "compareTo decides relative order one pair at a time; the sort just keeps applying it until every pair agrees.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: "Priya(87)" }, { value: "Arjun(91)" }, { value: "Vikram(78)" }],
+            note: "Collections.sort calls compareTo repeatedly to determine relative order between pairs of Students.",
+          },
+          {
+            cells: [{ value: "Vikram(78)", state: "swap" }, { value: "Priya(87)" }, { value: "Arjun(91)", state: "swap" }],
+            note: "Comparing Vikram(78) and Priya(87): Integer.compare(78, 87) is negative, so Vikram sorts before Priya.",
+          },
+          {
+            cells: [{ value: "Vikram(78)" }, { value: "Priya(87)", state: "swap" }, { value: "Arjun(91)", state: "swap" }],
+            note: "Comparing Priya(87) and Arjun(91): Integer.compare(87, 91) is negative, so Priya sorts before Arjun.",
+          },
+          {
+            cells: [{ value: "Vikram(78)", state: "done" }, { value: "Priya(87)", state: "done" }, { value: "Arjun(91)", state: "done" }],
+            note:
+              "The sort settles into ascending order of marks: Vikram(78), Priya(87), Arjun(91) — exactly " +
+              "what compareTo defines as \"natural\" for this class.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

@@ -145,22 +145,68 @@ export const chapterTries: Chapter = {
         "startsWith(dot): False\nsearch(card): True",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "insert(\"car\") then insert(\"card\") — sharing the prefix, then forking",
-      steps: [
-        "insert(\"car\"): node=root. 'c' not a child of root, create it, descend. 'a' not a child, create, " +
-          "descend. 'r' not a child, create, descend. End of word: mark this node isWord=true. Path " +
-          "root->c->a->r now exists, with r's node marked as a complete word.",
-        "insert(\"card\"): node=root. 'c' *is* already a child (from 'car') — reuse it, descend, no new " +
-          "node. 'a' already exists — reuse, descend. 'r' already exists — reuse, descend. Now at the same " +
-          "'r' node insert(\"car\") ended on, which is already isWord=true.",
-        "'d' is not yet a child of that 'r' node — create it, descend. End of word: mark this new 'd' node " +
-          "isWord=true. Result: 'car' and 'card' share all three nodes for c-a-r, forking only at the extra " +
-          "'d'.",
-        "search(\"ca\"): walks c, a successfully (both exist), reaching the 'a' node — but that node's " +
-          "isWord is false (only 'car' and 'card' were marked, not 'ca'), so search returns false even " +
-          "though the path exists.",
-      ],
+      caption: "A 'done' node marks isWord=true — a complete word ends there, not just a valid path through it. Only the single child a node actually has is drawn.",
+      viz: {
+        type: "tree",
+        frames: [
+          {
+            rootId: "root",
+            nodes: [
+              { id: "root", value: "•", left: "c", right: null },
+              { id: "c", value: "c", left: "a", right: null },
+              { id: "a", value: "a", left: "r", right: null },
+              { id: "r", value: "r", left: null, right: null, state: "done" },
+            ],
+            note:
+              "insert(\"car\"): node=root. 'c' not a child of root, create it, descend. 'a' not a child, " +
+              "create, descend. 'r' not a child, create, descend. End of word: mark this node isWord=true. " +
+              "Path root->c->a->r now exists, with r's node marked as a complete word.",
+          },
+          {
+            rootId: "root",
+            nodes: [
+              { id: "root", value: "•", left: "c", right: null },
+              { id: "c", value: "c", left: "a", right: null, state: "visiting" },
+              { id: "a", value: "a", left: "r", right: null, state: "visiting" },
+              { id: "r", value: "r", left: null, right: null, state: "done" },
+            ],
+            note:
+              "insert(\"card\"): node=root. 'c' *is* already a child (from 'car') — reuse it, descend, no " +
+              "new node. 'a' already exists — reuse, descend. 'r' already exists — reuse, descend. Now at " +
+              "the same 'r' node insert(\"car\") ended on, which is already isWord=true.",
+          },
+          {
+            rootId: "root",
+            nodes: [
+              { id: "root", value: "•", left: "c", right: null },
+              { id: "c", value: "c", left: "a", right: null },
+              { id: "a", value: "a", left: "r", right: null },
+              { id: "r", value: "r", left: "d", right: null, state: "done" },
+              { id: "d", value: "d", left: null, right: null, state: "active" },
+            ],
+            note:
+              "'d' is not yet a child of that 'r' node — create it, descend. End of word: mark this new " +
+              "'d' node isWord=true. Result: 'car' and 'card' share all three nodes for c-a-r, forking only " +
+              "at the extra 'd'.",
+          },
+          {
+            rootId: "root",
+            nodes: [
+              { id: "root", value: "•", left: "c", right: null },
+              { id: "c", value: "c", left: "a", right: null, state: "visiting" },
+              { id: "a", value: "a", left: "r", right: null, state: "compare" },
+              { id: "r", value: "r", left: "d", right: null, state: "done" },
+              { id: "d", value: "d", left: null, right: null, state: "done" },
+            ],
+            note:
+              "search(\"ca\"): walks c, a successfully (both exist), reaching the 'a' node — but that " +
+              "node's isWord is false (only 'car' and 'card' were marked, not 'ca'), so search returns " +
+              "false even though the path exists.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

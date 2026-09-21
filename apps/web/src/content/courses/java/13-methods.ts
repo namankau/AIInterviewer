@@ -119,20 +119,48 @@ export const chapterMethods: Chapter = {
         "After doubleFirstElement, data[0] = 20",
     },
     {
-      kind: "trace",
-      title: "Why number stays 10 but data[0] actually changes to 20",
-      steps: [
-        "`doubleValue(number)`: Java copies the *value* 10 into the parameter x. x and number are now " +
-          "two completely independent int variables that happen to start equal.",
-        "Inside the method, `x = x * 2;` changes x to 20 — but this only touches the local copy. number, " +
-          "back in main, was never touched.",
-        "`doubleFirstElement(data)`: Java copies the *reference* — the directions to the array object — " +
-          "into the parameter arr. arr and data are two separate variables, but they both point at the " +
-          "exact same array object in memory.",
-        "Inside the method, `arr[0] = arr[0] * 2;` doesn't reassign the variable arr — it reaches through " +
-          "the reference and modifies the *object itself*, the shared array.",
-        "Because data still points at that same object, `data[0]` in main reflects the change: 20, not 10.",
-      ],
+      kind: "viz",
+      title: "doubleValue(number) — a copied int never affects the caller's variable",
+      caption: "number and x are two independent boxes that merely started out equal.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: 10, pointers: ["number (main)"] }],
+            note: "Before the call: number, in main, holds 10.",
+          },
+          {
+            cells: [{ value: 10, pointers: ["number (main)"] }, { value: 10, state: "active", pointers: ["x (method)"] }],
+            note: "`doubleValue(number)`: Java copies the *value* 10 into the parameter x. x and number are now two completely independent int variables that happen to start equal.",
+          },
+          {
+            cells: [{ value: 10, state: "done", pointers: ["number (main)"] }, { value: 20, state: "active", pointers: ["x (method)"] }],
+            note: "Inside the method, `x = x * 2;` changes x to 20 — but this only touches the local copy. number, back in main, was never touched.",
+          },
+        ],
+      },
+    },
+    {
+      kind: "viz",
+      title: "doubleFirstElement(data) — a copied reference still points at the same object",
+      caption: "data and arr are two independent boxes too, but this time both boxes hold directions to the same array — so a change through arr is visible through data.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: 10, pointers: ["data[0] / arr[0]"] }],
+            note: "`doubleFirstElement(data)`: Java copies the *reference* — the directions to the array object — into the parameter arr. arr and data are two separate variables, but they both point at the exact same array object in memory.",
+          },
+          {
+            cells: [{ value: 20, state: "active", pointers: ["data[0] / arr[0]"] }],
+            note: "Inside the method, `arr[0] = arr[0] * 2;` doesn't reassign the variable arr — it reaches through the reference and modifies the *object itself*, the shared array.",
+          },
+          {
+            cells: [{ value: 20, state: "done", pointers: ["data[0] / arr[0]"] }],
+            note: "Because data still points at that same object, `data[0]` in main reflects the change: 20, not 10.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

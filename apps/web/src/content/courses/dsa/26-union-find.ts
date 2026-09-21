@@ -135,23 +135,41 @@ export const chapterUnionFind: Chapter = {
         "union(0, 2) formed a new connection: False",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "union(0,1), union(1,2) — watch path compression flatten the chain",
-      steps: [
-        "init(6): parent = [0,1,2,3,4,5] — everyone starts as their own representative (their own group of " +
-          "one). rank = [0,0,0,0,0,0].",
-        "union(0, 1): find(0)=0, find(1)=1 (both already roots). Roots differ, ranks equal (0==0), so " +
-          "parent[1]=0 and rank[0] becomes 1. parent = [0,0,2,3,4,5].",
-        "union(1, 2): find(1) — parent[1]=0, and parent[0]=0 (0 is its own parent), so find(1) returns 0, " +
-          "no compression needed yet (path was already length 1). find(2)=2. Roots differ (0 vs 2); " +
-          "rank[0]=1 > rank[2]=0, so the smaller-rank tree attaches under the bigger: parent[2]=0. " +
-          "parent = [0,0,0,3,4,5].",
-        "find(2) now, later: parent[2]=0, and parent[0]=0, so it returns 0 directly — 2 was attached " +
-          "straight to the root during union, so there's nothing further to compress here, but for a " +
-          "longer chain (imagine 5 unions in a row without rank balancing), path compression would rewrite " +
-          "every node on the path directly to the root the first time find() walks it, keeping future " +
-          "lookups from that subtree O(1).",
-      ],
+      caption: "Each cell holds parent[i] — an index that is its own value is a root; a done cell has just been re-pointed straight at a root.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: 0 }, { value: 1 }, { value: 2 }, { value: 3 }, { value: 4 }, { value: 5 }],
+            note: "init(6): parent = [0,1,2,3,4,5] — everyone starts as their own representative (their own group of one). rank = [0,0,0,0,0,0].",
+          },
+          {
+            cells: [{ value: 0, state: "compare", pointers: ["root"] }, { value: 0, state: "done" }, { value: 2 }, { value: 3 }, { value: 4 }, { value: 5 }],
+            note:
+              "union(0, 1): find(0)=0, find(1)=1 (both already roots). Roots differ, ranks equal (0==0), " +
+              "so parent[1]=0 and rank[0] becomes 1. parent = [0,0,2,3,4,5].",
+          },
+          {
+            cells: [{ value: 0, state: "compare", pointers: ["root"] }, { value: 0, state: "done" }, { value: 0, state: "done" }, { value: 3 }, { value: 4 }, { value: 5 }],
+            note:
+              "union(1, 2): find(1) — parent[1]=0, and parent[0]=0 (0 is its own parent), so find(1) " +
+              "returns 0, no compression needed yet (path was already length 1). find(2)=2. Roots differ " +
+              "(0 vs 2); rank[0]=1 > rank[2]=0, so the smaller-rank tree attaches under the bigger: " +
+              "parent[2]=0. parent = [0,0,0,3,4,5].",
+          },
+          {
+            cells: [{ value: 0, pointers: ["root"] }, { value: 0 }, { value: 0, state: "active", pointers: ["find(2)"] }, { value: 3 }, { value: 4 }, { value: 5 }],
+            note:
+              "find(2) now, later: parent[2]=0, and parent[0]=0, so it returns 0 directly — 2 was attached " +
+              "straight to the root during union, so there's nothing further to compress here, but for a " +
+              "longer chain (imagine 5 unions in a row without rank balancing), path compression would " +
+              "rewrite every node on the path directly to the root the first time find() walks it, keeping " +
+              "future lookups from that subtree O(1).",
+          },
+        ],
+      },
     },
     {
       kind: "p",

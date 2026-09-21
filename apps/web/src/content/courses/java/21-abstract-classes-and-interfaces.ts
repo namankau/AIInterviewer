@@ -132,16 +132,33 @@ export const chapterAbstractInterfaces: Chapter = {
       ],
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why ec.printInfo() prints \"0.0 km/l\" for the ElectricCar",
-      steps: [
-        "ec is an ElectricCar, constructed via super(name), inheriting printInfo() unchanged from Vehicle.",
-        "ec.printInfo() calls fuelEfficiency() — because ec's actual class is ElectricCar, the overridden " +
-          "version there runs (this is overriding, from the last chapter, working exactly the same way for " +
-          "an abstract parent as for a concrete one).",
-        "ElectricCar's fuelEfficiency() returns 0.0.",
-        "printInfo()'s println assembles: name (\"Nexon EV\") + \" gives \" + 0.0 + \" km/l\".",
-      ],
+      caption: "printInfo() itself never changed — it's the abstract method it calls partway through that resolves to ElectricCar's own version.",
+      viz: {
+        type: "callstack",
+        frames: [
+          {
+            stack: [{ label: "ec.printInfo() (inherited from Vehicle)", state: "active" }],
+            note: "ec is an ElectricCar, constructed via super(name), inheriting printInfo() unchanged from Vehicle.",
+          },
+          {
+            stack: [{ label: "ec.printInfo()" }, { label: "ElectricCar.fuelEfficiency()", state: "active" }],
+            note:
+              "ec.printInfo() calls fuelEfficiency() — because ec's actual class is ElectricCar, the " +
+              "overridden version there runs (this is overriding, from the last chapter, working exactly " +
+              "the same way for an abstract parent as for a concrete one).",
+          },
+          {
+            stack: [{ label: "ec.printInfo()" }, { label: "ElectricCar.fuelEfficiency()", state: "returning" }],
+            note: "ElectricCar's fuelEfficiency() returns 0.0.",
+          },
+          {
+            stack: [{ label: "ec.printInfo()", state: "returning" }],
+            note: "printInfo()'s println assembles: name (\"Nexon EV\") + \" gives \" + 0.0 + \" km/l\".",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

@@ -122,19 +122,59 @@ export const chapterMergeSort: Chapter = {
       pythonOutput: "sorted: [1, 2, 3, 4, 7, 8, 9]",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "mergeSort({8, 3, 7, 4, 2, 9, 1}) — splitting down, then merging back up",
-      steps: [
-        "Split {8,3,7,4,2,9,1} at mid into {8,3,7,4} and {2,9,1}.",
-        "{8,3,7,4} splits into {8,3} and {7,4}; {8,3} splits into {8} and {3} (both base cases, size 1).",
-        "Merge {8} and {3}: compare 8 vs 3, take 3, then take 8 (one ran out). Result {3,8}.",
-        "{7,4} similarly merges to {4,7}. Now merge {3,8} and {4,7}: 3<4 take 3; 8 vs 4 take 4; 8 vs 7 " +
-          "take 7; only 8 left, append it. Result {3,4,7,8}.",
-        "{2,9,1} splits into {2} and {9,1}; {9,1} merges to {1,9} (9 vs 1, take 1, then 9).",
-        "Merge {2} and {1,9}: 2 vs 1, take 1; 2 vs 9, take 2; only 9 left, append. Result {1,2,9}.",
-        "Final merge: {3,4,7,8} and {1,2,9}. 3 vs 1 take 1; 3 vs 2 take 2; 3 vs 9 take 3; 4 vs 9 take 4; " +
-          "7 vs 9 take 7; 8 vs 9 take 8; only 9 left, append. Result {1,2,3,4,7,8,9} — fully sorted.",
-      ],
+      caption: "The highlighted window is the range just merged; values inside it are already sorted relative to each other before the next merge combines two such windows.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: 8 }, { value: 3 }, { value: 7 }, { value: 4 }, { value: 2 }, { value: 9 }, { value: 1 }],
+            range: [0, 3],
+            note: "Split {8,3,7,4,2,9,1} at mid into left {8,3,7,4} (indices 0-3) and right {2,9,1} (indices 4-6).",
+          },
+          {
+            cells: [{ value: 8 }, { value: 3 }, { value: 7 }, { value: 4 }, { value: 2 }, { value: 9 }, { value: 1 }],
+            range: [0, 1],
+            note: "{8,3,7,4} splits into {8,3} and {7,4}; {8,3} splits into {8} and {3} (both base cases, size 1).",
+          },
+          {
+            cells: [{ value: 3, state: "done" }, { value: 8, state: "done" }, { value: 7 }, { value: 4 }, { value: 2 }, { value: 9 }, { value: 1 }],
+            range: [0, 1],
+            note: "Merge {8} and {3}: compare 8 vs 3, take 3, then take 8 (one ran out). Result {3,8}.",
+          },
+          {
+            cells: [{ value: 3, state: "done" }, { value: 8, state: "done" }, { value: 4, state: "done" }, { value: 7, state: "done" }, { value: 2 }, { value: 9 }, { value: 1 }],
+            range: [2, 3],
+            note: "{7,4} similarly merges to {4,7}.",
+          },
+          {
+            cells: [{ value: 3, state: "done" }, { value: 4, state: "done" }, { value: 7, state: "done" }, { value: 8, state: "done" }, { value: 2 }, { value: 9 }, { value: 1 }],
+            range: [0, 3],
+            note:
+              "Merge {3,8} and {4,7}: 3<4 take 3; 8 vs 4 take 4; 8 vs 7 take 7; only 8 left, append it. " +
+              "Result {3,4,7,8}.",
+          },
+          {
+            cells: [{ value: 3, state: "done" }, { value: 4, state: "done" }, { value: 7, state: "done" }, { value: 8, state: "done" }, { value: 2 }, { value: 1, state: "done" }, { value: 9, state: "done" }],
+            range: [5, 6],
+            note: "{2,9,1} splits into {2} and {9,1}; {9,1} merges to {1,9} (9 vs 1, take 1, then 9).",
+          },
+          {
+            cells: [{ value: 3, state: "done" }, { value: 4, state: "done" }, { value: 7, state: "done" }, { value: 8, state: "done" }, { value: 1, state: "done" }, { value: 2, state: "done" }, { value: 9, state: "done" }],
+            range: [4, 6],
+            note: "Merge {2} and {1,9}: 2 vs 1, take 1; 2 vs 9, take 2; only 9 left, append. Result {1,2,9}.",
+          },
+          {
+            cells: [{ value: 1, state: "done" }, { value: 2, state: "done" }, { value: 3, state: "done" }, { value: 4, state: "done" }, { value: 7, state: "done" }, { value: 8, state: "done" }, { value: 9, state: "done" }],
+            range: [0, 6],
+            note:
+              "Final merge: {3,4,7,8} and {1,2,9}. 3 vs 1 take 1; 3 vs 2 take 2; 3 vs 9 take 3; 4 vs 9 " +
+              "take 4; 7 vs 9 take 7; 8 vs 9 take 8; only 9 left, append. Result {1,2,3,4,7,8,9} — fully " +
+              "sorted.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

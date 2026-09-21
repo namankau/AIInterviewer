@@ -96,17 +96,25 @@ export const chapterStatic: Chapter = {
         "created a single object: the JVM calls it directly on the class, with nothing to `new` first.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why Student.count reads 3, not 1, after three separate `new Student(...)` calls",
-      steps: [
-        "count is declared static — one shared int, stored with the class, not duplicated per object.",
-        "new Student(\"Priya\") runs the constructor, which executes count++ — count goes from 0 to 1.",
-        "new Student(\"Arjun\") runs the same constructor on a different object, but count++ still touches " +
-          "the one shared count — it goes from 1 to 2.",
-        "new Student(\"Vikram\") pushes it to 3.",
-        "Because every object's constructor incremented the same variable, Student.count correctly reads 3 " +
-          "afterward, regardless of which object you ask through.",
-      ],
+      caption: "One box, shared by every object of the class — there is no separate copy per Student to get out of sync.",
+      viz: {
+        type: "array",
+        frames: [
+          { cells: [{ value: 0, pointers: ["Student.count"] }], note: "count is declared static — one shared int, stored with the class, not duplicated per object." },
+          { cells: [{ value: 1, state: "active", pointers: ["Student.count"] }], note: "new Student(\"Priya\") runs the constructor, which executes count++ — count goes from 0 to 1." },
+          {
+            cells: [{ value: 2, state: "active", pointers: ["Student.count"] }],
+            note: "new Student(\"Arjun\") runs the same constructor on a different object, but count++ still touches the one shared count — it goes from 1 to 2.",
+          },
+          { cells: [{ value: 3, state: "active", pointers: ["Student.count"] }], note: "new Student(\"Vikram\") pushes it to 3." },
+          {
+            cells: [{ value: 3, state: "done", pointers: ["Student.count"] }],
+            note: "Because every object's constructor incremented the same variable, Student.count correctly reads 3 afterward, regardless of which object you ask through.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

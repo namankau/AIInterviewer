@@ -80,15 +80,29 @@ export const chapterIfElseSwitch: Chapter = {
       output: "Grade: A2\nDay: Wednesday\nSeason: Spring",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why marks = 82 prints \"Grade: A2\", not A1 or B1",
-      steps: [
-        "Java checks `marks >= 90` first. 82 >= 90 is false — skip this block, move to the next `else if`.",
-        "Java checks `marks >= 75`. 82 >= 75 is true. This block runs: prints \"Grade: A2\".",
-        "Because a condition already succeeded, Java does not check `marks >= 60` at all, even though " +
-          "it's also true for 82 — the ladder stops at the first match.",
-        "The final `else` never runs either, for the same reason.",
-      ],
+      caption: "A done rung is where the ladder stopped and ran; the rungs below it are never even evaluated, whether or not they'd also be true.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: "marks>=90", state: "active", pointers: ["checking"] }, { value: "marks>=75" }, { value: "marks>=60" }, { value: "else" }],
+            note: "Java checks `marks >= 90` first. 82 >= 90 is false — skip this block, move to the next `else if`.",
+          },
+          {
+            cells: [{ value: "marks>=90", state: "compare" }, { value: "marks>=75", state: "done", pointers: ["checking"] }, { value: "marks>=60" }, { value: "else" }],
+            note: "Java checks `marks >= 75`. 82 >= 75 is true. This block runs: prints \"Grade: A2\".",
+          },
+          {
+            cells: [{ value: "marks>=90", state: "compare" }, { value: "marks>=75", state: "done" }, { value: "marks>=60" }, { value: "else" }],
+            note:
+              "Because a condition already succeeded, Java does not check `marks >= 60` at all, even " +
+              "though it's also true for 82 — the ladder stops at the first match. The final `else` never " +
+              "runs either, for the same reason.",
+          },
+        ],
+      },
     },
     { kind: "h", text: "The classic switch, and why `break` matters" },
     {

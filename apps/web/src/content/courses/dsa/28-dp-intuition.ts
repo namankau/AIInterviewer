@@ -147,21 +147,96 @@ export const chapterDpIntuition: Chapter = {
         "naive(35) took roughly 1057ms; memo(35) took roughly 0ms",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "fibNaive(5) — the call tree, showing exactly which work repeats",
-      steps: [
-        "fibNaive(5) calls fibNaive(4) and fibNaive(3).",
-        "fibNaive(4) calls fibNaive(3) and fibNaive(2) — notice fibNaive(3) is now being computed a second " +
-          "time, completely from scratch.",
-        "fibNaive(3) (the first call, from step 1) calls fibNaive(2) and fibNaive(1) — fibNaive(2) is also " +
-          "about to be recomputed multiple times across the tree.",
-        "By the time the whole call tree for fibNaive(5) finishes, fibNaive(3) has been computed 2 separate " +
-          "times, fibNaive(2) has been computed 3 separate times, and fibNaive(1)/fibNaive(0) even more — " +
-          "every one of those repeats does the exact same work and returns the exact same answer.",
-        "fibMemo(5) makes the identical shape of recursive calls, but the *second* time fibNaive(3) would " +
-          "have been entered, fibMemo finds it already in the map and returns instantly — cutting an " +
-          "exponentially branching tree down to one entry per distinct value of n, 0 through 5.",
-      ],
+      caption: "A 'compare' node is a value already computed elsewhere in this same tree; the final frame shows fibMemo cutting those repeats off before they re-expand.",
+      viz: {
+        type: "tree",
+        frames: [
+          {
+            rootId: "n5",
+            nodes: [
+              { id: "n5", value: 5, left: "n4", right: "n3b", state: "active" },
+              { id: "n4", value: 4, left: null, right: null, state: "active" },
+              { id: "n3b", value: 3, left: null, right: null, state: "active" },
+            ],
+            note: "fibNaive(5) calls fibNaive(4) and fibNaive(3).",
+          },
+          {
+            rootId: "n5",
+            nodes: [
+              { id: "n5", value: 5, left: "n4", right: "n3b" },
+              { id: "n4", value: 4, left: "n3a", right: "n2b", state: "active" },
+              { id: "n3a", value: 3, left: null, right: null, state: "compare" },
+              { id: "n2b", value: 2, left: null, right: null, state: "active" },
+              { id: "n3b", value: 3, left: null, right: null },
+            ],
+            note:
+              "fibNaive(4) calls fibNaive(3) and fibNaive(2) — notice fibNaive(3) is now being computed a " +
+              "second time, completely from scratch.",
+          },
+          {
+            rootId: "n5",
+            nodes: [
+              { id: "n5", value: 5, left: "n4", right: "n3b" },
+              { id: "n4", value: 4, left: "n3a", right: "n2b" },
+              { id: "n3a", value: 3, left: "n2a", right: "n1a", state: "active" },
+              { id: "n2a", value: 2, left: null, right: null, state: "compare" },
+              { id: "n1a", value: 1, left: null, right: null },
+              { id: "n2b", value: 2, left: null, right: null },
+              { id: "n3b", value: 3, left: null, right: null },
+            ],
+            note:
+              "fibNaive(3) (the first call, from step 1) calls fibNaive(2) and fibNaive(1) — fibNaive(2) " +
+              "is also about to be recomputed multiple times across the tree.",
+          },
+          {
+            rootId: "n5",
+            nodes: [
+              { id: "n5", value: 5, left: "n4", right: "n3b" },
+              { id: "n4", value: 4, left: "n3a", right: "n2b" },
+              { id: "n3a", value: 3, left: "n2a", right: "n1a", state: "compare" },
+              { id: "n2a", value: 2, left: "n1b", right: "n0a", state: "compare" },
+              { id: "n1a", value: 1, left: null, right: null },
+              { id: "n1b", value: 1, left: null, right: null },
+              { id: "n0a", value: 0, left: null, right: null },
+              { id: "n2b", value: 2, left: "n1c", right: "n0b", state: "compare" },
+              { id: "n1c", value: 1, left: null, right: null },
+              { id: "n0b", value: 0, left: null, right: null },
+              { id: "n3b", value: 3, left: "n2c", right: "n1d", state: "compare" },
+              { id: "n2c", value: 2, left: "n1e", right: "n0c", state: "compare" },
+              { id: "n1e", value: 1, left: null, right: null },
+              { id: "n0c", value: 0, left: null, right: null },
+              { id: "n1d", value: 1, left: null, right: null },
+            ],
+            note:
+              "By the time the whole call tree for fibNaive(5) finishes, fibNaive(3) has been computed 2 " +
+              "separate times (n3a, n3b — both marked here), fibNaive(2) has been computed 3 separate " +
+              "times (n2a, n2b, n2c), and fibNaive(1)/fibNaive(0) even more — every one of those repeats " +
+              "does the exact same work and returns the exact same answer.",
+          },
+          {
+            rootId: "n5",
+            nodes: [
+              { id: "n5", value: 5, left: "n4", right: "n3b", state: "active" },
+              { id: "n4", value: 4, left: "n3a", right: "n2b", state: "active" },
+              { id: "n3a", value: 3, left: "n2a", right: "n1a", state: "active" },
+              { id: "n2a", value: 2, left: "n1b", right: "n0a", state: "active" },
+              { id: "n1a", value: 1, left: null, right: null, state: "done" },
+              { id: "n1b", value: 1, left: null, right: null, state: "done" },
+              { id: "n0a", value: 0, left: null, right: null, state: "done" },
+              { id: "n2b", value: 2, left: null, right: null, state: "done" },
+              { id: "n3b", value: 3, left: null, right: null, state: "done" },
+            ],
+            note:
+              "fibMemo(5) makes the identical shape of recursive calls the first time each value is " +
+              "needed, but the moment fibNaive(3) or fibNaive(2) would be re-entered (n3b, n2b here), " +
+              "fibMemo finds it already in the map and returns instantly instead of expanding it again — " +
+              "cutting an exponentially branching tree down to one real computation per distinct value of " +
+              "n, 0 through 5.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

@@ -183,21 +183,108 @@ export const chapterDpPatterns: Chapter = {
         'knapsack capacity=5: 7\nlcs("abcde", "ace"): 3\nlis: 4\nuniquePaths(3, 7): 28',
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "lcs(\"abcde\", \"ace\") — filling the table where dp[i][j] means 'LCS of the first i and first j characters'",
-      steps: [
-        "dp[0][*] and dp[*][0] are all 0 (an empty string has an LCS of length 0 with anything).",
-        "dp[1][1]: compare a[0]='a' vs b[0]='a' — match! dp[1][1] = dp[0][0] + 1 = 1. The rest of row 1 " +
-          "('a' against 'c', then 'e') finds no further matches, so it carries 1 forward: row 1 = [0,1,1,1].",
-        "Row 2 (a[1]='b'): 'b' matches neither 'a', 'c', nor 'e', so every cell just carries forward the " +
-          "best of the cell above or to the left — row 2 = [0,1,1,1], unchanged from row 1.",
-        "dp[3][2]: a[2]='c' vs b[1]='c' — match! dp[3][2] = dp[2][1] + 1 = 1 + 1 = 2. dp[3][3]: a[2]='c' " +
-          "vs b[2]='e' — no match, so dp[3][3] = max(dp[2][3], dp[3][2]) = max(1, 2) = 2. Row 3 = [0,1,2,2].",
-        "Row 4 (a[3]='d'): 'd' matches nothing in \"ace\", so the row carries forward unchanged: " +
-          "row 4 = [0,1,2,2].",
-        "dp[5][3]: a[4]='e' vs b[2]='e' — match! dp[5][3] = dp[4][2] + 1 = 2 + 1 = 3 — the final answer: " +
-          "the LCS is exactly \"ace\", length 3, built by matching 'a', then 'c', then 'e' in order.",
-      ],
+      caption: "Filled row by row; a highlighted cell is where this frame's step just wrote a new value.",
+      viz: {
+        type: "table",
+        frames: [
+          {
+            rowLabels: ["i=0 (\"\")", "i=1 (a)", "i=2 (b)", "i=3 (c)", "i=4 (d)", "i=5 (e)"],
+            colLabels: ["j=0 (\"\")", "j=1 (a)", "j=2 (c)", "j=3 (e)"],
+            rows: [
+              [0, 0, 0, 0],
+              [0, null, null, null],
+              [0, null, null, null],
+              [0, null, null, null],
+              [0, null, null, null],
+              [0, null, null, null],
+            ],
+            note: "dp[0][*] and dp[*][0] are all 0 (an empty string has an LCS of length 0 with anything).",
+          },
+          {
+            rowLabels: ["i=0 (\"\")", "i=1 (a)", "i=2 (b)", "i=3 (c)", "i=4 (d)", "i=5 (e)"],
+            colLabels: ["j=0 (\"\")", "j=1 (a)", "j=2 (c)", "j=3 (e)"],
+            rows: [
+              [0, 0, 0, 0],
+              [0, 1, 1, 1],
+              [0, null, null, null],
+              [0, null, null, null],
+              [0, null, null, null],
+              [0, null, null, null],
+            ],
+            highlight: [[1, 1]],
+            note:
+              "dp[1][1]: compare a[0]='a' vs b[0]='a' — match! dp[1][1] = dp[0][0] + 1 = 1. The rest of " +
+              "row 1 ('a' against 'c', then 'e') finds no further matches, so it carries 1 forward: " +
+              "row 1 = [0,1,1,1].",
+          },
+          {
+            rowLabels: ["i=0 (\"\")", "i=1 (a)", "i=2 (b)", "i=3 (c)", "i=4 (d)", "i=5 (e)"],
+            colLabels: ["j=0 (\"\")", "j=1 (a)", "j=2 (c)", "j=3 (e)"],
+            rows: [
+              [0, 0, 0, 0],
+              [0, 1, 1, 1],
+              [0, 1, 1, 1],
+              [0, null, null, null],
+              [0, null, null, null],
+              [0, null, null, null],
+            ],
+            highlight: [[2, 1], [2, 2], [2, 3]],
+            note:
+              "Row 2 (a[1]='b'): 'b' matches neither 'a', 'c', nor 'e', so every cell just carries forward " +
+              "the best of the cell above or to the left — row 2 = [0,1,1,1], unchanged from row 1.",
+          },
+          {
+            rowLabels: ["i=0 (\"\")", "i=1 (a)", "i=2 (b)", "i=3 (c)", "i=4 (d)", "i=5 (e)"],
+            colLabels: ["j=0 (\"\")", "j=1 (a)", "j=2 (c)", "j=3 (e)"],
+            rows: [
+              [0, 0, 0, 0],
+              [0, 1, 1, 1],
+              [0, 1, 1, 1],
+              [0, 1, 2, 2],
+              [0, null, null, null],
+              [0, null, null, null],
+            ],
+            highlight: [[3, 2], [3, 3]],
+            note:
+              "dp[3][2]: a[2]='c' vs b[1]='c' — match! dp[3][2] = dp[2][1] + 1 = 1 + 1 = 2. dp[3][3]: " +
+              "a[2]='c' vs b[2]='e' — no match, so dp[3][3] = max(dp[2][3], dp[3][2]) = max(1, 2) = 2. " +
+              "Row 3 = [0,1,2,2].",
+          },
+          {
+            rowLabels: ["i=0 (\"\")", "i=1 (a)", "i=2 (b)", "i=3 (c)", "i=4 (d)", "i=5 (e)"],
+            colLabels: ["j=0 (\"\")", "j=1 (a)", "j=2 (c)", "j=3 (e)"],
+            rows: [
+              [0, 0, 0, 0],
+              [0, 1, 1, 1],
+              [0, 1, 1, 1],
+              [0, 1, 2, 2],
+              [0, 1, 2, 2],
+              [0, null, null, null],
+            ],
+            highlight: [[4, 1], [4, 2], [4, 3]],
+            note: "Row 4 (a[3]='d'): 'd' matches nothing in \"ace\", so the row carries forward unchanged: row 4 = [0,1,2,2].",
+          },
+          {
+            rowLabels: ["i=0 (\"\")", "i=1 (a)", "i=2 (b)", "i=3 (c)", "i=4 (d)", "i=5 (e)"],
+            colLabels: ["j=0 (\"\")", "j=1 (a)", "j=2 (c)", "j=3 (e)"],
+            rows: [
+              [0, 0, 0, 0],
+              [0, 1, 1, 1],
+              [0, 1, 1, 1],
+              [0, 1, 2, 2],
+              [0, 1, 2, 2],
+              [0, 1, 2, 3],
+            ],
+            highlight: [[5, 3]],
+            note:
+              "dp[5][3]: a[4]='e' vs b[2]='e' — match! dp[5][3] = dp[4][2] + 1 = 2 + 1 = 3 — the final " +
+              "answer: the LCS is exactly \"ace\", length 3, built by matching 'a', then 'c', then 'e' in " +
+              "order.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

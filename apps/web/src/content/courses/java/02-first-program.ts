@@ -98,19 +98,32 @@ export const chapterFirstProgram: Chapter = {
         "produced `Name: Aditi` on one line in the trace below, rather than on two.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Reading the four print statements in order",
-      steps: [
-        "`System.out.println(\"Roll number: 21\")` writes the text, then starts a new line. Output so far: " +
-          "`Roll number: 21` followed by a line break.",
-        "`System.out.print(\"Name: \")` writes the text but does *not* start a new line — the cursor stays " +
-          "right after the colon and space.",
-        "`System.out.println(\"Aditi\")` writes `Aditi` right where the cursor was — continuing the same " +
-          "line — and *then* starts a new line. The line now reads `Name: Aditi`.",
-        "`System.out.println(\"Class: XII-B\")` writes the text on its own new line, then starts another.",
-        "Final output is three lines: `Roll number: 21`, `Name: Aditi`, `Class: XII-B` — even though four " +
-          "statements ran.",
-      ],
+      caption: "Each line in the box is a completed output line; a line still being built (no line break yet) shows as the newest, unfinished entry.",
+      viz: {
+        type: "queue",
+        frames: [
+          {
+            items: ["Roll number: 21"],
+            note: "`System.out.println(\"Roll number: 21\")` writes the text, then starts a new line.",
+          },
+          {
+            items: ["Roll number: 21", "Name: "],
+            note: "`System.out.print(\"Name: \")` writes the text but does *not* start a new line — the cursor stays right after the colon and space.",
+          },
+          {
+            items: ["Roll number: 21", "Name: Aditi"],
+            note: "`System.out.println(\"Aditi\")` writes `Aditi` right where the cursor was — continuing the same line — and *then* starts a new line. The line now reads `Name: Aditi`.",
+          },
+          {
+            items: ["Roll number: 21", "Name: Aditi", "Class: XII-B"],
+            note:
+              "`System.out.println(\"Class: XII-B\")` writes the text on its own new line, then starts " +
+              "another. Final output is three lines, even though four statements ran.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

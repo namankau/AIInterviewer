@@ -53,6 +53,25 @@ rather than reinventing it. Tasks `tasks/task-047` through `tasks/task-051`.
 - One optional field at session start: "Where are you in your career?" A stated answer beats
   the derivation; saying nothing runs the pre-051 path unedited.
 
+**Courses — Python alongside Java (task 050, merged `a83c871`)**
+- **All 30 DSA chapters** gain a Python equivalent on every code block. The Java course stays
+  Java — it is a course *about* Java.
+- `code-language-context.tsx` — one page-wide Java/Python choice, backed by
+  `useSyncExternalStore` rather than a Context plus an effect. SSR always renders one
+  language, so there is no hydration mismatch, and `localStorage` is reconciled through the
+  store's snapshot rather than inside an effect's setState.
+- Both languages are highlighted by Shiki at build time.
+- **Every one of the 31 Python snippets was executed locally and its real output pasted** —
+  the same bar `types.ts` already set for Java.
+- Two divergences were kept honest rather than forced to match: `groupAnagrams` prints in a
+  different order because Python dicts preserve insertion order and Java's `HashMap` does
+  not; and the raw-memory-address half of the arrays chapter has no honest Python parallel,
+  because CPython lists hold pointers rather than values.
+- Idiomatic Python throughout — `enumerate`, tuple swap, `deque`, `heapq`, `Counter`,
+  `defaultdict`, comprehensions — and the Java scaffolding Python does not need (manual heap
+  `grow()`, a `swap()` helper, the checked-exception dance) was removed rather than
+  transliterated.
+
 ## Assumptions I made
 - **"Campus fresher" is derived, not declared, by default** — `Level.ENTRY` and under 12
   months of resume experience, or no resume with a title saying fresher/intern/graduate.
@@ -98,15 +117,21 @@ rather than reinventing it. Tasks `tasks/task-047` through `tasks/task-051`.
     locally before `develop` was pushed, so the remote never existed without it.
 
 ## Merge status
-- Merged into `develop`: `1c08197` (047), `fbdd27f` (048), `4893a2c` (049), `2315016` (051).
-- **Task 050 (Python across the DSA course) is still in flight** on `feat/dsa-python`. Its
-  agent was interrupted twice; the run's progress file `runs/2026-09-20-progress.md` has the
-  resume state.
+- **All five workstreams merged into `develop`:** `1c08197` (047), `fbdd27f` (048),
+  `4893a2c` (049), `2315016` (051), `a83c871` (050). Handoff at `07cdac2`.
+- Every merge was gated on a CI run whose `headSha` I checked against the branch head, not
+  merely on the latest green run for the branch.
 - **Process deviation, owned:** the task-051 file was committed straight to `develop`
   (`17ead13`) rather than via a branch. Docs-only and CI went green after, but rule 1 says
   branch-then-merge and I did not.
 - Nothing was pushed to `main`, and no PR was opened — none of this touched auth, payments,
   data deletion or permissions.
+
+## Interruptions during the run
+Three agents were killed mid-task — two by the plan's usage limit, one by a network drop —
+and **none lost work**, because every brief required pushing after each coherent step. Each
+was resumed with `SendMessage` (keeping its context) rather than restarted cold, per
+CLAUDE.md's restart protocol. `runs/2026-09-20-progress.md` carried the state across.
 
 ## New dependency
 - **Shiki (MIT)**, build/server-time only, for static code highlighting. Verified absent from
@@ -115,9 +140,14 @@ rather than reinventing it. Tasks `tasks/task-047` through `tasks/task-051`.
 
 ## Suggested next task
 - Spend a little on one live generation run to check the aptitude questions and the fresher
-  calibration actually land — it is the only remaining way to know.
+  calibration actually land — it is the only remaining way to know. After that, look at the
+  rendered course pages with your own eyes; nothing in this run has been seen.
 
 ## Open questions for you
+- **The DSA course now defaults to the Python tab, not Java.** The reasoning was that the
+  audience is DSA-first students prepping in Python/C++, and that Python is the only
+  language a reader can actually execute in the playground. It is a product call and easy to
+  flip — say so if you disagree.
 - **The Java runner.** Every route costs money or security sign-off: self-hosting Piston
   (MIT) needs a `privileged: true` Docker sidecar; Judge0 is GPLv3 with an unresolved
   API-use question; CheerpJ needs a commercial licence. Piston is the recommendation, but

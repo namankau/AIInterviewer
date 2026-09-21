@@ -172,24 +172,123 @@ export const chapterShortestPaths: Chapter = {
       pythonOutput: "BFS distances from 0: [0, 1, 1, 2, 3]\nDijkstra distances from 0: [0, 3, 1, 4]",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "dijkstra() from vertex 0 — edges 0->1(4), 0->2(1), 2->1(2), 1->3(1), 2->3(5)",
-      steps: [
-        "dist = [0, INF, INF, INF]. pq = [(0, dist 0)].",
-        "Pop (0, 0) — the cheapest known entry. d=0 matches dist[0], not stale. Relax neighbours: " +
-          "0->1 costs 0+4=4 < INF, update dist[1]=4, push (1,4). 0->2 costs 0+1=1 < INF, update dist[2]=1, " +
-          "push (2,1). pq = [(2,1), (1,4)].",
-        "Pop (2, 1) — cheapest remaining. d=1 matches dist[2], not stale. Relax: 2->1 costs 1+2=3 < " +
-          "dist[1]=4, update dist[1]=3, push (1,3). 2->3 costs 1+5=6 < INF, update dist[3]=6, push (3,6). " +
-          "pq = [(1,3), (1,4), (3,6)].",
-        "Pop (1, 3) — cheapest remaining. d=3 matches dist[1]=3, not stale. Relax: 1->3 costs 3+1=4 < " +
-          "dist[3]=6, update dist[3]=4, push (3,4). pq = [(1,4), (3,4), (3,6)].",
-        "Pop (1, 4). But dist[1] is now 3, and d=4 > 3 — this is a stale entry left over from the first " +
-          "relaxation, before the cheaper 0->2->1 route was found. Skip it entirely.",
-        "Pop (3, 4). d=4 matches dist[3]=4, not stale. 3 has no outgoing edges here. pq = [(3,6)].",
-        "Pop (3, 6). d=6 > dist[3]=4 — stale, skip. pq empty, done. Final: dist = [0, 3, 1, 4] — note " +
-          "dist[1]=3 via 0->2->1, cheaper than the direct edge 0->1 costing 4.",
-      ],
+      caption: "Each node's label carries its current best-known distance; an edge lights up the moment it's relaxed, whether or not the relaxation actually improves anything.",
+      viz: {
+        type: "graph",
+        frames: [
+          {
+            nodes: [
+              { id: "0", label: "0 · dist 0", state: "active" },
+              { id: "1", label: "1 · dist ∞" },
+              { id: "2", label: "2 · dist ∞" },
+              { id: "3", label: "3 · dist ∞" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true },
+              { from: "0", to: "2", directed: true },
+              { from: "2", to: "1", directed: true },
+              { from: "1", to: "3", directed: true },
+              { from: "2", to: "3", directed: true },
+            ],
+            note: "dist = [0, INF, INF, INF]. pq = [(0, dist 0)].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0 · dist 0", state: "done" },
+              { id: "1", label: "1 · dist 4" },
+              { id: "2", label: "2 · dist 1" },
+              { id: "3", label: "3 · dist ∞" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true, state: "visiting" },
+              { from: "0", to: "2", directed: true, state: "visiting" },
+              { from: "2", to: "1", directed: true },
+              { from: "1", to: "3", directed: true },
+              { from: "2", to: "3", directed: true },
+            ],
+            note:
+              "Pop (0, 0) — the cheapest known entry. d=0 matches dist[0], not stale. Relax neighbours: " +
+              "0->1 costs 0+4=4 < INF, update dist[1]=4, push (1,4). 0->2 costs 0+1=1 < INF, update " +
+              "dist[2]=1, push (2,1). pq = [(2,1), (1,4)].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0 · dist 0", state: "done" },
+              { id: "1", label: "1 · dist 3" },
+              { id: "2", label: "2 · dist 1", state: "done" },
+              { id: "3", label: "3 · dist 6" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true },
+              { from: "0", to: "2", directed: true },
+              { from: "2", to: "1", directed: true, state: "visiting" },
+              { from: "1", to: "3", directed: true },
+              { from: "2", to: "3", directed: true, state: "visiting" },
+            ],
+            note:
+              "Pop (2, 1) — cheapest remaining. d=1 matches dist[2], not stale. Relax: 2->1 costs 1+2=3 < " +
+              "dist[1]=4, update dist[1]=3, push (1,3). 2->3 costs 1+5=6 < INF, update dist[3]=6, push " +
+              "(3,6). pq = [(1,3), (1,4), (3,6)].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0 · dist 0", state: "done" },
+              { id: "1", label: "1 · dist 3", state: "done" },
+              { id: "2", label: "2 · dist 1", state: "done" },
+              { id: "3", label: "3 · dist 4" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true },
+              { from: "0", to: "2", directed: true },
+              { from: "2", to: "1", directed: true },
+              { from: "1", to: "3", directed: true, state: "visiting" },
+              { from: "2", to: "3", directed: true },
+            ],
+            note:
+              "Pop (1, 3) — cheapest remaining. d=3 matches dist[1]=3, not stale. Relax: 1->3 costs 3+1=4 " +
+              "< dist[3]=6, update dist[3]=4, push (3,4). pq = [(1,4), (3,4), (3,6)].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0 · dist 0", state: "done" },
+              { id: "1", label: "1 · dist 3", state: "compare" },
+              { id: "2", label: "2 · dist 1", state: "done" },
+              { id: "3", label: "3 · dist 4" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true },
+              { from: "0", to: "2", directed: true },
+              { from: "2", to: "1", directed: true },
+              { from: "1", to: "3", directed: true },
+              { from: "2", to: "3", directed: true },
+            ],
+            note:
+              "Pop (1, 4). But dist[1] is now 3, and d=4 > 3 — this is a stale entry left over from the " +
+              "first relaxation, before the cheaper 0->2->1 route was found. Skip it entirely.",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0 · dist 0", state: "done" },
+              { id: "1", label: "1 · dist 3", state: "done" },
+              { id: "2", label: "2 · dist 1", state: "done" },
+              { id: "3", label: "3 · dist 4", state: "done" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true },
+              { from: "0", to: "2", directed: true },
+              { from: "2", to: "1", directed: true },
+              { from: "1", to: "3", directed: true },
+              { from: "2", to: "3", directed: true },
+            ],
+            note:
+              "Pop (3, 4). d=4 matches dist[3]=4, not stale. 3 has no outgoing edges here. pq = [(3,6)]. " +
+              "Pop (3, 6) next: d=6 > dist[3]=4 — stale, skip. pq empty, done. Final: dist = [0, 3, 1, 4] " +
+              "— note dist[1]=3 via 0->2->1, cheaper than the direct edge 0->1 costing 4.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

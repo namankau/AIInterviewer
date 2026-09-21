@@ -145,21 +145,106 @@ export const chapterTopologicalSort: Chapter = {
       pythonOutput: "Topological order: [0, 1, 2, 3, 4]\nCaught: cycle detected, no valid topological order",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "topoSort on 0->1, 0->2, 1->3, 2->3, 3->4",
-      steps: [
-        "Compute in-degrees by counting incoming edges: 0 has 0 (nothing points to it), 1 has 1 (from 0), " +
-          "2 has 1 (from 0), 3 has 2 (from 1 and 2), 4 has 1 (from 3). indegree = [0,1,1,2,1].",
-        "Only vertex 0 has in-degree 0 — enqueue it. queue=[0].",
-        "Poll 0. order=[0]. Decrement in-degree of 0's targets: 1 becomes 0 (enqueue it), 2 becomes 0 " +
-          "(enqueue it). indegree=[0,0,0,2,1]. queue=[1,2].",
-        "Poll 1. order=[0,1]. Decrement target 3: indegree[3] becomes 1 (not 0 yet, don't enqueue). " +
-          "queue=[2].",
-        "Poll 2. order=[0,1,2]. Decrement target 3: indegree[3] becomes 0 — enqueue it. queue=[3].",
-        "Poll 3. order=[0,1,2,3]. Decrement target 4: indegree[4] becomes 0 — enqueue it. queue=[4].",
-        "Poll 4. order=[0,1,2,3,4]. No outgoing edges to process. queue empty. order.size()==5==n, so this " +
-          "is a valid, complete topological order.",
-      ],
+      caption: "A node's label carries its live in-degree; it's only safe to poll once that count reaches 0.",
+      viz: {
+        type: "graph",
+        frames: [
+          {
+            nodes: [
+              { id: "0", label: "0 · in 0" }, { id: "1", label: "1 · in 1" }, { id: "2", label: "2 · in 1" },
+              { id: "3", label: "3 · in 2" }, { id: "4", label: "4 · in 1" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true }, { from: "0", to: "2", directed: true },
+              { from: "1", to: "3", directed: true }, { from: "2", to: "3", directed: true },
+              { from: "3", to: "4", directed: true },
+            ],
+            note:
+              "Compute in-degrees by counting incoming edges: 0 has 0 (nothing points to it), 1 has 1 " +
+              "(from 0), 2 has 1 (from 0), 3 has 2 (from 1 and 2), 4 has 1 (from 3). indegree = [0,1,1,2,1].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0 · in 0", state: "active" }, { id: "1", label: "1 · in 1" }, { id: "2", label: "2 · in 1" },
+              { id: "3", label: "3 · in 2" }, { id: "4", label: "4 · in 1" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true }, { from: "0", to: "2", directed: true },
+              { from: "1", to: "3", directed: true }, { from: "2", to: "3", directed: true },
+              { from: "3", to: "4", directed: true },
+            ],
+            note: "Only vertex 0 has in-degree 0 — enqueue it. queue=[0].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0 · in 0", state: "done" }, { id: "1", label: "1 · in 0", state: "active" },
+              { id: "2", label: "2 · in 0", state: "active" }, { id: "3", label: "3 · in 2" }, { id: "4", label: "4 · in 1" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true, state: "visiting" }, { from: "0", to: "2", directed: true, state: "visiting" },
+              { from: "1", to: "3", directed: true }, { from: "2", to: "3", directed: true },
+              { from: "3", to: "4", directed: true },
+            ],
+            note:
+              "Poll 0. order=[0]. Decrement in-degree of 0's targets: 1 becomes 0 (enqueue it), 2 becomes " +
+              "0 (enqueue it). indegree=[0,0,0,2,1]. queue=[1,2].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0 · in 0", state: "done" }, { id: "1", label: "1 · in 0", state: "done" },
+              { id: "2", label: "2 · in 0", state: "active" }, { id: "3", label: "3 · in 1" }, { id: "4", label: "4 · in 1" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true }, { from: "0", to: "2", directed: true },
+              { from: "1", to: "3", directed: true, state: "visiting" }, { from: "2", to: "3", directed: true },
+              { from: "3", to: "4", directed: true },
+            ],
+            note: "Poll 1. order=[0,1]. Decrement target 3: indegree[3] becomes 1 (not 0 yet, don't enqueue). queue=[2].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0 · in 0", state: "done" }, { id: "1", label: "1 · in 0", state: "done" },
+              { id: "2", label: "2 · in 0", state: "done" }, { id: "3", label: "3 · in 0", state: "active" }, { id: "4", label: "4 · in 1" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true }, { from: "0", to: "2", directed: true },
+              { from: "1", to: "3", directed: true }, { from: "2", to: "3", directed: true, state: "visiting" },
+              { from: "3", to: "4", directed: true },
+            ],
+            note: "Poll 2. order=[0,1,2]. Decrement target 3: indegree[3] becomes 0 — enqueue it. queue=[3].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0 · in 0", state: "done" }, { id: "1", label: "1 · in 0", state: "done" },
+              { id: "2", label: "2 · in 0", state: "done" }, { id: "3", label: "3 · in 0", state: "done" },
+              { id: "4", label: "4 · in 0", state: "active" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true }, { from: "0", to: "2", directed: true },
+              { from: "1", to: "3", directed: true }, { from: "2", to: "3", directed: true },
+              { from: "3", to: "4", directed: true, state: "visiting" },
+            ],
+            note: "Poll 3. order=[0,1,2,3]. Decrement target 4: indegree[4] becomes 0 — enqueue it. queue=[4].",
+          },
+          {
+            nodes: [
+              { id: "0", label: "0 · in 0", state: "done" }, { id: "1", label: "1 · in 0", state: "done" },
+              { id: "2", label: "2 · in 0", state: "done" }, { id: "3", label: "3 · in 0", state: "done" },
+              { id: "4", label: "4 · in 0", state: "done" },
+            ],
+            edges: [
+              { from: "0", to: "1", directed: true }, { from: "0", to: "2", directed: true },
+              { from: "1", to: "3", directed: true }, { from: "2", to: "3", directed: true },
+              { from: "3", to: "4", directed: true },
+            ],
+            note:
+              "Poll 4. order=[0,1,2,3,4]. No outgoing edges to process. queue empty. order.size()==5==n, " +
+              "so this is a valid, complete topological order.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

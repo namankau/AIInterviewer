@@ -1,7 +1,15 @@
 /**
- * `` `code` ``, `**bold**` and `*italic*` inside course text and titles. Deliberately not a
- * markdown parser — three patterns, split by hand. An italic needs a non-space character
- * just inside each asterisk, so arithmetic like `2 * 3 * 4` in prose is left alone.
+ * `` `code` ``, `**bold**`, `*italic*`, `{{O(n)}}` and `~~term~~` inside course text and
+ * titles. Deliberately not a markdown parser — five patterns, split by hand. An italic
+ * needs a non-space character just inside each asterisk, so arithmetic like `2 * 3 * 4`
+ * in prose is left alone.
+ *
+ * `{{...}}` and `~~...~~` are the two small inline "coloured boxes" the owner asked for
+ * (task 052): a complexity pill for the `O(n)`/`O(log n)` terms that recur constantly and
+ * were previously buried in prose, and a key-term chip for the word being defined. Both
+ * pair colour with the label itself (the term/complexity text is always shown), never
+ * colour alone. Content already wraps real code (including literal `{{...}}` array
+ * literals) in backticks, so the code pattern always wins at that position first.
  */
 export function InlineText({ text }: { text: string }) {
   const tokens = tokenize(text);
@@ -18,6 +26,18 @@ export function InlineText({ text }: { text: string }) {
           </strong>
         ) : token.kind === "italic" ? (
           <em key={i}>{token.text}</em>
+        ) : token.kind === "complexity" ? (
+          <span key={i} className="pill pill-accent font-mono normal-case">
+            {token.text}
+          </span>
+        ) : token.kind === "chip" ? (
+          <span
+            key={i}
+            className="rounded px-1 py-0.5 font-medium text-ink"
+            style={{ backgroundColor: "color-mix(in srgb, var(--highlight) 22%, transparent)" }}
+          >
+            {token.text}
+          </span>
         ) : (
           <span key={i}>{token.text}</span>
         ),
@@ -26,11 +46,11 @@ export function InlineText({ text }: { text: string }) {
   );
 }
 
-type Token = { kind: "text" | "code" | "bold" | "italic"; text: string };
+type Token = { kind: "text" | "code" | "bold" | "italic" | "complexity" | "chip"; text: string };
 
 function tokenize(text: string): Token[] {
   const tokens: Token[] = [];
-  const pattern = /`([^`]+)`|\*\*([^*]+)\*\*|\*(?=\S)([^*]*?\S)\*/g;
+  const pattern = /`([^`]+)`|\*\*([^*]+)\*\*|\*(?=\S)([^*]*?\S)\*|\{\{([^}]+)\}\}|~~([^~]+)~~/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -44,6 +64,10 @@ function tokenize(text: string): Token[] {
       tokens.push({ kind: "bold", text: match[2] });
     } else if (match[3] !== undefined) {
       tokens.push({ kind: "italic", text: match[3] });
+    } else if (match[4] !== undefined) {
+      tokens.push({ kind: "complexity", text: match[4] });
+    } else if (match[5] !== undefined) {
+      tokens.push({ kind: "chip", text: match[5] });
     }
     lastIndex = pattern.lastIndex;
   }

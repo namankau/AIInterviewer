@@ -7,6 +7,24 @@ import { PlaygroundLazy } from "@/components/courses/playground-lazy";
 import { CodeBlock } from "@/components/courses/code-block";
 import { CopyCodeButton } from "@/components/courses/copy-code-button";
 import { InlineText } from "@/components/courses/inline-text";
+import { ConceptCard } from "@/components/courses/concept-card";
+import { CompareBlock } from "@/components/courses/compare-block";
+import { StepsBlock } from "@/components/courses/steps-block";
+
+/**
+ * Block kinds allowed to break out of the ~70ch prose column (task 052) — the diagrams,
+ * code, tables and comparisons that want the reclaimed screen width. Everything else
+ * (paragraphs, asides, lists) stays capped at prose width: a wide paragraph is genuinely
+ * harder to read, so widening the page should not widen the sentence.
+ */
+const FULL_BLEED_KINDS: ReadonlySet<Block["kind"]> = new Set([
+  "viz",
+  "code",
+  "playground",
+  "table",
+  "compare",
+  "steps",
+]);
 
 /**
  * Renders one chapter's blocks in order, each block kind styled deliberately (task 045).
@@ -34,7 +52,9 @@ export function BlockRenderer({
   return (
     <div className="flex flex-col gap-8">
       {blocks.map((block, index) => (
-        <BlockView key={index} block={block} highlighted={highlightedCode?.[index] ?? null} />
+        <div key={index} className={FULL_BLEED_KINDS.has(block.kind) ? "w-full max-w-full" : "max-w-[70ch]"}>
+          <BlockView block={block} highlighted={highlightedCode?.[index] ?? null} />
+        </div>
       ))}
     </div>
   );
@@ -210,6 +230,15 @@ function BlockView({
 
     case "viz":
       return <VizBlock block={block} />;
+
+    case "concept":
+      return <ConceptCard block={block} />;
+
+    case "compare":
+      return <CompareBlock block={block} />;
+
+    case "steps":
+      return <StepsBlock block={block} />;
 
     case "playground":
       return (

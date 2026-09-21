@@ -116,6 +116,60 @@ export const chapterShortestPaths: Chapter = {
         "    }\n" +
         "}\n",
       output: "BFS distances from 0: [0, 1, 1, 2, 3]\nDijkstra distances from 0: [0, 3, 1, 4]",
+      python:
+        "import heapq\n" +
+        "from collections import deque\n" +
+        "\n" +
+        "\n" +
+        "def bfs_shortest(adj, start):\n" +
+        "    n = len(adj)\n" +
+        "    dist = [-1] * n\n" +
+        "    dist[start] = 0\n" +
+        "    queue = deque([start])\n" +
+        "    while queue:\n" +
+        "        curr = queue.popleft()\n" +
+        "        for next_v in adj[curr]:\n" +
+        "            if dist[next_v] == -1:\n" +
+        "                dist[next_v] = dist[curr] + 1\n" +
+        "                queue.append(next_v)\n" +
+        "    return dist\n" +
+        "\n" +
+        "\n" +
+        "def dijkstra(adj, start):\n" +
+        "    n = len(adj)\n" +
+        '    dist = [float("inf")] * n\n' +
+        "    dist[start] = 0\n" +
+        "    pq = [(0, start)]  # (distSoFar, vertex) -- tuples compare by distance first, no\n" +
+        "    # comparator needed the way Java's PriorityQueue does\n" +
+        "    while pq:\n" +
+        "        d, curr = heapq.heappop(pq)\n" +
+        "        if d > dist[curr]:\n" +
+        "            continue  # stale entry, already beaten\n" +
+        "        for next_v, weight in adj[curr]:\n" +
+        "            new_dist = d + weight\n" +
+        "            if new_dist < dist[next_v]:\n" +
+        "                dist[next_v] = new_dist\n" +
+        "                heapq.heappush(pq, (new_dist, next_v))\n" +
+        "    return dist\n" +
+        "\n" +
+        "\n" +
+        "# Unweighted: 0-1, 0-2, 1-3, 2-3, 3-4\n" +
+        "adj = [[] for _ in range(5)]\n" +
+        "edges = [(0, 1), (0, 2), (1, 3), (2, 3), (3, 4)]\n" +
+        "for a, b in edges:\n" +
+        "    adj[a].append(b)\n" +
+        "    adj[b].append(a)\n" +
+        'print("BFS distances from 0:", bfs_shortest(adj, 0))\n' +
+        "\n" +
+        "# Weighted: 0->1 (4), 0->2 (1), 2->1 (2), 1->3 (1), 2->3 (5)\n" +
+        "wadj = [[] for _ in range(4)]\n" +
+        "wadj[0].append((1, 4))\n" +
+        "wadj[0].append((2, 1))\n" +
+        "wadj[2].append((1, 2))\n" +
+        "wadj[1].append((3, 1))\n" +
+        "wadj[2].append((3, 5))\n" +
+        'print("Dijkstra distances from 0:", dijkstra(wadj, 0))\n',
+      pythonOutput: "BFS distances from 0: [0, 1, 1, 2, 3]\nDijkstra distances from 0: [0, 3, 1, 4]",
     },
     {
       kind: "trace",

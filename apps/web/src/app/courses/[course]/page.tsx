@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ChapterDoneMark, CourseHeroProgress, ModuleProgress } from "@/components/courses/course-progress";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { courses, getCourse, totalChapters, totalMinutes } from "@/content/courses";
@@ -31,8 +32,6 @@ export default async function CoursePage({ params }: { params: Promise<{ course:
   const course = getCourse(slug);
   if (!course) notFound();
 
-  const firstChapter = course.modules[0]?.chapters[0];
-
   return (
     <div className="min-h-dvh">
       <CourseSiteHeader />
@@ -53,14 +52,10 @@ export default async function CoursePage({ params }: { params: Promise<{ course:
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
             {course.level} · {totalChapters(course)} chapters · {totalMinutes(course)} min
           </p>
-          {firstChapter ? (
-            <Link
-              href={`/courses/${course.slug}/${firstChapter.slug}`}
-              className="w-fit rounded-md bg-accent px-5 py-2.5 text-caption font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
-            >
-              Start course
-            </Link>
-          ) : null}
+          <CourseHeroProgress
+            courseSlug={course.slug}
+            chapters={course.modules.flatMap((m) => m.chapters.map((c) => ({ slug: c.slug, title: c.title })))}
+          />
         </div>
       </section>
 
@@ -68,9 +63,12 @@ export default async function CoursePage({ params }: { params: Promise<{ course:
         <ol className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           {course.modules.map((module, mi) => (
             <li key={module.title} className="rounded-md border border-line bg-surface-raised p-6 shadow-sm">
-              <h2 className="text-heading text-ink">
-                Module {mi + 1} — {module.title}
-              </h2>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h2 className="text-heading text-ink">
+                  Module {mi + 1} — {module.title}
+                </h2>
+                <ModuleProgress courseSlug={course.slug} chapterSlugs={module.chapters.map((c) => c.slug)} />
+              </div>
               <ol className="mt-4 flex flex-col divide-y divide-line border-y border-line">
                 {module.chapters.map((chapter, ci) => (
                   <li key={chapter.slug}>
@@ -78,7 +76,8 @@ export default async function CoursePage({ params }: { params: Promise<{ course:
                       href={`/courses/${course.slug}/${chapter.slug}`}
                       className="flex items-center justify-between gap-4 py-3.5 transition-colors hover:bg-surface-sunken"
                     >
-                      <span className="flex items-baseline gap-3">
+                      <span className="flex items-center gap-3">
+                        <ChapterDoneMark courseSlug={course.slug} chapterSlug={chapter.slug} />
                         <span className="font-mono text-micro text-ink-subtle">
                           {String(mi + 1)}.{String(ci + 1)}
                         </span>

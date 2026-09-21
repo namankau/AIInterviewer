@@ -34,6 +34,18 @@ describe("course registry", () => {
     const slugs = courses.map((c) => c.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
   });
+
+  // Task 054: nearly every `trace` block became a `viz` across dsa/ and java/. One survivor
+  // remains (dsa/binary-search's "search on the answer", a conceptual integer range with no
+  // concrete elements to draw) — this guards against the count silently creeping back up as
+  // new chapters are added or edited.
+  it("keeps trace blocks rare — almost every dry run is a viz, not a sentence list", () => {
+    const traceCount = courses
+      .flatMap((course) => flattenChapters(course))
+      .flatMap((chapter) => chapter.blocks)
+      .filter((b) => b.kind === "trace").length;
+    expect(traceCount).toBeLessThanOrEqual(1);
+  });
 });
 
 describe.each(courses)("course: $slug", (course: Course) => {

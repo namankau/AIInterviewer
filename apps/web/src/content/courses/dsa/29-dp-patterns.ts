@@ -121,6 +121,66 @@ export const chapterDpPatterns: Chapter = {
         "}\n",
       output:
         'knapsack capacity=5: 7\nlcs("abcde", "ace"): 3\nlis: 4\nuniquePaths(3, 7): 28',
+      python:
+        "def knapsack(weights, values, capacity):\n" +
+        "    n = len(weights)\n" +
+        "    dp = [[0] * (capacity + 1) for _ in range(n + 1)]\n" +
+        "    for i in range(1, n + 1):\n" +
+        "        for w in range(capacity + 1):\n" +
+        "            dp[i][w] = dp[i - 1][w]  # don't take item i-1\n" +
+        "            if weights[i - 1] <= w:\n" +
+        "                dp[i][w] = max(dp[i][w], dp[i - 1][w - weights[i - 1]] + values[i - 1])\n" +
+        "    return dp[n][capacity]\n" +
+        "\n" +
+        "\n" +
+        "def lcs(a, b):\n" +
+        "    n, m = len(a), len(b)\n" +
+        "    dp = [[0] * (m + 1) for _ in range(n + 1)]\n" +
+        "    for i in range(1, n + 1):\n" +
+        "        for j in range(1, m + 1):\n" +
+        "            if a[i - 1] == b[j - 1]:\n" +
+        "                dp[i][j] = dp[i - 1][j - 1] + 1\n" +
+        "            else:\n" +
+        "                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])\n" +
+        "    return dp[n][m]\n" +
+        "\n" +
+        "\n" +
+        "def lis(nums):\n" +
+        "    n = len(nums)\n" +
+        "    dp = [1] * n\n" +
+        "    best = 1\n" +
+        "    for i in range(1, n):\n" +
+        "        for j in range(i):\n" +
+        "            if nums[j] < nums[i]:\n" +
+        "                dp[i] = max(dp[i], dp[j] + 1)\n" +
+        "        best = max(best, dp[i])\n" +
+        "    return best\n" +
+        "\n" +
+        "\n" +
+        "def unique_paths(rows, cols):\n" +
+        "    dp = [[0] * cols for _ in range(rows)]\n" +
+        "    for i in range(rows):\n" +
+        "        dp[i][0] = 1\n" +
+        "    for j in range(cols):\n" +
+        "        dp[0][j] = 1\n" +
+        "    for i in range(1, rows):\n" +
+        "        for j in range(1, cols):\n" +
+        "            dp[i][j] = dp[i - 1][j] + dp[i][j - 1]\n" +
+        "    return dp[rows - 1][cols - 1]\n" +
+        "\n" +
+        "\n" +
+        "weights = [2, 3, 4, 5]\n" +
+        "values = [3, 4, 5, 6]\n" +
+        'print("knapsack capacity=5:", knapsack(weights, values, 5))\n' +
+        "\n" +
+        "print('lcs(\"abcde\", \"ace\"):', lcs(\"abcde\", \"ace\"))\n" +
+        "\n" +
+        "nums = [10, 9, 2, 5, 3, 7, 101, 18]\n" +
+        'print("lis:", lis(nums))\n' +
+        "\n" +
+        'print("uniquePaths(3, 7):", unique_paths(3, 7))\n',
+      pythonOutput:
+        'knapsack capacity=5: 7\nlcs("abcde", "ace"): 3\nlis: 4\nuniquePaths(3, 7): 28',
     },
     {
       kind: "trace",

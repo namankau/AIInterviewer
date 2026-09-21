@@ -36,8 +36,22 @@ describe("highlightChapterBlocks", () => {
 
     expect(result).toHaveLength(4);
     expect(result[0]).toBeNull();
-    expect(result[1]).toContain("shiki");
+    // A `code` block yields a { java, python } pair (task 050) -- java only here, since
+    // this block carries no python field.
+    expect(result[1]).toEqual({ java: expect.stringContaining("shiki"), python: null });
+    // A `playground` block still yields a single highlighted string -- it has exactly one
+    // language, unlike a switchable `code` block.
     expect(result[2]).toContain("shiki");
     expect(result[3]).toBeNull();
+  });
+
+  it("also highlights a code block's python field when present", async () => {
+    const blocks: Block[] = [{ kind: "code", code: "int x = 1;", python: "x = 1" }];
+
+    const result = await highlightChapterBlocks(blocks);
+
+    const highlight = result[0] as { java: string | null; python: string | null };
+    expect(highlight.java).toContain("shiki");
+    expect(highlight.python).toContain("shiki");
   });
 });

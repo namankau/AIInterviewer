@@ -3,13 +3,14 @@
 import type {
   ReportAssessedArea,
   ReportAssistance,
+  ReportPracticeItem,
   ReportQuestionSources,
   SessionReport,
 } from "@acemyinterview/shared";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { CompetencyBars, OverallScore } from "@/components/report-charts";
+import { CompetencyBars, CompetencyHighlights, OverallScore, bandFor } from "@/components/report-charts";
 import { ApiRequestError, fetchReport } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useAccessToken } from "@/lib/use-access-token";
@@ -135,13 +136,20 @@ export function ReportDocument({ report }: { report: SessionReport }) {
       </header>
 
       {/*
-        * The anchor, and the first thing under the headline. It is deliberately not in a
-        * panel: the three bordered blocks further down are asides, and this is the page's
-        * own voice, so it sits on the sheet at the size the number deserves.
+        * Task 053 — the five-second read. The owner's own words after seeing a live report:
+        * "it also seems a lot of theory that the candidate has to read." Everything above
+        * this line was already true and specific; the change is putting the overall result
+        * and where it came from side by side, wide, before any prose at all. At `lg` and up
+        * there is room for both; below it they stack in the order that matters more first.
         */}
-      <OverallScore competencies={competencies} />
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-14">
+        <OverallScore competencies={competencies} />
+        <CompetencyHighlights competencies={competencies} />
+      </div>
 
       {report.assistance ? <AssistancePanel assistance={report.assistance} /> : null}
+
+      {practicePlan.length > 0 ? <PracticePlanPanel items={practicePlan} /> : null}
 
       <Section title="Competencies" lead="Each score is anchored to something you actually said.">
         {competencies.length === 0 ? (
@@ -154,25 +162,56 @@ export function ReportDocument({ report }: { report: SessionReport }) {
             <CompetencyBars competencies={competencies} />
 
             <ul className="flex flex-col gap-8 border-t border-line pt-8">
-              {competencies.map((item) => (
-                <li key={item.competency} className="flex flex-col gap-3">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <h3 className="text-heading text-ink">{item.competency}</h3>
-                    <span className="shrink-0 font-mono text-caption tabular-nums text-ink-muted">
-                      {item.score}/{item.maxScore}
-                    </span>
-                  </div>
-                  {/*
-                    * No bar here. The chart above compares all of them against the same
-                    * datum, which is the only way the comparison is worth anything; a
-                    * second copy of one bar in isolation would say less and claim more.
-                    */}
-                  <p className="max-w-prose text-body text-ink-muted">{item.rationale}</p>
-                  <blockquote className="border-l-2 border-accent pl-4 text-body text-ink italic">
-                    &ldquo;{item.evidenceQuote}&rdquo;
-                  </blockquote>
-                </li>
-              ))}
+              {competencies.map((item) => {
+                const percent = item.maxScore > 0 ? (item.score / item.maxScore) * 100 : 0;
+                const band = bandFor(percent);
+                return (
+                  <li key={item.competency} className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <h3 className="text-heading text-ink">{item.competency}</h3>
+                        {/*
+                          * The band name, not a colour, carries the one-line verdict here —
+                          * the bars above already carry the comparison, this is the word for
+                          * where it landed. Neutral styling on purpose: this list holds
+                          * "Under par" and "Exceptional" side by side, and colouring one red
+                          * and the other green would be a second, louder verdict than the
+                          * text already gives (CLAUDE.md: never colour-code meaning alone).
+                          */}
+                        <span className="rounded-full border border-line-strong px-2.5 py-0.5 font-mono text-micro tracking-widest text-ink-subtle uppercase">
+                          {band.name}
+                        </span>
+                      </div>
+                      <span className="shrink-0 font-mono text-caption tabular-nums text-ink-muted">
+                        {item.score}/{item.maxScore}
+                      </span>
+                    </div>
+
+                    {/*
+                      * The quote first and large — task 053 calls it "the most valuable
+                      * thing on the page" — and never behind the disclosure below. A test
+                      * pins that down: `evidenceQuote` must render outside any `<details>`.
+                      */}
+                    <blockquote className="rounded-r-lg border-l-4 border-accent bg-accent-wash py-3 pl-5 text-body text-ink italic">
+                      &ldquo;{item.evidenceQuote}&rdquo;
+                    </blockquote>
+
+                    <details className="group">
+                      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-caption font-medium text-ink-subtle marker:content-none hover:text-ink [&::-webkit-details-marker]:hidden">
+                        <svg
+                          aria-hidden="true"
+                          viewBox="0 0 8 8"
+                          className="h-2 w-2 shrink-0 fill-current transition-transform group-open:rotate-90"
+                        >
+                          <polygon points="0,0 8,4 0,8" />
+                        </svg>
+                        Why this score
+                      </summary>
+                      <p className="max-w-prose pt-2 text-body text-ink-muted">{item.rationale}</p>
+                    </details>
+                  </li>
+                );
+              })}
             </ul>
           </>
         )}
@@ -238,25 +277,6 @@ export function ReportDocument({ report }: { report: SessionReport }) {
       <AssessedAreas strengths={strengths} developmentAreas={developmentAreas} />
 
       <QuestionSources sources={report.questionSources} />
-
-      {practicePlan.length > 0 ? (
-        <Section title="What to work on" lead="Before the next attempt, in this order.">
-          <ol className="flex flex-col gap-6">
-            {practicePlan.map((item, index) => (
-              <li key={item.focus} className="flex gap-4">
-                <span className="pt-0.5 font-mono text-caption text-ink-subtle">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-body font-medium text-ink">{item.focus}</h3>
-                  <p className="max-w-prose text-body text-ink-muted">{item.why}</p>
-                  <p className="max-w-prose text-caption text-ink-subtle">{item.drill}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </Section>
-      ) : null}
 
       <Section title="If this had been the real thing" lead="A simulation, not a verdict.">
         <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] p-6">
@@ -335,6 +355,46 @@ function AssistancePanel({ assistance }: { assistance: ReportAssistance }) {
           ))}
         </ul>
       ) : null}
+    </section>
+  );
+}
+
+/**
+ * What to do next, given the same visual weight as the score.
+ *
+ * Task 053: "what to do next" was a numbered list near the bottom of a long page, after
+ * everything else had already asked for the candidate's attention — the opposite of what
+ * task 048 built it for. It moves up beside the score and the assistance panel, in the
+ * same bordered-card language, on the theory that a candidate who reads nothing else on
+ * this page should still leave with a drill in hand.
+ */
+function PracticePlanPanel({ items }: { items: ReportPracticeItem[] }) {
+  return (
+    <section
+      aria-labelledby="practice-plan"
+      className="flex flex-col gap-5 rounded-xl border border-accent/30 bg-surface-raised p-6 shadow-[var(--shadow-sm)]"
+    >
+      <div className="flex flex-col gap-1">
+        <h2 id="practice-plan" className="text-heading text-ink">
+          Do this before your next attempt
+        </h2>
+        <p className="text-caption text-ink-subtle">In this order — each one earns the next.</p>
+      </div>
+
+      <ol className="flex flex-col gap-5">
+        {items.map((item, index) => (
+          <li key={item.focus} className="flex gap-4">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-wash font-mono text-caption font-medium text-accent-strong">
+              {index + 1}
+            </span>
+            <div className="flex flex-col gap-1 pt-0.5">
+              <h3 className="text-body font-medium text-ink">{item.focus}</h3>
+              <p className="max-w-prose text-body text-ink-muted">{item.why}</p>
+              <p className="max-w-prose text-caption text-ink-subtle">{item.drill}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

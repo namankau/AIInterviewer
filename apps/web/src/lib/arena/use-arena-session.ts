@@ -2,21 +2,25 @@
 
 import { useCallback, useId, useState } from "react";
 
-import { checkNewBadges, recordActivity, XP_PER_CORRECT, type BadgeDefinition } from "@/lib/arena/progression";
+import { checkNewBadges, XP_PER_CORRECT, type BadgeDefinition } from "@/lib/arena/progression";
+import { useArenaProgress } from "@/lib/arena/progress-store";
 import { scheduleNext } from "@/lib/arena/scheduler";
 import { pickSessionChallenges, SESSION_SIZE } from "@/lib/arena/session";
-import { loadProgress, saveProgress, type ArenaProgress } from "@/lib/arena/storage";
+import type { ArenaProgress } from "@/lib/arena/storage";
 import type { Challenge } from "@/lib/arena/types";
 
 /**
  * All the state one Arena run needs (task 055, §1-3): which challenges make up this run,
- * where the learner is in it, and — on every submitted answer — updating the FSRS card,
- * XP, mastery and streak in `localStorage`.
+ * where the learner is in it, and — on every submitted answer — the new FSRS card and
+ * mastery, saved to the account.
+ *
+ * XP and the streak are no longer computed here. The server decides both and returns them,
+ * so a client cannot post itself a level; `XP_PER_CORRECT` survives only to label the
+ * "+XP" shown during a run.
  *
  * Persistence happens directly inside the `submit`/`next` event handlers rather than in a
- * `useEffect` reacting to state changes: an effect here would run a render late for no
- * benefit, since nothing external is being subscribed to — the handler already knows
- * exactly what just happened and why.
+ * `useEffect` reacting to state changes: an effect there would run a render late for no
+ * benefit, since the handler already knows exactly what just happened and why.
  */
 
 export interface AnswerRecord {
@@ -40,6 +44,8 @@ export interface UseArenaSessionResult {
   answers: AnswerRecord[];
   progress: ArenaProgress;
   newBadges: BadgeDefinition[];
+  /** True once an answer has failed to save, so the run can say so rather than pretend. */
+  saveFailed: boolean;
   select: (index: number) => void;
   submit: () => void;
   next: () => void;
@@ -47,25 +53,16 @@ export interface UseArenaSessionResult {
 
 export function useArenaSession(allChallenges: Challenge[], courseSlug?: string): UseArenaSessionResult {
   const seed = useId();
+  const { progress, recordAnswer, awardBadges } = useArenaProgress();
 
-  // Computed once, at mount: which progress this run starts from, and which challenges
-  // it's made of. A lazy `useState` initialiser (never a ref written during render) is
-  // the React-sanctioned place for this kind of one-time setup.
-  const [initial] = useState(() => {
-    const initialProgress = loadProgress();
-    const challenges = pickSessionChallenges(
-      allChallenges,
-      initialProgress.cards,
-      new Date(),
-      `session-${seed}`,
-      SESSION_SIZE,
-      courseSlug,
-    );
-    return { progress: initialProgress, challenges };
-  });
-
-  const [progress, setProgress] = useState<ArenaProgress>(initial.progress);
-  const [challenges] = useState<Challenge[]>(initial.challenges);
+  // Which challenges the run is made of, computed once at mount from the schedule as it
+  // stood then. A lazy `useState` initialiser (never a ref written during render) is the
+  // React-sanctioned place for this kind of one-time setup. The caller does not mount this
+  // until progress has loaded, so the due cards are real rather than an empty guess.
+  const [challenges] = useState<Challenge[]>(() =>
+    pickSessionChallenges(allChallenges, progress.cards, new Date(), `session-${seed}`, SESSION_SIZE, courseSlug),
+  );
+  const [saveFailed, setSaveFailed] = useState(false);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -90,20 +87,12 @@ export function useArenaSession(allChallenges: Challenge[], courseSlug?: string)
 
     setSubmitted(true);
     setAnswers((prev) => [...prev, { challengeId: challenge.id, correct }]);
-    setProgress((prev) => {
-      const nextCard = scheduleNext(prev.cards[challenge.id], correct, now);
-      const cards = { ...prev.cards, [challenge.id]: nextCard };
-      const xp = prev.xp + (correct ? XP_PER_CORRECT : 0);
-      const masteredChallengeIds =
-        correct && !prev.masteredChallengeIds.includes(challenge.id)
-          ? [...prev.masteredChallengeIds, challenge.id]
-          : prev.masteredChallengeIds;
-      const streak = recordActivity(prev.streak, now);
-      const updated: ArenaProgress = { ...prev, xp, cards, masteredChallengeIds, streak };
-      saveProgress(updated);
-      return updated;
+
+    const nextCard = scheduleNext(progress.cards[challenge.id], correct, now);
+    void recordAnswer(challenge.id, correct, nextCard, now).then((ok) => {
+      if (!ok) setSaveFailed(true);
     });
-  }, [submitted, selected, challenge]);
+  }, [submitted, selected, challenge, progress.cards, recordAnswer]);
 
   const next = useCallback(() => {
     if (!submitted) return;
@@ -116,18 +105,14 @@ export function useArenaSession(allChallenges: Challenge[], courseSlug?: string)
     }
 
     setFinished(true);
-    setProgress((prev) => {
-      const earned = checkNewBadges(
-        { streak: prev.streak, masteredChallengeIds: prev.masteredChallengeIds, allChallenges },
-        prev.badges,
-      );
-      if (earned.length === 0) return prev;
-      setNewBadges(earned);
-      const updated: ArenaProgress = { ...prev, badges: [...prev.badges, ...earned.map((b) => b.id)] };
-      saveProgress(updated);
-      return updated;
-    });
-  }, [submitted, index, challenges.length, allChallenges]);
+    const earned = checkNewBadges(
+      { streak: progress.streak, masteredChallengeIds: progress.masteredChallengeIds, allChallenges },
+      progress.badges,
+    );
+    if (earned.length === 0) return;
+    setNewBadges(earned);
+    void awardBadges(earned.map((b) => b.id));
+  }, [submitted, index, challenges.length, allChallenges, progress, awardBadges]);
 
   const correctCount = answers.filter((a) => a.correct).length;
 
@@ -144,6 +129,7 @@ export function useArenaSession(allChallenges: Challenge[], courseSlug?: string)
     answers,
     progress,
     newBadges,
+    saveFailed,
     select,
     submit,
     next,

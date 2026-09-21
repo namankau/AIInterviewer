@@ -60,6 +60,7 @@ export function ArenaSession({
         streakDays={session.progress.streak.current}
         newBadges={session.newBadges}
         answers={session.answers}
+        saveFailed={session.saveFailed}
         onPlayAgain={onPlayAgain}
       />
     );
@@ -113,6 +114,7 @@ function ResultScreen({
   totalXp,
   streakDays,
   newBadges,
+  saveFailed,
   answers,
   onPlayAgain,
 }: {
@@ -124,6 +126,7 @@ function ResultScreen({
   totalXp: number;
   streakDays: number;
   newBadges: { id: string; title: string; description: string }[];
+  saveFailed: boolean;
   answers: AnswerRecord[];
   onPlayAgain?: () => void;
 }) {
@@ -148,6 +151,12 @@ function ResultScreen({
         </p>
       </div>
 
+      {saveFailed ? (
+        <p role="alert" className="text-caption text-danger">
+          Some of this run could not be saved to your account. Your XP and streak may be behind until you
+          play again with a working connection.
+        </p>
+      ) : null}
       {newBadges.length > 0 ? (
         <div className="flex flex-col gap-2 rounded-md border border-highlight/40 bg-highlight/10 px-5 py-4">
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">

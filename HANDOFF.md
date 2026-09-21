@@ -1,143 +1,136 @@
-# Handoff — 2026-09-21
+# Handoff — 2026-09-21 (second run of the day)
 
 ## Task
-Make the courses stop being pure theory (visuals + somewhere to try things out), and make
-mock interviews much better for freshers facing campus placements — reusing open source
-rather than reinventing it. Then a second pass after you looked at the live pages and said
-the reader was still congested and theoretical and the report was a wall of text.
-Tasks `tasks/task-047` through `tasks/task-054`.
+Add a gamified, interactive learning section "like scalequest.io", leveraging open source
+rather than reinventing it. `tasks/task-055-arena-gamified-practice.md`.
 
 ---
 
-## Round 2 — what you asked for after seeing it running
+## The research changed the design — read this first
 
-**The navigation bug was real.** Both landing-page course cards had `href="/courses"`, so
-clicking either one landed on the same catalogue. The comment above them said "links out
-even if the route isn't live yet" — true when written, quietly false once the courses
-shipped. Fixed, and the cards now read their titles and taglines from the course content, so
-the landing page cannot drift out of step again. (`de2656c`)
+I had a researcher look at scalequest.io rather than assume what it was. **It is not a quiz
+bank with XP bolted on**, which is the obvious thing to build and the wrong thing:
 
-**The reader now uses the screen** (`9ea8d5a`, task 052). Container 1152px → 1600px, and the
-middle grid track is fluid instead of capped at 70ch. The mechanism that matters: each block
-declares its own width in `block-renderer.tsx` — prose stays at 70ch, while `viz`, `code`,
-playgrounds, tables, `compare` and `steps` go full width. Done per block kind rather than
-with negative margins, so it cannot collide with the sticky rails.
+- You read a short crisis narrative, you look at a **diagram of the system**, you make one
+  architectural call, and you are told immediately whether it was sound.
+- Progression runs through four **themed campaigns of rising difficulty**, checkpointed.
+- The mechanics underneath are plain multiple choice. **What makes it a game is the framing
+  — story plus diagram around each decision — not the scoring.**
 
-| Width | Diagram column before | After |
+So the Arena leads with the picture where a chapter has one, and it does **not** copy
+scalequest's subject matter: its content is system design, which CLAUDE.md already settles is
+refused for a campus fresher. Authored story content is a content task, not this one.
+
+## What I built
+
+**`/arena`** — short, keyboard-first practice runs, public, free, and playable with no
+account.
+
+**The architecture that matters: the Arena has no content store of its own.**
+`lib/arena/derive.ts` is a pure function from `courses` to `Challenge[]` — no I/O, no clock,
+no `Math.random`. It derives **~800 challenges from the 65 chapters that already exist**:
+
+| Kind | Count | Derived from |
 |---|---|---|
-| 1280px | ~608px | ~608px (unchanged) |
-| 1440px | ~630px | ~700–750px |
-| 1920px | ~630px | ~1000–1050px |
+| `mcq` | 195 | the existing `quiz` blocks, directly |
+| `what-next` | ~253 | a `viz` frame — "what does the next step say?" |
+| `spot-mistake` | ~239 | the mistake/fix pairs already inside `pitfall` blocks |
+| `predict-output` | ~74 | `code`/`playground` blocks with real pasted output |
+| `which-column` | ~41 | `compare` blocks |
 
-**The visual vocabulary you asked for** — the "coloured circles and boxes":
-`concept` cards, `compare` columns (2–3, stacking below `sm`), `steps` strips with SVG
-chevrons, `{{O(n)}}` → complexity pill, `~~term~~` → key-term chip. All built on
-`color-mix()` over the existing CSS variables, so dark mode needed no new tokens. Colour is
-only ever a scan aid — the label always carries the meaning.
+That corpus was already reviewed for accuracy, it **cannot drift** from the courses, and it
+grows every time a chapter is written. `derive.test.ts` pins a floor of 700 so a content
+refactor cannot silently empty the Arena.
 
-**Every chapter is now a picture, not a list of sentences** (`b287a8f`, task 054). All
-remaining `trace` blocks became `viz` — tree viz for the fib call tree, BSTs and tries; graph
-viz with live distance and in-degree labels for Dijkstra and topological sort; a table viz
-filling the LCS table row by row; callstack viz for recursion and constructor chaining — or
-a `steps` strip where the thing traced was control flow rather than data state.
-**Exactly one `trace` survives**, in binary-search-on-the-answer: it narrows a scalar over an
-implicit range with nothing concrete to draw, and 31 cells would be clutter on desktop and
-illegible on mobile. A content-integrity test pins the count at one so it cannot creep back.
+**Distractors are never invented.** They are only ever real strings drawn from the same
+content — other frame notes in the same visualisation, other real outputs in the same course,
+the other half of a pitfall pair. When the pool cannot honestly supply one, the challenge is
+**dropped**. That rule is the difference between a learning tool and an actively harmful one:
+a plausible wrong answer that is secretly also right teaches the wrong thing.
 
-**The report is readable in five seconds** (`4160e7f`, task 053). A summary band leads with
-the overall score beside strongest and weakest competencies (ranked by score *ratio*, so
-different rubric maxima compare fairly). The score-scale essay moved, word for word, behind
-a native "How this is scored" disclosure; each competency's rationale behind "Why this
-score". **The evidence quote was pulled out in front of both** and a test pins that it is
-never inside a disclosure — it is the most valuable thing on the page and it was buried. The
-practice plan moved from near the bottom to near the top. Widened to `max-w-6xl`, but every
-paragraph keeps its own `max-w-prose`, so line length is unchanged.
-
----
-
-## Round 1 — what was built first
-
-- **Course visuals** (`1c08197`, task 047): the `viz` block kind and hand-rolled inline-SVG
-  renderers for eight shapes, with a step control. Frame 0 server-renders, so the diagram is
-  in the HTML for search and for JS-off readers.
-- **Try it yourself** (`4893a2c`, task 049): a `playground` block over a pluggable runner.
-  Python runs today through the Pyodide worker already in the repo; Java shows an honest line
-  saying browser execution is not available yet. Shiki highlighting at build time.
-- **Python alongside Java** (`a83c871`, task 050): all 30 DSA chapters, switchable page-wide.
-  Every one of the 31 snippets was executed and its real output pasted.
-- **Fresher and campus calibration** (`fbdd27f`, task 048): `CandidateStage`, a
-  `levelCalibration` brief through every prompt, campus round ground, `RoundType.APTITUDE` as
-  spoken reasoning, and system design refused for a campus fresher.
-- **Let a candidate say so** (`2315016`, task 051): one optional field at session start.
-
----
+**The rest, by file:**
+- `lib/arena/scheduler.ts` — the only place `ts-fsrs` is imported. Narrows FSRS's four grades
+  to two, deliberately: a right/wrong quiz gives no honest signal for "recalled but it was a
+  struggle", and guessing would invent precision the interaction does not support.
+- `lib/arena/progression.ts` — XP, level curve (`50·n²`), streak, badges, daily quest. All
+  hand-rolled, all named constants. **No streak multiplier** — a reward that varies in ways
+  the learner cannot see coming is closer to a slot machine than to honest progress.
+- `lib/arena/storage.ts` — `localStorage` behind a versioned key, every read and write in
+  try/catch.
+- `lib/arena/celebrate.ts` — `canvas-confetti`, gated on `prefers-reduced-motion` at the call
+  site rather than trusting the library's opt-in flag. Milestones only, never every answer.
+- `components/arena/*` — the session, challenge card, progress summary, daily quest.
+- Entry points: `rail-nav.tsx`, the course index, a chapter page, the landing page.
 
 ## Assumptions I made
-- **"Campus fresher" is derived by default** (ENTRY and under 12 months, or no resume with a
-  student-ish title). Guessing "student" from an empty profile would be the same bug
-  mirrored; task 051 then let a student correct it.
-- **Aptitude is spoken reason-aloud, not a timed MCQ.** An aggregator can already give a
-  student a timed test; talking through the set-up is what a voice-first product can do.
-- **Refusing rather than substituting** an explicitly-chosen system-design round.
-- **The DSA course gets Python, the Java course stays Java.** C++ was rejected — it needs a
-  server runner, same as Java.
-- **1600px as the reader's container ceiling** — a judgement call, not a measured constraint.
-- **`steps` rather than a forced `viz`** for control-flow and compile-time sequences.
+- **Campaigns map onto the existing module tree** rather than a new structure — that is the
+  half of scalequest's shape that carries most of the feel, and it was nearly free.
+- **The daily quest is 7 challenges**, seeded from the date string alone, so it is identical
+  across a refresh and across devices.
+- **Badges require real coverage**, not counts — "chapter cleared" means every derived
+  challenge from that chapter answered correctly. Deliberately hard; no participation
+  trophies.
+- **A `what-next` distractor is a *later* state of the same algorithm.** Only one is
+  literally next, so it is honest, and it tests order of operations rather than wording.
+- **Logged out only.** Account sync, server persistence and any leaderboard are out of scope
+  here — they touch user data and RLS, so they are their own task and go through a **PR**.
 
 ## What I could NOT verify
-- **Nothing has been looked at in a browser.** I have no browser automation in this session,
-  so I can compile it and test it but not see it. Every "unverified by eye" note is literal.
-- **Nobody has clicked Run.** The lazy-load contract is unit-tested; real Pyodide load time
-  in a browser is not.
-- **No live AI call was made anywhere** (rule 7). So nobody knows whether a fresher round
-  sounds like one, or whether the aptitude generator produces questions solvable aloud —
-  **it has never produced a real question.** Still the highest-value thing to spend on.
-- Dark mode on any of the new components; mobile layout of `steps`/`compare` (there is a
-  structural test, but jsdom cannot measure real overflow).
-- The densest new diagrams: `dsa/28-dp-intuition` (a 15-node fib call tree) and the
-  Dijkstra / topological-sort graphs. Worth confirming they read as clarity, not clutter.
+- **Nothing has been looked at in a browser.** Still no browser automation in this session.
+  This is the third run in a row where that is the main gap. **Please look at:** `/arena`
+  (empty state, before any progress exists), a run mid-flight, the result screen, and
+  `/arena/[course]` — at 1280px, 1440px, 1920px, on mobile, and in dark mode.
+- **Nobody has played it.** Whether a 7-challenge run actually feels like a game rather than
+  a quiz is exactly the judgement CI cannot make, and it is the whole point of the task.
+- Whether `what-next` reads as fun or as tedious at ~253 challenges — it is the largest slice
+  of the corpus and the least proven.
+- Confetti on a real milestone, and its reduced-motion behaviour.
 
 ## Verification status
-- typecheck / lint / tests / build: **pass**, verified on CI for every merged branch, with
-  each run's `headSha` checked against the branch head rather than trusting the latest green
-  run for the branch.
-- Migrations: **all 22 applied and confirmed remote**, each in the same step as its merge.
-  `20260921000000_stated_candidate_level.sql` was the dangerous one — the column is
-  *selected* on every session read, so it was applied before the code reached `develop`.
+- typecheck / lint / tests / build: **pass**. CI green on the branch tip `3702248` (`headSha`
+  checked against the tip, not "latest green run"), and green again on `develop` at
+  `d3d2585` after the merge.
+- **No migrations in this task** — confirmed by diffing `supabase/migrations` across the
+  whole run. Nothing to `db:push`.
+- I ran `npm install` at the repo root after merging, so the two new packages exist on disk
+  locally. This is the one class of breakage green CI structurally cannot see — it runs
+  `npm ci` from clean — and it bit us with Shiki last run.
+
+## Dependencies
+Two, both pre-approved after a research pass read the actual LICENSE file rather than a
+README badge:
+- **`ts-fsrs` 5.4.2 (MIT, ~7.2KB gzipped, zero runtime deps)** — the reference TypeScript
+  implementation of FSRS, the algorithm that replaced SM-2 inside Anki. Scheduling review is
+  the one genuinely hard algorithm here. Rejected: `supermemo`, `@dtjv/sm-2`,
+  `@kirklin/supermemo2` (all older SM-2), and hand-rolling.
+- **`canvas-confetti` 1.9.4 (ISC, ~4.3KB gzipped, zero deps)** plus its `@types`.
+
+Everything else is hand-rolled, per the research: XP curves, streaks and badges have no
+library worth taking, and adopting one means bending our schema to someone else's.
 
 ## Merge status
-- All eight tasks merged into `develop`. Final: `b287a8f`.
-- Nothing pushed to `main`. **PR #9 (`develop` → `main`) is open and deliberately unmerged** —
-  it predates round 2, so its description is now understated. Worth refreshing before merging.
-- **Process deviations, owned:** the task-051 file (`17ead13`) and the task-054 file
-  (`5dc63ab`) were committed straight to `develop` rather than via a branch. Docs-only, CI
-  green after each, but rule 1 says branch-then-merge and I did not.
-
-## Dependency
-**One added across all eight tasks: Shiki (MIT)**, build/server-time only, verified absent
-from every client chunk the course route requires. The editor, the Python runtime and the
-whiteboard were already in the repo, and the visualisations are hand-rolled because task
-047's research found d3/mermaid/react-flow all heavier than the problem.
+- Merged into `develop` at **`d3d2585`**. Nothing pushed to `main`.
+- **The merge is 2683 lines, well over the ~800-line reviewability guideline** in CLAUDE.md.
+  It should probably have been split into two tasks — engine and UI — and I am recording that
+  rather than glossing it.
+- PR #9 (`develop` → `main`) is still open and now understates the release by two full rounds.
 
 ## Interruptions
-Four agents were killed mid-task — three by the plan's usage limit, one by a network drop —
-and **none lost work**, because every brief required pushing after each coherent step. Each
-was resumed with `SendMessage` rather than restarted cold.
+`build-arena` was killed by the session usage limit (resets 1:50pm IST) with step 4 in hand —
+but step 4 had already been committed and pushed, and its worktree was clean, so **nothing
+was lost and no resume was needed**. CI failed on step 3 (`3b2acf2`); the agent fixed it
+itself and the branch tip is green.
 
 ## Suggested next task
-1. One live generation run, to check the aptitude questions and fresher calibration land.
-2. Look at the new pages and the report with your own eyes.
+1. **Play it**, and tell me whether it feels like a game. Nothing else I can do substitutes.
+2. A dev-only report preview route (~30 lines) — still the cheapest permanent fix to the
+   "nobody has looked at it" problem.
 
 ## Open questions for you
-- **A dev-only report preview route.** There is no way to view a report without running a
-  live interview — no preview route, no storybook. To see one you must temporarily point
-  `app/report/[id]/page.tsx` at the fixture exported from `report-view.test.tsx`.
-  This is *why* "nobody has looked at it" keeps recurring. ~30 lines would fix it permanently.
-- **The Java runner.** Self-hosted Piston (MIT) is the recommendation; it needs a
-  `privileged: true` Docker sidecar, so hosting spend and an arbitrary-code-execution surface
-  are yours to approve.
-- **Is 1600px the right ceiling** for the reader, or do you want it wider?
-- **Group discussion** is unbuilt — it needs multiple simultaneous speakers, a different
-  interaction model from the turn-based voice loop. Its own task, if it belongs at all.
-- **No open corpus exists** for Indian campus placement, aptitude, or DSA problem statements
-  that a commercial product may use. `docs/third-party-sources.md` records this.
+- **Account sync and a leaderboard** — worth building? A leaderboard needs a privacy decision
+  about what a student's name looks like to strangers, which is yours, not mine.
+- **Do you want authored narrative content** (scalequest's actual differentiator) on top of
+  the campaign structure? That is a content-writing task of real size, not a code one.
+- Still open from earlier runs: the Java runner (self-hosted Piston — spend and an
+  arbitrary-code-execution surface), one live generation run for the aptitude generator
+  (**it has never produced a real question**), and whether 1600px is the right reader ceiling.

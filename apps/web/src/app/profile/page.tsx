@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Your profile" };
  */
 export default function ProfilePage() {
   return (
-    <AppShell>
+    <AppShell breadcrumb="profile">
       <div className="flex w-full max-w-4xl flex-col gap-10">
         <header className="flex flex-col gap-2">
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Profile</p>

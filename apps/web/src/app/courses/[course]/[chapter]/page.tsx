@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { BlockRenderer } from "@/components/courses/block-renderer";
 import { CodeLanguageProvider } from "@/components/courses/code-language-context";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { CourseToc } from "@/components/courses/course-toc";
 import { OnThisPage } from "@/components/courses/on-this-page";
@@ -71,6 +72,14 @@ export default async function ChapterPage({
   return (
     <div className="min-h-dvh">
       <CourseSiteHeader />
+      <Breadcrumbs
+        wide
+        items={[
+          { label: "courses", href: "/courses" },
+          { label: course.title.toLowerCase(), href: `/courses/${course.slug}` },
+          { label: chapter.title.toLowerCase() },
+        ]}
+      />
       <div className="border-b border-line px-6 py-3 md:px-12">
         <p className="mx-auto max-w-[100rem] font-mono text-micro tracking-widest text-ink-subtle lowercase">
           <Link href="/courses" className="hover:text-ink">

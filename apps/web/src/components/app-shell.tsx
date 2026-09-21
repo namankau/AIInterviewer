@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import Link from "next/link";
 
 import { AccountSummary } from "@/components/account-summary";
@@ -22,9 +23,12 @@ import { RailNav } from "@/components/rail-nav";
  */
 export function AppShell({
   breadcrumb,
+  parent,
   children,
 }: {
   breadcrumb?: string;
+  /** A page this one sits under (a report under rounds); adds a middle crumb and a back link. */
+  parent?: { label: string; href: Route };
   children: React.ReactNode;
 }) {
   return (
@@ -59,8 +63,23 @@ export function AppShell({
                 home
               </Link>
               <span className="px-1.5">/</span>
-              <span className="text-ink-muted">{breadcrumb}</span>
+              {parent ? (
+                <>
+                  <Link href={parent.href} className="hover:text-ink">
+                    {parent.label}
+                  </Link>
+                  <span className="px-1.5">/</span>
+                </>
+              ) : null}
+              <span aria-current="page" className="text-ink-muted">
+                {breadcrumb}
+              </span>
             </p>
+            {parent ? (
+              <Link href={parent.href} className="mt-1.5 inline-block text-caption font-medium text-accent-strong hover:underline">
+                <span aria-hidden="true">←</span> Back to {parent.label}
+              </Link>
+            ) : null}
           </div>
         ) : null}
         {/*

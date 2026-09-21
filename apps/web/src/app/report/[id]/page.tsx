@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Your report" };
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return (
-    <AppShell breadcrumb="report">
+    <AppShell breadcrumb="report" parent={{ label: "rounds", href: "/rounds" }}>
       {/*
         * Task 053: `max-w-3xl` forced the whole report into one narrow column, including
         * the new side-by-side summary at the top. `max-w-6xl` gives that summary room to

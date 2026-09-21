@@ -2,6 +2,7 @@ import type {
   ApiError,
   BankCompany,
   BankQuestionPage,
+  CourseProgressView,
   RoundType,
   CodeRunResult,
   EntitlementView,
@@ -13,6 +14,7 @@ import type {
   ResumeView,
   SkillView,
   UpdateProfileRequest,
+  ImportCourseProgressRequest,
   ReadinessGroup,
   RoundDraft,
   RunCodeRequest,
@@ -353,4 +355,44 @@ export function submitAnswer(
     form.append("video", video, "answer-video.webm");
   }
   return apiSend<SubmitAnswerResponse>(`/api/v1/sessions/${sessionId}/turns`, "POST", accessToken, form);
+}
+
+// -- course progress ---------------------------------------------------------
+
+/** `GET /api/v1/me/course-progress` — every chapter this candidate has finished. */
+export function fetchCourseProgress(options: ApiGetOptions): Promise<CourseProgressView> {
+  return apiGet<CourseProgressView>("/api/v1/me/course-progress", options);
+}
+
+/** Idempotent: marking a finished chapter finished again is a no-op, not an error. */
+export function markChapterComplete(
+  accessToken: string,
+  courseSlug: string,
+  chapterSlug: string,
+): Promise<void> {
+  return apiSend<void>(
+    `/api/v1/me/course-progress/${encodeURIComponent(courseSlug)}/${encodeURIComponent(chapterSlug)}`,
+    "PUT",
+    accessToken,
+  );
+}
+
+export function markChapterIncomplete(
+  accessToken: string,
+  courseSlug: string,
+  chapterSlug: string,
+): Promise<void> {
+  return apiSend<void>(
+    `/api/v1/me/course-progress/${encodeURIComponent(courseSlug)}/${encodeURIComponent(chapterSlug)}`,
+    "DELETE",
+    accessToken,
+  );
+}
+
+/** A one-off union of progress saved in this browser before it was account-backed. */
+export function importCourseProgress(
+  accessToken: string,
+  body: ImportCourseProgressRequest,
+): Promise<CourseProgressView> {
+  return apiSend<CourseProgressView>("/api/v1/me/course-progress/import", "POST", accessToken, body);
 }

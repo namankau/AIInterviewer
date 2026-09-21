@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { InlineText } from "@/components/courses/inline-text";
 import { summarizeChapters } from "@/lib/course-progress";
@@ -44,50 +45,49 @@ export function ProgressBar({ done, total, label }: { done: number; total: numbe
 }
 
 /** Course-page hero: how far along, and one button that goes to the right place. */
-export function CourseHeroProgress({
-  courseSlug,
-  chapters,
-}: {
-  courseSlug: string;
-  chapters: ChapterRef[];
-}) {
-  const { completed } = useCourseProgress(courseSlug);
+export function CourseHeroProgress({ courseSlug, chapters }: { courseSlug: string; chapters: ChapterRef[] }) {
+  const { completed, ready } = useCourseProgress(courseSlug);
   const summary = summarizeChapters(chapters, completed);
   const first = chapters[0];
   const target = summary.next ?? first;
+  // Until the account's progress has loaded, "Start course" would be a guess — and the
+  // wrong one for anyone returning. Say "Continue" only when it is known to be true.
+  const started = ready && summary.started;
 
   return (
     <div className="flex max-w-md flex-col gap-4">
-      {summary.started ? <ProgressBar done={summary.done} total={summary.total} label="Course progress" /> : null}
+      {started ? <ProgressBar done={summary.done} total={summary.total} label="Course progress" /> : null}
       {target ? (
         <Link
           href={`/courses/${courseSlug}/${target.slug}`}
           className="w-fit rounded-md bg-accent px-5 py-2.5 text-caption font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
         >
-          {summary.finished ? "Review from the start" : summary.started ? "Continue learning" : "Start course"}
+          {ready && summary.finished ? "Review from the start" : started ? "Continue learning" : "Start course"}
         </Link>
       ) : null}
-      {summary.started && !summary.finished && summary.next ? (
-        <p className="text-caption text-ink-muted">Up next: <InlineText text={summary.next.title} /></p>
+      {started && !summary.finished && summary.next ? (
+        <p className="text-caption text-ink-muted">
+          Up next: <InlineText text={summary.next.title} />
+        </p>
       ) : null}
-      {summary.finished ? <p className="text-caption font-medium text-positive">Every chapter complete.</p> : null}
+      {ready && summary.finished ? <p className="text-caption font-medium text-positive">Every chapter complete.</p> : null}
     </div>
   );
 }
 
 /** A catalogue card's progress line; renders nothing until the learner has started. */
 export function CourseCardProgress({ courseSlug, chapters }: { courseSlug: string; chapters: ChapterRef[] }) {
-  const { completed } = useCourseProgress(courseSlug);
+  const { completed, ready } = useCourseProgress(courseSlug);
   const summary = summarizeChapters(chapters, completed);
-  if (!summary.started) return null;
+  if (!ready || !summary.started) return null;
   return <ProgressBar done={summary.done} total={summary.total} label="Course progress" />;
 }
 
 /** "2 of 5 done" for a module heading. Empty until something in it is complete. */
 export function ModuleProgress({ courseSlug, chapterSlugs }: { courseSlug: string; chapterSlugs: string[] }) {
-  const { completed } = useCourseProgress(courseSlug);
+  const { completed, ready } = useCourseProgress(courseSlug);
   const done = chapterSlugs.filter((slug) => completed.has(slug)).length;
-  if (done === 0) return null;
+  if (!ready || done === 0) return null;
   return (
     <span className="font-mono text-micro tracking-widest text-positive uppercase">
       {done === chapterSlugs.length ? "Complete" : `${done} of ${chapterSlugs.length} done`}
@@ -97,8 +97,8 @@ export function ModuleProgress({ courseSlug, chapterSlugs }: { courseSlug: strin
 
 /** The tick in a chapter row: a check plus a visually hidden word, so it is not colour alone. */
 export function ChapterDoneMark({ courseSlug, chapterSlug }: { courseSlug: string; chapterSlug: string }) {
-  const { completed } = useCourseProgress(courseSlug);
-  const done = completed.has(chapterSlug);
+  const { completed, ready } = useCourseProgress(courseSlug);
+  const done = ready && completed.has(chapterSlug);
   return (
     <span
       className={`flex size-5 shrink-0 items-center justify-center rounded-full border ${
@@ -111,24 +111,46 @@ export function ChapterDoneMark({ courseSlug, chapterSlug }: { courseSlug: strin
   );
 }
 
-/** End-of-chapter control. Completion is the learner's statement, never inferred from a visit. */
+/**
+ * End-of-chapter control. Completion is the learner's statement, never inferred from a
+ * visit. The tick applies immediately and is reverted if the save fails, and the failure
+ * is said out loud rather than leaving somebody believing it was recorded.
+ */
 export function MarkCompleteButton({ courseSlug, chapterSlug }: { courseSlug: string; chapterSlug: string }) {
-  const { completed, setChapterDone } = useCourseProgress(courseSlug);
+  const { completed, ready, setChapterDone } = useCourseProgress(courseSlug);
+  const [failed, setFailed] = useState(false);
+  const [saving, setSaving] = useState(false);
   const done = completed.has(chapterSlug);
 
+  async function toggle() {
+    setSaving(true);
+    setFailed(false);
+    const ok = await setChapterDone(chapterSlug, !done);
+    setSaving(false);
+    if (!ok) setFailed(true);
+  }
+
   return (
-    <button
-      type="button"
-      aria-pressed={done}
-      onClick={() => setChapterDone(chapterSlug, !done)}
-      className={`inline-flex items-center gap-2 rounded-md border px-4 py-2.5 text-caption font-medium transition-colors ${
-        done
-          ? "border-positive/50 bg-positive/10 text-ink hover:bg-positive/15"
-          : "border-accent bg-accent text-accent-contrast hover:bg-accent-strong"
-      }`}
-    >
-      {done ? <CheckIcon className="text-positive" /> : null}
-      {done ? "Completed — click to undo" : "Mark chapter as complete"}
-    </button>
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        aria-pressed={done}
+        disabled={!ready || saving}
+        onClick={toggle}
+        className={`inline-flex w-fit items-center gap-2 rounded-md border px-4 py-2.5 text-caption font-medium transition-colors disabled:opacity-60 ${
+          done
+            ? "border-positive/50 bg-positive/10 text-ink hover:bg-positive/15"
+            : "border-accent bg-accent text-accent-contrast hover:bg-accent-strong"
+        }`}
+      >
+        {done ? <CheckIcon className="text-positive" /> : null}
+        {done ? "Completed — click to undo" : "Mark chapter as complete"}
+      </button>
+      {failed ? (
+        <p role="alert" className="text-caption text-danger">
+          That didn&apos;t save. Check your connection and try again.
+        </p>
+      ) : null}
+    </div>
   );
 }

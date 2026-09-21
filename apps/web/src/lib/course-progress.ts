@@ -1,16 +1,18 @@
 /**
- * Which chapters a learner has marked complete, per course.
+ * Counting course progress, and reading the progress this browser saved before progress
+ * was account-backed.
  *
- * Kept in `localStorage` behind one versioned key, the same as Arena progress: it needs no
- * backend and works the moment it ships. The cost is that it is per browser, not per
- * account — see the task notes. The storage interface is deliberately this small
- * (`readRaw` / `writeRaw`) so a server-backed store can replace it later without touching
- * any component.
+ * The store itself is now the API (`use-course-progress.ts`): progress kept in a browser
+ * does not follow a candidate to a second device or a lab machine, and does not go away
+ * when they sign out of a shared one. What remains here is the pure counting, which has
+ * no idea where the data came from, plus the reader for the old `localStorage` key so a
+ * candidate can import what they already ticked.
  *
  * "Complete" is something the learner says by pressing a button, never inferred from
  * having opened the page: opening a chapter is not the same as having learnt it.
  */
 
+/** The key chapter completion used before it moved to the account. Read, never written. */
 export const COURSE_PROGRESS_KEY = "course-progress:v1";
 
 export type CompletedByCourse = Record<string, string[]>;

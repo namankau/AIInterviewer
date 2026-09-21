@@ -94,6 +94,34 @@ export const chapterStringTechniques: Chapter = {
         "}\n",
       output:
         'isPalindrome("malayalam"): true\nisPalindrome("hello"): false\nisAnagram("listen", "silent"): true\nisAnagram("rat", "car"): false',
+      python:
+        "from collections import Counter\n" +
+        "\n" +
+        "\n" +
+        "def is_palindrome(s):\n" +
+        "    left, right = 0, len(s) - 1\n" +
+        "    while left < right:\n" +
+        "        if s[left] != s[right]:\n" +
+        "            return False\n" +
+        "        left += 1\n" +
+        "        right -= 1\n" +
+        "    return True\n" +
+        "\n" +
+        "\n" +
+        "def is_anagram(a, b):\n" +
+        "    if len(a) != len(b):\n" +
+        "        return False\n" +
+        "    counts = Counter(a)\n" +
+        "    counts.subtract(b)\n" +
+        "    return all(count == 0 for count in counts.values())\n" +
+        "\n" +
+        "\n" +
+        "print('isPalindrome(\"malayalam\"):', is_palindrome(\"malayalam\"))\n" +
+        "print('isPalindrome(\"hello\"):', is_palindrome(\"hello\"))\n" +
+        "print('isAnagram(\"listen\", \"silent\"):', is_anagram(\"listen\", \"silent\"))\n" +
+        "print('isAnagram(\"rat\", \"car\"):', is_anagram(\"rat\", \"car\"))\n",
+      pythonOutput:
+        'isPalindrome("malayalam"): True\nisPalindrome("hello"): False\nisAnagram("listen", "silent"): True\nisAnagram("rat", "car"): False',
     },
     {
       kind: "trace",

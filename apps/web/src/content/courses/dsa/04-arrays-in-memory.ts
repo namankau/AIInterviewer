@@ -70,6 +70,26 @@ export const chapterArraysInMemory: Chapter = {
         "data[2] lives at address 1008\n" +
         "data[3] lives at address 1012\n" +
         "data[4] lives at address 1016",
+      python:
+        "def insert_at(data, used_length, index, value):\n" +
+        "    # Shift everything from the end down to `index` one slot right, then drop `value`\n" +
+        "    # into the gap that opens up.\n" +
+        "    for i in range(used_length, index, -1):\n" +
+        "        data[i] = data[i - 1]\n" +
+        "    data[index] = value\n" +
+        "\n" +
+        "\n" +
+        "data = [10, 20, 30, 40, 0]\n" +
+        'print("Before:", data)\n' +
+        "insert_at(data, 4, 2, 25)\n" +
+        'print("After inserting 25 at index 2:", data)\n' +
+        "\n" +
+        "# CPython's list is a contiguous array of *pointers* to objects, not raw values -- each\n" +
+        "# pointer is a fixed size (8 bytes on a typical 64-bit build), so data[i] is still one\n" +
+        "# multiplication and one dereference away, same O(1) reasoning as Java's int[]. Python\n" +
+        "# doesn't expose real memory addresses the way this chapter's Java demo does, so there's\n" +
+        '# no literal "data[i] lives at address ..." line to print here.\n',
+      pythonOutput: "Before: [10, 20, 30, 40, 0]\nAfter inserting 25 at index 2: [10, 20, 25, 30, 40]",
     },
     {
       kind: "viz",

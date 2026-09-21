@@ -87,6 +87,36 @@ export const chapterTwoPointers: Chapter = {
         "    }\n" +
         "}\n",
       output: "pair indices: [2, 3] -> 7 + 11 = 18\nreversed: 5 4 3 2 1",
+      python:
+        "def pair_with_sum(sorted_nums, target):\n" +
+        "    left, right = 0, len(sorted_nums) - 1\n" +
+        "    while left < right:\n" +
+        "        total = sorted_nums[left] + sorted_nums[right]\n" +
+        "        if total == target:\n" +
+        "            return left, right\n" +
+        "        elif total < target:\n" +
+        "            left += 1\n" +
+        "        else:\n" +
+        "            right -= 1\n" +
+        "    return -1, -1\n" +
+        "\n" +
+        "\n" +
+        "def reverse_in_place(arr):\n" +
+        "    left, right = 0, len(arr) - 1\n" +
+        "    while left < right:\n" +
+        "        arr[left], arr[right] = arr[right], arr[left]\n" +
+        "        left += 1\n" +
+        "        right -= 1\n" +
+        "\n" +
+        "\n" +
+        "sorted_nums = [2, 4, 7, 11, 15, 20]\n" +
+        "left, right = pair_with_sum(sorted_nums, 18)\n" +
+        'print(f"pair indices: [{left}, {right}] -> {sorted_nums[left]} + {sorted_nums[right]} = 18")\n' +
+        "\n" +
+        "arr = [1, 2, 3, 4, 5]\n" +
+        "reverse_in_place(arr)\n" +
+        'print("reversed:", " ".join(str(v) for v in arr))\n',
+      pythonOutput: "pair indices: [2, 3] -> 7 + 11 = 18\nreversed: 5 4 3 2 1",
     },
     {
       kind: "viz",

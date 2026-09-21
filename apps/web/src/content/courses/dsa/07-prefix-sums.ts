@@ -67,6 +67,25 @@ export const chapterPrefixSums: Chapter = {
         "    }\n" +
         "}\n",
       output: "prefix: 0 4 6 13 14 19 22\nsum[1..3]: 10\nsum[0..5]: 22\nsum[2..2]: 7",
+      python:
+        "def build_prefix(nums):\n" +
+        "    prefix = [0] * (len(nums) + 1)\n" +
+        "    for i, num in enumerate(nums):\n" +
+        "        prefix[i + 1] = prefix[i] + num\n" +
+        "    return prefix\n" +
+        "\n" +
+        "\n" +
+        "def range_sum(prefix, left, right):\n" +
+        "    return prefix[right + 1] - prefix[left]\n" +
+        "\n" +
+        "\n" +
+        "nums = [4, 2, 7, 1, 5, 3]\n" +
+        "prefix = build_prefix(nums)\n" +
+        'print("prefix:", " ".join(str(p) for p in prefix))\n' +
+        'print("sum[1..3]:", range_sum(prefix, 1, 3))\n' +
+        'print("sum[0..5]:", range_sum(prefix, 0, 5))\n' +
+        'print("sum[2..2]:", range_sum(prefix, 2, 2))\n',
+      pythonOutput: "prefix: 0 4 6 13 14 19 22\nsum[1..3]: 10\nsum[0..5]: 22\nsum[2..2]: 7",
     },
     {
       kind: "viz",

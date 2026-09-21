@@ -107,6 +107,45 @@ export const chapterComplexity: Chapter = {
         "100    1          6        100      600        10000       \n" +
         "1000   1          9        1000     9000       1000000     \n" +
         "10000  1          13       10000    130000     100000000",
+      python:
+        "def constant_ops(n):\n" +
+        "    return 1\n" +
+        "\n" +
+        "\n" +
+        "def log_ops(n):\n" +
+        "    count = 0\n" +
+        "    i = n\n" +
+        "    while i > 1:\n" +
+        "        i //= 2\n" +
+        "        count += 1\n" +
+        "    return count\n" +
+        "\n" +
+        "\n" +
+        "def linear_ops(n):\n" +
+        "    return n\n" +
+        "\n" +
+        "\n" +
+        "def n_log_n_ops(n):\n" +
+        "    return n * log_ops(n)\n" +
+        "\n" +
+        "\n" +
+        "def quadratic_ops(n):\n" +
+        "    return n * n\n" +
+        "\n" +
+        "\n" +
+        "print(f\"{'n':<6} {'O(1)':<10} {'O(log n)':<8} {'O(n)':<8} {'O(n log n)':<10} {'O(n^2)':<12}\")\n" +
+        "for n in [1, 10, 100, 1000, 10000]:\n" +
+        "    print(\n" +
+        "        f\"{n:<6} {constant_ops(n):<10} {log_ops(n):<8} {linear_ops(n):<8} \"\n" +
+        "        f\"{n_log_n_ops(n):<10} {quadratic_ops(n):<12}\"\n" +
+        "    )\n",
+      pythonOutput:
+        "n      O(1)       O(log n) O(n)     O(n log n) O(n^2)      \n" +
+        "1      1          0        1        0          1           \n" +
+        "10     1          3        10       30         100         \n" +
+        "100    1          6        100      600        10000       \n" +
+        "1000   1          9        1000     9000       1000000     \n" +
+        "10000  1          13       10000    130000     100000000",
     },
     {
       kind: "trace",

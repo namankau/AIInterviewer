@@ -87,6 +87,31 @@ export const chapterWhatIsDsa: Chapter = {
         "    }\n" +
         "}\n",
       output: "a slow: true\na fast: true\nb slow: false\nb fast: false",
+      python:
+        "def has_duplicate_slow(nums):\n" +
+        "    for i in range(len(nums)):\n" +
+        "        for j in range(i + 1, len(nums)):\n" +
+        "            if nums[i] == nums[j]:\n" +
+        "                return True\n" +
+        "    return False\n" +
+        "\n" +
+        "\n" +
+        "def has_duplicate_fast(nums):\n" +
+        "    seen = set()\n" +
+        "    for n in nums:\n" +
+        "        if n in seen:\n" +
+        "            return True\n" +
+        "        seen.add(n)\n" +
+        "    return False\n" +
+        "\n" +
+        "\n" +
+        "a = [4, 7, 2, 9, 7, 1]\n" +
+        "b = [4, 7, 2, 9, 1, 3]\n" +
+        'print(f"a slow: {has_duplicate_slow(a)}")\n' +
+        'print(f"a fast: {has_duplicate_fast(a)}")\n' +
+        'print(f"b slow: {has_duplicate_slow(b)}")\n' +
+        'print(f"b fast: {has_duplicate_fast(b)}")\n',
+      pythonOutput: "a slow: True\na fast: True\nb slow: False\nb fast: False",
     },
     {
       kind: "trace",

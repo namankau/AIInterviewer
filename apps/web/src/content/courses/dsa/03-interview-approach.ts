@@ -69,6 +69,13 @@ export const chapterInterviewApproach: Chapter = {
         "    }\n" +
         "    return new int[]{-1, -1};\n" +
         "}\n",
+      python:
+        "def two_sum_brute(nums, target):\n" +
+        "    for i in range(len(nums)):\n" +
+        "        for j in range(i + 1, len(nums)):\n" +
+        "            if nums[i] + nums[j] == target:\n" +
+        "                return i, j\n" +
+        "    return -1, -1\n",
     },
     { kind: "h", text: "Step 3: Optimise" },
     {
@@ -123,6 +130,32 @@ export const chapterInterviewApproach: Chapter = {
         "    }\n" +
         "}\n",
       output: "brute: [0, 1]\nfast:  [0, 1]",
+      python:
+        "def two_sum_brute(nums, target):\n" +
+        "    for i in range(len(nums)):\n" +
+        "        for j in range(i + 1, len(nums)):\n" +
+        "            if nums[i] + nums[j] == target:\n" +
+        "                return i, j\n" +
+        "    return -1, -1\n" +
+        "\n" +
+        "\n" +
+        "def two_sum_fast(nums, target):\n" +
+        "    seen_index_of = {}\n" +
+        "    for i, num in enumerate(nums):\n" +
+        "        need = target - num\n" +
+        "        if need in seen_index_of:\n" +
+        "            return seen_index_of[need], i\n" +
+        "        seen_index_of[num] = i\n" +
+        "    return -1, -1\n" +
+        "\n" +
+        "\n" +
+        "nums = [2, 7, 11, 15, 3]\n" +
+        "target = 9\n" +
+        "r1 = two_sum_brute(nums, target)\n" +
+        "r2 = two_sum_fast(nums, target)\n" +
+        'print(f"brute: {list(r1)}")\n' +
+        'print(f"fast:  {list(r2)}")\n',
+      pythonOutput: "brute: [0, 1]\nfast:  [0, 1]",
     },
     {
       kind: "trace",

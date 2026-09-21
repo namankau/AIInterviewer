@@ -138,16 +138,30 @@ export const chapterBitManipulation: Chapter = {
         "countSetBits(255) = 8\nsingleNumber: 4",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "countSetBits(10) — clearing the lowest set bit each round (10 is binary 1010)",
-      steps: [
-        "n = 1010 (binary). n - 1 = 1001. n & (n-1) = 1010 & 1001 = 1000. This cleared the lowest set bit " +
-          "(the one at position 1) — notice 1000 has one fewer '1' than 1010. count = 1.",
-        "n = 1000. n - 1 = 0111. n & (n-1) = 1000 & 0111 = 0000. This cleared the last remaining set bit " +
-          "(position 3). count = 2.",
-        "n = 0000. Loop condition n != 0 is false — stop. Final count = 2, matching 1010 having exactly two " +
-          "'1' bits.",
-      ],
+      caption: "Cells read bit3, bit2, bit1, bit0 left to right; the pointer marks the lowest '1' that n & (n-1) is about to clear.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: 1 }, { value: 0 }, { value: 1, state: "active", pointers: ["lowest 1"] }, { value: 0 }],
+            note:
+              "n = 1010 (binary). n - 1 = 1001. n & (n-1) = 1010 & 1001 = 1000. This cleared the lowest " +
+              "set bit (the one at position 1) — notice 1000 has one fewer '1' than 1010. count = 1.",
+          },
+          {
+            cells: [{ value: 1, state: "active", pointers: ["lowest 1"] }, { value: 0 }, { value: 0, state: "done" }, { value: 0 }],
+            note:
+              "n = 1000. n - 1 = 0111. n & (n-1) = 1000 & 0111 = 0000. This cleared the last remaining " +
+              "set bit (position 3). count = 2.",
+          },
+          {
+            cells: [{ value: 0, state: "done" }, { value: 0 }, { value: 0, state: "done" }, { value: 0 }],
+            note: "n = 0000. Loop condition n != 0 is false — stop. Final count = 2, matching 1010 having exactly two '1' bits.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

@@ -1,23 +1,21 @@
 "use client";
 
-import { useState } from "react";
-
 import { BADGES, levelForXp } from "@/lib/arena/progression";
-import { loadProgress, type ArenaProgress } from "@/lib/arena/storage";
+import { useArenaProgress } from "@/lib/arena/progress-store";
 
 /**
- * The learner's own progress — level, streak, badges earned — read from `localStorage`
- * (task 055, §5: no account, no server, this task). `loadProgress` itself is
- * SSR-safe (it degrades to `defaultProgress()` when there is no `window`), so the lazy
- * `useState` initialiser reads it directly rather than behind a mount-only effect — the
- * same convention `usePrefersReducedMotion` already uses for the same kind of
- * client-only, per-visitor value.
+ * The learner's own progress — level, streak, badges earned — read from the account.
+ *
+ * Renders nothing until it has loaded: "Level 0, no streak" is a specific and wrong claim
+ * to show a learner who has a streak going, and it would flash on every page load.
  */
 export function ProgressSummary() {
-  const [progress] = useState<ArenaProgress>(() => loadProgress());
+  const { progress, ready } = useArenaProgress();
   const level = levelForXp(progress.xp);
   const percentIntoLevel = level.xpForNextLevel > 0 ? Math.round((level.xpIntoLevel / level.xpForNextLevel) * 100) : 100;
   const earnedBadges = BADGES.filter((b) => progress.badges.includes(b.id));
+
+  if (!ready) return null;
 
   return (
     <div className="flex flex-col gap-4 rounded-md border border-line-strong bg-surface-raised px-6 py-5">

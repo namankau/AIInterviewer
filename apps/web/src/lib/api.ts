@@ -1,5 +1,9 @@
 import type {
   ApiError,
+  ArenaBadgesView,
+  ArenaCountersView,
+  ArenaProgressView,
+  AwardBadgesRequest,
   BankCompany,
   BankQuestionPage,
   CourseProgressView,
@@ -14,7 +18,9 @@ import type {
   ResumeView,
   SkillView,
   UpdateProfileRequest,
+  ImportArenaProgressRequest,
   ImportCourseProgressRequest,
+  RecordAnswerRequest,
   ReadinessGroup,
   RoundDraft,
   RunCodeRequest,
@@ -395,4 +401,34 @@ export function importCourseProgress(
   body: ImportCourseProgressRequest,
 ): Promise<CourseProgressView> {
   return apiSend<CourseProgressView>("/api/v1/me/course-progress/import", "POST", accessToken, body);
+}
+
+// -- arena progress ----------------------------------------------------------
+
+/** `GET /api/v1/me/arena` — XP, streak, badges and the review schedule. */
+export function fetchArenaProgress(options: ApiGetOptions): Promise<ArenaProgressView> {
+  return apiGet<ArenaProgressView>("/api/v1/me/arena", options);
+}
+
+/** Records one answered challenge. The server decides the XP and the streak. */
+export function recordArenaAnswer(
+  accessToken: string,
+  body: RecordAnswerRequest,
+): Promise<ArenaCountersView> {
+  return apiSend<ArenaCountersView>("/api/v1/me/arena/answers", "POST", accessToken, body);
+}
+
+export function awardArenaBadges(
+  accessToken: string,
+  body: AwardBadgesRequest,
+): Promise<ArenaBadgesView> {
+  return apiSend<ArenaBadgesView>("/api/v1/me/arena/badges", "POST", accessToken, body);
+}
+
+/** A one-off union of Arena progress saved in this browser before it was account-backed. */
+export function importArenaProgress(
+  accessToken: string,
+  body: ImportArenaProgressRequest,
+): Promise<ArenaProgressView> {
+  return apiSend<ArenaProgressView>("/api/v1/me/arena/import", "POST", accessToken, body);
 }

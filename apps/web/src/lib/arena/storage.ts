@@ -1,13 +1,19 @@
 import type { ReviewState } from "@/lib/arena/scheduler";
 
 /**
- * Arena progress lives in `localStorage` for this task (task 055, §5 — no account sync
- * yet, that is task 056 and goes through a PR because it touches user data and RLS).
- * Every read and write is wrapped in try/catch: a private window, blocked site data, or a
- * disabled `localStorage` must never break the page, only mean progress isn't remembered.
+ * The shape of Arena progress, and the reader for the `localStorage` key it used before
+ * it moved to the account.
+ *
+ * The store is now the API (`progress-store.ts`): progress kept in a browser does not
+ * follow a learner to a second device or a lab machine, and does not go away when they
+ * sign out of a shared one. What is left here is the type, the defaults, and a defensive
+ * reader so a learner can import what this browser already holds. Every read and write is
+ * wrapped in try/catch: a private window, blocked site data, or a disabled `localStorage`
+ * must never break the page.
  */
 
-const STORAGE_KEY = "arena:v1";
+/** The key Arena progress used before it moved to the account. Read, never written. */
+export const ARENA_STORAGE_KEY = "arena:v1";
 
 export interface StreakState {
   current: number;
@@ -44,7 +50,7 @@ export function defaultProgress(): ArenaProgress {
 }
 
 /**
- * Accepts anything that has ever been written under `STORAGE_KEY`, including malformed
+ * Accepts anything that has ever been written under `ARENA_STORAGE_KEY`, including malformed
  * JSON, a future/unknown version, or a stray `null`, and always returns a well-formed
  * `ArenaProgress`. There is only one schema version so far; this is the seam a version 2
  * migration plugs into later, rather than a rewrite of every call site.
@@ -74,12 +80,28 @@ function migrate(raw: unknown): ArenaProgress {
   };
 }
 
+/**
+ * Parses a raw stored value into progress, or null when there is nothing usable there.
+ * Used by the one-off import: `loadProgress` cannot tell "absent" from "empty", and the
+ * import prompt must not offer to import nothing.
+ */
+export function parseStoredProgress(raw: string | null | undefined): ArenaProgress | null {
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return migrate(parsed);
+  } catch {
+    return null;
+  }
+}
+
 /** Reads progress from `localStorage`. Never throws — a throwing or unavailable
  * `localStorage`, corrupt JSON, or a missing key all degrade to `defaultProgress()`. */
 export function loadProgress(): ArenaProgress {
   try {
     if (typeof window === "undefined" || !window.localStorage) return defaultProgress();
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(ARENA_STORAGE_KEY);
     if (!raw) return defaultProgress();
     return migrate(JSON.parse(raw));
   } catch {
@@ -92,7 +114,7 @@ export function loadProgress(): ArenaProgress {
 export function saveProgress(progress: ArenaProgress): void {
   try {
     if (typeof window === "undefined" || !window.localStorage) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    window.localStorage.setItem(ARENA_STORAGE_KEY, JSON.stringify(progress));
   } catch {
     // Private window, blocked site data, quota exceeded — progress just isn't saved.
   }

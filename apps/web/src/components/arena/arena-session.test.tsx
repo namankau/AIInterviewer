@@ -7,8 +7,33 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // already covers the reduced-motion gating on this module in isolation.
 vi.mock("canvas-confetti", () => ({ default: vi.fn() }));
 
+// The run now saves to the account rather than to localStorage, so the API and the token
+// are mocked at the boundary; `recordArenaAnswer` is also the assertion that an answer
+// actually reached the account.
+const fetchArenaProgress = vi.hoisted(() => vi.fn());
+const recordArenaAnswer = vi.hoisted(() => vi.fn());
+const awardArenaBadges = vi.hoisted(() => vi.fn());
+const useAccessToken = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/api", () => ({
+  fetchArenaProgress,
+  recordArenaAnswer,
+  awardArenaBadges,
+  importArenaProgress: vi.fn(),
+}));
+vi.mock("@/lib/use-access-token", () => ({ useAccessToken }));
+
 import { ArenaSession } from "@/components/arena/arena-session";
+import { resetArenaProgress } from "@/lib/arena/progress-store";
 import type { Challenge } from "@/lib/arena/types";
+
+const EMPTY_PROGRESS = {
+  xp: 0,
+  streak: { current: 0, longest: 0, lastActiveDate: null },
+  badges: [],
+  cards: {},
+  masteredChallengeIds: [],
+};
 
 function setMatchMedia(matches: boolean) {
   Object.defineProperty(window, "matchMedia", {
@@ -68,6 +93,12 @@ describe("ArenaSession", () => {
   beforeEach(() => {
     setMatchMedia(false);
     window.localStorage.clear();
+    vi.clearAllMocks();
+    resetArenaProgress();
+    useAccessToken.mockReturnValue("token-abc");
+    fetchArenaProgress.mockResolvedValue(EMPTY_PROGRESS);
+    recordArenaAnswer.mockResolvedValue({ xp: 10, streak: { current: 1, longest: 1, lastActiveDate: "2026-09-21" } });
+    awardArenaBadges.mockResolvedValue({ badges: [] });
   });
 
   afterEach(() => {
@@ -160,5 +191,54 @@ describe("ArenaSession", () => {
     await screen.findByText("Run complete");
     const link = screen.getByRole("link", { name: new RegExp(first.chapterSlug) });
     expect(link).toHaveAttribute("href", `/courses/${first.courseSlug}/${first.chapterSlug}`);
+  });
+});
+
+describe("saving a run to the account", () => {
+  beforeEach(() => {
+    setMatchMedia(false);
+    vi.clearAllMocks();
+    resetArenaProgress();
+    useAccessToken.mockReturnValue("token-abc");
+    fetchArenaProgress.mockResolvedValue(EMPTY_PROGRESS);
+    recordArenaAnswer.mockResolvedValue({ xp: 10, streak: { current: 1, longest: 1, lastActiveDate: "2026-09-21" } });
+    awardArenaBadges.mockResolvedValue({ badges: [] });
+  });
+
+  it("posts each answer to the account, with the learner's own calendar date", async () => {
+    const user = userEvent.setup();
+    render(<ArenaSession challenges={[challenges[0]!]} />);
+
+    await answerCurrent(user, true);
+
+    await waitFor(() => expect(recordArenaAnswer).toHaveBeenCalledTimes(1));
+    const [token, body] = recordArenaAnswer.mock.calls[0]!;
+    expect(token).toBe("token-abc");
+    expect(body.challengeId).toBe("c1");
+    expect(body.correct).toBe(true);
+    // The learner's local day, not a UTC one — the streak boundary depends on it.
+    expect(body.localDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(body.card.due).toEqual(expect.any(String));
+  });
+
+  it("records a wrong answer too, so the card is rescheduled", async () => {
+    const user = userEvent.setup();
+    render(<ArenaSession challenges={[challenges[0]!]} />);
+
+    await answerCurrent(user, false);
+
+    await waitFor(() => expect(recordArenaAnswer).toHaveBeenCalledTimes(1));
+    expect(recordArenaAnswer.mock.calls[0]![1].correct).toBe(false);
+  });
+
+  it("says so, rather than pretending, when an answer cannot be saved", async () => {
+    recordArenaAnswer.mockRejectedValue(new Error("offline"));
+    const user = userEvent.setup();
+    render(<ArenaSession challenges={[challenges[0]!]} />);
+
+    await answerCurrent(user, true);
+    await user.keyboard("{Enter}");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not be saved/i);
   });
 });

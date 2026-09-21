@@ -15,3 +15,4 @@ export * from "./interview.js";
 export * from "./question-bank.js";
 export * from "./loop-brief.js";
 export * from "./course-progress.js";
+export * from "./arena.js";

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ImportBrowserArenaProgress } from "@/components/arena/import-browser-arena";
 import { ArenaDailyQuest } from "@/components/arena/arena-daily-quest";
 import { ProgressSummary } from "@/components/arena/progress-summary";
 import { Breadcrumbs } from "@/components/breadcrumbs";
@@ -43,6 +44,7 @@ export default function ArenaPage() {
           </div>
           <div className="lg:w-96 lg:shrink-0">
             <ProgressSummary />
+            <ImportBrowserArenaProgress />
           </div>
         </div>
 

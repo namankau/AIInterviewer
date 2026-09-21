@@ -3,8 +3,26 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { env } from "@/lib/env";
 
-/** Routes that require a signed-in candidate. */
-const PROTECTED_PREFIXES = ["/dashboard", "/questions"];
+/**
+ * Routes that require a signed-in candidate. Everything except the landing page and the
+ * sign-in flow: courses and the Arena were public until the owner decided (21 Sep 2026)
+ * that a visitor should sign up or in before seeing any of it.
+ */
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/questions",
+  "/courses",
+  "/arena",
+  "/interview",
+  "/rounds",
+  "/profile",
+  "/report",
+];
+
+/** Matches the prefix itself or anything beneath it — `/arena` but not `/arenas`. */
+function isProtected(pathname: string): boolean {
+  return PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
 
 /** Routes a signed-in candidate has no reason to see. */
 const SIGNED_OUT_ONLY = ["/login"];
@@ -43,7 +61,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   const { pathname } = request.nextUrl;
 
-  if (!user && PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+  if (!user && isProtected(pathname)) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     redirectUrl.search = `?next=${encodeURIComponent(pathname)}`;

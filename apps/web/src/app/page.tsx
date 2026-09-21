@@ -497,6 +497,18 @@ function Courses() {
               <span className="text-caption font-semibold text-accent">Start course →</span>
             </Link>
           ))}
+          <Link
+            href={"/arena" as Route}
+            className="card flex flex-col gap-2 p-6 transition-shadow hover:shadow-[var(--shadow-md)]"
+          >
+            <span className="pill pill-highlight w-fit">New</span>
+            <h3 className="text-heading font-bold text-ink">The Arena</h3>
+            <p className="text-caption text-ink-muted">
+              Short, gamified rounds derived from every chapter above — spot the mistake, predict the output,
+              read a diagram one step ahead.
+            </p>
+            <span className="pt-2 text-caption font-semibold text-accent">Play now →</span>
+          </Link>
         </div>
       </div>
     </section>

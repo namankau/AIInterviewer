@@ -48,5 +48,6 @@ const LINKS = [
   { href: "/rounds", label: "Rounds" },
   { href: "/questions", label: "Questions" },
   { href: "/courses", label: "Courses" },
+  { href: "/arena", label: "Arena" },
   { href: "/profile", label: "Profile" },
 ] as const;

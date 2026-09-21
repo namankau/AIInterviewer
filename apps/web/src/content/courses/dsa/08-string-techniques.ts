@@ -124,28 +124,93 @@ export const chapterStringTechniques: Chapter = {
         'isPalindrome("malayalam"): True\nisPalindrome("hello"): False\nisAnagram("listen", "silent"): True\nisAnagram("rat", "car"): False',
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: 'isPalindrome("malayalam") — converging inward',
-      steps: [
-        "left=0 ('m'), right=8 ('m'). Match. left++ , right--.",
-        "left=1 ('a'), right=7 ('a'). Match. left++, right--.",
-        "left=2 ('l'), right=6 ('l'). Match. left++, right--.",
-        "left=3 ('a'), right=5 ('a'). Match. left++, right--.",
-        "left=4, right=4. left is no longer < right — loop stops (the middle 'y' never needed comparing " +
-          "against itself).",
-        "No mismatch found anywhere — return true.",
-      ],
+      caption: "left and right move toward each other one step at a time; a match keeps them moving, a mismatch would return false immediately.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [
+              { value: "m", state: "compare", pointers: ["left"] },
+              { value: "a" }, { value: "l" }, { value: "a" }, { value: "y" }, { value: "a" }, { value: "l" }, { value: "a" },
+              { value: "m", state: "compare", pointers: ["right"] },
+            ],
+            note: "left=0 ('m'), right=8 ('m'). Match. left++, right--.",
+          },
+          {
+            cells: [
+              { value: "m", state: "done" },
+              { value: "a", state: "compare", pointers: ["left"] },
+              { value: "l" }, { value: "a" }, { value: "y" }, { value: "a" }, { value: "l" },
+              { value: "a", state: "compare", pointers: ["right"] },
+              { value: "m", state: "done" },
+            ],
+            note: "left=1 ('a'), right=7 ('a'). Match. left++, right--.",
+          },
+          {
+            cells: [
+              { value: "m", state: "done" }, { value: "a", state: "done" },
+              { value: "l", state: "compare", pointers: ["left"] },
+              { value: "a" }, { value: "y" }, { value: "a" },
+              { value: "l", state: "compare", pointers: ["right"] },
+              { value: "a", state: "done" }, { value: "m", state: "done" },
+            ],
+            note: "left=2 ('l'), right=6 ('l'). Match. left++, right--.",
+          },
+          {
+            cells: [
+              { value: "m", state: "done" }, { value: "a", state: "done" }, { value: "l", state: "done" },
+              { value: "a", state: "compare", pointers: ["left"] },
+              { value: "y" },
+              { value: "a", state: "compare", pointers: ["right"] },
+              { value: "l", state: "done" }, { value: "a", state: "done" }, { value: "m", state: "done" },
+            ],
+            note: "left=3 ('a'), right=5 ('a'). Match. left++, right--.",
+          },
+          {
+            cells: [
+              { value: "m", state: "done" }, { value: "a", state: "done" }, { value: "l", state: "done" }, { value: "a", state: "done" },
+              { value: "y", state: "active", pointers: ["left", "right"] },
+              { value: "a", state: "done" }, { value: "l", state: "done" }, { value: "a", state: "done" }, { value: "m", state: "done" },
+            ],
+            note:
+              "left=4, right=4. left is no longer < right — loop stops (the middle 'y' never needed " +
+              "comparing against itself). No mismatch found anywhere — return true.",
+          },
+        ],
+      },
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: 'isAnagram("listen", "silent") — build, then tear down',
-      steps: [
-        "Build phase, reading \"listen\": counts becomes {l:1, i:1, s:1, t:1, e:1, n:1}.",
-        "Tear-down phase, reading \"silent\": counts.merge('s', -1, sum) -> s becomes 0. Then 'i' -> 0, " +
-          "'l' -> 0, 'e' -> 0, 'n' -> 0, 't' -> 0.",
-        "Every value in counts is now exactly 0 — the two strings used precisely the same letters, the " +
-          "same number of times each. Return true.",
-      ],
+      caption: "One shared counts table: the first string builds it up, the second tears it back down; every count landing on 0 means the letters matched exactly.",
+      viz: {
+        type: "table",
+        frames: [
+          {
+            rowLabels: ["l", "i", "s", "t", "e", "n"],
+            colLabels: ["count"],
+            rows: [[0], [0], [0], [0], [0], [0]],
+            note: "counts starts empty (every count 0, no entries yet).",
+          },
+          {
+            rowLabels: ["l", "i", "s", "t", "e", "n"],
+            colLabels: ["count"],
+            rows: [[1], [1], [1], [1], [1], [1]],
+            note: "Build phase, reading \"listen\" one character at a time: counts becomes {l:1, i:1, s:1, t:1, e:1, n:1}.",
+          },
+          {
+            rowLabels: ["l", "i", "s", "t", "e", "n"],
+            colLabels: ["count"],
+            rows: [[0], [0], [0], [0], [0], [0]],
+            note:
+              "Tear-down phase, reading \"silent\": counts.merge(c, -1, sum) for each character brings " +
+              "'s', 'i', 'l', 'e', 'n', 't' back to 0, one at a time. Every value in counts is now exactly " +
+              "0 — the two strings used precisely the same letters, the same number of times each. Return true.",
+          },
+        ],
+      },
     },
     {
       kind: "table",

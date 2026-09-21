@@ -15,6 +15,42 @@ That is what this task builds: `/arena`.
 
 ---
 
+## What scalequest.io actually is — and what to take from it
+
+A research pass looked at the live site, because the reference matters. **It is not a
+quiz bank with XP bolted on**, which is the obvious thing to build and the wrong thing:
+
+- It is a **narrative, scenario-driven game**. You read a short crisis story with named
+  characters, you look at a **diagram of the system**, you make one architectural call, and
+  you are told immediately whether the decision was sound and why.
+- Progression runs through **four themed campaigns of rising difficulty**, each built around
+  a concrete scenario, rather than abstract topic buckets. Checkpointed, unlocking as you go.
+- The mechanics underneath are still just multiple choice with feedback. **What makes it feel
+  like a game is the framing — story plus diagram wrapped around each decision — not the
+  scoring.**
+
+The lesson, and it is the most important sentence in this brief: **the gamification is
+presentation, not arithmetic.** A leaderboard and an XP number will not make this fun. A
+decision that feels like it matters, shown as a picture, will.
+
+Two consequences for what you build:
+
+1. **Campaigns, not one flat pool.** The courses already have a module structure — use it.
+   Each module is a campaign with a name and a theme; its chapters are the levels; difficulty
+   rises through it; progress is checkpointed per campaign. This is nearly free, because the
+   structure exists, and it is the half of scalequest's shape that carries most of the feel.
+2. **Lead with the picture.** Where a challenge has a `viz` available, show the diagram and
+   ask for the decision, rather than showing a paragraph and asking about it. Reuse
+   `viz-block.tsx`; do not build a second visualisation system.
+
+**What is explicitly out of scope here:** authored crisis narratives with characters, and
+system-design scenarios. Our courses are Java and DSA, and CLAUDE.md settles that system
+design is refused for a campus fresher — so scalequest's actual subject matter is not ours to
+copy. Written narrative content is a separate content-authoring task if the owner wants it.
+Build the structure and the framing; do not invent story content to fill it.
+
+---
+
 ## The core architectural rule — read this before anything else
 
 **The Arena does not get its own content store. Challenges are derived from the course
@@ -84,13 +120,28 @@ A run is **short** — around 7 challenges, 3–5 minutes, a clear end. Not an e
 
 ### 3. Spaced repetition — the one place to take a dependency
 
-Which challenge a learner sees next is the genuinely hard algorithm here, and it is a solved
-problem. A separate research pass is running on this; its recommendation will be sent to you
-before you need it. **Follow it.** If it says adopt `ts-fsrs`, adopt it rather than
-hand-rolling SM-2. If it says hand-roll, hand-roll.
+Which challenge a learner sees next is the genuinely hard algorithm here, and it is solved.
+A research pass verified the options; **its conclusion is settled, implement it, do not
+relitigate it**:
 
-Wrap whatever you use behind `lib/arena/scheduler.ts` so the choice is reversible and
-testable without the library in the loop.
+- **Adopt `ts-fsrs` (MIT, ~7.2KB gzipped, zero runtime dependencies, TypeScript-native,
+  client-side).** It is the reference TS implementation of FSRS — the algorithm that
+  replaced SM-2 inside Anki itself. Licence confirmed by reading the actual LICENSE file.
+- Rejected: `supermemo`, `@dtjv/sm-2`, `@kirklin/supermemo2` — all implement the older SM-2
+  that FSRS was built to supersede. Hand-rolling SM-2 was rejected for the same reason: FSRS
+  is empirically tuned against large review datasets and is not worth re-deriving.
+
+Wrap it behind `lib/arena/scheduler.ts` so the choice is reversible and so the progression
+logic is testable without the library in the loop. You own persistence — `ts-fsrs` is a pure
+scheduling function over a card's review history and stores nothing itself.
+
+**Second and last permitted dependency: `canvas-confetti` (ISC, ~4.3KB gzipped, zero deps)**
+for the celebration on a genuine milestone. It has a `disableForReducedMotion` option but it
+is **off by default** — wrap it in a helper that checks the media query and pass the flag.
+Do not fire it on every correct answer; a celebration that happens constantly is noise.
+
+**These two are the entire dependency budget for this task.** Anything else needs a written
+justification in your report against what is already in the repo.
 
 ### 4. Where it lives
 
@@ -119,8 +170,25 @@ lands from search must be able to play immediately, with no account.
 
 ## Don't reinvent the wheel — and don't over-install either
 
-The owner has said this twice, so be deliberate in both directions. The research pass will
-give you a verified list of what to install and what to build by hand. Broad priors:
+The owner has said this twice, so be deliberate in both directions. The research pass has
+already done this work — install `ts-fsrs` and `canvas-confetti`, and **build everything else
+by hand**. Its other findings, so you do not repeat the search:
+
+- **No permissively-licensed question corpus exists** that this product may use. Checked and
+  rejected: `open-quiz-commons` (CC-BY-SA-4.0 — ShareAlike would infect our content),
+  `sachuverma/DataStructures-Algorithms` (MIT on the repo, but the content is just *links* to
+  GeeksforGeeks/LeetCode/InterviewBit, which we may neither scrape nor republish), and the
+  general run of "CS-Fundamentals" student repos (no LICENSE file at all, therefore default
+  copyright). This independently confirms the earlier DSA-corpus finding. **The 195 reviewed
+  questions already in the repo are the only sound source.** This is exactly why the derived
+  corpus above is the architecture.
+- **XP curves, streak tracking and badge definitions have no library worth taking** — each is
+  50–100 lines against our own data model, and adopting one means bending our schema to fit
+  someone else's. Write them.
+- `Trophy UI` (gamification UI components) came back **licence-unverified — the repo 404'd**.
+  Do not install it. Recorded only so nobody re-searches it.
+
+Broad priors that still hold:
 
 - **Do not** add a charting, animation, or state-management library. `useReducer` is enough.
   CLAUDE.md explicitly bans a state-management library before there is state that needs one.

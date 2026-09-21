@@ -1,57 +1,86 @@
 @import "tailwindcss";
 
 /*
- * Design tokens.
+ * Design tokens — InterviewBit-style revamp (task 044, PRD design).
  *
- * The reference is a serious engineering tool — a terminal, a good CI dashboard, a
- * well-set technical book — not a SaaS landing page. Ink on paper in light, a dark
- * console in dark. One accent, used for meaning and never for mood.
- *
- * The user is a nervous candidate whose livelihood is on the line. Decoration reads as
- * a company with nothing to show; restraint reads as one that does this for a living.
+ * The owner's brief: the previous "engineering tool" look reads as hand-written rather
+ * than as a product with an audience behind it. This pass keeps the same token *names*
+ * so every page re-themes from here, but the palette is now a confident product blue
+ * over navy and soft-blue surfaces — closer to a modern SaaS marketing site than a
+ * terminal, while keeping one accent used for meaning, not mood, per CLAUDE.md.
  */
 
 :root {
-  /*
-   * Paper, not white. A page with a little warmth in it reads as something printed and
-   * considered; #ffffff reads as a default nobody chose. The ramp is four steps so a
-   * panel can sit on the page without a border and still be legible as a separate thing.
-   */
-  --surface: #fbf8f4;
+  /* Page background is a hair off pure white so a full-bleed card can sit on it without
+     a border and still read as separate; raised cards are true white with a soft shadow. */
+  --surface: #f7f9fc;
   --surface-raised: #ffffff;
-  --surface-sunken: #f2ede5;
-  --ink: #14151a;
-  --ink-muted: #56544f;
-  --ink-subtle: #8a877f;
-  /* Hairlines, not borders. A rule in a printed table is thinner than a card edge. */
-  --line: #14151a14;
-  --line-strong: #14151a2e;
-  --accent: #1c4f7c;
-  --accent-strong: #143a5c;
+  --surface-sunken: #f2f6ff;
+  /* Soft-blue tint used for section bands and hero backdrops behind the navy. */
+  --surface-tint: #f2f6ff;
+  --navy: #0b1a33;
+  --navy-raised: #12244a;
+  --ink: #0f172a;
+  --ink-muted: #475569;
+  --ink-subtle: #5f6b7a;
+  /* Text set on the navy surfaces (hero, nav, footer). */
+  --on-navy: #f8fafc;
+  --on-navy-muted: #b9c4d6;
+
+  --line: #0f172a17;
+  --line-strong: #0f172a2e;
+
+  --accent: #1a64f0;
+  --accent-strong: #1550c4;
   --accent-contrast: #ffffff;
-  --accent-wash: #eef3f8;
-  --danger: #9b2c2c;
-  --positive: #1f6b45;
-  --grid: rgba(18, 20, 26, 0.045);
+  --accent-wash: #eaf1ff;
+
+  /* Secondary accents for badges, status and the "how it works" rhythm. Never used as
+     the primary call to action — one accent still carries that meaning. */
+  --accent-2: #12a150;
+  --highlight: #f5a524;
+
+  --danger: #b3261e;
+  --positive: #0a7d3c;
+  --grid: rgba(15, 23, 42, 0.05);
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 1px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 24px 64px rgba(15, 23, 42, 0.14), 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface: #0b0c10;
-    --surface-raised: #14161c;
-    --surface-sunken: #101218;
-    --ink: #edeae5;
-    --ink-muted: #9a978f;
-    --ink-subtle: #6a675f;
-    --line: #edeae514;
-    --line-strong: #edeae52e;
-    --accent: #6ea8dc;
-    --accent-strong: #92c0e8;
-    --accent-contrast: #0b0d11;
-    --accent-wash: #121b25;
-    --danger: #e08585;
-    --positive: #6cc296;
-    --grid: rgba(232, 234, 237, 0.05);
+    --surface: #0a0e17;
+    --surface-raised: #121826;
+    --surface-sunken: #0f1420;
+    --surface-tint: #101a2e;
+    --navy: #060b16;
+    --navy-raised: #0d1526;
+    --ink: #eef1f6;
+    --ink-muted: #a7b0c0;
+    --ink-subtle: #7b8494;
+    --on-navy: #f1f4f9;
+    --on-navy-muted: #a7b0c0;
+
+    --line: #eef1f617;
+    --line-strong: #eef1f62e;
+
+    --accent: #5b93f7;
+    --accent-strong: #8ab2fa;
+    --accent-contrast: #071023;
+    --accent-wash: #12203f;
+
+    --accent-2: #3fc383;
+    --highlight: #f7bb55;
+
+    --danger: #f0938c;
+    --positive: #4cc987;
+    --grid: rgba(238, 241, 246, 0.05);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.55), 0 8px 20px rgba(0, 0, 0, 0.35);
   }
 }
 
@@ -59,40 +88,48 @@
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
   --color-surface-sunken: var(--surface-sunken);
+  --color-surface-tint: var(--surface-tint);
+  --color-navy: var(--navy);
+  --color-navy-raised: var(--navy-raised);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
   --color-ink-subtle: var(--ink-subtle);
+  --color-on-navy: var(--on-navy);
+  --color-on-navy-muted: var(--on-navy-muted);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-contrast: var(--accent-contrast);
   --color-accent-wash: var(--accent-wash);
+  --color-accent-2: var(--accent-2);
+  --color-highlight: var(--highlight);
   --color-danger: var(--danger);
   --color-positive: var(--positive);
 
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   --font-mono:
     ui-monospace, "JetBrains Mono", "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
   /*
-   * Headings are set in a serif against a sans interface. That single contrast is most
-   * of what separates an editorial page from a dashboard, and it costs nothing: these
-   * are faces every machine already has. A licensed display face would be better still,
-   * but choosing one is the owner's call, not an autonomous run's.
+   * Headings now sit in the same bold sans as the body — one confident modern grotesque
+   * carrying both, set apart by weight and scale rather than by switching families. The
+   * serif read as an editorial trade publication; a product with an audience to win over
+   * reads as one typeface used with conviction.
    */
-  --font-display: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-display: var(--font-jakarta), var(--font-sans);
 
   /* A short scale. Anything off it should have to justify itself. */
-  --text-hero: clamp(2.5rem, 6vw, 4.25rem);
-  --text-hero--line-height: 1.02;
-  --text-hero--letter-spacing: -0.02em;
+  --text-hero: clamp(2.75rem, 6vw, 4.5rem);
+  --text-hero--line-height: 1.04;
+  --text-hero--letter-spacing: -0.025em;
   --text-display: clamp(2rem, 4vw, 2.9rem);
-  --text-display--line-height: 1.08;
-  --text-display--letter-spacing: -0.015em;
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.02em;
   --text-title: 1.7rem;
-  --text-title--line-height: 1.18;
-  --text-title--letter-spacing: -0.01em;
+  --text-title--line-height: 1.2;
+  --text-title--letter-spacing: -0.015em;
   --text-heading: 1.0625rem;
   --text-heading--line-height: 1.4;
   --text-heading--letter-spacing: -0.005em;
@@ -118,15 +155,11 @@
     text-rendering: optimizeLegibility;
   }
 
-  /*
-   * The three display sizes are the serif. Applying it here rather than at every call
-   * site means a heading cannot accidentally be set in the interface face.
-   */
   .text-hero,
   .text-display,
   .text-title {
     font-family: var(--font-display);
-    font-weight: 400;
+    font-weight: 700;
   }
 
   /* Tabular figures everywhere numbers are compared down a column. */
@@ -155,6 +188,44 @@
   /* A hairline that reads as a rule in a printed table, not a card border. */
   .rule {
     border-color: var(--line);
+  }
+
+  /* The one card shape used everywhere: white surface, soft border, soft shadow. */
+  .card {
+    background-color: var(--surface-raised);
+    border: 1px solid var(--line);
+    border-radius: 0.9rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Small rounded label — status, tag, coverage archetype. Never the primary action. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.25rem 0.7rem;
+    font-size: var(--text-micro);
+    letter-spacing: var(--text-micro--letter-spacing);
+    line-height: var(--text-micro--line-height);
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .pill-accent {
+    background-color: var(--accent-wash);
+    color: var(--accent-strong);
+  }
+  .pill-positive {
+    background-color: color-mix(in srgb, var(--accent-2) 14%, transparent);
+    color: var(--positive);
+  }
+  .pill-highlight {
+    background-color: color-mix(in srgb, var(--highlight) 20%, transparent);
+    color: #8a5a10;
+  }
+  .pill-navy {
+    background-color: color-mix(in srgb, var(--on-navy) 14%, transparent);
+    color: var(--on-navy);
   }
 }
 
@@ -230,5 +301,30 @@
   .presence-speaking .presence-mouth,
   .presence-thinking .presence-eyes {
     animation: none;
+  }
+}
+
+/*
+ * Shiki's build-time output (task 049) — the `code` and `playground` static blocks. Shiki
+ * bakes both a light and a dark colour into every token as `--shiki-light`/`--shiki-dark`
+ * custom properties (`defaultColor: false`), and leaves picking one to us; since this
+ * product has no class-based theme switch, the same `prefers-color-scheme` query that
+ * drives every other token in this file drives this too, rather than a second mechanism.
+ * The background stays ours (`bg-surface-raised` on the wrapping figure) — only the token
+ * colours come from Shiki.
+ */
+.shiki-wrap .shiki,
+.shiki-wrap .shiki span {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  background-color: transparent !important;
+  color: var(--shiki-light);
+}
+
+@media (prefers-color-scheme: dark) {
+  .shiki-wrap .shiki,
+  .shiki-wrap .shiki span {
+    color: var(--shiki-dark);
   }
 }

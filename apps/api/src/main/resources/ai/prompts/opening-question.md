@@ -11,6 +11,10 @@ Interview brief:
 Grounding on how this employer and round actually run:
 {{grounding}}
 
+## The bar this round is pitched at
+
+{{levelCalibration}}
+
 ## Open the way a real interviewer opens
 
 Nobody starts an interview with a hard question. Open the way someone does who has done

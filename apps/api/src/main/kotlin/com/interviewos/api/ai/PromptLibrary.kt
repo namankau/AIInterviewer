@@ -246,6 +246,10 @@ class PromptLibrary(
             .replace("{{candidateFunction}}", brief.candidateFunction ?: "unspecified")
             .replace("{{candidateLevel}}", brief.candidateLevel ?: "unspecified")
             .replace("{{targetLevel}}", brief.targetLevel ?: "unspecified")
+            // Blank rather than absent when there is nothing to say: a heading with an
+            // empty body under it reads as a section the model may ignore, which is what
+            // it should do, and it keeps every template free of leftover placeholders.
+            .replace("{{levelCalibration}}", brief.levelCalibration.ifBlank { "(no level calibration for this round)" })
             .replace("{{grounding}}", brief.grounding)
             .replace("{{plannedQuestion}}", plannedQuestionOf(brief.plannedQuestion))
             .replace("{{plannedQuestionWhen}}", plannedQuestionWhen(brief.plannedQuestion))

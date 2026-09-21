@@ -138,6 +138,18 @@ data class InterviewBrief(
     val candidateFunction: String?,
     val candidateLevel: String?,
     val targetLevel: String?,
+    /**
+     * The bar this round is run at, in prose the model has to work against rather than a
+     * label it can skim past (task 048).
+     *
+     * Written by the engine from
+     * [com.interviewos.api.interview.CandidateStage] — a level alone never calibrated
+     * anything, because "0 years of experience" reads to a model as a number rather than
+     * as an instruction not to ask a student about production incidents. Empty when the
+     * caller has nothing to say about the level, which is how every prompt behaved before
+     * this existed.
+     */
+    val levelCalibration: String = "",
     /** Archetype-level grounding; carries its own provenance so nothing is invented. */
     val grounding: String,
     /**

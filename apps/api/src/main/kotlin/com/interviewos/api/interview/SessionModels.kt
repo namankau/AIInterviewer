@@ -51,6 +51,13 @@ data class StartSessionRequest(
     @field:Min(5)
     @field:Max(120)
     val durationMinutes: Int = 40,
+    /**
+     * The candidate saying, in their own words, where they are: `student`,
+     * `recent_graduate` or `professional` (task 051). Optional — null reproduces today's
+     * behaviour exactly, deriving the stage from the role title and resume alone
+     * ([CandidateStage.of]). An unrecognised value is a `400`, not a silent ignore.
+     */
+    val candidateStage: String? = null,
 )
 
 /** One exchange as the client needs to render it. */

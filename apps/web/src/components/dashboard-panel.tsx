@@ -128,7 +128,7 @@ export function DashboardView({
           {openSession ? (
             <Link
               href={`/interview/${openSession.id}`}
-              className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
+              className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
             >
               Resume interview
             </Link>
@@ -138,8 +138,8 @@ export function DashboardView({
               aria-disabled={entitlement?.allowed === false}
               className={
                 entitlement?.allowed === false
-                  ? "pointer-events-none rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast opacity-50"
-                  : "rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
+                  ? "pointer-events-none rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast opacity-50"
+                  : "rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
               }
             >
               Start an interview
@@ -198,7 +198,7 @@ export function DashboardView({
                 {readiness.map((group) => (
                   <li
                     key={`${group.companyName}-${group.roleTitle}`}
-                    className="flex flex-col gap-2 rounded-lg border border-line bg-surface-raised px-5 py-4"
+                    className="flex flex-col gap-2 rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] px-5 py-4"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <span className="text-body text-ink">

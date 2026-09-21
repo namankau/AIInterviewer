@@ -13,6 +13,10 @@ Interview brief:
 Grounding:
 {{grounding}}
 
+## The bar this round is pitched at
+
+{{levelCalibration}}
+
 ## Where you are in the round
 
 - Stage: **{{phase}}**

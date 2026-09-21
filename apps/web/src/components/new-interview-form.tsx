@@ -1,6 +1,6 @@
 "use client";
 
-import type { RoundDraft, RoundType } from "@acemyinterview/shared";
+import type { CandidateStage, RoundDraft, RoundType } from "@acemyinterview/shared";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -145,7 +145,7 @@ export function NewInterviewForm() {
           maxLength={600}
           required
           placeholder="Infosys MR round next Tuesday. 5 years, Java backend."
-          className="w-full resize-none rounded-lg border border-line bg-surface-raised px-4 py-3.5 text-body text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
+          className="w-full resize-none rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] px-4 py-3.5 text-body text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
         />
 
         <div className="flex flex-wrap items-center gap-3">
@@ -219,6 +219,9 @@ function RoundSetup({
   const [language, setLanguage] = useState(draft.language);
   const [consentAudio, setConsentAudio] = useState(false);
   const [cameraOn, setCameraOn] = useState(false);
+  // Optional, and left blank by default: leaving it blank must behave exactly as it did
+  // before this field existed, deriving the stage from the role title and resume alone.
+  const [candidateStage, setCandidateStage] = useState<CandidateStage | "">("");
   /*
    * Whether this browser can read the questions out itself. Decided here because the
    * session is created here, and the opening question is synthesised as part of creating
@@ -261,6 +264,7 @@ function RoundSetup({
         // being looked at, which is a benefit that never leaves their own screen.
         consentVideo: cameraOn,
         durationMinutes,
+        candidateStage: candidateStage === "" ? undefined : candidateStage,
       });
       onStart(session.id);
     } catch (cause) {
@@ -357,6 +361,22 @@ function RoundSetup({
         <p className="text-caption text-ink-muted">{draft.groundingNote}</p>
       ) : null}
 
+      <Field
+        label="Where are you in your career?"
+        hint="Optional — so the questions match where you are. Leave it blank and we'll go by the role and resume."
+      >
+        <select
+          value={candidateStage}
+          onChange={(event) => setCandidateStage(event.target.value as CandidateStage | "")}
+          className={INPUT}
+        >
+          <option value="">Prefer not to say</option>
+          <option value="student">Student, still studying</option>
+          <option value="recent_graduate">Recent graduate, no job yet</option>
+          <option value="professional">Working professional</option>
+        </select>
+      </Field>
+
       <fieldset className="flex flex-col gap-4">
         <legend className="pb-1 text-heading text-ink">Which round?</legend>
         <div className="grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-2">
@@ -413,7 +433,7 @@ function RoundSetup({
         </Field>
       </div>
 
-      <fieldset className="flex flex-col gap-4 rounded-lg border border-line bg-surface-raised p-5">
+      <fieldset className="flex flex-col gap-4 rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] p-5">
         <legend className="px-2 text-heading text-ink">Before we start</legend>
         <p className="text-caption text-ink-muted">
           This interview is spoken. Nothing is recorded until you agree, and everything

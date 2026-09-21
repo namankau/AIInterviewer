@@ -24,8 +24,21 @@ export const EMPLOYER_ARCHETYPES = [
 ] as const;
 export type EmployerArchetype = (typeof EMPLOYER_ARCHETYPES)[number];
 
+/**
+ * What a candidate says about their own stage when starting a session (task 051), so
+ * they can correct the server's guess rather than sit whatever round it derived from
+ * the role title and resume alone (`CandidateStage.of` on the API).
+ *
+ * A `text` column with a check constraint on the API side, not a real Postgres enum —
+ * kept here anyway, unlike `level`, because unlike level this is a closed, candidate-
+ * facing choice with exactly three options rather than an open field.
+ */
+export const CANDIDATE_STAGES = ["student", "recent_graduate", "professional"] as const;
+export type CandidateStage = (typeof CANDIDATE_STAGES)[number];
+
 /** PRD 06. */
 export const ROUND_TYPES = [
+  "aptitude",
   "technical_fundamentals",
   "project_deep_dive",
   "coding_practical",

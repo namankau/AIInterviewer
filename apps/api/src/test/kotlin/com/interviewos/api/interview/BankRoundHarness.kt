@@ -4,6 +4,7 @@ import com.interviewos.api.ai.AiResult
 import com.interviewos.api.ai.AiUsage
 import com.interviewos.api.ai.AnswerAssessment
 import com.interviewos.api.ai.ComposedCase
+import com.interviewos.api.ai.ComposedRound
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
 import com.interviewos.api.ai.ReportContent
@@ -44,11 +45,17 @@ class BankRoundHarness {
     val archetypes = ArchetypeResolver()
     val poolMaterial = PoolMaterial(mapper)
 
+    /** Returns null for every candidate unless a test says otherwise: no resume, as most rounds run. */
+    val resumeService: ResumeService = mock(ResumeService::class.java)
+
     /** What the model is asked, in order. */
     val briefs = mutableListOf<InterviewBrief>()
     var case: ComposedCase? = null
     var assessment: AnswerAssessment? = null
     var report: ReportContent? = null
+
+    /** What the model reads out of a candidate's one-line query, when a test exercises the round composer. */
+    var composedRound: ComposedRound? = null
 
     val ai: InterviewAi =
         mock(InterviewAi::class.java) { invocation ->
@@ -56,6 +63,7 @@ class BankRoundHarness {
             brief?.let { briefs += it }
             when (invocation.method.name) {
                 "composeCase" -> AiResult(checkNotNull(case), AiUsage.none("test"))
+                "composeRound" -> AiResult(checkNotNull(composedRound), AiUsage.none("test"))
                 "assessAnswer" -> AiResult(checkNotNull(assessment), AiUsage.none("test"))
                 "composeReport" -> AiResult(checkNotNull(report), AiUsage.none("test"))
                 else -> RETURNS_DEFAULTS.answer(invocation)
@@ -73,11 +81,12 @@ class BankRoundHarness {
             objectMapper = mapper,
             questionSpeech = mock(QuestionSpeech::class.java),
             entitlementProperties = EntitlementProperties(),
+            roundsProperties = RoundsProperties(),
             retentionProperties = RetentionProperties(),
             roundMedia = RoundMediaProperties(),
             bankRounds = BankRoundPlanner(directory, bank, repository),
             poolRounds = PoolRoundPlanner(directory, pool, repository, poolMaterial),
-            resumeService = mock(ResumeService::class.java),
+            resumeService = resumeService,
             roundWorkspaceComposer = RoundWorkspaceComposer(ai, mapper, ProblemVerifier(ai, mapper), poolMaterial),
             codeRunner = mock(CodeRunner::class.java),
             transactionManager =

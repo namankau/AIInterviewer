@@ -89,4 +89,45 @@ class QuestionProvenanceTest {
         assertEquals("Reported for Amazon by 2 sources we hold, cited below.", provenance.basis)
         assertTrue(provenance.askedBecause.isNotBlank(), "a replaced question still says why it was asked")
     }
+
+    /**
+     * The rule task 048 turns on.
+     *
+     * A campus process is the thing a model will state most confidently and the thing we
+     * can least support: the employers' own pages could not be read, and every figure in
+     * circulation about their tests comes from prep aggregators. So a claim about how
+     * campus hiring runs, written by the model, stays `model_knowledge` however specific
+     * it sounds — and an empty citation list cannot promote it.
+     */
+    @Test
+    fun `a campus process claim with no source behind it is never published_source`() {
+        val claim =
+            "Campus hiring at this kind of employer typically opens with an aptitude and reasoning gate " +
+                "before any technical round."
+
+        val fromModel = assertNotNull(QuestionProvenance.fromModel(claim, "Reasoning under time pressure.", "You are a fresher."))
+        val fromNoSources = assertNotNull(QuestionProvenance.fromSources(claim, "Reasoning.", "You are a fresher.", sources = emptyList()))
+
+        for (provenance in listOf(fromModel, fromNoSources)) {
+            assertEquals(ProvenanceTier.MODEL_KNOWLEDGE, provenance.tier)
+            assertTrue(provenance.sources.isEmpty())
+        }
+    }
+
+    /**
+     * An aptitude question comes out of the pool, and the pool is the model's own writing.
+     * Nothing about the round type can raise it, and what the candidate reads says so in
+     * as many words.
+     */
+    @Test
+    fun `an aptitude question from the pool is the model's own knowledge, and says so`() {
+        val label = PoolQuestionLabel.employerKind(Archetype.SERVICE_BASED_IT)
+
+        val provenance = QuestionProvenance.fromPool(label, probes = "Ratios worked aloud.", askedBecause = null)
+
+        assertEquals(ProvenanceTier.MODEL_KNOWLEDGE, provenance.tier)
+        assertTrue(provenance.sources.isEmpty())
+        assertEquals(label, provenance.label)
+        assertTrue(label.contains("Not a verified report"), "the candidate is told, not left to infer it")
+    }
 }

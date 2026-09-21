@@ -31,7 +31,7 @@ export default function RoundsPage() {
         <header className="flex flex-col gap-4">
           <h1 className="text-display text-balance text-ink">The rounds.</h1>
           <p className="max-w-xl text-body text-ink-muted">
-            Eight rounds, each with its own structure and its own rubric. An Infosys
+            Nine rounds, each with its own structure and its own rubric. An Infosys
             techno-managerial panel is not a Google system design round, and preparing for one
             does not prepare you for the other.
           </p>
@@ -65,7 +65,7 @@ export default function RoundsPage() {
           </p>
           <Link
             href="/interview/new"
-            className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
+            className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
           >
             Set up a round
           </Link>

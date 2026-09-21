@@ -33,13 +33,13 @@ export function AppShell({
         aria-label="Main"
         className="flex shrink-0 flex-col gap-7 border-b border-line bg-surface-sunken px-5 py-5 md:w-60 md:border-r md:border-b-0 md:py-7"
       >
-        <Link href="/dashboard" className="text-heading tracking-tight text-ink">
+        <Link href="/dashboard" className="text-heading font-bold tracking-tight text-ink">
           AceMyInterview
         </Link>
 
         <Link
           href="/interview/new"
-          className="rounded-md bg-accent px-4 py-2.5 text-center text-caption font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
+          className="rounded-lg bg-accent px-4 py-2.5 text-center text-caption font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong"
         >
           New interview
         </Link>

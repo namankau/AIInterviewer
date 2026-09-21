@@ -56,6 +56,7 @@ class InterviewService(
     private val objectMapper: ObjectMapper,
     private val questionSpeech: QuestionSpeech,
     private val entitlementProperties: EntitlementProperties,
+    private val roundsProperties: RoundsProperties,
     private val retentionProperties: RetentionProperties,
     private val roundMedia: RoundMediaProperties,
     private val bankRounds: BankRoundPlanner,
@@ -109,20 +110,38 @@ class InterviewService(
             }
 
         val company = composed.company.trim().take(120)
-        val roundType = RoundType.parseOrNull(composed.roundType) ?: RoundType.PROJECT_DEEP_DIVE
+        val drafted = RoundType.parseOrNull(composed.roundType) ?: RoundType.PROJECT_DEEP_DIVE
+        val role = composed.role.trim().take(120)
+        val statedLevel = composed.level.trim().take(60)
+
+        // The engine, not the model, decides which round a fresher is given. There is no
+        // resume on this path — nobody is signed in to it — so the stage is read from what
+        // they wrote: "fresher", "campus", "graduate trainee", "2026 batch".
+        val stage = CandidateStage.of(role, experienceMonths = null, statedLevel = statedLevel)
+        val excluded = stage.campusFresher && drafted in roundsProperties.campusExcludedTypes
+        val roundType = if (excluded) CAMPUS_FALLBACK_ROUND else drafted
+        val substitution =
+            "You described a fresher or campus round, so this is a ${roundType.label.lowercase()} round rather " +
+                "than ${drafted.label.lowercase()}: campus loops do not contain one, and it is not a fair bar " +
+                "at this stage. Change it below if that is not what you meant."
+
         val resolution = archetypeResolver.resolve(company)
         val duration = composed.durationMinutes?.coerceIn(MIN_ROUND_MINUTES, MAX_ROUND_MINUTES) ?: DEFAULT_ROUND_MINUTES
 
         return RoundDraft(
             companyName = company,
-            roleTitle = composed.role.trim().take(120),
-            level = composed.level.trim().take(60),
+            roleTitle = role,
+            level = statedLevel,
             roundType = roundType.dbValue,
             roundLabel = roundType.label,
             durationMinutes = duration,
             language = if (composed.language == "hindi_english") "hindi_english" else "english",
             understood = composed.understood.trim(),
-            assumptions = composed.assumptions.map { it.trim() }.filter { it.isNotBlank() },
+            // Never a silent swap: the draft goes back to the candidate to correct, so the
+            // substitution is listed with everything else that was assumed for them.
+            assumptions =
+                composed.assumptions.map { it.trim() }.filter { it.isNotBlank() } +
+                    if (excluded) listOf(substitution) else emptyList(),
             confidence = composed.confidence.lowercase().takeIf { it in DRAFT_CONFIDENCES } ?: "low",
             archetypeLabel = resolution.archetype.label,
             archetypeConfidence = resolution.confidence.dbValue,
@@ -180,6 +199,24 @@ class InterviewService(
             RoundType.parseOrNull(request.roundType)
                 ?: throw ApiException.badRequest("That is not a round type we run.", code = "unknown_round_type")
 
+        // Optional, and rejected outright when it does not parse rather than silently
+        // dropped — the same treatment an unrecognised round type gets above.
+        val declaredStage =
+            request.candidateStage?.let {
+                DeclaredStage.parseOrNull(it)
+                    ?: throw ApiException.badRequest(
+                        "That is not a stage we recognise. Leave it blank if none of the options fit.",
+                        code = "unknown_candidate_stage",
+                    )
+            }
+
+        // Read before the session row is written, because it decides whether this round may
+        // run at all — and read once, then carried, rather than fetched again inside
+        // `composeAndOpen`.
+        val background = resumeService.backgroundFor(userId)
+        val stage = CandidateStage.of(request.roleTitle, background?.tenure?.totalExperienceMonths, declaredStage = declaredStage)
+        refuseRoundAboveStage(roundType, stage)
+
         val resolution = archetypeResolver.resolve(request.companyName)
         val sessionId =
             inTransaction {
@@ -187,18 +224,42 @@ class InterviewService(
                 // before that endpoint had ever been called failed on the users foreign key.
                 // Any entry point that creates user-owned rows has to stand on its own.
                 userRepository.provision(identity)
-                admitAndInsert(userId, request, roundType, resolution)
+                admitAndInsert(userId, request, roundType, resolution, declaredStage)
             }
 
         // The session row has committed, so a failure from here on can no longer be rolled
         // back — it has to be recorded. Without this a round that died mid-setup would sit
         // `in_progress` with no question in it, and block the candidate's next start.
         return try {
-            composeAndOpen(userId, sessionId, request, roundType, resolution)
+            composeAndOpen(userId, sessionId, request, roundType, resolution, background, stage, declaredStage)
         } catch (e: RuntimeException) {
             runCatching { repository.markSessionStatus(sessionId, userId, "failed") }
             throw e
         }
+    }
+
+    /**
+     * Refuses a round this candidate should not be sitting at all (task 048).
+     *
+     * Said out loud rather than quietly substituted. Swapping the round the candidate
+     * picked for a different one would leave them practising something they did not
+     * choose and a history row that disagrees with what they remember doing; refusing it
+     * with the reason lets them decide — and if the level is wrong, the role title they
+     * typed is what to fix, which the message says.
+     */
+    private fun refuseRoundAboveStage(
+        roundType: RoundType,
+        stage: CandidateStage,
+    ) {
+        if (!stage.campusFresher || roundType !in roundsProperties.campusExcludedTypes) return
+        throw ApiException.badRequest(
+            "We do not run a ${roundType.label.lowercase()} round for a campus or new-graduate candidate. " +
+                "No fresher loop contains one, and marking a student against that bar would tell you something " +
+                "untrue about how ready you are. Coding, technical fundamentals and project deep-dive are the " +
+                "rounds this stage is actually decided on. If you are not a fresher, set the role title to the " +
+                "one you are interviewing for and start again.",
+            code = "round_not_run_at_this_level",
+        )
     }
 
     /**
@@ -212,6 +273,7 @@ class InterviewService(
         request: StartSessionRequest,
         roundType: RoundType,
         resolution: ArchetypeResolution,
+        declaredStage: DeclaredStage?,
     ): UUID {
         val decision =
             Entitlement.evaluate(
@@ -238,6 +300,7 @@ class InterviewService(
             consentAudio = request.consentAudio,
             consentVideo = request.consentVideo,
             durationMinutes = request.durationMinutes,
+            declaredStage = declaredStage,
         )
     }
 
@@ -251,8 +314,10 @@ class InterviewService(
         request: StartSessionRequest,
         roundType: RoundType,
         resolution: ArchetypeResolution,
+        background: CandidateBackground?,
+        stage: CandidateStage,
+        declaredStage: DeclaredStage?,
     ): SessionView {
-        val background = resumeService.backgroundFor(userId)
         val brief =
             briefFor(
                 company = request.companyName.trim(),
@@ -261,6 +326,7 @@ class InterviewService(
                 roundType = roundType,
                 language = request.language,
                 background = background,
+                declaredStage = declaredStage,
             )
         // A DSA or design round is conducted around material — a problem, or a case — and
         // its opening is templated from that rather than asked of the model separately.
@@ -301,7 +367,7 @@ class InterviewService(
             } ?: try {
                 AiSpendContext
                     .of(userId, sessionId) {
-                        interviewAi.composeOpeningQuestion(brief, plan.toContext())
+                        interviewAi.composeOpeningQuestion(brief, plan.toContext(stage))
                     }.value
             } catch (e: AiUnavailableException) {
                 repository.markSessionStatus(sessionId, userId, "failed")
@@ -438,6 +504,7 @@ class InterviewService(
                 language = session.language,
                 background = background,
                 planned = planned?.let { PlannedQuestion(it.text, session.companyName, askNow, reported = it is PlannedFrom.Bank) },
+                declaredStage = session.declaredStage,
             )
         val priorTurns =
             repository
@@ -450,7 +517,14 @@ class InterviewService(
                 AiSpendContext.of(userId, sessionId) {
                     interviewAi.assessAnswer(
                         brief = brief,
-                        round = plan.toContext(),
+                        round =
+                            plan.toContext(
+                                CandidateStage.of(
+                                    session.roleTitle,
+                                    background?.tenure?.totalExperienceMonths,
+                                    declaredStage = session.declaredStage,
+                                ),
+                            ),
                         priorTurns = priorTurns,
                         currentQuestion = turn.questionText,
                         answer = audio,
@@ -621,7 +695,20 @@ class InterviewService(
         val roundType = RoundType.fromDbValue(session.roundType)
         val resolution =
             ArchetypeResolution(Archetype.fromDbValue(session.archetype), confidenceOf(session.archetypeConfidence))
-        val brief = briefFor(session.companyName, resolution, session.roleTitle, roundType, session.language)
+        // The resume is read here too, so a hint is pitched at the same candidate the
+        // round is: a student asking for help should not be handed a mid-level nudge.
+        val background = resumeService.backgroundFor(userId)
+        val stage = CandidateStage.of(session.roleTitle, background?.tenure?.totalExperienceMonths, declaredStage = session.declaredStage)
+        val brief =
+            briefFor(
+                company = session.companyName,
+                resolution = resolution,
+                role = session.roleTitle,
+                roundType = roundType,
+                language = session.language,
+                background = background,
+                declaredStage = session.declaredStage,
+            )
         val plan =
             InterviewPlan.forTurn(
                 turnIndex = turnIndex,
@@ -640,7 +727,7 @@ class InterviewService(
         val offered =
             try {
                 AiSpendContext.of(userId, sessionId) {
-                    interviewAi.offerHint(brief, plan.toContext(), priorTurns, turn.questionText)
+                    interviewAi.offerHint(brief, plan.toContext(stage), priorTurns, turn.questionText)
                 }
             } catch (e: AiUnavailableException) {
                 log.warn("Hint unavailable for session {} turn {}", sessionId, turnIndex, e)
@@ -962,6 +1049,14 @@ class InterviewService(
             background?.asPrompt(resumeUse),
         ).joinToString(separator = "\n\n")
 
+    /**
+     * The brief handed to the model for one turn.
+     *
+     * [CandidateStage] is derived here rather than passed in, so every path that conducts
+     * a round — the opening, every answer, and a hint — is calibrated the same way. A
+     * fresher who got a student's opening question and then a mid-level bar on the answer
+     * would be worse off than one who got neither (task 048).
+     */
     private fun briefFor(
         company: String,
         resolution: ArchetypeResolution,
@@ -970,23 +1065,43 @@ class InterviewService(
         language: String,
         background: CandidateBackground? = null,
         planned: PlannedQuestion? = null,
-    ) = InterviewBrief(
-        company = company,
-        archetype = resolution.archetype.label,
-        role = role,
-        roundType = "${roundType.label}. ${roundType.brief}",
-        roundCovers = roundType.covers.joinToString("\n") { "- $it" },
-        language = language,
-        // Null on every round until the resume existed, which is precisely why the
-        // project deep-dive had nothing of the candidate's own to dig into.
-        candidateFunction = background?.resume?.headline,
-        candidateLevel = background?.let { "${it.tenure.totalExperienceMonths / 12} years of experience" },
-        targetLevel = null,
-        grounding = groundingText(resolution, background, roundType.resumeUse),
-        plannedQuestion = planned,
-    )
+        declaredStage: DeclaredStage? = null,
+    ): InterviewBrief {
+        val stage = CandidateStage.of(role, background?.tenure?.totalExperienceMonths, declaredStage = declaredStage)
+        return InterviewBrief(
+            company = company,
+            archetype = resolution.archetype.label,
+            role = role,
+            roundType = "${roundType.label}. ${roundType.brief}",
+            // The ground a *fresher* has to be taken across is not the ground somebody
+            // with a job is: four of the professional entries ask a student about work
+            // they have not done, and an interviewer with nowhere else to go asks them.
+            roundCovers = stage.covers(roundType).joinToString("\n") { "- $it" },
+            language = language,
+            // Null on every round until the resume existed, which is precisely why the
+            // project deep-dive had nothing of the candidate's own to dig into.
+            candidateFunction = background?.resume?.headline,
+            // "0 years of experience" was true and useless. What a model can act on is
+            // that there is no professional history here at all.
+            candidateLevel =
+                when {
+                    stage.campusFresher -> stage.candidateDescription
+                    background != null -> "${background.tenure.totalExperienceMonths / 12} years of experience"
+                    else -> null
+                },
+            targetLevel = stage.targetDescription,
+            levelCalibration = stage.interviewerCalibration(),
+            grounding = groundingText(resolution, background, roundType.resumeUse),
+            plannedQuestion = planned,
+        )
+    }
 
-    private fun TurnPlan.toContext() =
+    /**
+     * @param stage who is in the room, so the warm-up beat is asked in words they can
+     *   answer. Null where the caller has not derived it, which reads as the professional
+     *   wording — the behaviour before task 048.
+     */
+    private fun TurnPlan.toContext(stage: CandidateStage? = null) =
         RoundContext(
             phase =
                 when (phase) {
@@ -997,7 +1112,7 @@ class InterviewService(
             minutesElapsed = minutesElapsed,
             minutesRemaining = minutesRemaining,
             durationMinutes = durationMinutes,
-            warmupInstruction = warmupFocus?.instruction,
+            warmupInstruction = warmupFocus?.instructionFor(stage?.campusFresher == true),
             briefTheCandidate = briefTheCandidate,
             mustConclude = mustConclude,
         )
@@ -1071,6 +1186,13 @@ class InterviewService(
         const val MIN_ROUND_MINUTES = 10
         const val MAX_ROUND_MINUTES = 120
         val DRAFT_CONFIDENCES = setOf("high", "medium", "low")
+
+        /**
+         * What a drafted round becomes when the one the model chose is not run at campus
+         * level. Technical fundamentals, because it is the round a fresher loop is
+         * actually decided on and the one they can prepare for from a syllabus.
+         */
+        val CAMPUS_FALLBACK_ROUND = RoundType.TECHNICAL_FUNDAMENTALS
         val ALLOWED_ACTIONS =
             setOf(
                 "follow_up",

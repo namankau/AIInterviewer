@@ -227,7 +227,7 @@ export function LoopBriefStep({
             <button
               type="button"
               onClick={() => onChooseRound(firstPlanItem.roundType)}
-              className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-white hover:opacity-90"
+              className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-white hover:opacity-90"
             >
               Start with {firstPlanItem.roundLabel}
             </button>
@@ -235,7 +235,7 @@ export function LoopBriefStep({
             <button
               type="button"
               onClick={onSkip}
-              className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-white hover:opacity-90"
+              className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-white hover:opacity-90"
             >
               Set up a round
             </button>

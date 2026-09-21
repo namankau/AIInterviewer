@@ -119,16 +119,31 @@ export const chapterWrapperClasses: Chapter = {
       ],
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why unboxing a null Integer throws, instead of silently giving 0",
-      steps: [
-        "Integer nullable = null; — nullable is a reference pointing at no object at all.",
-        "int broken = nullable; requires unboxing: the compiler inserts nullable.intValue() behind the scenes.",
-        ".intValue() is an instance method call — it needs an actual object to call it on.",
-        "Calling a method on a null reference is exactly what NullPointerException means, so it's thrown " +
-          "right there, before broken is ever assigned.",
-        "The catch block handles it and the program continues normally.",
-      ],
+      caption: "nullable never holds a real object, so the method call autoboxing inserts has nothing to run on.",
+      viz: {
+        type: "array",
+        frames: [
+          { cells: [{ value: "null", pointers: ["nullable"] }], note: "Integer nullable = null; — nullable is a reference pointing at no object at all." },
+          {
+            cells: [{ value: "null", state: "active", pointers: ["nullable"] }],
+            note: "int broken = nullable; requires unboxing: the compiler inserts nullable.intValue() behind the scenes.",
+          },
+          {
+            cells: [{ value: "null", state: "compare", pointers: ["nullable.intValue()"] }],
+            note: ".intValue() is an instance method call — it needs an actual object to call it on.",
+          },
+          {
+            cells: [{ value: "NullPointerException", state: "swap", pointers: ["nullable.intValue()"] }],
+            note: "Calling a method on a null reference is exactly what NullPointerException means, so it's thrown right there, before broken is ever assigned.",
+          },
+          {
+            cells: [{ value: "NullPointerException", state: "done" }],
+            note: "The catch block handles it and the program continues normally.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

@@ -97,16 +97,36 @@ export const chapterClassesAndObjects: Chapter = {
         "forgotten field silently reads as `0`/`false`/`null` instead of failing to compile.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "What happens, step by step, when new Student() runs",
-      steps: [
-        "Java reserves a block of memory big enough for one Student's fields: name, rollNumber, marks.",
-        "Every field gets its default value first: name = null, rollNumber = 0, marks = 0.",
-        "The object now exists, unnamed, sitting in memory.",
-        "The reference to that memory is handed back and stored in the variable s1.",
-        "s1.name = \"Priya\"; reaches through the reference and overwrites the default null with \"Priya\" " +
-          "— the object itself changes; s1 still points at the same object.",
-      ],
+      caption: "Each row is one field of the object; a highlighted cell just received a new value.",
+      viz: {
+        type: "table",
+        frames: [
+          {
+            rowLabels: ["name", "rollNumber", "marks"],
+            colLabels: ["value"],
+            rows: [["?"], ["?"], ["?"]],
+            note: "Java reserves a block of memory big enough for one Student's fields: name, rollNumber, marks.",
+          },
+          {
+            rowLabels: ["name", "rollNumber", "marks"],
+            colLabels: ["value"],
+            rows: [["null"], [0], [0]],
+            highlight: [[0, 0], [1, 0], [2, 0]],
+            note: "Every field gets its default value first: name = null, rollNumber = 0, marks = 0. The object now exists, unnamed, sitting in memory, and the reference to it is handed back and stored in the variable s1.",
+          },
+          {
+            rowLabels: ["name", "rollNumber", "marks"],
+            colLabels: ["value"],
+            rows: [["Priya"], [0], [0]],
+            highlight: [[0, 0]],
+            note:
+              "s1.name = \"Priya\"; reaches through the reference and overwrites the default null with " +
+              "\"Priya\" — the object itself changes; s1 still points at the same object.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

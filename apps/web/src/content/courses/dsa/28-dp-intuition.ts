@@ -188,28 +188,50 @@ export const chapterDpIntuition: Chapter = {
         "order yourself, which is sometimes the harder part of designing a DP solution.",
     },
     {
+      kind: "compare",
+      title: "Memoization vs tabulation",
+      columns: [
+        {
+          label: "Memoization (top-down)",
+          items: [
+            "You ask for `fib(n)`; recursion discovers which smaller subproblems it needs",
+            "Often the more natural translation from a recursive brute-force solution",
+            "Costs a call stack — recursion depth is real space, and function calls have overhead",
+          ],
+        },
+        {
+          label: "Tabulation (bottom-up)",
+          items: [
+            "You decide the fill order in advance (smallest first) and iterate",
+            "No recursion, no call stack — usually the faster of the two in practice",
+            "You must work out the correct fill order yourself, which is sometimes the hard part",
+          ],
+        },
+      ],
+    },
+    {
       kind: "table",
       head: ["Approach", "Time", "Space", "Why"],
       rows: [
         [
           "fibNaive(n)",
-          "O(2ⁿ)",
-          "O(n)",
+          "{{O(2ⁿ)}}",
+          "{{O(n)}}",
           "Each call branches into two more calls (mirroring the recursion chapter's branching-call " +
             "warning), and the recursion depth (space) is O(n) while the total call count grows " +
             "exponentially.",
         ],
         [
           "fibMemo(n) — top-down",
-          "O(n)",
-          "O(n)",
+          "{{O(n)}}",
+          "{{O(n)}}",
           "Each distinct value of n is computed exactly once; every repeat call is an O(1) map lookup " +
             "instead of new recursive work.",
         ],
         [
           "fibTabulation(n) — bottom-up",
-          "O(n)",
-          "O(n) (or O(1) if only the last two values are kept)",
+          "{{O(n)}}",
+          "{{O(n)}} (or {{O(1)}} if only the last two values are kept)",
           "One pass filling the table in dependency order, no recursion overhead; Fibonacci specifically " +
             "only ever needs the previous two values, so the array can be shrunk to two variables.",
         ],

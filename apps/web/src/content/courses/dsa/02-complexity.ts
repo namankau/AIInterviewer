@@ -47,15 +47,24 @@ export const chapterComplexity: Chapter = {
         "throw away: the shape itself — O(n) and O(n²) describe genuinely, unignorably different growth.",
     },
     {
+      kind: "concept",
+      title: "Big-O describes shape, not a stopwatch reading",
+      text:
+        "Two algorithms with the same Big-O can still run at very different speeds in practice — Big-O only " +
+        "promises that, as the input gets large, their *running time grows the same way*. It answers " +
+        "\"if I double n, does the work double, stay the same, or explode?\" — never \"how many " +
+        "milliseconds will this take on my machine?\"",
+    },
+    {
       kind: "table",
       head: ["Name", "Big-O", "Meaning in plain words", "Typical example"],
       rows: [
-        ["Constant", "O(1)", "Same work regardless of input size.", "Reading array[0]"],
-        ["Logarithmic", "O(log n)", "Work grows very slowly; each step roughly halves what's left.", "Binary search"],
-        ["Linear", "O(n)", "Work grows in direct proportion to input size.", "One loop over an array"],
-        ["Linearithmic", "O(n log n)", "A linear pass repeated roughly log n times.", "Merge sort, quick sort"],
-        ["Quadratic", "O(n²)", "Work grows with the square of input size.", "Comparing every pair"],
-        ["Exponential", "O(2ⁿ)", "Work doubles with every single extra input item.", "Trying every subset"],
+        ["Constant", "{{O(1)}}", "Same work regardless of input size.", "Reading array[0]"],
+        ["Logarithmic", "{{O(log n)}}", "Work grows very slowly; each step roughly halves what's left.", "Binary search"],
+        ["Linear", "{{O(n)}}", "Work grows in direct proportion to input size.", "One loop over an array"],
+        ["Linearithmic", "{{O(n log n)}}", "A linear pass repeated roughly log n times.", "Merge sort, quick sort"],
+        ["Quadratic", "{{O(n²)}}", "Work grows with the square of input size.", "Comparing every pair"],
+        ["Exponential", "{{O(2ⁿ)}}", "Work doubles with every single extra input item.", "Trying every subset"],
       ],
     },
     {

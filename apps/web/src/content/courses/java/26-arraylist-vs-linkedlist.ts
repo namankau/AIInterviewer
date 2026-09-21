@@ -113,17 +113,38 @@ export const chapterArrayListVsLinkedList: Chapter = {
       ],
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why arrayList.add(1, \"Neha\") produces [Priya, Neha, Arjun, Vikram]",
-      steps: [
-        "Before the insert: [Priya, Arjun, Vikram] at indices 0, 1, 2.",
-        "add(1, \"Neha\") means: insert \"Neha\" so it becomes the new element at index 1.",
-        "Internally, ArrayList shifts every element from index 1 onward one slot to the right, making room: " +
-          "Arjun moves from index 1 to 2, Vikram moves from index 2 to 3.",
-        "\"Neha\" is written into the now-empty index 1.",
-        "Result: [Priya, Neha, Arjun, Vikram] — this shifting is exactly the cost that makes a middle " +
-          "insertion on an ArrayList relatively expensive for a large list.",
-      ],
+      caption: "Every element from the insertion point onward physically shifts one slot right before the new value is written in.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: "Priya" }, { value: "Arjun" }, { value: "Vikram" }],
+            note: "Before the insert: [Priya, Arjun, Vikram] at indices 0, 1, 2.",
+          },
+          {
+            cells: [{ value: "Priya" }, { value: "?", state: "active", pointers: ["index 1"] }, { value: "Arjun" }, { value: "Vikram" }],
+            note: "add(1, \"Neha\") means: insert \"Neha\" so it becomes the new element at index 1.",
+          },
+          {
+            cells: [{ value: "Priya" }, { value: "?" }, { value: "Arjun", state: "swap" }, { value: "Vikram", state: "swap" }],
+            note:
+              "Internally, ArrayList shifts every element from index 1 onward one slot to the right, " +
+              "making room: Arjun moves from index 1 to 2, Vikram moves from index 2 to 3.",
+          },
+          {
+            cells: [{ value: "Priya" }, { value: "Neha", state: "done" }, { value: "Arjun" }, { value: "Vikram" }],
+            note: "\"Neha\" is written into the now-empty index 1.",
+          },
+          {
+            cells: [{ value: "Priya" }, { value: "Neha" }, { value: "Arjun" }, { value: "Vikram" }],
+            note:
+              "Result: [Priya, Neha, Arjun, Vikram] — this shifting is exactly the cost that makes a " +
+              "middle insertion on an ArrayList relatively expensive for a large list.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

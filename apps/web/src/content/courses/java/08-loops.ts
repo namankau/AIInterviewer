@@ -106,17 +106,21 @@ export const chapterLoops: Chapter = {
         "menu before asking whether to show it again, for instance.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "The while loop computing 1+2+3+4+5",
-      steps: [
-        "total = 0, n = 5. Check n > 0: true (5 > 0).",
-        "total += n → total = 0 + 5 = 5. n-- → n = 4.",
-        "Check n > 0: true (4 > 0). total += n → total = 5 + 4 = 9. n-- → n = 3.",
-        "Check n > 0: true. total = 9 + 3 = 12. n = 2.",
-        "Check n > 0: true. total = 12 + 2 = 14. n = 1.",
-        "Check n > 0: true. total = 14 + 1 = 15. n = 0.",
-        "Check n > 0: false (0 > 0 is false). Loop exits with total = 15.",
-      ],
+      caption: "Two boxes, `total` and `n`; each round the value of `n` is folded into `total` and then `n` counts down.",
+      viz: {
+        type: "array",
+        frames: [
+          { cells: [{ value: 0, pointers: ["total"] }, { value: 5, state: "active", pointers: ["n"] }], note: "total = 0, n = 5. Check n > 0: true (5 > 0)." },
+          { cells: [{ value: 5, pointers: ["total"] }, { value: 4, state: "active", pointers: ["n"] }], note: "total += n → total = 0 + 5 = 5. n-- → n = 4." },
+          { cells: [{ value: 9, pointers: ["total"] }, { value: 3, state: "active", pointers: ["n"] }], note: "Check n > 0: true (4 > 0). total += n → total = 5 + 4 = 9. n-- → n = 3." },
+          { cells: [{ value: 12, pointers: ["total"] }, { value: 2, state: "active", pointers: ["n"] }], note: "Check n > 0: true. total = 9 + 3 = 12. n = 2." },
+          { cells: [{ value: 14, pointers: ["total"] }, { value: 1, state: "active", pointers: ["n"] }], note: "Check n > 0: true. total = 12 + 2 = 14. n = 1." },
+          { cells: [{ value: 15, pointers: ["total"] }, { value: 0, state: "active", pointers: ["n"] }], note: "Check n > 0: true. total = 14 + 1 = 15. n = 0." },
+          { cells: [{ value: 15, state: "done", pointers: ["total"] }, { value: 0, pointers: ["n"] }], note: "Check n > 0: false (0 > 0 is false). Loop exits with total = 15." },
+        ],
+      },
     },
     {
       kind: "pitfall",

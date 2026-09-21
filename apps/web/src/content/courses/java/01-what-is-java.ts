@@ -100,21 +100,30 @@ export const chapterWhatIsJava: Chapter = {
       ],
     },
     {
-      kind: "trace",
+      kind: "steps",
       title: "What happens when you run `java Hello`",
       steps: [
-        "You typed `javac Hello.java` earlier. The compiler checked your code for errors and, finding " +
-          "none, wrote `Hello.class` next to it — bytecode, not English and not machine code for any " +
-          "particular processor.",
-        "You type `java Hello`. The JVM starts up on your machine.",
-        "The JVM locates `Hello.class`, loads it into memory, and verifies the bytecode is well-formed " +
-          "(this is part of why Java has a reputation for safety — malformed or tampered bytecode is " +
-          "rejected before it runs).",
-        "The JVM finds the special method `public static void main(String[] args)` — every runnable Java " +
-          "program needs exactly this method as its starting point — and begins executing the " +
-          "instructions inside it, one by one, translating each into something your specific processor " +
-          "can do.",
-        "The program prints its output and finishes; the JVM exits.",
+        {
+          label: "Compile",
+          text:
+            "`javac Hello.java` checks your code for errors and, finding none, writes `Hello.class` next " +
+            "to it — bytecode, not English and not machine code for any particular processor.",
+        },
+        { label: "Start", text: "You type `java Hello`. The JVM starts up on your machine." },
+        {
+          label: "Load & verify",
+          text:
+            "The JVM locates `Hello.class`, loads it into memory, and verifies the bytecode is well-formed " +
+            "— malformed or tampered bytecode is rejected before it runs.",
+        },
+        {
+          label: "Execute",
+          text:
+            "The JVM finds `public static void main(String[] args)` — every runnable program's starting " +
+            "point — and executes the instructions inside it, translating each into something your " +
+            "specific processor can do.",
+        },
+        { label: "Exit", text: "The program prints its output and finishes; the JVM exits." },
       ],
     },
     {

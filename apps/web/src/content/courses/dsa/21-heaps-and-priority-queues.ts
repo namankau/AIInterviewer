@@ -133,6 +133,75 @@ export const chapterHeapsAndPriorityQueues: Chapter = {
         "    }\n" +
         "}\n",
       output: "MinHeap pop order: 1 2 3 5 8 9\n3 largest, ascending: 5 11 12",
+      python:
+        "import heapq\n" +
+        "\n" +
+        "\n" +
+        "class MinHeap:\n" +
+        "    def __init__(self):\n" +
+        "        # No manual grow() needed here -- a Python list already grows on its own, unlike\n" +
+        "        # the fixed-size array Java's version starts from.\n" +
+        "        self.data = []\n" +
+        "\n" +
+        "    def push(self, val):\n" +
+        "        self.data.append(val)\n" +
+        "        i = len(self.data) - 1\n" +
+        "        while i > 0:\n" +
+        "            parent = (i - 1) // 2\n" +
+        "            if self.data[parent] <= self.data[i]:\n" +
+        "                break\n" +
+        "            self.data[parent], self.data[i] = self.data[i], self.data[parent]\n" +
+        "            i = parent\n" +
+        "\n" +
+        "    def pop(self):\n" +
+        "        top = self.data[0]\n" +
+        "        last = self.data.pop()\n" +
+        "        if self.data:\n" +
+        "            self.data[0] = last\n" +
+        "            i = 0\n" +
+        "            n = len(self.data)\n" +
+        "            while True:\n" +
+        "                left, right = 2 * i + 1, 2 * i + 2\n" +
+        "                smallest = i\n" +
+        "                if left < n and self.data[left] < self.data[smallest]:\n" +
+        "                    smallest = left\n" +
+        "                if right < n and self.data[right] < self.data[smallest]:\n" +
+        "                    smallest = right\n" +
+        "                if smallest == i:\n" +
+        "                    break\n" +
+        "                self.data[i], self.data[smallest] = self.data[smallest], self.data[i]\n" +
+        "                i = smallest\n" +
+        "        return top\n" +
+        "\n" +
+        "    def size(self):\n" +
+        "        return len(self.data)\n" +
+        "\n" +
+        "\n" +
+        "def k_largest(nums, k):\n" +
+        "    # Python's own binary heap, heapq, works directly on a plain list of values -- no\n" +
+        "    # wrapper object like Java's PriorityQueue -- and is a min-heap by default, same as\n" +
+        "    # PriorityQueue's natural ordering.\n" +
+        "    min_heap = []\n" +
+        "    for n in nums:\n" +
+        "        heapq.heappush(min_heap, n)\n" +
+        "        if len(min_heap) > k:\n" +
+        "            heapq.heappop(min_heap)\n" +
+        "    return [heapq.heappop(min_heap) for _ in range(k)]\n" +
+        "\n" +
+        "\n" +
+        "heap = MinHeap()\n" +
+        "values = [5, 3, 8, 1, 9, 2]\n" +
+        "for v in values:\n" +
+        "    heap.push(v)\n" +
+        "order = []\n" +
+        "while heap.size() > 0:\n" +
+        "    order.append(heap.pop())\n" +
+        'print("MinHeap pop order:", " ".join(str(v) for v in order))\n' +
+        "\n" +
+        "nums = [3, 1, 5, 12, 2, 11]\n" +
+        "largest3 = k_largest(nums, 3)\n" +
+        'print("3 largest, ascending:", " ".join(str(v) for v in largest3))\n',
+      pythonOutput: "MinHeap pop order: 1 2 3 5 8 9\n3 largest, ascending: 5 11 12",
     },
     {
       kind: "trace",

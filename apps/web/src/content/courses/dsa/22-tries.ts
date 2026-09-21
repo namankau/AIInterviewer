@@ -96,6 +96,53 @@ export const chapterTries: Chapter = {
       output:
         "search(cat): true\nsearch(ca): false\nstartsWith(ca): true\nstartsWith(do): true\n" +
         "startsWith(dot): false\nsearch(card): true",
+      python:
+        "class TrieNode:\n" +
+        "    def __init__(self):\n" +
+        "        self.children = {}\n" +
+        "        self.is_word = False\n" +
+        "\n" +
+        "\n" +
+        "class Trie:\n" +
+        "    def __init__(self):\n" +
+        "        self.root = TrieNode()\n" +
+        "\n" +
+        "    def insert(self, word):\n" +
+        "        node = self.root\n" +
+        "        for ch in word:\n" +
+        "            node = node.children.setdefault(ch, TrieNode())\n" +
+        "        node.is_word = True\n" +
+        "\n" +
+        "    def search(self, word):\n" +
+        "        node = self._find_node(word)\n" +
+        "        return node is not None and node.is_word\n" +
+        "\n" +
+        "    def starts_with(self, prefix):\n" +
+        "        return self._find_node(prefix) is not None\n" +
+        "\n" +
+        "    def _find_node(self, s):\n" +
+        "        node = self.root\n" +
+        "        for ch in s:\n" +
+        "            node = node.children.get(ch)\n" +
+        "            if node is None:\n" +
+        "                return None\n" +
+        "        return node\n" +
+        "\n" +
+        "\n" +
+        "trie = Trie()\n" +
+        'words = ["cat", "car", "card", "care", "dog"]\n' +
+        "for w in words:\n" +
+        "    trie.insert(w)\n" +
+        "\n" +
+        'print("search(cat):", trie.search("cat"))\n' +
+        'print("search(ca):", trie.search("ca"))\n' +
+        'print("startsWith(ca):", trie.starts_with("ca"))\n' +
+        'print("startsWith(do):", trie.starts_with("do"))\n' +
+        'print("startsWith(dot):", trie.starts_with("dot"))\n' +
+        'print("search(card):", trie.search("card"))\n',
+      pythonOutput:
+        "search(cat): True\nsearch(ca): False\nstartsWith(ca): True\nstartsWith(do): True\n" +
+        "startsWith(dot): False\nsearch(card): True",
     },
     {
       kind: "trace",

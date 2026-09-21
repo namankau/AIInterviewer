@@ -16,7 +16,18 @@ import type { Challenge } from "@/lib/arena/types";
  * visible run of correct answers, and a result screen naming exactly what to revise —
  * every derived challenge already carries a link back to the chapter that teaches it.
  */
-export function ArenaSession({ challenges, courseSlug }: { challenges: Challenge[]; courseSlug?: string }) {
+export function ArenaSession({
+  challenges,
+  courseSlug,
+  onPlayAgain,
+}: {
+  challenges: Challenge[];
+  courseSlug?: string;
+  /** Called instead of rendering a "play again" link, when the caller wants to remount a
+   * fresh run itself (e.g. `ArenaPlayPanel`, since navigating to the same route as the
+   * current page does not force a remount). */
+  onPlayAgain?: () => void;
+}) {
   const session = useArenaSession(challenges, courseSlug);
   const reducedMotion = usePrefersReducedMotion();
   const celebratedRef = useRef(false);
@@ -49,6 +60,7 @@ export function ArenaSession({ challenges, courseSlug }: { challenges: Challenge
         streakDays={session.progress.streak.current}
         newBadges={session.newBadges}
         answers={session.answers}
+        onPlayAgain={onPlayAgain}
       />
     );
   }
@@ -102,6 +114,7 @@ function ResultScreen({
   streakDays,
   newBadges,
   answers,
+  onPlayAgain,
 }: {
   challenges: Challenge[];
   courseSlug: string | undefined;
@@ -112,6 +125,7 @@ function ResultScreen({
   streakDays: number;
   newBadges: { id: string; title: string; description: string }[];
   answers: AnswerRecord[];
+  onPlayAgain?: () => void;
 }) {
   const level = levelForXp(totalXp);
   const byId = new Map(challenges.map((c) => [c.id, c]));
@@ -170,12 +184,22 @@ function ResultScreen({
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Link
-          href={(courseSlug ? `/arena/${courseSlug}` : "/arena") as Route}
-          className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-strong"
-        >
-          Play again
-        </Link>
+        {onPlayAgain ? (
+          <button
+            type="button"
+            onClick={onPlayAgain}
+            className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-strong"
+          >
+            Play again
+          </button>
+        ) : (
+          <Link
+            href={(courseSlug ? `/arena/${courseSlug}` : "/arena") as Route}
+            className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-strong"
+          >
+            Play again
+          </Link>
+        )}
         <Link href="/arena" className="text-caption font-medium text-accent hover:underline">
           Back to Arena
         </Link>

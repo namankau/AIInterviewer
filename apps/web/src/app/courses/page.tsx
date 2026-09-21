@@ -50,6 +50,22 @@ export default function CoursesPage() {
             </li>
           ))}
         </ul>
+
+        <div className="mt-14 flex flex-col items-start gap-3 rounded-md border border-line-strong bg-surface-raised px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-1.5">
+            <p className="font-mono text-micro tracking-widest text-accent uppercase">New</p>
+            <p className="text-body text-ink">
+              Rather test yourself than read? Try <span className="font-medium">the Arena</span> — short, gamified
+              rounds derived straight from these chapters.
+            </p>
+          </div>
+          <Link
+            href="/arena"
+            className="shrink-0 rounded-md bg-accent px-5 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-strong"
+          >
+            Play the Arena
+          </Link>
+        </div>
       </main>
       <CourseSiteFooter />
     </div>

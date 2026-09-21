@@ -12,7 +12,7 @@ export const chapterComplexity: Chapter = {
       kind: "p",
       text:
         "The last chapter showed two solutions to the same problem costing very different amounts of work, " +
-        "but \"costs more work\" was still vague. **Big-O notation** is how that vagueness is fixed: a " +
+        "but \"costs more work\" was still vague. ~~Big-O notation~~ is how that vagueness is fixed: a " +
         "precise, language-independent way to describe how the *amount of work* a piece of code does grows " +
         "as the input grows — not how many milliseconds it takes on one particular laptop, which depends on " +
         "the processor, the language, even what else is running.",
@@ -47,15 +47,24 @@ export const chapterComplexity: Chapter = {
         "throw away: the shape itself — O(n) and O(n²) describe genuinely, unignorably different growth.",
     },
     {
+      kind: "concept",
+      title: "Big-O describes shape, not a stopwatch reading",
+      text:
+        "Two algorithms with the same Big-O can still run at very different speeds in practice — Big-O only " +
+        "promises that, as the input gets large, their *running time grows the same way*. It answers " +
+        "\"if I double n, does the work double, stay the same, or explode?\" — never \"how many " +
+        "milliseconds will this take on my machine?\"",
+    },
+    {
       kind: "table",
       head: ["Name", "Big-O", "Meaning in plain words", "Typical example"],
       rows: [
-        ["Constant", "O(1)", "Same work regardless of input size.", "Reading array[0]"],
-        ["Logarithmic", "O(log n)", "Work grows very slowly; each step roughly halves what's left.", "Binary search"],
-        ["Linear", "O(n)", "Work grows in direct proportion to input size.", "One loop over an array"],
-        ["Linearithmic", "O(n log n)", "A linear pass repeated roughly log n times.", "Merge sort, quick sort"],
-        ["Quadratic", "O(n²)", "Work grows with the square of input size.", "Comparing every pair"],
-        ["Exponential", "O(2ⁿ)", "Work doubles with every single extra input item.", "Trying every subset"],
+        ["Constant", "{{O(1)}}", "Same work regardless of input size.", "Reading array[0]"],
+        ["Logarithmic", "{{O(log n)}}", "Work grows very slowly; each step roughly halves what's left.", "Binary search"],
+        ["Linear", "{{O(n)}}", "Work grows in direct proportion to input size.", "One loop over an array"],
+        ["Linearithmic", "{{O(n log n)}}", "A linear pass repeated roughly log n times.", "Merge sort, quick sort"],
+        ["Quadratic", "{{O(n²)}}", "Work grows with the square of input size.", "Comparing every pair"],
+        ["Exponential", "{{O(2ⁿ)}}", "Work doubles with every single extra input item.", "Trying every subset"],
       ],
     },
     {
@@ -148,19 +157,67 @@ export const chapterComplexity: Chapter = {
         "10000  1          13       10000    130000     100000000",
     },
     {
-      kind: "trace",
-      title: "logOps(100): halving until 1",
-      steps: [
-        "i = 100, count = 0. 100 > 1, so continue.",
-        "i = 100 / 2 = 50, count = 1. 50 > 1, continue.",
-        "i = 50 / 2 = 25, count = 2. 25 > 1, continue.",
-        "i = 25 / 2 = 12, count = 3. 12 > 1, continue.",
-        "i = 12 / 2 = 6, count = 4. 6 > 1, continue.",
-        "i = 6 / 2 = 3, count = 5. 3 > 1, continue.",
-        "i = 3 / 2 = 1, count = 6. 1 is not > 1 — stop.",
-        "Result: 6 halvings to shrink 100 down to 1, matching log₂(100) ≈ 6.6, rounded down by " +
-          "integer division.",
-      ],
+      kind: "viz",
+      title: "logOps(100) — each step halves what's left",
+      caption: "One cell per value `i` takes on; the count of active cells at the end is the function's answer.",
+      viz: {
+        type: "array",
+        frames: [
+          { cells: [{ value: 100, state: "active", pointers: ["i"] }], note: "i=100, count=0. 100 > 1, continue." },
+          {
+            cells: [{ value: 100, state: "done" }, { value: 50, state: "active", pointers: ["i"] }],
+            note: "i = 100/2 = 50, count=1. 50 > 1, continue.",
+          },
+          {
+            cells: [{ value: 100, state: "done" }, { value: 50, state: "done" }, { value: 25, state: "active", pointers: ["i"] }],
+            note: "i = 50/2 = 25, count=2. 25 > 1, continue.",
+          },
+          {
+            cells: [
+              { value: 100, state: "done" },
+              { value: 50, state: "done" },
+              { value: 25, state: "done" },
+              { value: 12, state: "active", pointers: ["i"] },
+            ],
+            note: "i = 25/2 = 12 (integer division), count=3. 12 > 1, continue.",
+          },
+          {
+            cells: [
+              { value: 100, state: "done" },
+              { value: 50, state: "done" },
+              { value: 25, state: "done" },
+              { value: 12, state: "done" },
+              { value: 6, state: "active", pointers: ["i"] },
+            ],
+            note: "i = 12/2 = 6, count=4. 6 > 1, continue.",
+          },
+          {
+            cells: [
+              { value: 100, state: "done" },
+              { value: 50, state: "done" },
+              { value: 25, state: "done" },
+              { value: 12, state: "done" },
+              { value: 6, state: "done" },
+              { value: 3, state: "active", pointers: ["i"] },
+            ],
+            note: "i = 6/2 = 3, count=5. 3 > 1, continue.",
+          },
+          {
+            cells: [
+              { value: 100, state: "done" },
+              { value: 50, state: "done" },
+              { value: 25, state: "done" },
+              { value: 12, state: "done" },
+              { value: 6, state: "done" },
+              { value: 3, state: "done" },
+              { value: 1, state: "active", pointers: ["i"] },
+            ],
+            note:
+              "i = 3/2 = 1, count=6. 1 is not > 1 — stop. Result: 6 halvings to shrink 100 down to 1, " +
+              "matching log₂(100) ≈ 6.6, rounded down by integer division.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

@@ -147,21 +147,96 @@ export const chapterDpIntuition: Chapter = {
         "naive(35) took roughly 1057ms; memo(35) took roughly 0ms",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "fibNaive(5) — the call tree, showing exactly which work repeats",
-      steps: [
-        "fibNaive(5) calls fibNaive(4) and fibNaive(3).",
-        "fibNaive(4) calls fibNaive(3) and fibNaive(2) — notice fibNaive(3) is now being computed a second " +
-          "time, completely from scratch.",
-        "fibNaive(3) (the first call, from step 1) calls fibNaive(2) and fibNaive(1) — fibNaive(2) is also " +
-          "about to be recomputed multiple times across the tree.",
-        "By the time the whole call tree for fibNaive(5) finishes, fibNaive(3) has been computed 2 separate " +
-          "times, fibNaive(2) has been computed 3 separate times, and fibNaive(1)/fibNaive(0) even more — " +
-          "every one of those repeats does the exact same work and returns the exact same answer.",
-        "fibMemo(5) makes the identical shape of recursive calls, but the *second* time fibNaive(3) would " +
-          "have been entered, fibMemo finds it already in the map and returns instantly — cutting an " +
-          "exponentially branching tree down to one entry per distinct value of n, 0 through 5.",
-      ],
+      caption: "A 'compare' node is a value already computed elsewhere in this same tree; the final frame shows fibMemo cutting those repeats off before they re-expand.",
+      viz: {
+        type: "tree",
+        frames: [
+          {
+            rootId: "n5",
+            nodes: [
+              { id: "n5", value: 5, left: "n4", right: "n3b", state: "active" },
+              { id: "n4", value: 4, left: null, right: null, state: "active" },
+              { id: "n3b", value: 3, left: null, right: null, state: "active" },
+            ],
+            note: "fibNaive(5) calls fibNaive(4) and fibNaive(3).",
+          },
+          {
+            rootId: "n5",
+            nodes: [
+              { id: "n5", value: 5, left: "n4", right: "n3b" },
+              { id: "n4", value: 4, left: "n3a", right: "n2b", state: "active" },
+              { id: "n3a", value: 3, left: null, right: null, state: "compare" },
+              { id: "n2b", value: 2, left: null, right: null, state: "active" },
+              { id: "n3b", value: 3, left: null, right: null },
+            ],
+            note:
+              "fibNaive(4) calls fibNaive(3) and fibNaive(2) — notice fibNaive(3) is now being computed a " +
+              "second time, completely from scratch.",
+          },
+          {
+            rootId: "n5",
+            nodes: [
+              { id: "n5", value: 5, left: "n4", right: "n3b" },
+              { id: "n4", value: 4, left: "n3a", right: "n2b" },
+              { id: "n3a", value: 3, left: "n2a", right: "n1a", state: "active" },
+              { id: "n2a", value: 2, left: null, right: null, state: "compare" },
+              { id: "n1a", value: 1, left: null, right: null },
+              { id: "n2b", value: 2, left: null, right: null },
+              { id: "n3b", value: 3, left: null, right: null },
+            ],
+            note:
+              "fibNaive(3) (the first call, from step 1) calls fibNaive(2) and fibNaive(1) — fibNaive(2) " +
+              "is also about to be recomputed multiple times across the tree.",
+          },
+          {
+            rootId: "n5",
+            nodes: [
+              { id: "n5", value: 5, left: "n4", right: "n3b" },
+              { id: "n4", value: 4, left: "n3a", right: "n2b" },
+              { id: "n3a", value: 3, left: "n2a", right: "n1a", state: "compare" },
+              { id: "n2a", value: 2, left: "n1b", right: "n0a", state: "compare" },
+              { id: "n1a", value: 1, left: null, right: null },
+              { id: "n1b", value: 1, left: null, right: null },
+              { id: "n0a", value: 0, left: null, right: null },
+              { id: "n2b", value: 2, left: "n1c", right: "n0b", state: "compare" },
+              { id: "n1c", value: 1, left: null, right: null },
+              { id: "n0b", value: 0, left: null, right: null },
+              { id: "n3b", value: 3, left: "n2c", right: "n1d", state: "compare" },
+              { id: "n2c", value: 2, left: "n1e", right: "n0c", state: "compare" },
+              { id: "n1e", value: 1, left: null, right: null },
+              { id: "n0c", value: 0, left: null, right: null },
+              { id: "n1d", value: 1, left: null, right: null },
+            ],
+            note:
+              "By the time the whole call tree for fibNaive(5) finishes, fibNaive(3) has been computed 2 " +
+              "separate times (n3a, n3b — both marked here), fibNaive(2) has been computed 3 separate " +
+              "times (n2a, n2b, n2c), and fibNaive(1)/fibNaive(0) even more — every one of those repeats " +
+              "does the exact same work and returns the exact same answer.",
+          },
+          {
+            rootId: "n5",
+            nodes: [
+              { id: "n5", value: 5, left: "n4", right: "n3b", state: "active" },
+              { id: "n4", value: 4, left: "n3a", right: "n2b", state: "active" },
+              { id: "n3a", value: 3, left: "n2a", right: "n1a", state: "active" },
+              { id: "n2a", value: 2, left: "n1b", right: "n0a", state: "active" },
+              { id: "n1a", value: 1, left: null, right: null, state: "done" },
+              { id: "n1b", value: 1, left: null, right: null, state: "done" },
+              { id: "n0a", value: 0, left: null, right: null, state: "done" },
+              { id: "n2b", value: 2, left: null, right: null, state: "done" },
+              { id: "n3b", value: 3, left: null, right: null, state: "done" },
+            ],
+            note:
+              "fibMemo(5) makes the identical shape of recursive calls the first time each value is " +
+              "needed, but the moment fibNaive(3) or fibNaive(2) would be re-entered (n3b, n2b here), " +
+              "fibMemo finds it already in the map and returns instantly instead of expanding it again — " +
+              "cutting an exponentially branching tree down to one real computation per distinct value of " +
+              "n, 0 through 5.",
+          },
+        ],
+      },
     },
     {
       kind: "p",
@@ -188,28 +263,50 @@ export const chapterDpIntuition: Chapter = {
         "order yourself, which is sometimes the harder part of designing a DP solution.",
     },
     {
+      kind: "compare",
+      title: "Memoization vs tabulation",
+      columns: [
+        {
+          label: "Memoization (top-down)",
+          items: [
+            "You ask for `fib(n)`; recursion discovers which smaller subproblems it needs",
+            "Often the more natural translation from a recursive brute-force solution",
+            "Costs a call stack — recursion depth is real space, and function calls have overhead",
+          ],
+        },
+        {
+          label: "Tabulation (bottom-up)",
+          items: [
+            "You decide the fill order in advance (smallest first) and iterate",
+            "No recursion, no call stack — usually the faster of the two in practice",
+            "You must work out the correct fill order yourself, which is sometimes the hard part",
+          ],
+        },
+      ],
+    },
+    {
       kind: "table",
       head: ["Approach", "Time", "Space", "Why"],
       rows: [
         [
           "fibNaive(n)",
-          "O(2ⁿ)",
-          "O(n)",
+          "{{O(2ⁿ)}}",
+          "{{O(n)}}",
           "Each call branches into two more calls (mirroring the recursion chapter's branching-call " +
             "warning), and the recursion depth (space) is O(n) while the total call count grows " +
             "exponentially.",
         ],
         [
           "fibMemo(n) — top-down",
-          "O(n)",
-          "O(n)",
+          "{{O(n)}}",
+          "{{O(n)}}",
           "Each distinct value of n is computed exactly once; every repeat call is an O(1) map lookup " +
             "instead of new recursive work.",
         ],
         [
           "fibTabulation(n) — bottom-up",
-          "O(n)",
-          "O(n) (or O(1) if only the last two values are kept)",
+          "{{O(n)}}",
+          "{{O(n)}} (or {{O(1)}} if only the last two values are kept)",
           "One pass filling the table in dependency order, no recursion overhead; Fibonacci specifically " +
             "only ever needs the previous two values, so the array can be shrunk to two variables.",
         ],

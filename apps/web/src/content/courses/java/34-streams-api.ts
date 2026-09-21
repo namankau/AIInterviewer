@@ -125,19 +125,34 @@ export const chapterStreams: Chapter = {
       ],
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why nothing runs until .collect(...) — laziness in the toppers pipeline",
-      steps: [
-        "students.stream().filter(...).map(...).sorted() alone builds a description of the pipeline — no " +
-          "student has been examined yet.",
-        ".collect(Collectors.toList()) is the terminal operation — only now does the stream actually walk " +
-          "through students.",
-        "Each student is pulled through filter first: Priya (87, passes), Arjun (91, passes), Vikram (78, " +
-          "rejected), Neha (95, passes), Rahul (62, rejected).",
-        "The three survivors are mapped to their names: Priya, Arjun, Neha.",
-        "sorted() orders them alphabetically: Arjun, Neha, Priya — collect() gathers this final list, " +
-          "matching the printed output.",
-      ],
+      caption: "Nothing in the array actually moves until the terminal operation runs — filter, map and sorted are only a description until then.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: "Priya(87)" }, { value: "Arjun(91)" }, { value: "Vikram(78)" }, { value: "Neha(95)" }, { value: "Rahul(62)" }],
+            note: "students.stream().filter(...).map(...).sorted() alone builds a description of the pipeline — no student has been examined yet.",
+          },
+          {
+            cells: [{ value: "Priya(87)", state: "active" }, { value: "Arjun(91)", state: "active" }, { value: "Vikram(78)", state: "active" }, { value: "Neha(95)", state: "active" }, { value: "Rahul(62)", state: "active" }],
+            note: ".collect(Collectors.toList()) is the terminal operation — only now does the stream actually walk through students.",
+          },
+          {
+            cells: [{ value: "Priya(87)", state: "done" }, { value: "Arjun(91)", state: "done" }, { value: "Vikram(78)", state: "compare" }, { value: "Neha(95)", state: "done" }, { value: "Rahul(62)", state: "compare" }],
+            note: "Each student is pulled through filter first: Priya (87, passes), Arjun (91, passes), Vikram (78, rejected), Neha (95, passes), Rahul (62, rejected).",
+          },
+          {
+            cells: [{ value: "Priya", state: "done" }, { value: "Arjun", state: "done" }, { value: "Neha", state: "done" }],
+            note: "The three survivors are mapped to their names: Priya, Arjun, Neha.",
+          },
+          {
+            cells: [{ value: "Arjun", state: "done" }, { value: "Neha", state: "done" }, { value: "Priya", state: "done" }],
+            note: "sorted() orders them alphabetically: Arjun, Neha, Priya — collect() gathers this final list, matching the printed output.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

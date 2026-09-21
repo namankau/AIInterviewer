@@ -1,161 +1,136 @@
-# Handoff — 2026-09-21
+# Handoff — 2026-09-21 (second run of the day)
 
 ## Task
-Make the courses stop being pure theory (visuals + somewhere to try things out), and make
-mock interviews much better for freshers facing campus placements — reusing open source
-rather than reinventing it. Tasks `tasks/task-047` through `tasks/task-051`.
+Add a gamified, interactive learning section "like scalequest.io", leveraging open source
+rather than reinventing it. `tasks/task-055-arena-gamified-practice.md`.
+
+---
+
+## The research changed the design — read this first
+
+I had a researcher look at scalequest.io rather than assume what it was. **It is not a quiz
+bank with XP bolted on**, which is the obvious thing to build and the wrong thing:
+
+- You read a short crisis narrative, you look at a **diagram of the system**, you make one
+  architectural call, and you are told immediately whether it was sound.
+- Progression runs through four **themed campaigns of rising difficulty**, checkpointed.
+- The mechanics underneath are plain multiple choice. **What makes it a game is the framing
+  — story plus diagram around each decision — not the scoring.**
+
+So the Arena leads with the picture where a chapter has one, and it does **not** copy
+scalequest's subject matter: its content is system design, which CLAUDE.md already settles is
+refused for a campus fresher. Authored story content is a content task, not this one.
 
 ## What I built
 
-**Courses — visuals (task 047, merged `1c08197`)**
-- `apps/web/src/content/courses/types.ts` — a `viz` block kind with a declarative union:
-  `array | list | stack | queue | tree | graph | table | callstack`. Content describes state
-  per frame, never SVG coordinates. Every frame carries a `note` — that is what makes it
-  teaching rather than decoration.
-- `apps/web/src/components/courses/viz/*.tsx` — hand-rolled inline SVG per shape;
-  `viz-block.tsx` adds previous/next/play/reset and a step slider.
-- `apps/web/src/lib/courses/viz-layout.ts` — unit-tested binary-tree and radial-graph layout.
-- **16 chapters converted** (12 DSA, 4 Java). Where a `trace` block existed it was *replaced*
-  by the picture it was describing.
-- Frame 0 server-renders, so the diagram is in the HTML for search and for JS-off readers.
-  Colour is never the only signal — every state carries a text label too.
+**`/arena`** — short, keyboard-first practice runs, public, free, and playable with no
+account.
 
-**Courses — try it yourself (task 049, merged `4893a2c`)**
-- `playground` block kind, deliberately separate from `code` so a read-only sample can never
-  pull in the editor bundle.
-- `apps/web/src/lib/course-code-runner.ts` — the pluggable runner seam. `getRunner("python")`
-  wraps the existing Pyodide worker; `getRunner("java")` is `null`.
-- `apps/web/src/components/courses/playground.tsx` — CodeMirror, Reset, Run, distinct
-  stdout/stderr, explicit timeout message. For Java: an honest line saying browser execution
-  is not available yet. No fake Run, no unexplained disabled control.
-- `apps/web/src/lib/highlight-code.ts` — Shiki at build time, dual light/dark, degrades to a
-  plain `<pre>` on any error.
-- 5 DSA chapters got a Python playground as proof; all 5 outputs were produced by running the
-  code, not predicted.
+**The architecture that matters: the Arena has no content store of its own.**
+`lib/arena/derive.ts` is a pure function from `courses` to `Challenge[]` — no I/O, no clock,
+no `Math.random`. It derives **~800 challenges from the 65 chapters that already exist**:
 
-**Interviews — freshers and campus placement (task 048, merged `fbdd27f`)**
-- `CandidateStage.kt` — derives campus-fresher status server-side, deliberately narrower than
-  `Level.ENTRY` (someone 18 months into a first job is ENTRY and not campus).
-- A `levelCalibration` brief threaded through `opening-question.md`, `assess-answer.md`,
-  `offer-hint.md`, `compose-problem.md`, `compose-case.md` and `report.md`. It says in words:
-  judge against what a final-year student can know; do not ask what happened when it broke in
-  production, about on-call, or about a team they led.
-- `CampusRounds` — replaces, not appends to, the round ground for the five round types whose
-  professional version is unanswerable by a student.
-- System design is refused for a campus fresher, before any row is written or model called —
-  and refused loudly rather than silently swapped when they chose it explicitly. Configurable
-  via `interviewos.rounds.not-for-campus-freshers`.
-- `RoundType.APTITUDE` + `AptitudeQuestionGenerator.kt` — spoken reasoning, not a timed MCQ.
-- `ReportService` scores against the bar the round actually ran at, and is instructive for a
-  student: name the topic to study next.
+| Kind | Count | Derived from |
+|---|---|---|
+| `mcq` | 195 | the existing `quiz` blocks, directly |
+| `what-next` | ~253 | a `viz` frame — "what does the next step say?" |
+| `spot-mistake` | ~239 | the mistake/fix pairs already inside `pitfall` blocks |
+| `predict-output` | ~74 | `code`/`playground` blocks with real pasted output |
+| `which-column` | ~41 | `compare` blocks |
 
-**Interviews — let a candidate say so (task 051, merged `2315016`)**
-- One optional field at session start: "Where are you in your career?" A stated answer beats
-  the derivation; saying nothing runs the pre-051 path unedited.
+That corpus was already reviewed for accuracy, it **cannot drift** from the courses, and it
+grows every time a chapter is written. `derive.test.ts` pins a floor of 700 so a content
+refactor cannot silently empty the Arena.
 
-**Courses — Python alongside Java (task 050, merged `a83c871`)**
-- **All 30 DSA chapters** gain a Python equivalent on every code block. The Java course stays
-  Java — it is a course *about* Java.
-- `code-language-context.tsx` — one page-wide Java/Python choice, backed by
-  `useSyncExternalStore` rather than a Context plus an effect. SSR always renders one
-  language, so there is no hydration mismatch, and `localStorage` is reconciled through the
-  store's snapshot rather than inside an effect's setState.
-- Both languages are highlighted by Shiki at build time.
-- **Every one of the 31 Python snippets was executed locally and its real output pasted** —
-  the same bar `types.ts` already set for Java.
-- Two divergences were kept honest rather than forced to match: `groupAnagrams` prints in a
-  different order because Python dicts preserve insertion order and Java's `HashMap` does
-  not; and the raw-memory-address half of the arrays chapter has no honest Python parallel,
-  because CPython lists hold pointers rather than values.
-- Idiomatic Python throughout — `enumerate`, tuple swap, `deque`, `heapq`, `Counter`,
-  `defaultdict`, comprehensions — and the Java scaffolding Python does not need (manual heap
-  `grow()`, a `swap()` helper, the checked-exception dance) was removed rather than
-  transliterated.
+**Distractors are never invented.** They are only ever real strings drawn from the same
+content — other frame notes in the same visualisation, other real outputs in the same course,
+the other half of a pitfall pair. When the pool cannot honestly supply one, the challenge is
+**dropped**. That rule is the difference between a learning tool and an actively harmful one:
+a plausible wrong answer that is secretly also right teaches the wrong thing.
+
+**The rest, by file:**
+- `lib/arena/scheduler.ts` — the only place `ts-fsrs` is imported. Narrows FSRS's four grades
+  to two, deliberately: a right/wrong quiz gives no honest signal for "recalled but it was a
+  struggle", and guessing would invent precision the interaction does not support.
+- `lib/arena/progression.ts` — XP, level curve (`50·n²`), streak, badges, daily quest. All
+  hand-rolled, all named constants. **No streak multiplier** — a reward that varies in ways
+  the learner cannot see coming is closer to a slot machine than to honest progress.
+- `lib/arena/storage.ts` — `localStorage` behind a versioned key, every read and write in
+  try/catch.
+- `lib/arena/celebrate.ts` — `canvas-confetti`, gated on `prefers-reduced-motion` at the call
+  site rather than trusting the library's opt-in flag. Milestones only, never every answer.
+- `components/arena/*` — the session, challenge card, progress summary, daily quest.
+- Entry points: `rail-nav.tsx`, the course index, a chapter page, the landing page.
 
 ## Assumptions I made
-- **"Campus fresher" is derived, not declared, by default** — `Level.ENTRY` and under 12
-  months of resume experience, or no resume with a title saying fresher/intern/graduate.
-  Guessing "student" from an empty profile would be the same bug mirrored. Task 051 then
-  added the optional field so a student can correct it.
-- **Aptitude is a spoken, reason-aloud round, not a timed MCQ.** An aggregator can already
-  give a student a timed multiple-choice test; talking through the set-up is what a
-  voice-first product can uniquely do. No MCQ engine was built.
-- **Refusing rather than substituting** an explicitly-chosen system-design round for a
-  fresher. A silent swap would leave them practising something they did not pick.
-- **The DSA course gets Python, the Java course stays Java** — the latter is a course *about*
-  Java. C++ was considered and rejected: it needs a server runner, same as Java.
-- Visualisation is hand-rolled SVG with **no new dependency** — the pre-approved `dagre`
-  fallback went unused because hand-rolled layout was sufficient at course scale.
+- **Campaigns map onto the existing module tree** rather than a new structure — that is the
+  half of scalequest's shape that carries most of the feel, and it was nearly free.
+- **The daily quest is 7 challenges**, seeded from the date string alone, so it is identical
+  across a refresh and across devices.
+- **Badges require real coverage**, not counts — "chapter cleared" means every derived
+  challenge from that chapter answered correctly. Deliberately hard; no participation
+  trophies.
+- **A `what-next` distractor is a *later* state of the same algorithm.** Only one is
+  literally next, so it is honest, and it tests order of operations rather than wording.
+- **Logged out only.** Account sync, server persistence and any leaderboard are out of scope
+  here — they touch user data and RLS, so they are their own task and go through a **PR**.
 
 ## What I could NOT verify
-- **Nobody has looked at any of this rendered, in a browser.** CI green means it compiles and
-  passes tests. The visuals, the playground panel, Shiki's colours in dark mode, mobile
-  layout and the step-control feel are all unverified by eye. Worth a look at
-  `/courses/dsa/sliding-window`, `/courses/dsa/tree-basics-and-traversals` and
-  `/courses/dsa/graph-representation-bfs-dfs`.
-- **Nobody has clicked Run.** The lazy-load contract is unit-tested (the interpreter is never
-  fetched merely by rendering), but real Pyodide load time and Worker behaviour against the
-  CDN build are untested in a real browser.
-- **No live AI call was made anywhere** (rule 7). So nobody knows whether a fresher round
-  actually *sounds* like one, whether the calibration block changes Gemini's questions, or
-  whether the aptitude generator produces questions solvable aloud — **it has never produced
-  a real question.** This is the single highest-value thing to spend on: one cheap generation
-  run, reviewed by eye.
-- Copy tone: whether "Prefer not to say" reads as a calibration aid or a demographic question.
-- Play-through pacing (1.6s/1.4s per frame) is a guess, not measured against reading speed.
-- Aptitude round length is set at 25 minutes — also a guess.
+- **Nothing has been looked at in a browser.** Still no browser automation in this session.
+  This is the third run in a row where that is the main gap. **Please look at:** `/arena`
+  (empty state, before any progress exists), a run mid-flight, the result screen, and
+  `/arena/[course]` — at 1280px, 1440px, 1920px, on mobile, and in dark mode.
+- **Nobody has played it.** Whether a 7-challenge run actually feels like a game rather than
+  a quiz is exactly the judgement CI cannot make, and it is the whole point of the task.
+- Whether `what-next` reads as fun or as tedious at ~253 challenges — it is the largest slice
+  of the corpus and the least proven.
+- Confetti on a real milestone, and its reduced-motion behaviour.
 
 ## Verification status
-- typecheck / lint / tests / build: **pass**, verified on CI for every merged branch, with
-  the run's `headSha` checked against the branch head each time rather than trusting the
-  latest green run.
-- Migrations: **both applied and confirmed remote**, each in the same step as its merge.
-  - `20260920000000_aptitude_round.sql` — adds the `aptitude` enum value.
-  - `20260921000000_stated_candidate_level.sql` — adds `sessions.stated_level`. This one is
-    the `report_expired_at` shape: the column is *selected* on every session read, so an
-    unapplied migration would have broken every session, not just the new feature. Applied
-    locally before `develop` was pushed, so the remote never existed without it.
+- typecheck / lint / tests / build: **pass**. CI green on the branch tip `3702248` (`headSha`
+  checked against the tip, not "latest green run"), and green again on `develop` at
+  `d3d2585` after the merge.
+- **No migrations in this task** — confirmed by diffing `supabase/migrations` across the
+  whole run. Nothing to `db:push`.
+- I ran `npm install` at the repo root after merging, so the two new packages exist on disk
+  locally. This is the one class of breakage green CI structurally cannot see — it runs
+  `npm ci` from clean — and it bit us with Shiki last run.
+
+## Dependencies
+Two, both pre-approved after a research pass read the actual LICENSE file rather than a
+README badge:
+- **`ts-fsrs` 5.4.2 (MIT, ~7.2KB gzipped, zero runtime deps)** — the reference TypeScript
+  implementation of FSRS, the algorithm that replaced SM-2 inside Anki. Scheduling review is
+  the one genuinely hard algorithm here. Rejected: `supermemo`, `@dtjv/sm-2`,
+  `@kirklin/supermemo2` (all older SM-2), and hand-rolling.
+- **`canvas-confetti` 1.9.4 (ISC, ~4.3KB gzipped, zero deps)** plus its `@types`.
+
+Everything else is hand-rolled, per the research: XP curves, streaks and badges have no
+library worth taking, and adopting one means bending our schema to someone else's.
 
 ## Merge status
-- **All five workstreams merged into `develop`:** `1c08197` (047), `fbdd27f` (048),
-  `4893a2c` (049), `2315016` (051), `a83c871` (050). Handoff at `07cdac2`.
-- Every merge was gated on a CI run whose `headSha` I checked against the branch head, not
-  merely on the latest green run for the branch.
-- **Process deviation, owned:** the task-051 file was committed straight to `develop`
-  (`17ead13`) rather than via a branch. Docs-only and CI went green after, but rule 1 says
-  branch-then-merge and I did not.
-- Nothing was pushed to `main`, and no PR was opened — none of this touched auth, payments,
-  data deletion or permissions.
+- Merged into `develop` at **`d3d2585`**. Nothing pushed to `main`.
+- **The merge is 2683 lines, well over the ~800-line reviewability guideline** in CLAUDE.md.
+  It should probably have been split into two tasks — engine and UI — and I am recording that
+  rather than glossing it.
+- PR #9 (`develop` → `main`) is still open and now understates the release by two full rounds.
 
-## Interruptions during the run
-Three agents were killed mid-task — two by the plan's usage limit, one by a network drop —
-and **none lost work**, because every brief required pushing after each coherent step. Each
-was resumed with `SendMessage` (keeping its context) rather than restarted cold, per
-CLAUDE.md's restart protocol. `runs/2026-09-20-progress.md` carried the state across.
-
-## New dependency
-- **Shiki (MIT)**, build/server-time only, for static code highlighting. Verified absent from
-  every client chunk the course route requires. Nothing else was added: the editor, the
-  Python runtime and the whiteboard were all already in the repo.
+## Interruptions
+`build-arena` was killed by the session usage limit (resets 1:50pm IST) with step 4 in hand —
+but step 4 had already been committed and pushed, and its worktree was clean, so **nothing
+was lost and no resume was needed**. CI failed on step 3 (`3b2acf2`); the agent fixed it
+itself and the branch tip is green.
 
 ## Suggested next task
-- Spend a little on one live generation run to check the aptitude questions and the fresher
-  calibration actually land — it is the only remaining way to know. After that, look at the
-  rendered course pages with your own eyes; nothing in this run has been seen.
+1. **Play it**, and tell me whether it feels like a game. Nothing else I can do substitutes.
+2. A dev-only report preview route (~30 lines) — still the cheapest permanent fix to the
+   "nobody has looked at it" problem.
 
 ## Open questions for you
-- **The DSA course now defaults to the Python tab, not Java.** The reasoning was that the
-  audience is DSA-first students prepping in Python/C++, and that Python is the only
-  language a reader can actually execute in the playground. It is a product call and easy to
-  flip — say so if you disagree.
-- **The Java runner.** Every route costs money or security sign-off: self-hosting Piston
-  (MIT) needs a `privileged: true` Docker sidecar; Judge0 is GPLv3 with an unresolved
-  API-use question; CheerpJ needs a commercial licence. Piston is the recommendation, but
-  the spend and the arbitrary-code-execution surface are yours to approve.
-- **Group discussion** is a real part of campus placement and is not built. It needs multiple
-  simultaneous speakers — a different interaction model from the turn-based voice loop. It
-  wants its own task, and possibly its own decision about whether it belongs at all.
-- **No open corpus exists** for Indian campus placement, aptitude, or DSA problem statements
-  that a commercial product may use. CSES and Project Euler are CC BY-NC-SA (NonCommercial);
-  Codeforces forbids republishing. `docs/third-party-sources.md` records this. It means that
-  content has to be generated, not ingested — which is why the aptitude generator matters.
+- **Account sync and a leaderboard** — worth building? A leaderboard needs a privacy decision
+  about what a student's name looks like to strangers, which is yours, not mine.
+- **Do you want authored narrative content** (scalequest's actual differentiator) on top of
+  the campaign structure? That is a content-writing task of real size, not a code one.
+- Still open from earlier runs: the Java runner (self-hosted Piston — spend and an
+  arbitrary-code-execution surface), one live generation run for the aptitude generator
+  (**it has never produced a real question**), and whether 1600px is the right reader ceiling.

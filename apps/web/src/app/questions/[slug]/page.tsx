@@ -15,7 +15,7 @@ export default async function CompanyQuestionsPage({ params }: { params: Promise
   if (!questionBankBrowsable()) notFound();
   const { slug } = await params;
   return (
-    <AppShell breadcrumb="questions">
+    <AppShell breadcrumb={slug} parent={{ label: "questions", href: "/questions" }}>
       <div className="w-full max-w-4xl">
         <CompanyQuestions slug={slug} />
       </div>

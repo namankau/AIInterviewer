@@ -97,16 +97,24 @@ export const chapterBreakContinueNested: Chapter = {
       output: "1\t2\t3\t\n2\t4\t6\t\n3\t6\t9\t\n*\n**\n***\n****",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "How the triangle's inner loop bound changes with i",
-      steps: [
-        "i = 1: inner loop runs `for (j = 1; j <= 1; j++)` — one iteration. Prints one \"*\", then a new line.",
-        "i = 2: inner loop runs `for (j = 1; j <= 2; j++)` — two iterations. Prints \"**\", then a new line.",
-        "i = 3: inner loop condition is now j <= 3 — three iterations. Prints \"***\".",
-        "i = 4: inner loop condition is j <= 4 — four iterations. Prints \"****\".",
-        "The key idea: the inner loop's *own* upper bound (`j <= i`) depends on the outer loop's current " +
-          "value — that dependency is what turns a rectangle of stars into a growing triangle.",
-      ],
+      caption: "Each printed row is one outer-loop iteration; its length is exactly the inner loop's upper bound, `j <= i`.",
+      viz: {
+        type: "queue",
+        frames: [
+          { items: ["*"], note: "i = 1: inner loop runs `for (j = 1; j <= 1; j++)` — one iteration. Prints one \"*\", then a new line." },
+          { items: ["*", "**"], note: "i = 2: inner loop runs `for (j = 1; j <= 2; j++)` — two iterations. Prints \"**\", then a new line." },
+          { items: ["*", "**", "***"], note: "i = 3: inner loop condition is now j <= 3 — three iterations. Prints \"***\"." },
+          {
+            items: ["*", "**", "***", "****"],
+            note:
+              "i = 4: inner loop condition is j <= 4 — four iterations. Prints \"****\". The key idea: the " +
+              "inner loop's *own* upper bound (`j <= i`) depends on the outer loop's current value — that " +
+              "dependency is what turns a rectangle of stars into a growing triangle.",
+          },
+        ],
+      },
     },
     { kind: "h", text: "Labelled break — escaping more than one loop at once" },
     {

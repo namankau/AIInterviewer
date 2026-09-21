@@ -36,6 +36,15 @@ export const chapterWhatIsDsa: Chapter = {
         "and rebuilds its structures as data arrives, so *which* structure to use, and when, is itself part " +
         "of the skill.",
     },
+    {
+      kind: "concept",
+      title: "Data structure vs. algorithm",
+      text:
+        "A ~~data structure~~ is a deliberate way of organising data (an array, a hash set, a tree). An " +
+        "~~algorithm~~ is the step-by-step procedure that operates on that organisation to produce an " +
+        "answer. The same algorithmic idea (\"have I seen this before?\") costs a different amount of work " +
+        "depending entirely on which structure it runs against.",
+    },
     { kind: "h", text: "Same answer, very different cost" },
     {
       kind: "p",
@@ -114,17 +123,74 @@ export const chapterWhatIsDsa: Chapter = {
       pythonOutput: "a slow: True\na fast: True\nb slow: False\nb fast: False",
     },
     {
-      kind: "trace",
-      title: "Why the HashSet version does less work on {4, 7, 2, 9, 7, 1}",
-      steps: [
-        "seen = {}. Read 4: not in seen, add it. seen = {4}.",
-        "Read 7: not in seen, add it. seen = {4, 7}.",
-        "Read 2: not in seen, add it. seen = {4, 7, 2}.",
-        "Read 9: not in seen, add it. seen = {4, 7, 2, 9}.",
-        "Read 7 again: already in seen — return true immediately.",
-        "The slow version, on the same array, would have compared (4,7), (4,2), (4,9)... up to 15 pairs " +
-          "before it happened to reach the matching (7, 7) pair near the end.",
-      ],
+      kind: "viz",
+      title: "hasDuplicateFast on {4, 7, 2, 9, 7, 1} — a done cell is already in seen",
+      caption:
+        "Each cell is checked once, left to right; the moment a value is already marked done, that's the " +
+        "duplicate, and the scan stops without ever looking at the remaining cells.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [
+              { value: 4, state: "active", pointers: ["i"] },
+              { value: 7 },
+              { value: 2 },
+              { value: 9 },
+              { value: 7 },
+              { value: 1 },
+            ],
+            note: "seen = {}. i=0: check 4 — not in seen, add it. seen = {4}.",
+          },
+          {
+            cells: [
+              { value: 4, state: "done" },
+              { value: 7, state: "active", pointers: ["i"] },
+              { value: 2 },
+              { value: 9 },
+              { value: 7 },
+              { value: 1 },
+            ],
+            note: "i=1: check 7 — not in seen, add it. seen = {4, 7}.",
+          },
+          {
+            cells: [
+              { value: 4, state: "done" },
+              { value: 7, state: "done" },
+              { value: 2, state: "active", pointers: ["i"] },
+              { value: 9 },
+              { value: 7 },
+              { value: 1 },
+            ],
+            note: "i=2: check 2 — not in seen, add it. seen = {4, 7, 2}.",
+          },
+          {
+            cells: [
+              { value: 4, state: "done" },
+              { value: 7, state: "done" },
+              { value: 2, state: "done" },
+              { value: 9, state: "active", pointers: ["i"] },
+              { value: 7 },
+              { value: 1 },
+            ],
+            note: "i=3: check 9 — not in seen, add it. seen = {4, 7, 2, 9}.",
+          },
+          {
+            cells: [
+              { value: 4, state: "done" },
+              { value: 7, state: "compare" },
+              { value: 2, state: "done" },
+              { value: 9, state: "done" },
+              { value: 7, state: "compare", pointers: ["i"] },
+              { value: 1 },
+            ],
+            note:
+              "i=4: check 7 — already in seen (the value at index 1) — return true immediately. Index 5 is " +
+              "never examined. hasDuplicateSlow, on this same array, would have compared (4,7), (4,2), " +
+              "(4,9)... up to 15 pairs before happening to reach this matching pair.",
+          },
+        ],
+      },
     },
     {
       kind: "table",
@@ -147,10 +213,10 @@ export const chapterWhatIsDsa: Chapter = {
     {
       kind: "p",
       text:
-        "The slow version compares every pair: for n numbers, that's roughly n²/2 comparisons — a cost " +
+        "The slow version compares every pair: for n numbers, that's roughly {{O(n²)}} comparisons — a cost " +
         "that's fine for 6 numbers and genuinely unusable for 6 million. The fast version does one pass, " +
         "checking each number against a set that answers \"have I seen this?\" almost instantly — a cost " +
-        "that stays close to n even as n grows huge. The rest of this course is about naming this " +
+        "that stays close to {{O(n)}} even as n grows huge. The rest of this course is about naming this " +
         "difference precisely (the next chapter), and building a mental library of structures and " +
         "techniques so you reach for the shelf, not the drawer, by habit.",
     },

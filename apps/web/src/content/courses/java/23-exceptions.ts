@@ -126,18 +126,13 @@ export const chapterExceptions: Chapter = {
       ],
     },
     {
-      kind: "trace",
+      kind: "steps",
       title: "Why 'Finished checking the array...' prints even though the try block threw",
       steps: [
-        "marks[5] is evaluated — index 5 is out of bounds for a length-3 array.",
-        "Java immediately throws ArrayIndexOutOfBoundsException; the rest of the try block (the println's " +
-          "own completion) is abandoned.",
-        "The exception's type is matched against the catch clause — it matches, so that block runs and " +
-          "prints the caught message.",
-        "Before control leaves the try/catch entirely, the finally block always runs — whether the try " +
-          "succeeded, an exception was caught, or even if the exception had gone uncaught.",
-        "Only after finally completes does execution continue to the next statement after the whole " +
-          "try/catch/finally.",
+        { label: "Throw", text: "marks[5] is evaluated — index 5 is out of bounds for a length-3 array. Java immediately throws ArrayIndexOutOfBoundsException; the rest of the try block is abandoned." },
+        { label: "Catch", text: "The exception's type is matched against the catch clause — it matches, so that block runs and prints the caught message." },
+        { label: "Finally", text: "Before control leaves the try/catch entirely, the finally block always runs — whether the try succeeded, an exception was caught, or even if the exception had gone uncaught." },
+        { label: "Resume", text: "Only after finally completes does execution continue to the next statement after the whole try/catch/finally." },
       ],
     },
     {

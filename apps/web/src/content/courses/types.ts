@@ -76,7 +76,27 @@ export type Block =
       prompt?: string;
       /** What a correct, unmodified run should print — compared loosely (trailing whitespace only). */
       expectedOutput?: string;
-    };
+    }
+  /**
+   * A titled, tinted rule/definition box (task 052) — distinct from `analogy` (the
+   * everyday picture mapped onto the concept) and `remember` (the end-of-chapter recap):
+   * this states the formal rule or term as soon as it's introduced, so a reader can point
+   * back to it without re-reading the surrounding paragraph. One of the "coloured boxes"
+   * the owner asked for.
+   */
+  | { kind: "concept"; title: string; text: string }
+  /**
+   * A side-by-side comparison — `ArrayList` vs `LinkedList`, BFS vs DFS, `==` vs `.equals`
+   * — as 2-3 tinted columns instead of a plain table (task 052), so the reader tracks
+   * "if it's this, then..." straight down a column.
+   */
+  | { kind: "compare"; title?: string; columns: { label: string; items: string[] }[] }
+  /**
+   * A numbered, coloured pipeline of stages for anything sequential — compile → bytecode →
+   * JVM, or backtracking's choose/explore/undo (task 052) — instead of a numbered prose
+   * list the reader has to hold in their head.
+   */
+  | { kind: "steps"; title?: string; steps: { label: string; text: string }[] };
 
 /**
  * One visualisation and its frames. Every shape's frame is *state*, never coordinates —

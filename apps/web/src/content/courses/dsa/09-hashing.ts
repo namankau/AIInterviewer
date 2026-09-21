@@ -115,17 +115,42 @@ export const chapterHashing: Chapter = {
         "groups: {'act': ['cat', 'act'], 'dgo': ['dog', 'god'], 'art': ['rat']}",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: 'simpleHash("cat", 5) and simpleHash("rat", 5) landing in the same bucket',
-      steps: [
-        "\"cat\": 'c'(99) + 'a'(97) + 't'(116) = 312. 312 % 5 = 2.",
-        "\"rat\": 'r'(114) + 'a'(97) + 't'(116) = 327. 327 % 5 = 2.",
-        "Both land in bucket 2, despite \"cat\" and \"rat\" being unrelated words — a genuine collision, " +
-          "not because they're anagrams (that's a separate, deliberate case: \"cat\" and \"act\" also both " +
-          "sum to 312, landing in bucket 2 for a reason that does make sense).",
-        "A real HashMap would store both \"cat\" and \"rat\" (and \"act\") in bucket 2's internal list, and " +
-          "checking whether \"cat\" is present means checking that short list, not the whole table.",
-      ],
+      caption: "Bucket 2 fills up with three unrelated-looking words — each one really did hash there, for its own reason.",
+      viz: {
+        type: "table",
+        frames: [
+          {
+            rowLabels: ["bucket 0", "bucket 1", "bucket 2", "bucket 3", "bucket 4"],
+            colLabels: ["contents"],
+            rows: [[null], [null], ["cat"], [null], [null]],
+            highlight: [[2, 0]],
+            note: "\"cat\": 'c'(99) + 'a'(97) + 't'(116) = 312. 312 % 5 = 2 — placed in bucket 2.",
+          },
+          {
+            rowLabels: ["bucket 0", "bucket 1", "bucket 2", "bucket 3", "bucket 4"],
+            colLabels: ["contents"],
+            rows: [[null], [null], ["cat, rat"], [null], [null]],
+            highlight: [[2, 0]],
+            note:
+              "\"rat\": 'r'(114) + 'a'(97) + 't'(116) = 327. 327 % 5 = 2 — also bucket 2. Both land there " +
+              "despite \"cat\" and \"rat\" being unrelated words — a genuine collision, not because they're " +
+              "anagrams.",
+          },
+          {
+            rowLabels: ["bucket 0", "bucket 1", "bucket 2", "bucket 3", "bucket 4"],
+            colLabels: ["contents"],
+            rows: [[null], [null], ["cat, rat, act"], [null], [null]],
+            highlight: [[2, 0]],
+            note:
+              "\"act\" sums to the same 312 as \"cat\" (same letters, same character codes) and also lands " +
+              "in bucket 2, but for a reason that does make sense. A real HashMap stores all three in " +
+              "bucket 2's internal list, and checking whether \"cat\" is present means checking that short " +
+              "list, not the whole table.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

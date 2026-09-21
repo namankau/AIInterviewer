@@ -95,16 +95,34 @@ export const chapterFileIO: Chapter = {
         "it, that call would have erased Priya, Arjun, and Vikram's lines and left only Neha's.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why total marks reads 256 after parsing the file back",
-      steps: [
-        "readBack holds [\"Priya,87\", \"Arjun,91\", \"Vikram,78\"] — three lines, exactly as written.",
-        "For \"Priya,87\": split(\",\") gives [\"Priya\", \"87\"]; parts[1] is \"87\", parsed to int 87. " +
-          "total becomes 87.",
-        "For \"Arjun,91\": parts[1] is \"91\". total becomes 87 + 91 = 178.",
-        "For \"Vikram,78\": parts[1] is \"78\". total becomes 178 + 78 = 256.",
-        "Final total, printed after the loop: 256.",
-      ],
+      caption: "Each line's marks column is parsed and folded into the running total; the note-line describes exactly the split/parse step underneath the highlighted cell.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: "Priya,87" }, { value: "Arjun,91" }, { value: "Vikram,78" }],
+            note: "readBack holds [\"Priya,87\", \"Arjun,91\", \"Vikram,78\"] — three lines, exactly as written.",
+          },
+          {
+            cells: [{ value: "Priya,87", state: "done", pointers: ["total=87"] }, { value: "Arjun,91" }, { value: "Vikram,78" }],
+            note: "For \"Priya,87\": split(\",\") gives [\"Priya\", \"87\"]; parts[1] is \"87\", parsed to int 87. total becomes 87.",
+          },
+          {
+            cells: [{ value: "Priya,87", state: "done" }, { value: "Arjun,91", state: "done", pointers: ["total=178"] }, { value: "Vikram,78" }],
+            note: "For \"Arjun,91\": parts[1] is \"91\". total becomes 87 + 91 = 178.",
+          },
+          {
+            cells: [{ value: "Priya,87", state: "done" }, { value: "Arjun,91", state: "done" }, { value: "Vikram,78", state: "done", pointers: ["total=256"] }],
+            note: "For \"Vikram,78\": parts[1] is \"78\". total becomes 178 + 78 = 256.",
+          },
+          {
+            cells: [{ value: "Priya,87", state: "done" }, { value: "Arjun,91", state: "done" }, { value: "Vikram,78", state: "done" }],
+            note: "Final total, printed after the loop: 256.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

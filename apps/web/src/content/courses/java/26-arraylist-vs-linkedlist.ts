@@ -89,28 +89,62 @@ export const chapterArrayListVsLinkedList: Chapter = {
         "commonly used to implement a queue or a deque.",
     },
     {
-      kind: "table",
-      head: ["Operation", "ArrayList", "LinkedList"],
-      rows: [
-        ["get(index) — random access", "Fast — jumps straight to the memory slot", "Slow — walks node by node from the nearest end"],
-        ["add/remove at the end", "Fast (occasionally resizes the backing array)", "Fast"],
-        ["add/remove at the front or middle", "Slow — shifts every following element", "Fast, if you already have a reference to that node; still requires a walk to reach it by index"],
-        ["Memory overhead per element", "Low — just the elements, contiguous", "Higher — each node also stores two link references"],
-        ["Best used as", "The default choice for most lists, especially when you read a lot", "A queue/deque, or when you insert/remove heavily at the ends and rarely read by index"],
+      kind: "compare",
+      title: "ArrayList vs LinkedList",
+      columns: [
+        {
+          label: "ArrayList",
+          items: [
+            "`get(index)` is fast — jumps straight to the memory slot",
+            "Add/remove at the front or middle is slow — shifts every following element",
+            "Low memory overhead — just the elements, contiguous",
+            "The default choice for most lists, especially when you read a lot",
+          ],
+        },
+        {
+          label: "LinkedList",
+          items: [
+            "`get(index)` is slow — walks node by node from the nearest end",
+            "Add/remove at the ends is fast; in the middle, fast once you're there, but reaching it by index still walks",
+            "Higher memory overhead — each node also stores two link references",
+            "Best as a queue/deque, or when you insert/remove heavily at the ends and rarely read by index",
+          ],
+        },
       ],
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why arrayList.add(1, \"Neha\") produces [Priya, Neha, Arjun, Vikram]",
-      steps: [
-        "Before the insert: [Priya, Arjun, Vikram] at indices 0, 1, 2.",
-        "add(1, \"Neha\") means: insert \"Neha\" so it becomes the new element at index 1.",
-        "Internally, ArrayList shifts every element from index 1 onward one slot to the right, making room: " +
-          "Arjun moves from index 1 to 2, Vikram moves from index 2 to 3.",
-        "\"Neha\" is written into the now-empty index 1.",
-        "Result: [Priya, Neha, Arjun, Vikram] — this shifting is exactly the cost that makes a middle " +
-          "insertion on an ArrayList relatively expensive for a large list.",
-      ],
+      caption: "Every element from the insertion point onward physically shifts one slot right before the new value is written in.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: "Priya" }, { value: "Arjun" }, { value: "Vikram" }],
+            note: "Before the insert: [Priya, Arjun, Vikram] at indices 0, 1, 2.",
+          },
+          {
+            cells: [{ value: "Priya" }, { value: "?", state: "active", pointers: ["index 1"] }, { value: "Arjun" }, { value: "Vikram" }],
+            note: "add(1, \"Neha\") means: insert \"Neha\" so it becomes the new element at index 1.",
+          },
+          {
+            cells: [{ value: "Priya" }, { value: "?" }, { value: "Arjun", state: "swap" }, { value: "Vikram", state: "swap" }],
+            note:
+              "Internally, ArrayList shifts every element from index 1 onward one slot to the right, " +
+              "making room: Arjun moves from index 1 to 2, Vikram moves from index 2 to 3.",
+          },
+          {
+            cells: [{ value: "Priya" }, { value: "Neha", state: "done" }, { value: "Arjun" }, { value: "Vikram" }],
+            note: "\"Neha\" is written into the now-empty index 1.",
+          },
+          {
+            cells: [{ value: "Priya" }, { value: "Neha" }, { value: "Arjun" }, { value: "Vikram" }],
+            note:
+              "Result: [Priya, Neha, Arjun, Vikram] — this shifting is exactly the cost that makes a " +
+              "middle insertion on an ArrayList relatively expensive for a large list.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

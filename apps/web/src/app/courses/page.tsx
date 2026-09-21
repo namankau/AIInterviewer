@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { CourseCardProgress } from "@/components/courses/course-progress";
+import { ImportBrowserProgress } from "@/components/courses/import-browser-progress";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { courses, totalChapters, totalMinutes } from "@/content/courses";
 
@@ -20,6 +23,8 @@ export default function CoursesPage() {
   return (
     <div className="min-h-dvh">
       <CourseSiteHeader />
+      <Breadcrumbs items={[{ label: "home", href: "/dashboard" }, { label: "courses" }]} />
+      <ImportBrowserProgress />
       <main className="mx-auto max-w-6xl px-6 py-14 md:py-20">
         <header className="flex flex-col gap-4">
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Free, always</p>
@@ -43,13 +48,35 @@ export default function CoursesPage() {
                   <h2 className="text-title text-ink group-hover:text-accent">{course.title}</h2>
                   <p className="text-caption text-ink-muted">{course.tagline}</p>
                 </div>
-                <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-                  {totalChapters(course)} chapters · {totalMinutes(course)} min
-                </p>
+                <div className="flex flex-col gap-3">
+                  <CourseCardProgress
+                    courseSlug={course.slug}
+                    chapters={course.modules.flatMap((m) => m.chapters.map((c) => ({ slug: c.slug, title: c.title })))}
+                  />
+                  <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+                    {totalChapters(course)} chapters · {totalMinutes(course)} min
+                  </p>
+                </div>
               </Link>
             </li>
           ))}
         </ul>
+
+        <div className="mt-14 flex flex-col items-start gap-3 rounded-md border border-line-strong bg-surface-raised px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-1.5">
+            <p className="font-mono text-micro tracking-widest text-accent uppercase">New</p>
+            <p className="text-body text-ink">
+              Rather test yourself than read? Try <span className="font-medium">the Arena</span> — short, gamified
+              rounds derived straight from these chapters.
+            </p>
+          </div>
+          <Link
+            href="/arena"
+            className="shrink-0 rounded-md bg-accent px-5 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-strong"
+          >
+            Play the Arena
+          </Link>
+        </div>
       </main>
       <CourseSiteFooter />
     </div>

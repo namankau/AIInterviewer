@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { questionBankBrowsable } from "@/lib/flags";
+import { NAV_LINKS } from "@/lib/nav-links";
 
 /**
  * The rail's links, with the page you are on marked.
@@ -20,7 +21,7 @@ export function RailNav() {
 
   return (
     <ul className="flex flex-wrap gap-1.5 md:flex-col">
-      {LINKS.filter((link) => link.href !== "/questions" || questionBankBrowsable()).map((link) => {
+      {NAV_LINKS.filter((link) => link.href !== "/questions" || questionBankBrowsable()).map((link) => {
         const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
         return (
           <li key={link.href}>
@@ -42,11 +43,3 @@ export function RailNav() {
   );
 }
 
-/** Typed routes are on, so these are literals rather than a widened string[]. */
-const LINKS = [
-  { href: "/dashboard", label: "Home" },
-  { href: "/rounds", label: "Rounds" },
-  { href: "/questions", label: "Questions" },
-  { href: "/courses", label: "Courses" },
-  { href: "/profile", label: "Profile" },
-] as const;

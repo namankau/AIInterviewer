@@ -1,7 +1,12 @@
 import type {
   ApiError,
+  ArenaBadgesView,
+  ArenaCountersView,
+  ArenaProgressView,
+  AwardBadgesRequest,
   BankCompany,
   BankQuestionPage,
+  CourseProgressView,
   RoundType,
   CodeRunResult,
   EntitlementView,
@@ -13,6 +18,9 @@ import type {
   ResumeView,
   SkillView,
   UpdateProfileRequest,
+  ImportArenaProgressRequest,
+  ImportCourseProgressRequest,
+  RecordAnswerRequest,
   ReadinessGroup,
   RoundDraft,
   RunCodeRequest,
@@ -353,4 +361,74 @@ export function submitAnswer(
     form.append("video", video, "answer-video.webm");
   }
   return apiSend<SubmitAnswerResponse>(`/api/v1/sessions/${sessionId}/turns`, "POST", accessToken, form);
+}
+
+// -- course progress ---------------------------------------------------------
+
+/** `GET /api/v1/me/course-progress` — every chapter this candidate has finished. */
+export function fetchCourseProgress(options: ApiGetOptions): Promise<CourseProgressView> {
+  return apiGet<CourseProgressView>("/api/v1/me/course-progress", options);
+}
+
+/** Idempotent: marking a finished chapter finished again is a no-op, not an error. */
+export function markChapterComplete(
+  accessToken: string,
+  courseSlug: string,
+  chapterSlug: string,
+): Promise<void> {
+  return apiSend<void>(
+    `/api/v1/me/course-progress/${encodeURIComponent(courseSlug)}/${encodeURIComponent(chapterSlug)}`,
+    "PUT",
+    accessToken,
+  );
+}
+
+export function markChapterIncomplete(
+  accessToken: string,
+  courseSlug: string,
+  chapterSlug: string,
+): Promise<void> {
+  return apiSend<void>(
+    `/api/v1/me/course-progress/${encodeURIComponent(courseSlug)}/${encodeURIComponent(chapterSlug)}`,
+    "DELETE",
+    accessToken,
+  );
+}
+
+/** A one-off union of progress saved in this browser before it was account-backed. */
+export function importCourseProgress(
+  accessToken: string,
+  body: ImportCourseProgressRequest,
+): Promise<CourseProgressView> {
+  return apiSend<CourseProgressView>("/api/v1/me/course-progress/import", "POST", accessToken, body);
+}
+
+// -- arena progress ----------------------------------------------------------
+
+/** `GET /api/v1/me/arena` — XP, streak, badges and the review schedule. */
+export function fetchArenaProgress(options: ApiGetOptions): Promise<ArenaProgressView> {
+  return apiGet<ArenaProgressView>("/api/v1/me/arena", options);
+}
+
+/** Records one answered challenge. The server decides the XP and the streak. */
+export function recordArenaAnswer(
+  accessToken: string,
+  body: RecordAnswerRequest,
+): Promise<ArenaCountersView> {
+  return apiSend<ArenaCountersView>("/api/v1/me/arena/answers", "POST", accessToken, body);
+}
+
+export function awardArenaBadges(
+  accessToken: string,
+  body: AwardBadgesRequest,
+): Promise<ArenaBadgesView> {
+  return apiSend<ArenaBadgesView>("/api/v1/me/arena/badges", "POST", accessToken, body);
+}
+
+/** A one-off union of Arena progress saved in this browser before it was account-backed. */
+export function importArenaProgress(
+  accessToken: string,
+  body: ImportArenaProgressRequest,
+): Promise<ArenaProgressView> {
+  return apiSend<ArenaProgressView>("/api/v1/me/arena/import", "POST", accessToken, body);
 }

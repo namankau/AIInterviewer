@@ -105,19 +105,45 @@ export const chapterQuickSort: Chapter = {
       pythonOutput: "sorted: [1, 2, 3, 4, 7, 8, 9]",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "partition({8, 3, 7, 4, 2, 9, 1}, low=0, high=6) — pivot is arr[6]=1",
-      steps: [
-        "pivot = 1. boundary = -1 (nothing confirmed smaller than pivot yet).",
-        "i=0, arr[0]=8. 8 < 1 is false. boundary stays -1.",
-        "i=1, arr[1]=3. 3 < 1 is false. boundary stays -1.",
-        "i=2..4 (7, 4, 2): all false against pivot 1. boundary stays -1.",
-        "i=5, arr[5]=9. 9 < 1 is false. boundary stays -1.",
-        "Loop ends (i reached high). Swap arr[boundary+1]=arr[0] with arr[high]=arr[6]: swaps 8 and 1.",
-        "Array is now {1, 3, 7, 4, 2, 9, 8}. Return boundary+1 = 0 — the pivot (1) is now at index 0, its " +
-          "final sorted position, with an empty left side (nothing smaller) and everything else to its " +
-          "right, unsorted but correctly on the right side of 1.",
-      ],
+      caption: "Nothing in this array is smaller than the pivot, so boundary never advances — the swap at the end still puts the pivot exactly where it belongs.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: 8 }, { value: 3 }, { value: 7 }, { value: 4 }, { value: 2 }, { value: 9 }, { value: 1, pointers: ["pivot"] }],
+            note: "pivot = 1 (arr[6]). boundary = -1 (nothing confirmed smaller than pivot yet).",
+          },
+          {
+            cells: [{ value: 8, state: "active", pointers: ["i"] }, { value: 3 }, { value: 7 }, { value: 4 }, { value: 2 }, { value: 9 }, { value: 1, pointers: ["pivot"] }],
+            note: "i=0, arr[0]=8. 8 < 1 is false. boundary stays -1.",
+          },
+          {
+            cells: [{ value: 8 }, { value: 3, state: "active", pointers: ["i"] }, { value: 7 }, { value: 4 }, { value: 2 }, { value: 9 }, { value: 1, pointers: ["pivot"] }],
+            note: "i=1, arr[1]=3. 3 < 1 is false. boundary stays -1.",
+          },
+          {
+            cells: [{ value: 8 }, { value: 3 }, { value: 7, state: "active" }, { value: 4, state: "active" }, { value: 2, state: "active", pointers: ["i"] }, { value: 9 }, { value: 1, pointers: ["pivot"] }],
+            note: "i=2..4 (7, 4, 2): all false against pivot 1. boundary stays -1.",
+          },
+          {
+            cells: [{ value: 8 }, { value: 3 }, { value: 7 }, { value: 4 }, { value: 2 }, { value: 9, state: "active", pointers: ["i"] }, { value: 1, pointers: ["pivot"] }],
+            note: "i=5, arr[5]=9. 9 < 1 is false. boundary stays -1.",
+          },
+          {
+            cells: [{ value: 8, state: "swap" }, { value: 3 }, { value: 7 }, { value: 4 }, { value: 2 }, { value: 9 }, { value: 1, state: "swap" }],
+            note: "Loop ends (i reached high). Swap arr[boundary+1]=arr[0] with arr[high]=arr[6]: swaps 8 and 1.",
+          },
+          {
+            cells: [{ value: 1, state: "done" }, { value: 3 }, { value: 7 }, { value: 4 }, { value: 2 }, { value: 9 }, { value: 8 }],
+            note:
+              "Array is now {1, 3, 7, 4, 2, 9, 8}. Return boundary+1 = 0 — the pivot (1) is now at index 0, " +
+              "its final sorted position, with an empty left side (nothing smaller) and everything else to " +
+              "its right, unsorted but correctly on the right side of 1.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

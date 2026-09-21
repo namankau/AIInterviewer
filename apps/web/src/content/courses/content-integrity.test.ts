@@ -34,6 +34,18 @@ describe("course registry", () => {
     const slugs = courses.map((c) => c.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
   });
+
+  // Task 054: nearly every `trace` block became a `viz` across dsa/ and java/. One survivor
+  // remains (dsa/binary-search's "search on the answer", a conceptual integer range with no
+  // concrete elements to draw) — this guards against the count silently creeping back up as
+  // new chapters are added or edited.
+  it("keeps trace blocks rare — almost every dry run is a viz, not a sentence list", () => {
+    const traceCount = courses
+      .flatMap((course) => flattenChapters(course))
+      .flatMap((chapter) => chapter.blocks)
+      .filter((b) => b.kind === "trace").length;
+    expect(traceCount).toBeLessThanOrEqual(1);
+  });
 });
 
 describe.each(courses)("course: $slug", (course: Course) => {
@@ -174,6 +186,40 @@ describe.each(courses)("course: $slug", (course: Course) => {
               }
             }
           }
+        }
+      }
+    });
+
+    it("every concept card has a non-empty title and text", () => {
+      const concepts = blocksOf("concept", chapter) as Extract<Block, { kind: "concept" }>[];
+      for (const block of concepts) {
+        expect(block.title.trim().length).toBeGreaterThan(0);
+        expect(block.text.trim().length).toBeGreaterThan(0);
+      }
+    });
+
+    it("every compare block has 2-3 labelled columns, each with at least one item", () => {
+      const compares = blocksOf("compare", chapter) as Extract<Block, { kind: "compare" }>[];
+      for (const block of compares) {
+        expect(block.columns.length).toBeGreaterThanOrEqual(2);
+        expect(block.columns.length).toBeLessThanOrEqual(3);
+        for (const column of block.columns) {
+          expect(column.label.trim().length).toBeGreaterThan(0);
+          expect(column.items.length).toBeGreaterThan(0);
+          for (const item of column.items) {
+            expect(item.trim().length).toBeGreaterThan(0);
+          }
+        }
+      }
+    });
+
+    it("every steps block has at least 2 stages, each with a non-empty label and text", () => {
+      const stepsBlocks = blocksOf("steps", chapter) as Extract<Block, { kind: "steps" }>[];
+      for (const block of stepsBlocks) {
+        expect(block.steps.length).toBeGreaterThanOrEqual(2);
+        for (const step of block.steps) {
+          expect(step.label.trim().length).toBeGreaterThan(0);
+          expect(step.text.trim().length).toBeGreaterThan(0);
         }
       }
     });

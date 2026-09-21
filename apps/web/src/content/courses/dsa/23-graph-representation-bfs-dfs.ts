@@ -276,22 +276,44 @@ export const chapterGraphRepresentationBfsDfs: Chapter = {
         "what matters.",
     },
     {
+      kind: "compare",
+      title: "BFS vs DFS",
+      columns: [
+        {
+          label: "BFS",
+          items: [
+            "Queue (FIFO) — explores in expanding rings, one edge away, then two, then three",
+            "{{O(V + E)}} time, {{O(V)}} space (the queue's contents)",
+            "Use it when you need the *fewest edges* to reach something",
+          ],
+        },
+        {
+          label: "DFS",
+          items: [
+            "Recursion or an explicit stack (LIFO) — commits to one path as deep as it goes",
+            "{{O(V + E)}} time, {{O(V)}} space (the recursion depth)",
+            "Use it for 'does any path exist', 'find all paths', or cycle detection",
+          ],
+        },
+      ],
+    },
+    {
       kind: "table",
       head: ["Traversal", "Data structure", "Time", "Space", "Why"],
       rows: [
         [
           "BFS",
           "Queue",
-          "O(V + E)",
-          "O(V)",
+          "{{O(V + E)}}",
+          "{{O(V)}}",
           "Every vertex is enqueued once and every edge is examined once when scanning that vertex's " +
             "neighbours — V vertices plus E edge-checks total.",
         ],
         [
           "DFS",
           "Recursion / explicit stack",
-          "O(V + E)",
-          "O(V)",
+          "{{O(V + E)}}",
+          "{{O(V)}}",
           "Same reasoning as BFS — every vertex visited once, every edge examined once — but the O(V) space " +
             "here is the recursion depth (or stack), not a queue's contents.",
         ],

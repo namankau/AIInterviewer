@@ -2,6 +2,7 @@ import type { UsageCounts } from "@acemyinterview/shared";
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 
+import { courses, totalChapters, totalMinutes } from "@/content/courses";
 import { fetchUsage } from "@/lib/api";
 
 export const metadata: Metadata = {
@@ -458,12 +459,19 @@ function ReportContents() {
   );
 }
 
-/** Free courses, built in parallel (task 045). Links out even if the route isn't live yet. */
+/**
+ * Free courses (task 045).
+ *
+ * Each card links to its own course. It used to send both to `/courses` — the comment
+ * said "links out even if the route isn't live yet", which was true when it was written
+ * and quietly stopped being true once the courses shipped. The effect was that clicking
+ * either card landed you on the same catalogue page, so the two cards looked broken.
+ *
+ * The titles and taglines are read from the course content itself rather than repeated
+ * here, so the landing page cannot drift out of step with what the course is actually
+ * called.
+ */
 function Courses() {
-  const courses = [
-    { title: "Java for interviews", body: "Language fundamentals through the lens of what a panel actually probes." },
-    { title: "Data structures & algorithms", body: "The patterns that keep coming back across coding rounds, worked from first principles." },
-  ];
   return (
     <section className="border-b border-line">
       <div className="mx-auto max-w-6xl px-6 py-20">
@@ -475,17 +483,32 @@ function Courses() {
           </p>
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
-          {courses.map((c) => (
+          {courses.map((course) => (
             <Link
-              key={c.title}
-              href={"/courses" as Route}
+              key={course.slug}
+              href={`/courses/${course.slug}` as Route}
               className="card flex flex-col gap-2 p-6 transition-shadow hover:shadow-[var(--shadow-md)]"
             >
-              <h3 className="text-heading font-bold text-ink">{c.title}</h3>
-              <p className="text-caption text-ink-muted">{c.body}</p>
-              <span className="pt-2 text-caption font-semibold text-accent">Start course →</span>
+              <h3 className="text-heading font-bold text-ink">{course.title}</h3>
+              <p className="text-caption text-ink-muted">{course.tagline}</p>
+              <span className="pt-2 text-caption font-semibold text-accent">
+                {totalChapters(course)} chapters · {totalMinutes(course)} min
+              </span>
+              <span className="text-caption font-semibold text-accent">Start course →</span>
             </Link>
           ))}
+          <Link
+            href={"/arena" as Route}
+            className="card flex flex-col gap-2 p-6 transition-shadow hover:shadow-[var(--shadow-md)]"
+          >
+            <span className="pill pill-highlight w-fit">New</span>
+            <h3 className="text-heading font-bold text-ink">The Arena</h3>
+            <p className="text-caption text-ink-muted">
+              Short, gamified rounds derived from every chapter above — spot the mistake, predict the output,
+              read a diagram one step ahead.
+            </p>
+            <span className="pt-2 text-caption font-semibold text-accent">Play now →</span>
+          </Link>
         </div>
       </div>
     </section>

@@ -219,14 +219,130 @@ export function OverallScore({ competencies }: { competencies: ReportCompetency[
         </div>
       </div>
 
-      <figcaption className="max-w-prose text-body text-ink-muted">
-        The scale is set deliberately hard. 40% is a competent, ordinary answer and where most
-        rounds land — including rounds that pass. 50% is good, 60% genuinely strong, 70% the
-        answer an interviewer repeats to somebody else afterwards. A number in the forties is
-        the middle of this scale rather than a failure, and the room above it is left open so
-        that getting better has somewhere to show.
-      </figcaption>
+      {/*
+        * Task 053: this used to be a `figcaption` in the primary flow — a full paragraph of
+        * calibration theory between the candidate and their own result. It is genuinely good
+        * writing and genuinely not what somebody wants in the first five seconds, so it moves
+        * behind a disclosure. Native `<details>` rather than a hand-rolled toggle: it is
+        * keyboard-operable and announces its own expanded state with no ARIA to get wrong,
+        * and every word survives underneath it, unchanged.
+        */}
+      <details className="group max-w-prose">
+        <summary className="flex cursor-pointer list-none items-center gap-1.5 text-caption font-medium text-ink-subtle marker:content-none hover:text-ink [&::-webkit-details-marker]:hidden">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 8 8"
+            className="h-2 w-2 shrink-0 fill-current transition-transform group-open:rotate-90"
+          >
+            <polygon points="0,0 8,4 0,8" />
+          </svg>
+          How this is scored
+        </summary>
+        <p className="max-w-prose pt-3 text-body text-ink-muted">
+          The scale is set deliberately hard. 40% is a competent, ordinary answer and where most
+          rounds land — including rounds that pass. 50% is good, 60% genuinely strong, 70% the
+          answer an interviewer repeats to somebody else afterwards. A number in the forties is
+          the middle of this scale rather than a failure, and the room above it is left open so
+          that getting better has somewhere to show.
+        </p>
+      </details>
     </figure>
+  );
+}
+
+/**
+ * The two- or three-line read that has to work with nothing else on the page: which
+ * competencies carried this round, and which cost it most.
+ *
+ * This is the direct answer to the owner's brief — "how did I do" in about five seconds,
+ * as a visual rather than the prose the rest of the page still carries. It ranks by score
+ * ratio so rubrics of different maxima compare fairly, the same arithmetic as
+ * `overallScore`. With four or more competencies it splits into two columns; with three or
+ * fewer, splitting top/bottom from the same short list would say nothing a full list does
+ * not, so everything renders together instead.
+ *
+ * Deliberately no quotes here — this is the visual, not the evidence. The evidence is the
+ * point of the section immediately below, where every one of these same competencies is
+ * shown again with the words that earned its score.
+ */
+export function CompetencyHighlights({ competencies }: { competencies: ReportCompetency[] | undefined }) {
+  const items = (competencies ?? []).filter((item) => item.maxScore > 0);
+  if (items.length === 0) return null;
+
+  const ranked = items
+    .map((item) => ({ item, percent: (item.score / item.maxScore) * 100 }))
+    .sort((a, b) => b.percent - a.percent);
+
+  const n = ranked.length;
+  // "Two or three" per the brief, scaling gently with how many there are to split.
+  const take = n <= 3 ? n : Math.min(3, Math.max(2, Math.floor(n / 2)));
+  const strongest = ranked.slice(0, take);
+  const weakest = n <= 3 ? [] : ranked.slice(n - take).reverse();
+
+  if (weakest.length === 0) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h2 className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+          At a glance
+        </h2>
+        <HighlightGroup heading="Your competencies" tone="neutral" items={strongest} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h2 className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+        At a glance
+      </h2>
+      <div className="grid gap-6 sm:grid-cols-2">
+        <HighlightGroup heading="Strongest" tone="positive" items={strongest} />
+        <HighlightGroup heading="Weakest" tone="critical" items={weakest} />
+      </div>
+    </div>
+  );
+}
+
+function HighlightGroup({
+  heading,
+  tone,
+  items,
+}: {
+  heading: string;
+  tone: "positive" | "critical" | "neutral";
+  items: Array<{ item: ReportCompetency; percent: number }>;
+}) {
+  const rule = tone === "positive" ? "border-positive" : tone === "critical" ? "border-danger" : "border-line-strong";
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/*
+        * The colour on this rule is decoration, not the message — the heading text says
+        * "Strongest" or "Weakest" either way, so a reader who cannot see the colour loses
+        * nothing (per CLAUDE.md: never encode meaning in colour alone).
+        */}
+      <h3 className={cn("border-t-2 pt-2 text-caption font-medium tracking-wide text-ink-subtle uppercase", rule)}>
+        {heading}
+      </h3>
+      <ul className="flex flex-col gap-3">
+        {items.map(({ item, percent }) => (
+          <li key={item.competency} className="flex flex-col gap-1.5">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-body text-ink">{item.competency}</span>
+              <span className="shrink-0 font-mono text-caption tabular-nums text-ink-muted">
+                {item.score}/{item.maxScore}
+              </span>
+            </div>
+            <div aria-hidden="true" className="relative h-1.5 w-full bg-surface-sunken">
+              <span
+                className="absolute inset-y-0 left-0 bg-accent"
+                style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

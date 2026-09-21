@@ -1,8 +1,9 @@
 import type { ReportCompetency } from "@acemyinterview/shared";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { CompetencyBars, OverallScore, bandFor, overallScore } from "./report-charts";
+import { CompetencyBars, CompetencyHighlights, OverallScore, bandFor, overallScore } from "./report-charts";
 
 const competency = (name: string, score: number, maxScore = 5): ReportCompetency => ({
   competency: name,
@@ -110,5 +111,106 @@ describe("CompetencyBars", () => {
   it("survives a stored report that predates competencies", () => {
     expect(() => render(<CompetencyBars competencies={undefined} />)).not.toThrow();
     expect(screen.queryByRole("meter")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Task 053 — the score-scale theory moves behind a disclosure. Every word survives
+ * underneath it; the only change is whether it is open by default.
+ */
+describe("OverallScore's score-scale disclosure", () => {
+  it("keeps the calibration theory closed by default", () => {
+    render(<OverallScore competencies={[competency("a", 2)]} />);
+
+    const summary = screen.getByText(/how this is scored/i);
+    expect(summary.closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByText(/scale is set deliberately hard/i)).not.toBeVisible();
+  });
+
+  it("opens on click, and the summary is reachable as a label", async () => {
+    const user = userEvent.setup();
+    render(<OverallScore competencies={[competency("a", 2)]} />);
+
+    await user.click(screen.getByText(/how this is scored/i));
+
+    expect(screen.getByText(/scale is set deliberately hard/i)).toBeVisible();
+  });
+
+  /**
+   * jsdom does not model the browser's built-in "Enter/Space activates a focused
+   * `<summary>`" behaviour, so the toggle itself is only exercised via click above. What
+   * this checks is the thing that actually makes Enter/Space work in a real browser: a
+   * native `<summary>` inside a native `<details>`, tabbable with no explicit `tabIndex`
+   * needed — not a `<div onClick>` standing in for one.
+   */
+  it("is a native summary/details pair, not a div pretending to be one", () => {
+    render(<OverallScore competencies={[competency("a", 2)]} />);
+
+    const summary = screen.getByText(/how this is scored/i).closest("summary");
+    expect(summary?.tagName).toBe("SUMMARY");
+    expect(summary?.parentElement?.tagName).toBe("DETAILS");
+  });
+});
+
+/**
+ * Task 053 — "how did I do" in about five seconds: the strongest and weakest
+ * competencies as a visual, not a paragraph, for the owner's brief.
+ */
+describe("CompetencyHighlights", () => {
+  it("splits into strongest and weakest once there are enough to split", () => {
+    render(
+      <CompetencyHighlights
+        competencies={[
+          competency("Coding", 5),
+          competency("System design", 4),
+          competency("Communication", 1),
+          competency("Ownership", 1),
+        ]}
+      />,
+    );
+
+    const strongest = within(screen.getByText("Strongest").closest("div") as HTMLElement);
+    expect(strongest.getByText("Coding")).toBeInTheDocument();
+    expect(strongest.getByText("System design")).toBeInTheDocument();
+
+    const weakest = within(screen.getByText("Weakest").closest("div") as HTMLElement);
+    expect(weakest.getByText("Communication")).toBeInTheDocument();
+    expect(weakest.getByText("Ownership")).toBeInTheDocument();
+  });
+
+  it("ranks by score ratio, not raw score, so rubrics of different maxima compare fairly", () => {
+    render(
+      <CompetencyHighlights
+        competencies={[
+          competency("Low max, aced", 5, 5), // 100%
+          competency("Mid A", 4, 5), // 80%
+          competency("Mid B", 3, 5), // 60%
+          competency("High max, mediocre", 5, 10), // 50% — higher raw score than Mid B, lower ratio
+          competency("Mid C", 2, 5), // 40%
+          competency("Low max, poor", 1, 5), // 20%
+        ]}
+      />,
+    );
+
+    const strongest = within(screen.getByText("Strongest").closest("div") as HTMLElement);
+    expect(strongest.getByText("Low max, aced")).toBeInTheDocument();
+    expect(strongest.queryByText("High max, mediocre")).not.toBeInTheDocument();
+
+    const weakest = within(screen.getByText("Weakest").closest("div") as HTMLElement);
+    expect(weakest.getByText("Low max, poor")).toBeInTheDocument();
+  });
+
+  it("does not split a short list into two empty-feeling halves", () => {
+    render(<CompetencyHighlights competencies={[competency("Coding", 5), competency("Ownership", 1)]} />);
+
+    expect(screen.queryByText("Strongest")).not.toBeInTheDocument();
+    expect(screen.queryByText("Weakest")).not.toBeInTheDocument();
+    expect(screen.getByText("Coding")).toBeInTheDocument();
+    expect(screen.getByText("Ownership")).toBeInTheDocument();
+  });
+
+  it("renders nothing when there is nothing scored", () => {
+    const { container } = render(<CompetencyHighlights competencies={[]} />);
+    expect(container).toBeEmptyDOMElement();
   });
 });

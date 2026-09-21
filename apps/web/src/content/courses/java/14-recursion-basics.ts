@@ -99,21 +99,46 @@ export const chapterRecursion: Chapter = {
         "`2 * 1 = 2`; and so on back up, until `factorial(5)` finally computes `5 * 24 = 120`.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "factorial(5), calls going down then answers coming back up",
-      steps: [
-        "factorial(5) needs factorial(4) before it can multiply by 5. Call, and wait.",
-        "factorial(4) needs factorial(3). Call, and wait.",
-        "factorial(3) needs factorial(2). Call, and wait.",
-        "factorial(2) needs factorial(1). Call, and wait.",
-        "factorial(1) needs factorial(0). Call, and wait.",
-        "factorial(0) hits the base case directly: returns 1. No further call.",
-        "factorial(1) resumes: 1 * factorial(0) = 1 * 1 = 1. Returns 1.",
-        "factorial(2) resumes: 2 * factorial(1) = 2 * 1 = 2. Returns 2.",
-        "factorial(3) resumes: 3 * factorial(2) = 3 * 2 = 6. Returns 6.",
-        "factorial(4) resumes: 4 * factorial(3) = 4 * 6 = 24. Returns 24.",
-        "factorial(5) resumes: 5 * factorial(4) = 5 * 24 = 120. Returns 120 — the final answer.",
-      ],
+      caption: "The stack grows one frame per call until the base case, then shrinks one frame per return — each returning frame carries its answer back to the one below it.",
+      viz: {
+        type: "callstack",
+        frames: [
+          { stack: [{ label: "factorial(5)", state: "active" }], note: "factorial(5) needs factorial(4) before it can multiply by 5. Call, and wait." },
+          { stack: [{ label: "factorial(5)" }, { label: "factorial(4)", state: "active" }], note: "factorial(4) needs factorial(3). Call, and wait." },
+          { stack: [{ label: "factorial(5)" }, { label: "factorial(4)" }, { label: "factorial(3)", state: "active" }], note: "factorial(3) needs factorial(2). Call, and wait." },
+          { stack: [{ label: "factorial(5)" }, { label: "factorial(4)" }, { label: "factorial(3)" }, { label: "factorial(2)", state: "active" }], note: "factorial(2) needs factorial(1). Call, and wait." },
+          { stack: [{ label: "factorial(5)" }, { label: "factorial(4)" }, { label: "factorial(3)" }, { label: "factorial(2)" }, { label: "factorial(1)", state: "active" }], note: "factorial(1) needs factorial(0). Call, and wait." },
+          {
+            stack: [
+              { label: "factorial(5)" }, { label: "factorial(4)" }, { label: "factorial(3)" }, { label: "factorial(2)" }, { label: "factorial(1)" },
+              { label: "factorial(0)", state: "returning" },
+            ],
+            note: "factorial(0) hits the base case directly: returns 1. No further call.",
+          },
+          {
+            stack: [{ label: "factorial(5)" }, { label: "factorial(4)" }, { label: "factorial(3)" }, { label: "factorial(2)" }, { label: "factorial(1)", state: "returning" }],
+            note: "factorial(1) resumes: 1 * factorial(0) = 1 * 1 = 1. Returns 1.",
+          },
+          {
+            stack: [{ label: "factorial(5)" }, { label: "factorial(4)" }, { label: "factorial(3)" }, { label: "factorial(2)", state: "returning" }],
+            note: "factorial(2) resumes: 2 * factorial(1) = 2 * 1 = 2. Returns 2.",
+          },
+          {
+            stack: [{ label: "factorial(5)" }, { label: "factorial(4)" }, { label: "factorial(3)", state: "returning" }],
+            note: "factorial(3) resumes: 3 * factorial(2) = 3 * 2 = 6. Returns 6.",
+          },
+          {
+            stack: [{ label: "factorial(5)" }, { label: "factorial(4)", state: "returning" }],
+            note: "factorial(4) resumes: 4 * factorial(3) = 4 * 6 = 24. Returns 24.",
+          },
+          {
+            stack: [{ label: "factorial(5)", state: "returning" }],
+            note: "factorial(5) resumes: 5 * factorial(4) = 5 * 24 = 120. Returns 120 — the final answer.",
+          },
+        ],
+      },
     },
     { kind: "h", text: "Recursion isn't free: Fibonacci's hidden cost" },
     {

@@ -107,15 +107,32 @@ export const chapterCollectionsOverview: Chapter = {
         "surprise.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why marksByName.size() is 2, not 3, after three put() calls",
-      steps: [
-        "put(\"Priya\", 87): no existing entry for key \"Priya\", so a new entry is created. Map now has 1 entry.",
-        "put(\"Arjun\", 91): no existing entry for \"Arjun\", another new entry created. Map now has 2 entries.",
-        "put(\"Priya\", 90): an entry for \"Priya\" already exists — this call replaces its value (87 → 90), " +
-          "it does not add a second entry.",
-        "Final state: 2 entries total — \"Priya\" → 90, \"Arjun\" → 91.",
-      ],
+      caption: "A key already present gets its value replaced, in place — it never adds a second row.",
+      viz: {
+        type: "table",
+        frames: [
+          {
+            rowLabels: ["Priya"], colLabels: ["marks"], rows: [[87]], highlight: [[0, 0]],
+            note: "put(\"Priya\", 87): no existing entry for key \"Priya\", so a new entry is created. Map now has 1 entry.",
+          },
+          {
+            rowLabels: ["Priya", "Arjun"], colLabels: ["marks"], rows: [[87], [91]], highlight: [[1, 0]],
+            note: "put(\"Arjun\", 91): no existing entry for \"Arjun\", another new entry created. Map now has 2 entries.",
+          },
+          {
+            rowLabels: ["Priya", "Arjun"], colLabels: ["marks"], rows: [[90], [91]], highlight: [[0, 0]],
+            note:
+              "put(\"Priya\", 90): an entry for \"Priya\" already exists — this call replaces its value " +
+              "(87 → 90), it does not add a second entry.",
+          },
+          {
+            rowLabels: ["Priya", "Arjun"], colLabels: ["marks"], rows: [[90], [91]],
+            note: "Final state: 2 entries total — \"Priya\" → 90, \"Arjun\" → 91.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

@@ -13,8 +13,15 @@ export const metadata: Metadata = { title: "Your report" };
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return (
-    <AppShell breadcrumb="report">
-      <div className="w-full max-w-3xl">
+    <AppShell breadcrumb="report" parent={{ label: "rounds", href: "/rounds" }}>
+      {/*
+        * Task 053: `max-w-3xl` forced the whole report into one narrow column, including
+        * the new side-by-side summary at the top. `max-w-6xl` gives that summary room to
+        * sit in two columns from `lg` up while every prose paragraph inside still wraps at
+        * its own `max-w-prose` — widening the sheet does not widen the line length text is
+        * actually read at.
+        */}
+      <div className="w-full max-w-6xl">
         <ReportView sessionId={id} />
       </div>
     </AppShell>

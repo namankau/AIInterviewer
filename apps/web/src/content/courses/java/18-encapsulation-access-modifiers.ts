@@ -124,15 +124,19 @@ export const chapterEncapsulation: Chapter = {
         "balance are a deposit or a withdrawal, never a direct overwrite.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why the rejected withdraw(2000.0) leaves balance completely unchanged",
-      steps: [
-        "withdraw(2000.0) is called; balance is currently 1500.0.",
-        "The condition amount > balance checks 2000.0 > 1500.0, which is true.",
-        "The rejection message prints, and return; exits the method immediately.",
-        "The line balance -= amount; is never reached — it sits after the return.",
-        "balance is exactly what it was before the call: 1500.0, confirmed by the next println.",
-      ],
+      caption: "The guard rejects the withdrawal before the line that would have changed balance ever runs.",
+      viz: {
+        type: "array",
+        frames: [
+          { cells: [{ value: 1500.0, pointers: ["balance"] }], note: "withdraw(2000.0) is called; balance is currently 1500.0." },
+          { cells: [{ value: 1500.0, state: "compare", pointers: ["balance"] }], note: "The condition amount > balance checks 2000.0 > 1500.0, which is true." },
+          { cells: [{ value: 1500.0, pointers: ["balance"] }], note: "The rejection message prints, and return; exits the method immediately." },
+          { cells: [{ value: 1500.0, pointers: ["balance"] }], note: "The line balance -= amount; is never reached — it sits after the return." },
+          { cells: [{ value: 1500.0, state: "done", pointers: ["balance"] }], note: "balance is exactly what it was before the call: 1500.0, confirmed by the next println." },
+        ],
+      },
     },
     {
       kind: "pitfall",

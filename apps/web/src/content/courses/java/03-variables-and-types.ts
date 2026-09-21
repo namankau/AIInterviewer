@@ -111,17 +111,30 @@ export const chapterVariablesAndTypes: Chapter = {
         "Pi is approximately 3.14159",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "What happens to `rollNumber`",
-      steps: [
-        "`int rollNumber = 21;` — a 4-byte trunk labelled `rollNumber` is created and filled with 21.",
-        "`rollNumber = rollNumber + 1;` — the *right-hand side* is computed first: read the current " +
-          "value (21), add 1, getting 22.",
-        "The result, 22, is then stored back into the same trunk, replacing 21. The trunk is still " +
-          "called `rollNumber`; only its contents changed.",
-        "`System.out.println(\"New roll number: \" + rollNumber)` reads the current contents — 22 — and " +
-          "prints it.",
-      ],
+      caption: "One box, one variable — its contents change; the box itself, and its name, never do.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: 21, pointers: ["rollNumber"] }],
+            note: "`int rollNumber = 21;` — a 4-byte trunk labelled `rollNumber` is created and filled with 21.",
+          },
+          {
+            cells: [{ value: 21, state: "active", pointers: ["rollNumber"] }],
+            note: "`rollNumber = rollNumber + 1;` — the *right-hand side* is computed first: read the current value (21), add 1, getting 22.",
+          },
+          {
+            cells: [{ value: 22, state: "done", pointers: ["rollNumber"] }],
+            note: "The result, 22, is then stored back into the same trunk, replacing 21. The trunk is still called `rollNumber`; only its contents changed.",
+          },
+          {
+            cells: [{ value: 22, pointers: ["rollNumber"] }],
+            note: "`System.out.println(\"New roll number: \" + rollNumber)` reads the current contents — 22 — and prints it.",
+          },
+        ],
+      },
     },
     { kind: "h", text: "`final` — a trunk you lock after filling" },
     {

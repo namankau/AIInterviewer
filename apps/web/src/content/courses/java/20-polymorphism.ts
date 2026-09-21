@@ -116,18 +116,31 @@ export const chapterPolymorphism: Chapter = {
       ],
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why s.area() runs a different formula on each loop iteration",
-      steps: [
-        "shapes[0] actually is a Circle object (created with new Circle(2.0)), stored in a Shape[] array.",
-        "s.area() on iteration 1: Java checks the actual object behind s — it's a Circle — and runs " +
-          "Circle's area(): Math.PI * 2.0 * 2.0 ≈ 12.57.",
-        "shapes[1] actually is a Square object.",
-        "s.area() on iteration 2: the actual object is now a Square, so Java runs Square's area(): " +
-          "3.0 * 3.0 = 9.00.",
-        "Same line of source code (s.area()), same declared variable type (Shape) — different method body " +
-          "ran each time, because the decision is based on the real object, made fresh each call.",
-      ],
+      caption: "Every cell is declared type Shape, but its actual object differs — and it's the actual object, checked fresh each call, that decides which area() runs.",
+      viz: {
+        type: "array",
+        frames: [
+          { cells: [{ value: "Circle(2.0)", state: "active", pointers: ["shapes[0]"] }, { value: "Square(3.0)" }], note: "shapes[0] actually is a Circle object (created with new Circle(2.0)), stored in a Shape[] array." },
+          {
+            cells: [{ value: "Circle(2.0)", state: "done", pointers: ["shapes[0] / s"] }, { value: "Square(3.0)" }],
+            note: "s.area() on iteration 1: Java checks the actual object behind s — it's a Circle — and runs Circle's area(): Math.PI * 2.0 * 2.0 ≈ 12.57.",
+          },
+          {
+            cells: [{ value: "Circle(2.0)", state: "done" }, { value: "Square(3.0)", state: "active", pointers: ["shapes[1]"] }],
+            note: "shapes[1] actually is a Square object.",
+          },
+          {
+            cells: [{ value: "Circle(2.0)", state: "done" }, { value: "Square(3.0)", state: "done", pointers: ["shapes[1] / s"] }],
+            note: "s.area() on iteration 2: the actual object is now a Square, so Java runs Square's area(): 3.0 * 3.0 = 9.00.",
+          },
+          {
+            cells: [{ value: "Circle(2.0)", state: "done" }, { value: "Square(3.0)", state: "done" }],
+            note: "Same line of source code (s.area()), same declared variable type (Shape) — different method body ran each time, because the decision is based on the real object, made fresh each call.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

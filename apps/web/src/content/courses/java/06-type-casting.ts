@@ -128,18 +128,34 @@ export const chapterTypeCasting: Chapter = {
         "`+` calls this conversion for you automatically.",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Following `nextCode` and `nextLetter`",
-      steps: [
-        "`char letter = 'A';` — letter holds the character 'A', whose underlying numeric code is 65.",
-        "`int asciiValue = letter;` — widens automatically. asciiValue is 65 (an int, no longer tagged " +
-          "as a character).",
-        "`int nextCode = asciiValue + 1;` — ordinary int arithmetic. nextCode is 66.",
-        "`char nextLetter = (char) nextCode;` — narrows 66 back into a char. Code point 66 is 'B', so " +
-          "nextLetter holds 'B'.",
-        "Printing nextLetter shows the character, not the number — println knows nextLetter's declared " +
-          "type is char.",
-      ],
+      caption: "Each variable is added left to right as it's declared; the value never leaves its own box, only new boxes appear.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: "'A'", pointers: ["letter"] }],
+            note: "`char letter = 'A';` — letter holds the character 'A', whose underlying numeric code is 65.",
+          },
+          {
+            cells: [{ value: "'A'" }, { value: 65, state: "active", pointers: ["asciiValue"] }],
+            note: "`int asciiValue = letter;` — widens automatically. asciiValue is 65 (an int, no longer tagged as a character).",
+          },
+          {
+            cells: [{ value: "'A'" }, { value: 65 }, { value: 66, state: "active", pointers: ["nextCode"] }],
+            note: "`int nextCode = asciiValue + 1;` — ordinary int arithmetic. nextCode is 66.",
+          },
+          {
+            cells: [{ value: "'A'" }, { value: 65 }, { value: 66 }, { value: "'B'", state: "done", pointers: ["nextLetter"] }],
+            note: "`char nextLetter = (char) nextCode;` — narrows 66 back into a char. Code point 66 is 'B', so nextLetter holds 'B'.",
+          },
+          {
+            cells: [{ value: "'A'" }, { value: 65 }, { value: 66 }, { value: "'B'", pointers: ["nextLetter"] }],
+            note: "Printing nextLetter shows the character, not the number — println knows nextLetter's declared type is char.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

@@ -19,6 +19,37 @@ export const chapterHeapsAndPriorityQueues: Chapter = {
         "is exactly what makes both `push` and `pop` cost O(log n), rather than the O(n log n) a full sort " +
         "would need every time the smallest element is wanted.",
     },
+    {
+      kind: "concept",
+      title: "The heap property is weaker than \"sorted\", on purpose",
+      text:
+        "A heap only promises parent ≤ both children (min-heap) or parent ≥ both children (max-heap) — it " +
+        "makes no promise at all about which child is smaller, or about any two nodes that aren't in a " +
+        "direct parent/child relationship. Giving up full order is exactly what buys O(log n) push/pop " +
+        "instead of the O(n log n) a fully sorted structure would cost to maintain.",
+    },
+    {
+      kind: "compare",
+      title: "Min-heap vs max-heap",
+      columns: [
+        {
+          label: "Min-heap",
+          items: [
+            "Every parent ≤ both children — the smallest value sits at the root",
+            "Java's `PriorityQueue<>()` is a min-heap by default",
+            "The tool for \"k largest\": cap it at size k, evict the smallest candidate",
+          ],
+        },
+        {
+          label: "Max-heap",
+          items: [
+            "Every parent ≥ both children — the largest value sits at the root",
+            "In Java: `new PriorityQueue<>(Collections.reverseOrder())`",
+            "The tool for \"k smallest\": cap it at size k, evict the largest candidate",
+          ],
+        },
+      ],
+    },
     { kind: "h", text: "The hospital triage analogy" },
     {
       kind: "analogy",
@@ -204,18 +235,36 @@ export const chapterHeapsAndPriorityQueues: Chapter = {
       pythonOutput: "MinHeap pop order: 1 2 3 5 8 9\n3 largest, ascending: 5 11 12",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "push(1) onto a heap already holding [3, 5, 8] (indices 0, 1, 2) — sift up",
-      steps: [
-        "data = [3, 5, 8, ...], size=3. Place 1 at index 3 (the next free slot): data = [3, 5, 8, 1]. " +
-          "size becomes 4.",
-        "i=3. parent = (3-1)/2 = 1, which holds 5. Is data[1]=5 <= data[3]=1? No — violates the heap rule, " +
-          "so swap. data = [3, 1, 8, 5]. i becomes 1.",
-        "i=1. parent = (1-1)/2 = 0, which holds 3. Is data[0]=3 <= data[1]=1? No — swap again. " +
-          "data = [1, 3, 8, 5]. i becomes 0.",
-        "i=0 has no parent (i > 0 is false), loop ends. The new smallest value, 1, has 'floated' all the " +
-          "way to the root in exactly 2 swaps — one per level it needed to rise.",
-      ],
+      caption: "The new value starts at the next free leaf and swaps upward with its parent one level at a time, stopping the moment its parent is no longer bigger.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: 3 }, { value: 5 }, { value: 8 }, { value: 1, state: "active", pointers: ["i"] }],
+            note: "data = [3, 5, 8, ...], size=3. Place 1 at index 3 (the next free slot): data = [3, 5, 8, 1]. size becomes 4.",
+          },
+          {
+            cells: [{ value: 3 }, { value: 1, state: "swap" }, { value: 8 }, { value: 5, state: "swap" }],
+            note:
+              "i=3. parent = (3-1)/2 = 1, which holds 5. Is data[1]=5 <= data[3]=1? No — violates the heap " +
+              "rule, so swap. data = [3, 1, 8, 5]. i becomes 1.",
+          },
+          {
+            cells: [{ value: 1, state: "swap" }, { value: 3, state: "swap" }, { value: 8 }, { value: 5 }],
+            note:
+              "i=1. parent = (1-1)/2 = 0, which holds 3. Is data[0]=3 <= data[1]=1? No — swap again. " +
+              "data = [1, 3, 8, 5]. i becomes 0.",
+          },
+          {
+            cells: [{ value: 1, state: "done", pointers: ["i"] }, { value: 3 }, { value: 8 }, { value: 5 }],
+            note:
+              "i=0 has no parent (i > 0 is false), loop ends. The new smallest value, 1, has 'floated' all " +
+              "the way to the root in exactly 2 swaps — one per level it needed to rise.",
+          },
+        ],
+      },
     },
     {
       kind: "p",
@@ -246,29 +295,29 @@ export const chapterHeapsAndPriorityQueues: Chapter = {
       rows: [
         [
           "push(val)",
-          "O(log n)",
-          "O(1) extra",
+          "{{O(log n)}}",
+          "{{O(1)}} extra",
           "Sift up swaps the new value with its parent at most once per level; height is O(log n) for a " +
             "complete tree of n nodes.",
         ],
         [
           "pop() / peek min",
-          "O(log n) / O(1)",
-          "O(1) extra",
+          "{{O(log n)}} / {{O(1)}}",
+          "{{O(1)}} extra",
           "peek just reads the root directly; pop must sift the replacement root down, again at most once " +
             "per level.",
         ],
         [
           "Build a heap from n elements",
-          "O(n)",
-          "O(n)",
+          "{{O(n)}}",
+          "{{O(n)}}",
           "Bottom-up heapify does more work per node near the root but less near the leaves (where most " +
             "nodes are), which nets out to O(n) total, not O(n log n) as naive repeated inserts would.",
         ],
         [
           "kLargest(nums, k), n elements",
-          "O(n log k)",
-          "O(k)",
+          "{{O(n log k)}}",
+          "{{O(k)}}",
           "The heap never holds more than k elements, so every offer/evict pair costs O(log k), done up to " +
             "n times.",
         ],

@@ -112,17 +112,30 @@ export const chapterLambdas: Chapter = {
       ],
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "Why applyTwice(square, 3) evaluates to 81, not 9",
-      steps: [
-        "applyTwice(f, start) computes f.apply(f.apply(start)) — f is called on start, then f is called " +
-          "again on that result.",
-        "square is the lambda n -> n * n.",
-        "Inner call: f.apply(3) computes 3 * 3 = 9.",
-        "Outer call: f.apply(9) — applying square again, to the previous result — computes 9 * 9 = 81.",
-        "applyTwice returns 81, not 3 * 3 * 2 = 18 and not a single squaring's 9 — square is genuinely " +
-          "applied twice, chained.",
-      ],
+      caption: "The outer f.apply can't run until the inner one returns — square is chained onto its own previous result, not multiplied by itself.",
+      viz: {
+        type: "callstack",
+        frames: [
+          {
+            stack: [{ label: "applyTwice(square, 3)", state: "active" }],
+            note: "applyTwice(f, start) computes f.apply(f.apply(start)) — f is called on start, then f is called again on that result. square is the lambda n -> n * n.",
+          },
+          {
+            stack: [{ label: "applyTwice(square, 3)" }, { label: "f.apply(3)", state: "returning" }],
+            note: "Inner call: f.apply(3) computes 3 * 3 = 9.",
+          },
+          {
+            stack: [{ label: "applyTwice(square, 3)" }, { label: "f.apply(9)", state: "returning" }],
+            note: "Outer call: f.apply(9) — applying square again, to the previous result — computes 9 * 9 = 81.",
+          },
+          {
+            stack: [{ label: "applyTwice(square, 3)", state: "returning" }],
+            note: "applyTwice returns 81, not 3 * 3 * 2 = 18 and not a single squaring's 9 — square is genuinely applied twice, chained.",
+          },
+        ],
+      },
     },
     {
       kind: "pitfall",

@@ -60,10 +60,10 @@ export default async function CoursePage({ params }: { params: Promise<{ course:
         </div>
       </section>
 
-      <main className="mx-auto max-w-3xl px-6 py-14 md:py-20">
-        <ol className="flex flex-col gap-10">
+      <main className="mx-auto max-w-6xl px-6 py-14 md:py-20">
+        <ol className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           {course.modules.map((module, mi) => (
-            <li key={module.title}>
+            <li key={module.title} className="rounded-md border border-line bg-surface-raised p-6 shadow-sm">
               <h2 className="text-heading text-ink">
                 Module {mi + 1} — {module.title}
               </h2>

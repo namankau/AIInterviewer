@@ -95,6 +95,28 @@ export const chapterStrings: Chapter = {
         "say, and reserve `==` for checking whether two variables refer to the literal same object** " +
         "(which you'll rarely need for strings specifically, and use constantly for other reference types).",
     },
+    {
+      kind: "compare",
+      title: "`==` vs `.equals()`",
+      columns: [
+        {
+          label: "==",
+          items: [
+            "Compares object identity — \"is this the same sheet of paper?\"",
+            "For two literals, often `true` (the string pool hands out the same object)",
+            "For `new String(...)`, always `false`, even with identical text",
+          ],
+        },
+        {
+          label: ".equals()",
+          items: [
+            "Compares actual content — \"do these say the same thing?\"",
+            "`true` whenever the characters match, regardless of which object holds them",
+            "The one to reach for whenever you're comparing what a string *says*",
+          ],
+        },
+      ],
+    },
     { kind: "h", text: "Strings are immutable" },
     {
       kind: "p",

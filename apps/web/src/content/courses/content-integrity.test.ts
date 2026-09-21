@@ -178,6 +178,40 @@ describe.each(courses)("course: $slug", (course: Course) => {
       }
     });
 
+    it("every concept card has a non-empty title and text", () => {
+      const concepts = blocksOf("concept", chapter) as Extract<Block, { kind: "concept" }>[];
+      for (const block of concepts) {
+        expect(block.title.trim().length).toBeGreaterThan(0);
+        expect(block.text.trim().length).toBeGreaterThan(0);
+      }
+    });
+
+    it("every compare block has 2-3 labelled columns, each with at least one item", () => {
+      const compares = blocksOf("compare", chapter) as Extract<Block, { kind: "compare" }>[];
+      for (const block of compares) {
+        expect(block.columns.length).toBeGreaterThanOrEqual(2);
+        expect(block.columns.length).toBeLessThanOrEqual(3);
+        for (const column of block.columns) {
+          expect(column.label.trim().length).toBeGreaterThan(0);
+          expect(column.items.length).toBeGreaterThan(0);
+          for (const item of column.items) {
+            expect(item.trim().length).toBeGreaterThan(0);
+          }
+        }
+      }
+    });
+
+    it("every steps block has at least 2 stages, each with a non-empty label and text", () => {
+      const stepsBlocks = blocksOf("steps", chapter) as Extract<Block, { kind: "steps" }>[];
+      for (const block of stepsBlocks) {
+        expect(block.steps.length).toBeGreaterThanOrEqual(2);
+        for (const step of block.steps) {
+          expect(step.label.trim().length).toBeGreaterThan(0);
+          expect(step.text.trim().length).toBeGreaterThan(0);
+        }
+      }
+    });
+
     it("every playground block has non-empty starter source, and Python ones a runnable-looking expected output", () => {
       const playgrounds = blocksOf("playground", chapter) as Extract<Block, { kind: "playground" }>[];
       for (const block of playgrounds) {

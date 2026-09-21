@@ -19,6 +19,37 @@ export const chapterHeapsAndPriorityQueues: Chapter = {
         "is exactly what makes both `push` and `pop` cost O(log n), rather than the O(n log n) a full sort " +
         "would need every time the smallest element is wanted.",
     },
+    {
+      kind: "concept",
+      title: "The heap property is weaker than \"sorted\", on purpose",
+      text:
+        "A heap only promises parent ≤ both children (min-heap) or parent ≥ both children (max-heap) — it " +
+        "makes no promise at all about which child is smaller, or about any two nodes that aren't in a " +
+        "direct parent/child relationship. Giving up full order is exactly what buys O(log n) push/pop " +
+        "instead of the O(n log n) a fully sorted structure would cost to maintain.",
+    },
+    {
+      kind: "compare",
+      title: "Min-heap vs max-heap",
+      columns: [
+        {
+          label: "Min-heap",
+          items: [
+            "Every parent ≤ both children — the smallest value sits at the root",
+            "Java's `PriorityQueue<>()` is a min-heap by default",
+            "The tool for \"k largest\": cap it at size k, evict the smallest candidate",
+          ],
+        },
+        {
+          label: "Max-heap",
+          items: [
+            "Every parent ≥ both children — the largest value sits at the root",
+            "In Java: `new PriorityQueue<>(Collections.reverseOrder())`",
+            "The tool for \"k smallest\": cap it at size k, evict the largest candidate",
+          ],
+        },
+      ],
+    },
     { kind: "h", text: "The hospital triage analogy" },
     {
       kind: "analogy",
@@ -246,29 +277,29 @@ export const chapterHeapsAndPriorityQueues: Chapter = {
       rows: [
         [
           "push(val)",
-          "O(log n)",
-          "O(1) extra",
+          "{{O(log n)}}",
+          "{{O(1)}} extra",
           "Sift up swaps the new value with its parent at most once per level; height is O(log n) for a " +
             "complete tree of n nodes.",
         ],
         [
           "pop() / peek min",
-          "O(log n) / O(1)",
-          "O(1) extra",
+          "{{O(log n)}} / {{O(1)}}",
+          "{{O(1)}} extra",
           "peek just reads the root directly; pop must sift the replacement root down, again at most once " +
             "per level.",
         ],
         [
           "Build a heap from n elements",
-          "O(n)",
-          "O(n)",
+          "{{O(n)}}",
+          "{{O(n)}}",
           "Bottom-up heapify does more work per node near the root but less near the leaves (where most " +
             "nodes are), which nets out to O(n) total, not O(n log n) as naive repeated inserts would.",
         ],
         [
           "kLargest(nums, k), n elements",
-          "O(n log k)",
-          "O(k)",
+          "{{O(n log k)}}",
+          "{{O(k)}}",
           "The heap never holds more than k elements, so every offer/evict pair costs O(log k), done up to " +
             "n times.",
         ],

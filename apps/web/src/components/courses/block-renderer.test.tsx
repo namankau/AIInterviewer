@@ -41,6 +41,23 @@ const ALL_KINDS: Block[] = [
     prompt: "A prompt line.",
     expectedOutput: "2",
   },
+  { kind: "concept", title: "A concept title", text: "The formal rule." },
+  {
+    kind: "compare",
+    title: "A vs B",
+    columns: [
+      { label: "Column A", items: ["A item one"] },
+      { label: "Column B", items: ["B item one"] },
+    ],
+  },
+  {
+    kind: "steps",
+    title: "A pipeline",
+    steps: [
+      { label: "Step one", text: "First stage." },
+      { label: "Step two", text: "Second stage." },
+    ],
+  },
 ];
 
 // The Java/Python choice lives in `localStorage` (module-scoped, not React state — see
@@ -72,6 +89,34 @@ describe("BlockRenderer", () => {
     // block never fetches it — its own content resolves asynchronously here.
     expect(await screen.findByText("A prompt line.")).toBeInTheDocument();
     expect(await screen.findByText(/Running Java in the browser isn.t available yet/)).toBeInTheDocument();
+    expect(screen.getByText("A concept title")).toBeInTheDocument();
+    expect(screen.getByText("A vs B")).toBeInTheDocument();
+    expect(screen.getByText("Column A")).toBeInTheDocument();
+    expect(screen.getByText("A pipeline")).toBeInTheDocument();
+    expect(screen.getByText("First stage.")).toBeInTheDocument();
+  });
+
+  it("caps prose blocks at 70ch but lets full-bleed blocks (viz, code, table, compare, steps, playground) use the full width", () => {
+    const { container } = render(
+      <BlockRenderer
+        blocks={[
+          { kind: "p", text: "A paragraph." },
+          { kind: "table", head: ["A"], rows: [["1"]] },
+          {
+            kind: "compare",
+            columns: [
+              { label: "X", items: ["x"] },
+              { label: "Y", items: ["y"] },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    const wrappers = container.firstElementChild?.children ?? [];
+    expect(wrappers[0]?.className).toContain("max-w-[70ch]");
+    expect(wrappers[1]?.className).toContain("w-full");
+    expect(wrappers[2]?.className).toContain("w-full");
   });
 
   it("renders inline `code` and **bold** markers as their own elements", () => {
@@ -167,6 +212,42 @@ describe("BlockRenderer", () => {
 
     expect(screen.queryByRole("button", { name: "Java" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Python" })).not.toBeInTheDocument();
+  });
+
+  it("keeps full-bleed blocks from forcing page-level horizontal scroll at mobile width", () => {
+    // A `steps` strip is wider than a phone once it has more than a step or two, and a
+    // `compare` block has 2-3 columns — neither should widen the page itself. `steps`
+    // scrolls its own content (like a code block); `compare` stacks to one column by
+    // default and only grows columns from `sm:` up (task 052).
+    const { container } = render(
+      <BlockRenderer
+        blocks={[
+          {
+            kind: "steps",
+            steps: [
+              { label: "One", text: "First." },
+              { label: "Two", text: "Second." },
+              { label: "Three", text: "Third." },
+            ],
+          },
+          {
+            kind: "compare",
+            columns: [
+              { label: "X", items: ["x"] },
+              { label: "Y", items: ["y"] },
+              { label: "Z", items: ["z"] },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    const stepsList = container.querySelector("ol.overflow-x-auto");
+    expect(stepsList).toBeInTheDocument();
+
+    const compareGrid = container.querySelector(".grid.grid-cols-1");
+    expect(compareGrid).toBeInTheDocument();
+    expect(compareGrid?.className).not.toMatch(/(?<!sm:)grid-cols-[23]\b/);
   });
 
   it("falls back to a plain, unhighlighted <pre> when no highlighted HTML is given", () => {

@@ -113,18 +113,40 @@ export const chapterGreedy: Chapter = {
       pythonOutput: "max non-overlapping activities: 4\nminCoinsGreedy(41): 4",
     },
     {
-      kind: "trace",
+      kind: "viz",
       title: "maxActivities — after sorting by end time, walking left to right",
-      steps: [
-        "Sorted by end time, the relevant early activities are: (1,4), (3,5), (0,6), (5,7), ... lastEnd " +
-          "starts at -infinity.",
-        "(1,4): start 1 >= lastEnd (-inf)? Yes — take it. count=1, lastEnd=4.",
-        "(3,5): start 3 >= lastEnd (4)? No — 3 < 4, it would overlap the activity we just took. Skip.",
-        "(0,6): start 0 >= 4? No. Skip.",
-        "(5,7): start 5 >= 4? Yes — take it. count=2, lastEnd=7.",
-        "Continuing this rule for the rest of the sorted list eventually takes (8,11) and (12,14) as well, " +
-          "for a final count of 4 — the maximum possible, confirmed by the program's output.",
-      ],
+      caption: "A done cell is taken (it extends lastEnd); the compare cell is rejected for starting before the last activity taken ends.",
+      viz: {
+        type: "array",
+        frames: [
+          {
+            cells: [{ value: "(1,4)" }, { value: "(3,5)" }, { value: "(0,6)" }, { value: "(5,7)" }, { value: "(8,11)" }, { value: "(12,14)" }],
+            note: "Sorted by end time, the relevant early activities are: (1,4), (3,5), (0,6), (5,7), ... lastEnd starts at -infinity.",
+          },
+          {
+            cells: [{ value: "(1,4)", state: "done", pointers: ["i"] }, { value: "(3,5)" }, { value: "(0,6)" }, { value: "(5,7)" }, { value: "(8,11)" }, { value: "(12,14)" }],
+            note: "(1,4): start 1 >= lastEnd (-inf)? Yes — take it. count=1, lastEnd=4.",
+          },
+          {
+            cells: [{ value: "(1,4)", state: "done" }, { value: "(3,5)", state: "compare", pointers: ["i"] }, { value: "(0,6)" }, { value: "(5,7)" }, { value: "(8,11)" }, { value: "(12,14)" }],
+            note: "(3,5): start 3 >= lastEnd (4)? No — 3 < 4, it would overlap the activity we just took. Skip.",
+          },
+          {
+            cells: [{ value: "(1,4)", state: "done" }, { value: "(3,5)", state: "compare" }, { value: "(0,6)", state: "compare", pointers: ["i"] }, { value: "(5,7)" }, { value: "(8,11)" }, { value: "(12,14)" }],
+            note: "(0,6): start 0 >= 4? No. Skip.",
+          },
+          {
+            cells: [{ value: "(1,4)", state: "done" }, { value: "(3,5)", state: "compare" }, { value: "(0,6)", state: "compare" }, { value: "(5,7)", state: "done", pointers: ["i"] }, { value: "(8,11)" }, { value: "(12,14)" }],
+            note: "(5,7): start 5 >= 4? Yes — take it. count=2, lastEnd=7.",
+          },
+          {
+            cells: [{ value: "(1,4)", state: "done" }, { value: "(3,5)", state: "compare" }, { value: "(0,6)", state: "compare" }, { value: "(5,7)", state: "done" }, { value: "(8,11)", state: "done" }, { value: "(12,14)", state: "done" }],
+            note:
+              "Continuing this rule for the rest of the sorted list eventually takes (8,11) and (12,14) as " +
+              "well, for a final count of 4 — the maximum possible, confirmed by the program's output.",
+          },
+        ],
+      },
     },
     {
       kind: "p",

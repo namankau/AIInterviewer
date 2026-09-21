@@ -106,6 +106,54 @@ export const chapterSimpleSorts: Chapter = {
         "bubbleSort:    [1, 2, 5, 5, 6, 9]\n" +
         "selectionSort: [1, 2, 5, 5, 6, 9]\n" +
         "insertionSort: [1, 2, 5, 5, 6, 9]",
+      python:
+        "def bubble_sort(arr):\n" +
+        "    n = len(arr)\n" +
+        "    for pass_num in range(n - 1):\n" +
+        "        swapped = False\n" +
+        "        for i in range(n - 1 - pass_num):\n" +
+        "            if arr[i] > arr[i + 1]:\n" +
+        "                arr[i], arr[i + 1] = arr[i + 1], arr[i]\n" +
+        "                swapped = True\n" +
+        "        if not swapped:\n" +
+        "            break\n" +
+        "\n" +
+        "\n" +
+        "def selection_sort(arr):\n" +
+        "    n = len(arr)\n" +
+        "    for i in range(n - 1):\n" +
+        "        min_index = i\n" +
+        "        for j in range(i + 1, n):\n" +
+        "            if arr[j] < arr[min_index]:\n" +
+        "                min_index = j\n" +
+        "        arr[i], arr[min_index] = arr[min_index], arr[i]\n" +
+        "\n" +
+        "\n" +
+        "def insertion_sort(arr):\n" +
+        "    for i in range(1, len(arr)):\n" +
+        "        key = arr[i]\n" +
+        "        j = i - 1\n" +
+        "        while j >= 0 and arr[j] > key:\n" +
+        "            arr[j + 1] = arr[j]\n" +
+        "            j -= 1\n" +
+        "        arr[j + 1] = key\n" +
+        "\n" +
+        "\n" +
+        "a = [5, 2, 9, 1, 5, 6]\n" +
+        "b = list(a)\n" +
+        "c = list(a)\n" +
+        "\n" +
+        "bubble_sort(a)\n" +
+        "selection_sort(b)\n" +
+        "insertion_sort(c)\n" +
+        "\n" +
+        'print("bubbleSort:   ", a)\n' +
+        'print("selectionSort:", b)\n' +
+        'print("insertionSort:", c)\n',
+      pythonOutput:
+        "bubbleSort:    [1, 2, 5, 5, 6, 9]\n" +
+        "selectionSort: [1, 2, 5, 5, 6, 9]\n" +
+        "insertionSort: [1, 2, 5, 5, 6, 9]",
     },
     {
       kind: "viz",

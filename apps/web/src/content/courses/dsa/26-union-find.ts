@@ -91,6 +91,48 @@ export const chapterUnionFind: Chapter = {
       output:
         "components after unions: 2\nfind(0) == find(2): true\nfind(0) == find(3): false\n" +
         "union(0, 2) formed a new connection: false",
+      python:
+        "class UnionFind:\n" +
+        "    def __init__(self, n):\n" +
+        "        self.parent = list(range(n))\n" +
+        "        self.rank = [0] * n\n" +
+        "\n" +
+        "    def find(self, x):\n" +
+        "        if self.parent[x] != x:\n" +
+        "            self.parent[x] = self.find(self.parent[x])  # path compression\n" +
+        "        return self.parent[x]\n" +
+        "\n" +
+        "    def union(self, a, b):\n" +
+        "        root_a, root_b = self.find(a), self.find(b)\n" +
+        "        if root_a == root_b:\n" +
+        "            return False  # already connected -- would form a cycle\n" +
+        "        if self.rank[root_a] < self.rank[root_b]:\n" +
+        "            self.parent[root_a] = root_b\n" +
+        "        elif self.rank[root_a] > self.rank[root_b]:\n" +
+        "            self.parent[root_b] = root_a\n" +
+        "        else:\n" +
+        "            self.parent[root_b] = root_a\n" +
+        "            self.rank[root_a] += 1\n" +
+        "        return True\n" +
+        "\n" +
+        "\n" +
+        "uf = UnionFind(6)\n" +
+        "edges = [(0, 1), (1, 2), (3, 4), (4, 5)]\n" +
+        "components = 6\n" +
+        "for a, b in edges:\n" +
+        "    if uf.union(a, b):\n" +
+        "        components -= 1\n" +
+        "\n" +
+        'print("components after unions:", components)\n' +
+        'print("find(0) == find(2):", uf.find(0) == uf.find(2))\n' +
+        'print("find(0) == find(3):", uf.find(0) == uf.find(3))\n' +
+        "\n" +
+        "# detecting a cycle: adding an edge between two already-connected nodes\n" +
+        "added = uf.union(0, 2)\n" +
+        'print("union(0, 2) formed a new connection:", added)\n',
+      pythonOutput:
+        "components after unions: 2\nfind(0) == find(2): True\nfind(0) == find(3): False\n" +
+        "union(0, 2) formed a new connection: False",
     },
     {
       kind: "trace",

@@ -93,6 +93,49 @@ export const chapterBitManipulation: Chapter = {
         "n = 10 (binary 1010)\nisBitSet(n, 1): true\nisBitSet(n, 0): false\n" +
         "setBit(n, 0) = 11 (binary 1011)\nclearBit(n, 1) = 8 (binary 1000)\ncountSetBits(n) = 2\n" +
         "countSetBits(255) = 8\nsingleNumber: 4",
+      python:
+        "def is_bit_set(n, i):\n" +
+        "    return (n & (1 << i)) != 0\n" +
+        "\n" +
+        "\n" +
+        "def set_bit(n, i):\n" +
+        "    return n | (1 << i)\n" +
+        "\n" +
+        "\n" +
+        "def clear_bit(n, i):\n" +
+        "    return n & ~(1 << i)\n" +
+        "\n" +
+        "\n" +
+        "def count_set_bits(n):\n" +
+        "    count = 0\n" +
+        "    while n != 0:\n" +
+        "        n = n & (n - 1)  # clears the lowest set bit\n" +
+        "        count += 1\n" +
+        "    return count\n" +
+        "\n" +
+        "\n" +
+        "def single_number(nums):\n" +
+        "    result = 0\n" +
+        "    for n in nums:\n" +
+        "        result ^= n\n" +
+        "    return result\n" +
+        "\n" +
+        "\n" +
+        "n = 0b1010  # 10 in decimal\n" +
+        'print(f"n = {n} (binary {n:b})")\n' +
+        'print("isBitSet(n, 1):", is_bit_set(n, 1))\n' +
+        'print("isBitSet(n, 0):", is_bit_set(n, 0))\n' +
+        'print(f"setBit(n, 0) = {set_bit(n, 0)} (binary {set_bit(n, 0):b})")\n' +
+        'print(f"clearBit(n, 1) = {clear_bit(n, 1)} (binary {clear_bit(n, 1):b})")\n' +
+        'print("countSetBits(n) =", count_set_bits(n))\n' +
+        'print("countSetBits(255) =", count_set_bits(255))\n' +
+        "\n" +
+        "nums = [4, 1, 2, 1, 2]\n" +
+        'print("singleNumber:", single_number(nums))\n',
+      pythonOutput:
+        "n = 10 (binary 1010)\nisBitSet(n, 1): True\nisBitSet(n, 0): False\n" +
+        "setBit(n, 0) = 11 (binary 1011)\nclearBit(n, 1) = 8 (binary 1000)\ncountSetBits(n) = 2\n" +
+        "countSetBits(255) = 8\nsingleNumber: 4",
     },
     {
       kind: "trace",

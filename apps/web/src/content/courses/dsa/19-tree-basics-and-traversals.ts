@@ -120,6 +120,85 @@ export const chapterTreeBasicsAndTraversals: Chapter = {
       output:
         "preorder: [4, 2, 1, 3, 6, 5, 7]\ninorder: [1, 2, 3, 4, 5, 6, 7]\npostorder: [1, 3, 2, 5, 7, 6, 4]\n" +
         "levelOrder: [4, 2, 6, 1, 3, 5, 7]",
+      python:
+        "from collections import deque\n" +
+        "\n" +
+        "\n" +
+        "class Node:\n" +
+        "    def __init__(self, val):\n" +
+        "        self.val = val\n" +
+        "        self.left = None\n" +
+        "        self.right = None\n" +
+        "\n" +
+        "\n" +
+        "def preorder(node, out):\n" +
+        "    if node is None:\n" +
+        "        return\n" +
+        "    out.append(node.val)\n" +
+        "    preorder(node.left, out)\n" +
+        "    preorder(node.right, out)\n" +
+        "\n" +
+        "\n" +
+        "def inorder(node, out):\n" +
+        "    if node is None:\n" +
+        "        return\n" +
+        "    inorder(node.left, out)\n" +
+        "    out.append(node.val)\n" +
+        "    inorder(node.right, out)\n" +
+        "\n" +
+        "\n" +
+        "def postorder(node, out):\n" +
+        "    if node is None:\n" +
+        "        return\n" +
+        "    postorder(node.left, out)\n" +
+        "    postorder(node.right, out)\n" +
+        "    out.append(node.val)\n" +
+        "\n" +
+        "\n" +
+        "def level_order(root):\n" +
+        "    out = []\n" +
+        "    if root is None:\n" +
+        "        return out\n" +
+        "    queue = deque([root])\n" +
+        "    while queue:\n" +
+        "        curr = queue.popleft()\n" +
+        "        out.append(curr.val)\n" +
+        "        if curr.left is not None:\n" +
+        "            queue.append(curr.left)\n" +
+        "        if curr.right is not None:\n" +
+        "            queue.append(curr.right)\n" +
+        "    return out\n" +
+        "\n" +
+        "\n" +
+        "#         4\n" +
+        "#       /   \\\n" +
+        "#      2     6\n" +
+        "#     / \\   / \\\n" +
+        "#    1   3 5   7\n" +
+        "root = Node(4)\n" +
+        "root.left = Node(2)\n" +
+        "root.right = Node(6)\n" +
+        "root.left.left = Node(1)\n" +
+        "root.left.right = Node(3)\n" +
+        "root.right.left = Node(5)\n" +
+        "root.right.right = Node(7)\n" +
+        "\n" +
+        "pre = []\n" +
+        "preorder(root, pre)\n" +
+        'print("preorder:", pre)\n' +
+        "\n" +
+        "in_order = []\n" +
+        "inorder(root, in_order)\n" +
+        'print("inorder:", in_order)\n' +
+        "\n" +
+        "post = []\n" +
+        "postorder(root, post)\n" +
+        'print("postorder:", post)\n' +
+        "\n" +
+        'print("levelOrder:", level_order(root))\n',
+      pythonOutput:
+        "preorder: [4, 2, 1, 3, 6, 5, 7]\ninorder: [1, 2, 3, 4, 5, 6, 7]\npostorder: [1, 3, 2, 5, 7, 6, 4]\n" +
+        "levelOrder: [4, 2, 6, 1, 3, 5, 7]",
     },
     {
       kind: "viz",

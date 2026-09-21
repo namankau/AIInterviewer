@@ -83,6 +83,36 @@ export const chapterHashing: Chapter = {
         "god -> bucket 4\n" +
         "rat -> bucket 2\n" +
         "groups: {art=[rat], act=[cat, act], dgo=[dog, god]}",
+      python:
+        "from collections import defaultdict\n" +
+        "\n" +
+        "\n" +
+        "def simple_hash(s, bucket_count):\n" +
+        "    return sum(ord(c) for c in s) % bucket_count\n" +
+        "\n" +
+        "\n" +
+        "def group_anagrams(words):\n" +
+        "    groups = defaultdict(list)\n" +
+        "    for word in words:\n" +
+        '        key = "".join(sorted(word))\n' +
+        "        groups[key].append(word)\n" +
+        "    return dict(groups)\n" +
+        "\n" +
+        "\n" +
+        "buckets = 5\n" +
+        'names = ["cat", "act", "dog", "god", "rat"]\n' +
+        "for name in names:\n" +
+        '    print(f"{name} -> bucket {simple_hash(name, buckets)}")\n' +
+        "\n" +
+        "groups = group_anagrams(names)\n" +
+        'print("groups:", groups)\n',
+      pythonOutput:
+        "cat -> bucket 2\n" +
+        "act -> bucket 2\n" +
+        "dog -> bucket 4\n" +
+        "god -> bucket 4\n" +
+        "rat -> bucket 2\n" +
+        "groups: {'act': ['cat', 'act'], 'dgo': ['dog', 'god'], 'art': ['rat']}",
     },
     {
       kind: "trace",

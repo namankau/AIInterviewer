@@ -102,6 +102,47 @@ export const chapterTopologicalSort: Chapter = {
         "    }\n" +
         "}\n",
       output: "Topological order: [0, 1, 2, 3, 4]\nCaught: cycle detected, no valid topological order",
+      python:
+        "from collections import deque\n" +
+        "\n" +
+        "\n" +
+        "def topo_sort(n, adj):\n" +
+        "    indegree = [0] * n\n" +
+        "    for neighbours in adj:\n" +
+        "        for v in neighbours:\n" +
+        "            indegree[v] += 1\n" +
+        "\n" +
+        "    queue = deque(i for i in range(n) if indegree[i] == 0)\n" +
+        "    order = []\n" +
+        "    while queue:\n" +
+        "        curr = queue.popleft()\n" +
+        "        order.append(curr)\n" +
+        "        for next_v in adj[curr]:\n" +
+        "            indegree[next_v] -= 1\n" +
+        "            if indegree[next_v] == 0:\n" +
+        "                queue.append(next_v)\n" +
+        "\n" +
+        "    if len(order) != n:\n" +
+        '        raise ValueError("cycle detected, no valid topological order")\n' +
+        "    return order\n" +
+        "\n" +
+        "\n" +
+        "# Course prerequisites: 0 -> 1, 0 -> 2, 1 -> 3, 2 -> 3, 3 -> 4\n" +
+        "n = 5\n" +
+        "adj = [[] for _ in range(n)]\n" +
+        "edges = [(0, 1), (0, 2), (1, 3), (2, 3), (3, 4)]\n" +
+        "for a, b in edges:\n" +
+        "    adj[a].append(b)\n" +
+        "\n" +
+        'print("Topological order:", topo_sort(n, adj))\n' +
+        "\n" +
+        "# Now add a cycle: 4 -> 0\n" +
+        "adj[4].append(0)\n" +
+        "try:\n" +
+        "    topo_sort(n, adj)\n" +
+        "except ValueError as ex:\n" +
+        '    print(f"Caught: {ex}")\n',
+      pythonOutput: "Topological order: [0, 1, 2, 3, 4]\nCaught: cycle detected, no valid topological order",
     },
     {
       kind: "trace",

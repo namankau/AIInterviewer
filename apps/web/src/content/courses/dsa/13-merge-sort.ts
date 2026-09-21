@@ -82,6 +82,44 @@ export const chapterMergeSort: Chapter = {
         "    }\n" +
         "}\n",
       output: "sorted: [1, 2, 3, 4, 7, 8, 9]",
+      python:
+        "def merge_sort(arr, left, right):\n" +
+        "    if left >= right:\n" +
+        "        return\n" +
+        "    mid = left + (right - left) // 2\n" +
+        "    merge_sort(arr, left, mid)\n" +
+        "    merge_sort(arr, mid + 1, right)\n" +
+        "    merge(arr, left, mid, right)\n" +
+        "\n" +
+        "\n" +
+        "def merge(arr, left, mid, right):\n" +
+        "    left_part = arr[left:mid + 1]\n" +
+        "    right_part = arr[mid + 1:right + 1]\n" +
+        "\n" +
+        "    i = j = 0\n" +
+        "    k = left\n" +
+        "    while i < len(left_part) and j < len(right_part):\n" +
+        "        if left_part[i] <= right_part[j]:\n" +
+        "            arr[k] = left_part[i]\n" +
+        "            i += 1\n" +
+        "        else:\n" +
+        "            arr[k] = right_part[j]\n" +
+        "            j += 1\n" +
+        "        k += 1\n" +
+        "    while i < len(left_part):\n" +
+        "        arr[k] = left_part[i]\n" +
+        "        i += 1\n" +
+        "        k += 1\n" +
+        "    while j < len(right_part):\n" +
+        "        arr[k] = right_part[j]\n" +
+        "        j += 1\n" +
+        "        k += 1\n" +
+        "\n" +
+        "\n" +
+        "arr = [8, 3, 7, 4, 2, 9, 1]\n" +
+        "merge_sort(arr, 0, len(arr) - 1)\n" +
+        'print("sorted:", arr)\n',
+      pythonOutput: "sorted: [1, 2, 3, 4, 7, 8, 9]",
     },
     {
       kind: "trace",

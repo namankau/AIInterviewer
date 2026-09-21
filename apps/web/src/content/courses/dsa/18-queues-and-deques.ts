@@ -90,6 +90,34 @@ export const chapterQueuesAndDeques: Chapter = {
         "    }\n" +
         "}\n",
       output: "slidingWindowMax: 3 3 5 5 6 7\nqueue poll order: 1 2 3",
+      python:
+        "from collections import deque\n" +
+        "\n" +
+        "\n" +
+        "def sliding_window_max(nums, k):\n" +
+        "    result = [0] * (len(nums) - k + 1)\n" +
+        "    indices = deque()  # monotonic decreasing deque of indices\n" +
+        "    for i, num in enumerate(nums):\n" +
+        "        while indices and indices[0] <= i - k:\n" +
+        "            indices.popleft()\n" +
+        "        while indices and nums[indices[-1]] < num:\n" +
+        "            indices.pop()\n" +
+        "        indices.append(i)\n" +
+        "        if i >= k - 1:\n" +
+        "            result[i - k + 1] = nums[indices[0]]\n" +
+        "    return result\n" +
+        "\n" +
+        "\n" +
+        "nums = [1, 3, -1, -3, 5, 3, 6, 7]\n" +
+        "result = sliding_window_max(nums, 3)\n" +
+        'print("slidingWindowMax:", " ".join(str(v) for v in result))\n' +
+        "\n" +
+        "queue = deque()\n" +
+        "queue.append(1)\n" +
+        "queue.append(2)\n" +
+        "queue.append(3)\n" +
+        'print("queue poll order:", queue.popleft(), queue.popleft(), queue.popleft())\n',
+      pythonOutput: "slidingWindowMax: 3 3 5 5 6 7\nqueue poll order: 1 2 3",
     },
     {
       kind: "viz",

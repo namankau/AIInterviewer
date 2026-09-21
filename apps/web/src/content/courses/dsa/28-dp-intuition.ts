@@ -91,6 +91,60 @@ export const chapterDpIntuition: Chapter = {
       output:
         "fibNaive(10) = 55\nfibMemo(40) = 102334155\nfibTabulation(40) = 102334155\n" +
         "naive(35) took roughly 37ms; memo(35) took roughly 0ms",
+      python:
+        "import time\n" +
+        "\n" +
+        "\n" +
+        "def fib_naive(n):\n" +
+        "    if n <= 1:\n" +
+        "        return n\n" +
+        "    return fib_naive(n - 1) + fib_naive(n - 2)\n" +
+        "\n" +
+        "\n" +
+        "memo = {}\n" +
+        "\n" +
+        "\n" +
+        "def fib_memo(n):\n" +
+        "    if n <= 1:\n" +
+        "        return n\n" +
+        "    if n in memo:\n" +
+        "        return memo[n]\n" +
+        "    result = fib_memo(n - 1) + fib_memo(n - 2)\n" +
+        "    memo[n] = result\n" +
+        "    return result\n" +
+        "\n" +
+        "\n" +
+        "def fib_tabulation(n):\n" +
+        "    if n <= 1:\n" +
+        "        return n\n" +
+        "    dp = [0] * (n + 1)\n" +
+        "    dp[1] = 1\n" +
+        "    for i in range(2, n + 1):\n" +
+        "        dp[i] = dp[i - 1] + dp[i - 2]\n" +
+        "    return dp[n]\n" +
+        "\n" +
+        "\n" +
+        'print("fibNaive(10) =", fib_naive(10))\n' +
+        'print("fibMemo(40) =", fib_memo(40))\n' +
+        'print("fibTabulation(40) =", fib_tabulation(40))\n' +
+        "\n" +
+        "# Timing note: this number is machine- and interpreter-dependent, same as the Java\n" +
+        "# figure above -- what matters is the shape (roughly instant vs. clearly not), not the\n" +
+        "# exact millisecond count. A pure-Python interpreter has much higher per-call overhead\n" +
+        "# than JIT-compiled Java, so naive(35) here is considerably slower in absolute terms.\n" +
+        "start = time.perf_counter()\n" +
+        "fib_naive(35)\n" +
+        "naive_ms = int((time.perf_counter() - start) * 1000)\n" +
+        "\n" +
+        "memo.clear()\n" +
+        "start = time.perf_counter()\n" +
+        "fib_memo(35)\n" +
+        "memo_ms = int((time.perf_counter() - start) * 1000)\n" +
+        "\n" +
+        'print(f"naive(35) took roughly {naive_ms}ms; memo(35) took roughly {memo_ms}ms")\n',
+      pythonOutput:
+        "fibNaive(10) = 55\nfibMemo(40) = 102334155\nfibTabulation(40) = 102334155\n" +
+        "naive(35) took roughly 1057ms; memo(35) took roughly 0ms",
     },
     {
       kind: "trace",

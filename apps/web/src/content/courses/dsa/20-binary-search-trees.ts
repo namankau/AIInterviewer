@@ -109,6 +109,79 @@ export const chapterBinarySearchTrees: Chapter = {
       output:
         "inorder after inserts: 1 3 4 6 7 8 10 13 14\nsearch(6): true\nsearch(11): false\n" +
         "inorder after delete(3): 1 4 6 7 8 10 13 14",
+      python:
+        "class Node:\n" +
+        "    def __init__(self, val):\n" +
+        "        self.val = val\n" +
+        "        self.left = None\n" +
+        "        self.right = None\n" +
+        "\n" +
+        "\n" +
+        "def insert(node, val):\n" +
+        "    if node is None:\n" +
+        "        return Node(val)\n" +
+        "    if val < node.val:\n" +
+        "        node.left = insert(node.left, val)\n" +
+        "    elif val > node.val:\n" +
+        "        node.right = insert(node.right, val)\n" +
+        "    return node\n" +
+        "\n" +
+        "\n" +
+        "def search(node, target):\n" +
+        "    if node is None:\n" +
+        "        return False\n" +
+        "    if node.val == target:\n" +
+        "        return True\n" +
+        "    return search(node.left, target) if target < node.val else search(node.right, target)\n" +
+        "\n" +
+        "\n" +
+        "def delete(node, val):\n" +
+        "    if node is None:\n" +
+        "        return None\n" +
+        "    if val < node.val:\n" +
+        "        node.left = delete(node.left, val)\n" +
+        "    elif val > node.val:\n" +
+        "        node.right = delete(node.right, val)\n" +
+        "    else:\n" +
+        "        if node.left is None:\n" +
+        "            return node.right\n" +
+        "        if node.right is None:\n" +
+        "            return node.left\n" +
+        "        successor = node.right\n" +
+        "        while successor.left is not None:\n" +
+        "            successor = successor.left\n" +
+        "        node.val = successor.val\n" +
+        "        node.right = delete(node.right, successor.val)\n" +
+        "    return node\n" +
+        "\n" +
+        "\n" +
+        "def inorder(node, out):\n" +
+        "    if node is None:\n" +
+        "        return\n" +
+        "    inorder(node.left, out)\n" +
+        "    out.append(node.val)\n" +
+        "    inorder(node.right, out)\n" +
+        "\n" +
+        "\n" +
+        "root = None\n" +
+        "values = [8, 3, 10, 1, 6, 14, 4, 7, 13]\n" +
+        "for v in values:\n" +
+        "    root = insert(root, v)\n" +
+        "\n" +
+        "out = []\n" +
+        "inorder(root, out)\n" +
+        'print("inorder after inserts:", " ".join(str(v) for v in out))\n' +
+        "\n" +
+        'print("search(6):", search(root, 6))\n' +
+        'print("search(11):", search(root, 11))\n' +
+        "\n" +
+        "root = delete(root, 3)  # node with two children\n" +
+        "out2 = []\n" +
+        "inorder(root, out2)\n" +
+        'print("inorder after delete(3):", " ".join(str(v) for v in out2))\n',
+      pythonOutput:
+        "inorder after inserts: 1 3 4 6 7 8 10 13 14\nsearch(6): True\nsearch(11): False\n" +
+        "inorder after delete(3): 1 4 6 7 8 10 13 14",
     },
     {
       kind: "trace",

@@ -83,6 +83,34 @@ export const chapterGreedy: Chapter = {
         "    }\n" +
         "}\n",
       output: "max non-overlapping activities: 4\nminCoinsGreedy(41): 4",
+      python:
+        "def max_activities(activities):\n" +
+        "    activities = sorted(activities, key=lambda a: a[1])  # sort by end time\n" +
+        "    count = 0\n" +
+        "    last_end = float(\"-inf\")\n" +
+        "    for start, end in activities:\n" +
+        "        if start >= last_end:\n" +
+        "            count += 1\n" +
+        "            last_end = end\n" +
+        "    return count\n" +
+        "\n" +
+        "\n" +
+        "def min_coins_greedy(coins, amount):\n" +
+        "    count = 0\n" +
+        "    for coin in sorted(coins, reverse=True):\n" +
+        "        if amount <= 0:\n" +
+        "            break\n" +
+        "        coins_used, amount = divmod(amount, coin)\n" +
+        "        count += coins_used\n" +
+        "    return count if amount == 0 else -1\n" +
+        "\n" +
+        "\n" +
+        "activities = [(1, 4), (3, 5), (0, 6), (5, 7), (3, 8), (5, 9), (6, 10), (8, 11), (8, 12), (2, 13), (12, 14)]\n" +
+        'print("max non-overlapping activities:", max_activities(activities))\n' +
+        "\n" +
+        "coins = [1, 5, 10, 25]\n" +
+        'print("minCoinsGreedy(41):", min_coins_greedy(coins, 41))\n',
+      pythonOutput: "max non-overlapping activities: 4\nminCoinsGreedy(41): 4",
     },
     {
       kind: "trace",

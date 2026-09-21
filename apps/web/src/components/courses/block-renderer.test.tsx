@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { BlockRenderer } from "@/components/courses/block-renderer";
 import type { Block } from "@/content/courses/types";
@@ -42,6 +42,12 @@ const ALL_KINDS: Block[] = [
     expectedOutput: "2",
   },
 ];
+
+// The Java/Python choice lives in `localStorage` (module-scoped, not React state — see
+// `code-language-context.tsx`) so it outlives a render and must be reset between tests.
+afterEach(() => {
+  window.localStorage.removeItem("course-code-language");
+});
 
 describe("BlockRenderer", () => {
   it("renders every block kind without crashing, accessibly", async () => {
@@ -130,12 +136,37 @@ describe("BlockRenderer", () => {
     const { container } = render(
       <BlockRenderer
         blocks={[{ kind: "code", code: "int x = 1;" }]}
-        highlightedCode={['<pre class="shiki" tabindex="0"><code>marked up</code></pre>']}
+        highlightedCode={[{ java: '<pre class="shiki" tabindex="0"><code>marked up</code></pre>', python: null }]}
       />,
     );
 
     expect(container.querySelector(".shiki")).toBeInTheDocument();
     expect(screen.getByText("marked up")).toBeInTheDocument();
+  });
+
+  it("shows a Java/Python toggle only when a code block carries a python field, and switches the shown source", async () => {
+    const user = userEvent.setup();
+    render(
+      <BlockRenderer
+        blocks={[
+          { kind: "code", code: "System.out.println(1);", python: "print(1)", output: "1", pythonOutput: "1" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("print(1)")).toBeInTheDocument();
+    expect(screen.queryByText("System.out.println(1);")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Java" }));
+    expect(screen.getByText("System.out.println(1);")).toBeInTheDocument();
+    expect(screen.queryByText("print(1)")).not.toBeInTheDocument();
+  });
+
+  it("renders no language toggle for a code block with no python field", () => {
+    render(<BlockRenderer blocks={[{ kind: "code", code: "int x = 1;" }]} />);
+
+    expect(screen.queryByRole("button", { name: "Java" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Python" })).not.toBeInTheDocument();
   });
 
   it("falls back to a plain, unhighlighted <pre> when no highlighted HTML is given", () => {

@@ -13,8 +13,29 @@ export type Block =
   | { kind: "h"; text: string }
   /** The everyday picture the concept is mapped onto. */
   | { kind: "analogy"; title: string; text: string }
-  /** A Java snippet or complete program. `output` is real `java` output, pasted, not guessed. */
-  | { kind: "code"; code: string; caption?: string; output?: string }
+  /**
+   * A Java snippet or complete program. `output` is real `java` output, pasted, not guessed.
+   *
+   * `python`/`pythonOutput` (task 050, DSA course only) is an idiomatic Python equivalent —
+   * not Java transliterated into Python syntax — shown as a second tab the reader switches
+   * to, sharing one language choice across every code block on the page
+   * (`CodeLanguageProvider`). `pythonOutput` is held to the same bar as `output`: real,
+   * pasted, not guessed. The Java course leaves both undefined and stays Java-only.
+   *
+   * `pythonNote` is set instead of `python` on the rare block whose teaching point is
+   * Java-specific (`StringBuilder`, `==` vs `.equals`, primitive vs wrapper, array
+   * covariance, ...) where forcing a Python parallel would mislead — it explains what
+   * Python does instead, in place of a Python tab.
+   */
+  | {
+      kind: "code";
+      code: string;
+      caption?: string;
+      output?: string;
+      python?: string;
+      pythonOutput?: string;
+      pythonNote?: string;
+    }
   | { kind: "list"; items: string[]; ordered?: boolean }
   | { kind: "table"; head: string[]; rows: string[][] }
   /** A dry run, step by step — for anything with changing state (loops, recursion, references). */

@@ -82,6 +82,35 @@ export const chapterSlidingWindow: Chapter = {
         "}\n",
       output:
         'maxSumWindow(k=3): 9\nlongestNoRepeat("abcabcbb"): 3\nlongestNoRepeat("bbbbb"): 1',
+      python:
+        "def max_sum_window(nums, k):\n" +
+        "    window_sum = sum(nums[:k])\n" +
+        "    best = window_sum\n" +
+        "    for end in range(k, len(nums)):\n" +
+        "        window_sum += nums[end] - nums[end - k]\n" +
+        "        best = max(best, window_sum)\n" +
+        "    return best\n" +
+        "\n" +
+        "\n" +
+        "def longest_no_repeat(s):\n" +
+        "    in_window = set()\n" +
+        "    left = 0\n" +
+        "    best = 0\n" +
+        "    for right, c in enumerate(s):\n" +
+        "        while c in in_window:\n" +
+        "            in_window.remove(s[left])\n" +
+        "            left += 1\n" +
+        "        in_window.add(c)\n" +
+        "        best = max(best, right - left + 1)\n" +
+        "    return best\n" +
+        "\n" +
+        "\n" +
+        "nums = [2, 1, 5, 1, 3, 2]\n" +
+        'print("maxSumWindow(k=3):", max_sum_window(nums, 3))\n' +
+        "print('longestNoRepeat(\"abcabcbb\"):', longest_no_repeat(\"abcabcbb\"))\n" +
+        "print('longestNoRepeat(\"bbbbb\"):', longest_no_repeat(\"bbbbb\"))\n",
+      pythonOutput:
+        'maxSumWindow(k=3): 9\nlongestNoRepeat("abcabcbb"): 3\nlongestNoRepeat("bbbbb"): 1',
     },
     {
       kind: "viz",

@@ -209,6 +209,23 @@ describe.each(courses)("course: $slug", (course: Course) => {
         }
       });
 
+      // Task 050: every DSA code block gets a Python equivalent, switchable in the reader,
+      // unless the block's teaching point is genuinely Java-specific — in which case
+      // `pythonNote` says so instead of forcing a misleading parallel. Exactly one of the
+      // two must be set, never neither and never both.
+      it("has a python field or an honest pythonNote on every code block, and real, non-guessed output for both", () => {
+        const codeBlocks = blocksOf("code", chapter) as Extract<Block, { kind: "code" }>[];
+        for (const block of codeBlocks) {
+          const hasPython = Boolean(block.python && block.python.trim().length > 0);
+          const hasNote = Boolean(block.pythonNote && block.pythonNote.trim().length > 0);
+          expect(hasPython || hasNote).toBe(true);
+          expect(hasPython && hasNote).toBe(false);
+          if (hasPython && block.output) {
+            expect((block.pythonOutput ?? "").trim().length).toBeGreaterThan(0);
+          }
+        }
+      });
+
       it("ends with a 'Practice problems' heading followed by 3-5 problems in our own words", () => {
         const headingIndex = chapter.blocks.findIndex((b) => b.kind === "h" && b.text === "Practice problems");
         expect(headingIndex).toBeGreaterThanOrEqual(0);

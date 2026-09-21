@@ -29,17 +29,37 @@ export async function highlightCode(code: string, lang: string): Promise<string 
 }
 
 /**
- * Highlights every `code` and `playground` block in a chapter, aligned with `blocks` by
- * index (other kinds get `null`). Called once per chapter render — `codeToHtml` caches its
- * own highlighter internally, so this stays cheap across the handful of calls a chapter
- * makes.
+ * Highlighted HTML for one `code` block: `java` is always present, `python` only when the
+ * block carries a Python equivalent (task 050) — `null` in both the "no python field" and
+ * the "highlighting failed" cases, which `CodeBlock` treats the same way (fall back to a
+ * plain `<pre>`).
  */
-export function highlightChapterBlocks(blocks: Block[]): Promise<Array<string | null>> {
+export interface CodeBlockHighlight {
+  java: string | null;
+  python: string | null;
+}
+
+/**
+ * Highlights every `code` and `playground` block in a chapter, aligned with `blocks` by
+ * index (other kinds get `null`). `code` blocks get a `CodeBlockHighlight` (task 050);
+ * `playground` blocks keep the single-string shape from task 049, since a playground has
+ * exactly one language. Called once per chapter render — `codeToHtml` caches its own
+ * highlighter internally, so this stays cheap across the handful of calls a chapter makes.
+ */
+export function highlightChapterBlocks(
+  blocks: Block[],
+): Promise<Array<string | CodeBlockHighlight | null>> {
   return Promise.all(
-    blocks.map((block) => {
-      if (block.kind === "code") return highlightCode(block.code, "java");
+    blocks.map(async (block) => {
+      if (block.kind === "code") {
+        const [java, python] = await Promise.all([
+          highlightCode(block.code, "java"),
+          block.python ? highlightCode(block.python, "python") : Promise.resolve(null),
+        ]);
+        return { java, python };
+      }
       if (block.kind === "playground") return highlightCode(block.starter, block.language);
-      return Promise.resolve(null);
+      return null;
     }),
   );
 }

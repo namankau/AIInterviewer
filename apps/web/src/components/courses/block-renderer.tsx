@@ -1,8 +1,10 @@
 import { anchorId } from "@/content/courses/anchor";
 import type { Block } from "@/content/courses/types";
+import type { CodeBlockHighlight } from "@/lib/highlight-code";
 import { QuizBlock } from "@/components/courses/quiz-block";
 import { VizBlock } from "@/components/courses/viz-block";
 import { PlaygroundLazy } from "@/components/courses/playground-lazy";
+import { CodeBlock } from "@/components/courses/code-block";
 import { CopyCodeButton } from "@/components/courses/copy-code-button";
 import { InlineText } from "@/components/courses/inline-text";
 
@@ -22,11 +24,17 @@ import { InlineText } from "@/components/courses/inline-text";
  * every existing test) falls back to a plain `<pre>` — the same degrade-gracefully path an
  * unrecognised language takes.
  */
-export function BlockRenderer({ blocks, highlightedCode }: { blocks: Block[]; highlightedCode?: Array<string | null> }) {
+export function BlockRenderer({
+  blocks,
+  highlightedCode,
+}: {
+  blocks: Block[];
+  highlightedCode?: Array<string | CodeBlockHighlight | null>;
+}) {
   return (
     <div className="flex flex-col gap-8">
       {blocks.map((block, index) => (
-        <BlockView key={index} block={block} highlightedHtml={highlightedCode?.[index] ?? null} />
+        <BlockView key={index} block={block} highlighted={highlightedCode?.[index] ?? null} />
       ))}
     </div>
   );
@@ -44,7 +52,17 @@ function StaticCode({ code, html }: { code: string; html: string | null }) {
   );
 }
 
-function BlockView({ block, highlightedHtml }: { block: Block; highlightedHtml: string | null }) {
+function BlockView({
+  block,
+  highlighted,
+}: {
+  block: Block;
+  highlighted: string | CodeBlockHighlight | null;
+}) {
+  // `code` blocks get a `CodeBlockHighlight` object, `playground` blocks a plain string
+  // (task 049/050 — see `highlightChapterBlocks`). Guard once, here, rather than in each case.
+  const highlightedHtml = typeof highlighted === "string" ? highlighted : null;
+  const highlightedCodeBlock = highlighted && typeof highlighted === "object" ? highlighted : null;
   switch (block.kind) {
     case "p":
       return (
@@ -75,25 +93,7 @@ function BlockView({ block, highlightedHtml }: { block: Block; highlightedHtml: 
       );
 
     case "code":
-      return (
-        <figure className="flex flex-col gap-0 overflow-hidden rounded-md border border-line-strong">
-          {block.caption ? (
-            <figcaption className="border-b border-line-strong bg-surface-sunken px-4 py-2 text-caption text-ink-muted">
-              {block.caption}
-            </figcaption>
-          ) : null}
-          <div className="relative">
-            <StaticCode code={block.code} html={highlightedHtml} />
-            <CopyCodeButton code={block.code} />
-          </div>
-          {block.output ? (
-            <div className="border-t border-line-strong bg-surface-sunken px-4 py-3">
-              <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Output</p>
-              <pre className="mt-1 overflow-x-auto font-mono text-caption text-ink-muted">{block.output}</pre>
-            </div>
-          ) : null}
-        </figure>
-      );
+      return <CodeBlock block={block} highlighted={highlightedCodeBlock} />;
 
     case "list":
       return block.ordered ? (

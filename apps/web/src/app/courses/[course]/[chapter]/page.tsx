@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BlockRenderer } from "@/components/courses/block-renderer";
+import { CodeLanguageProvider } from "@/components/courses/code-language-context";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { CourseToc } from "@/components/courses/course-toc";
 import { OnThisPage } from "@/components/courses/on-this-page";
@@ -87,7 +88,9 @@ export default async function ChapterPage({
           <p className="mt-3 text-body text-ink-muted">{chapter.summary}</p>
 
           <div className="mt-10">
-            <BlockRenderer blocks={chapter.blocks} highlightedCode={highlightedCode} />
+            <CodeLanguageProvider>
+              <BlockRenderer blocks={chapter.blocks} highlightedCode={highlightedCode} />
+            </CodeLanguageProvider>
           </div>
 
           <nav aria-label="Chapter navigation" className="mt-14 flex flex-col gap-3 border-t border-line pt-8 sm:flex-row sm:justify-between">

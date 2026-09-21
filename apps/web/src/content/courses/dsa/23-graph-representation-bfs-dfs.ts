@@ -115,6 +115,57 @@ export const chapterGraphRepresentationBfsDfs: Chapter = {
         "    }\n" +
         "}\n",
       output: "BFS from 0: [0, 1, 2, 3, 4]\nDFS from 0: [0, 1, 3, 4, 2]",
+      python:
+        "from collections import deque\n" +
+        "\n" +
+        "\n" +
+        "def build_adj_list(n, edges):\n" +
+        "    adj = [[] for _ in range(n)]\n" +
+        "    for a, b in edges:\n" +
+        "        adj[a].append(b)\n" +
+        "        adj[b].append(a)  # undirected\n" +
+        "    return adj\n" +
+        "\n" +
+        "\n" +
+        "def bfs(adj, start):\n" +
+        "    order = []\n" +
+        "    visited = [False] * len(adj)\n" +
+        "    queue = deque([start])\n" +
+        "    visited[start] = True\n" +
+        "    while queue:\n" +
+        "        curr = queue.popleft()\n" +
+        "        order.append(curr)\n" +
+        "        for next_v in adj[curr]:\n" +
+        "            if not visited[next_v]:\n" +
+        "                visited[next_v] = True\n" +
+        "                queue.append(next_v)\n" +
+        "    return order\n" +
+        "\n" +
+        "\n" +
+        "def dfs(adj, start):\n" +
+        "    order = []\n" +
+        "    visited = [False] * len(adj)\n" +
+        "\n" +
+        "    def dfs_helper(curr):\n" +
+        "        visited[curr] = True\n" +
+        "        order.append(curr)\n" +
+        "        for next_v in adj[curr]:\n" +
+        "            if not visited[next_v]:\n" +
+        "                dfs_helper(next_v)\n" +
+        "\n" +
+        "    dfs_helper(start)\n" +
+        "    return order\n" +
+        "\n" +
+        "\n" +
+        "#   0 - 1 - 3\n" +
+        "#   |   |\n" +
+        "#   2 - 4\n" +
+        "edges = [(0, 1), (0, 2), (1, 3), (1, 4), (2, 4)]\n" +
+        "adj = build_adj_list(5, edges)\n" +
+        "\n" +
+        'print("BFS from 0:", bfs(adj, 0))\n' +
+        'print("DFS from 0:", dfs(adj, 0))\n',
+      pythonOutput: "BFS from 0: [0, 1, 2, 3, 4]\nDFS from 0: [0, 1, 3, 4, 2]",
     },
     {
       kind: "viz",

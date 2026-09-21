@@ -113,6 +113,67 @@ export const chapterLinkedLists: Chapter = {
         "    }\n" +
         "}\n",
       output: "original: 1 -> 2 -> 3 -> 4 -> 5\nreversed: 5 -> 4 -> 3 -> 2 -> 1\nhas cycle: true\nhas cycle: false",
+      python:
+        "class Node:\n" +
+        "    def __init__(self, val):\n" +
+        "        self.val = val\n" +
+        "        self.next = None\n" +
+        "\n" +
+        "\n" +
+        "def from_array(values):\n" +
+        "    dummy = Node(0)\n" +
+        "    tail = dummy\n" +
+        "    for v in values:\n" +
+        "        tail.next = Node(v)\n" +
+        "        tail = tail.next\n" +
+        "    return dummy.next\n" +
+        "\n" +
+        "\n" +
+        "def to_string_list(head):\n" +
+        "    parts = []\n" +
+        "    while head is not None:\n" +
+        "        parts.append(str(head.val))\n" +
+        "        head = head.next\n" +
+        '    return " -> ".join(parts)\n' +
+        "\n" +
+        "\n" +
+        "def reverse(head):\n" +
+        "    prev = None\n" +
+        "    curr = head\n" +
+        "    while curr is not None:\n" +
+        "        next_node = curr.next\n" +
+        "        curr.next = prev\n" +
+        "        prev = curr\n" +
+        "        curr = next_node\n" +
+        "    return prev\n" +
+        "\n" +
+        "\n" +
+        "def has_cycle(head):\n" +
+        "    slow = fast = head\n" +
+        "    while fast is not None and fast.next is not None:\n" +
+        "        slow = slow.next\n" +
+        "        fast = fast.next.next\n" +
+        "        if slow is fast:\n" +
+        "            return True\n" +
+        "    return False\n" +
+        "\n" +
+        "\n" +
+        "lst = from_array([1, 2, 3, 4, 5])\n" +
+        'print("original:", to_string_list(lst))\n' +
+        "reversed_list = reverse(lst)\n" +
+        'print("reversed:", to_string_list(reversed_list))\n' +
+        "\n" +
+        "a = Node(10)\n" +
+        "b = Node(20)\n" +
+        "c = Node(30)\n" +
+        "a.next = b\n" +
+        "b.next = c\n" +
+        "c.next = a  # cycle back to a\n" +
+        'print("has cycle:", has_cycle(a))\n' +
+        "\n" +
+        "no_cycle = from_array([1, 2, 3])\n" +
+        'print("has cycle:", has_cycle(no_cycle))\n',
+      pythonOutput: "original: 1 -> 2 -> 3 -> 4 -> 5\nreversed: 5 -> 4 -> 3 -> 2 -> 1\nhas cycle: True\nhas cycle: False",
     },
     {
       kind: "viz",

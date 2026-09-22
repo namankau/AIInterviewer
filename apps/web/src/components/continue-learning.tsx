@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { InlineText } from "@/components/courses/inline-text";
 import { ProgressBar } from "@/components/courses/course-progress";
-import { courses } from "@/content/courses";
+import type { CourseOutline } from "@/lib/course-outline";
 import { summarizeChapters } from "@/lib/course-progress";
 import { useAllCourseProgress } from "@/lib/use-course-progress";
 
@@ -16,17 +16,21 @@ import { useAllCourseProgress } from "@/lib/use-course-progress";
  * has loaded and at least one course has been started: an empty "continue" card on a
  * dashboard whose single job is starting an interview would be clutter, and the dashboard
  * already has one primary action that nothing else may compete with.
+ *
+ * Takes `outlines` as a prop rather than importing course content itself (task 056, L2):
+ * this is a client component, and the full course registry carries every chapter's code
+ * samples, `viz` frames and quizzes — 744 KB of it. The caller derives the slim outline
+ * (`getCourseOutlines`, server-side only) and hands down just the slugs and titles this
+ * needs.
  */
-export function ContinueLearning() {
+export function ContinueLearning({ outlines }: { outlines: CourseOutline[] }) {
   const { completed, status } = useAllCourseProgress();
 
   if (status !== "ready") return null;
 
-  const candidates = courses
+  const candidates = outlines
     .map((course) => {
-      const chapters = course.modules.flatMap((module) =>
-        module.chapters.map((chapter) => ({ slug: chapter.slug, title: chapter.title })),
-      );
+      const chapters = course.chapters;
       return { course, summary: summarizeChapters(chapters, completed[course.slug] ?? []) };
     })
     .filter((entry) => entry.summary.started && !entry.summary.finished && entry.summary.next);

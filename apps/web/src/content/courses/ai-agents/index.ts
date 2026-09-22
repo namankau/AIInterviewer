@@ -3,6 +3,11 @@ import { chapterTokens } from "@/content/courses/ai-agents/02-tokens";
 import { chapterTheContextWindow } from "@/content/courses/ai-agents/03-the-context-window";
 import { chapterWhyModelsMakeThingsUp } from "@/content/courses/ai-agents/04-why-models-make-things-up";
 import { chapterWhatATransformerIs } from "@/content/courses/ai-agents/05-what-a-transformer-is";
+import { chapterAnatomyOfAPrompt } from "@/content/courses/ai-agents/06-anatomy-of-a-prompt";
+import { chapterExamplesBeatAdjectives } from "@/content/courses/ai-agents/07-examples-beat-adjectives";
+import { chapterChainOfThought } from "@/content/courses/ai-agents/08-chain-of-thought";
+import { chapterAskingForStructure } from "@/content/courses/ai-agents/09-asking-for-structure";
+import { chapterWhenPromptingStopsWorking } from "@/content/courses/ai-agents/10-when-prompting-stops-working";
 import type { Course } from "@/content/courses/types";
 
 /**
@@ -40,6 +45,16 @@ export const aiAgentsCourse: Course = {
         chapterTheContextWindow,
         chapterWhyModelsMakeThingsUp,
         chapterWhatATransformerIs,
+      ],
+    },
+    {
+      title: "Talking to a model",
+      chapters: [
+        chapterAnatomyOfAPrompt,
+        chapterExamplesBeatAdjectives,
+        chapterChainOfThought,
+        chapterAskingForStructure,
+        chapterWhenPromptingStopsWorking,
       ],
     },
   ],

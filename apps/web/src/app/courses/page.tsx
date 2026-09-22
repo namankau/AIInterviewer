@@ -11,7 +11,8 @@ export const metadata: Metadata = {
   title: "Courses — AceMyInterview",
   description:
     "Free courses that teach the fundamentals from the very start, chapter by chapter — Java " +
-    "programming and data structures & algorithms, written so you never forget what you read.",
+    "programming, data structures & algorithms, and AI and agentic AI, written so you never forget " +
+    "what you read.",
 };
 
 /**
@@ -36,7 +37,7 @@ export default function CoursesPage() {
           </p>
         </header>
 
-        <ul className="mt-12 grid gap-5 sm:grid-cols-2">
+        <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {courses.map((course) => (
             <li key={course.slug}>
               <Link

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { courses, flattenChapters, getAdjacentChapters } from "@/content/courses";
+import { getScenario } from "@/lib/agent-lab/scenarios";
 import type {
   ArrayFrame,
   Block,
@@ -281,6 +282,56 @@ describe.each(courses)("course: $slug", (course: Course) => {
         expect(practice.items.length).toBeGreaterThanOrEqual(3);
         expect(practice.items.length).toBeLessThanOrEqual(5);
         for (const item of practice.items) {
+          expect(item.trim().length).toBeGreaterThan(0);
+        }
+      });
+    }
+
+    // AI-course-specific rules (task 057). This course teaches a field full of terms people
+    // half-know, and makes claims about named papers, specs and frameworks — so it carries
+    // obligations the other courses do not: define the term where it is introduced, say on
+    // every code block where that code would actually run, and never name an agent lab
+    // scenario that does not exist.
+    if (course.slug === "ai-agents") {
+      it("defines its terms: at least one concept card per chapter", () => {
+        expect(blocksOf("concept", chapter).length).toBeGreaterThanOrEqual(1);
+      });
+
+      it("says what every code block is, and where it runs, in a caption", () => {
+        const codeBlocks = blocksOf("code", chapter) as Extract<Block, { kind: "code" }>[];
+        for (const block of codeBlocks) {
+          expect((block.caption ?? "").trim().length, block.code.slice(0, 60)).toBeGreaterThan(0);
+        }
+      });
+
+      it("is Python throughout — no Java tab, no Java playground", () => {
+        const codeBlocks = blocksOf("code", chapter) as Extract<Block, { kind: "code" }>[];
+        for (const block of codeBlocks) {
+          expect(block.python).toBeUndefined();
+          expect(block.pythonNote).toBeUndefined();
+        }
+        const playgrounds = blocksOf("playground", chapter) as Extract<Block, { kind: "playground" }>[];
+        for (const block of playgrounds) {
+          expect(block.language).toBe("python");
+        }
+      });
+
+      it("names an agent lab scenario that actually exists", () => {
+        const labs = blocksOf("agentlab", chapter) as Extract<Block, { kind: "agentlab" }>[];
+        for (const lab of labs) {
+          expect(getScenario(lab.scenarioId), lab.scenarioId).toBeDefined();
+        }
+      });
+
+      it("ends with a 'Try this yourself' heading followed by 3-5 exercises", () => {
+        const headingIndex = chapter.blocks.findIndex((b) => b.kind === "h" && b.text === "Try this yourself");
+        expect(headingIndex).toBeGreaterThanOrEqual(0);
+        const next = chapter.blocks[headingIndex + 1];
+        expect(next?.kind).toBe("list");
+        const exercises = next as Extract<Block, { kind: "list" }>;
+        expect(exercises.items.length).toBeGreaterThanOrEqual(3);
+        expect(exercises.items.length).toBeLessThanOrEqual(5);
+        for (const item of exercises.items) {
           expect(item.trim().length).toBeGreaterThan(0);
         }
       });

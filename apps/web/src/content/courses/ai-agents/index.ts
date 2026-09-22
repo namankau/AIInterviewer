@@ -14,6 +14,11 @@ import { chapterWritingAToolDescription } from "@/content/courses/ai-agents/13-w
 import { chapterStoppingConditions } from "@/content/courses/ai-agents/14-stopping-conditions";
 import { chapterObservationsAndRecovery } from "@/content/courses/ai-agents/15-observations-and-recovery";
 import { chapterHowAgenticIsYourSystem } from "@/content/courses/ai-agents/16-how-agentic-is-your-system";
+import { chapterTheModelRemembersNothing } from "@/content/courses/ai-agents/17-the-model-remembers-nothing";
+import { chapterEmbeddings } from "@/content/courses/ai-agents/18-embeddings";
+import { chapterRetrievalAndRag } from "@/content/courses/ai-agents/19-retrieval-and-rag";
+import { chapterWhyVectorSearchIsNotMagic } from "@/content/courses/ai-agents/20-why-vector-search-is-not-magic";
+import { chapterShortAndLongTermMemory } from "@/content/courses/ai-agents/21-short-and-long-term-memory";
 import type { Course } from "@/content/courses/types";
 
 /**
@@ -72,6 +77,16 @@ export const aiAgentsCourse: Course = {
         chapterStoppingConditions,
         chapterObservationsAndRecovery,
         chapterHowAgenticIsYourSystem,
+      ],
+    },
+    {
+      title: "Giving an agent a memory",
+      chapters: [
+        chapterTheModelRemembersNothing,
+        chapterEmbeddings,
+        chapterRetrievalAndRag,
+        chapterWhyVectorSearchIsNotMagic,
+        chapterShortAndLongTermMemory,
       ],
     },
   ],

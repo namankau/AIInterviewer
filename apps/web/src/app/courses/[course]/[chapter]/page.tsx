@@ -68,7 +68,7 @@ export default async function ChapterPage({
   // Shiki runs here, at build time (this page is statically generated via
   // generateStaticParams), so the highlighted HTML ships with the page and zero
   // highlighting JS reaches the browser (task 049).
-  const highlightedCode = await highlightChapterBlocks(chapter.blocks);
+  const highlightedCode = await highlightChapterBlocks(chapter.blocks, course.codeLanguage ?? "java");
 
   return (
     <div className="min-h-dvh">

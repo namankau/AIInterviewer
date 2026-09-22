@@ -155,7 +155,9 @@ function derivePredictOutput(loc: ChapterLoc, pool: string[], used: Set<string>)
       correctIndex: built.correctIndex,
       why: `This is the real, verified output of the program above${block.caption ? ` (${block.caption})` : ""}.`,
       code: block.code,
-      codeLanguage: "java",
+      // The course says what its `code` blocks are written in (task 057) — the Arena must
+      // not label a Python sample "java" just because the first two courses were Java.
+      codeLanguage: loc.course.codeLanguage ?? "java",
     });
   }
 

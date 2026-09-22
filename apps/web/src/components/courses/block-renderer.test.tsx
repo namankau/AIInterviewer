@@ -181,7 +181,7 @@ describe("BlockRenderer", () => {
     const { container } = render(
       <BlockRenderer
         blocks={[{ kind: "code", code: "int x = 1;" }]}
-        highlightedCode={[{ java: '<pre class="shiki" tabindex="0"><code>marked up</code></pre>', python: null }]}
+        highlightedCode={[{ base: '<pre class="shiki" tabindex="0"><code>marked up</code></pre>', python: null }]}
       />,
     );
 

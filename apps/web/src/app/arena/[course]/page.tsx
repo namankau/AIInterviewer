@@ -71,7 +71,7 @@ export default async function ArenaCoursePage({ params }: { params: Promise<{ co
 
         <div className="mt-8">
           <Suspense fallback={null}>
-            <ArenaCoursePractice courseSlug={course.slug} allCourseChallenges={challenges} chapters={chapters} />
+            <ArenaCoursePractice key={course.slug} courseSlug={course.slug} chapters={chapters} />
           </Suspense>
         </div>
 

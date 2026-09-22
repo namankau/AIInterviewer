@@ -8,6 +8,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { courses } from "@/content/courses";
 import { allArenaChallenges, challengesForCourse } from "@/lib/arena/corpus";
+import { dailyQuest, possibleDateKeysWorldwide } from "@/lib/arena/progression";
 
 export const metadata: Metadata = {
   title: "Arena — AceMyInterview",
@@ -23,6 +24,12 @@ export const metadata: Metadata = {
  * real derived corpus.
  */
 export default function ArenaPage() {
+  // Computed here, against the full corpus, server-side — only the resulting handful of
+  // challenges (at most 3 dates * DAILY_QUEST_SIZE) crosses into the client (task 056, L3).
+  const questsByDate = Object.fromEntries(
+    possibleDateKeysWorldwide().map((dateKey) => [dateKey, dailyQuest(allArenaChallenges, dateKey)]),
+  );
+
   return (
     <div className="min-h-dvh">
       <CourseSiteHeader />
@@ -40,7 +47,7 @@ export default function ArenaPage() {
 
         <div className="mt-10 flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="flex-1">
-            <ArenaDailyQuest allChallenges={allArenaChallenges} />
+            <ArenaDailyQuest questsByDate={questsByDate} />
           </div>
           <div className="lg:w-96 lg:shrink-0">
             <ProgressSummary />

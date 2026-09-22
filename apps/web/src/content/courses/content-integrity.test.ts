@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { courses, flattenChapters, getAdjacentChapters } from "@/content/courses";
-import { getScenario } from "@/lib/agent-lab/scenarios";
+import { agentLabScenarios, getScenario } from "@/lib/agent-lab/scenarios";
 import type {
   ArrayFrame,
   Block,
@@ -46,6 +46,43 @@ describe("course registry", () => {
       .flatMap((chapter) => chapter.blocks)
       .filter((b) => b.kind === "trace").length;
     expect(traceCount).toBeLessThanOrEqual(1);
+  });
+});
+
+// Course-level rules for the AI course (task 057), asserted once rather than per chapter:
+// the owner asked for many quizzes, hands-on practice throughout, and the agent lab as the
+// thing that makes this course different. These guard all three against erosion.
+describe("course: ai-agents, as a whole", () => {
+  const aiCourse = courses.find((c) => c.slug === "ai-agents");
+  const aiChapters = aiCourse ? flattenChapters(aiCourse) : [];
+  const aiBlocks = aiChapters.flatMap((chapter) => chapter.blocks);
+
+  it("is registered", () => {
+    expect(aiCourse).toBeDefined();
+    expect(aiChapters.length).toBeGreaterThanOrEqual(30);
+  });
+
+  it("gives every chapter something to run: a python playground each", () => {
+    for (const chapter of aiChapters) {
+      const playgrounds = chapter.blocks.filter((b) => b.kind === "playground");
+      expect(playgrounds.length, chapter.slug).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("carries the maximum quizzes the writing standard allows, in every chapter", () => {
+    for (const chapter of aiChapters) {
+      expect(chapter.blocks.filter((b) => b.kind === "quiz").length, chapter.slug).toBe(3);
+    }
+  });
+
+  it("uses every agent lab scenario at least once", () => {
+    const used = new Set(
+      aiBlocks.filter((b) => b.kind === "agentlab").map((b) => (b.kind === "agentlab" ? b.scenarioId : "")),
+    );
+    expect(used.size).toBeGreaterThanOrEqual(4);
+    for (const scenario of agentLabScenarios) {
+      expect(used.has(scenario.id), scenario.id).toBe(true);
+    }
   });
 });
 

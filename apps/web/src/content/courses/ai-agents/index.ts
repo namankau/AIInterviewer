@@ -25,6 +25,12 @@ import { chapterParallelisation } from "@/content/courses/ai-agents/24-paralleli
 import { chapterOrchestratorWorkers } from "@/content/courses/ai-agents/25-orchestrator-workers";
 import { chapterEvaluatorOptimiser } from "@/content/courses/ai-agents/26-evaluator-optimiser";
 import { chapterMultiAgentAndHandoffs } from "@/content/courses/ai-agents/27-multi-agent-and-handoffs";
+import { chapterTheModelContextProtocol } from "@/content/courses/ai-agents/28-the-model-context-protocol";
+import { chapterTheFrameworks } from "@/content/courses/ai-agents/29-the-frameworks";
+import { chapterEvaluatingAnAgent } from "@/content/courses/ai-agents/30-evaluating-an-agent";
+import { chapterCostAndLatency } from "@/content/courses/ai-agents/31-cost-and-latency";
+import { chapterPromptInjectionAndSecurity } from "@/content/courses/ai-agents/32-prompt-injection-and-security";
+import { chapterWhatGoesWrongInProduction } from "@/content/courses/ai-agents/33-what-goes-wrong-in-production";
 import type { Course } from "@/content/courses/types";
 
 /**
@@ -104,6 +110,17 @@ export const aiAgentsCourse: Course = {
         chapterOrchestratorWorkers,
         chapterEvaluatorOptimiser,
         chapterMultiAgentAndHandoffs,
+      ],
+    },
+    {
+      title: "Making it real",
+      chapters: [
+        chapterTheModelContextProtocol,
+        chapterTheFrameworks,
+        chapterEvaluatingAnAgent,
+        chapterCostAndLatency,
+        chapterPromptInjectionAndSecurity,
+        chapterWhatGoesWrongInProduction,
       ],
     },
   ],

@@ -54,10 +54,26 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     },
   });
 
-  // getUser revalidates the token with Supabase; getSession would only read the cookie.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // `getClaims` verifies the access token's signature locally against the project's JWKS,
+  // which it caches, instead of asking the auth server who this is. `getUser` was here
+  // before and cost a network round trip to Supabase on *every* request through this proxy
+  // — and because the matcher covers ordinary navigations, that includes every RSC prefetch
+  // Next fires for a link entering the viewport. The courses index alone has 65 of those.
+  //
+  // This is not a weakening: `getSession` would be, because it only decodes the cookie and
+  // trusts it. `getClaims` checks the signature and the expiry, and refreshes the session
+  // first if the token is about to lapse. What it does not do is ask whether the account was
+  // deleted or banned in the last few minutes — which does not matter here, because the
+  // guard below is a redirect and not a security boundary. The API verifies the token itself
+  // on every call and is the only thing standing between a request and somebody's data.
+  //
+  // One caveat for whoever reads this next: the round trip only actually goes away if the
+  // Supabase project signs its JWTs with asymmetric keys. On a project still using the
+  // legacy shared secret, `getClaims` has no key to verify against and falls back to asking
+  // the server, exactly as `getUser` did. Same behaviour, no gain. Switching a project to
+  // asymmetric signing keys is a dashboard action.
+  const { data: claims } = await supabase.auth.getClaims();
+  const user = claims?.claims.sub ? { id: claims.claims.sub } : null;
 
   const { pathname } = request.nextUrl;
 

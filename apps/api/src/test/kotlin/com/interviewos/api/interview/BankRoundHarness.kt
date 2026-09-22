@@ -7,6 +7,7 @@ import com.interviewos.api.ai.ComposedCase
 import com.interviewos.api.ai.ComposedRound
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.InterviewBrief
+import com.interviewos.api.ai.OfferedHint
 import com.interviewos.api.ai.ReportContent
 import com.interviewos.api.bank.BankQuestion
 import com.interviewos.api.bank.CompanyDirectory
@@ -36,7 +37,20 @@ import java.util.UUID
  * The model is a Mockito mock with a scripted default answer rather than a hand-written
  * fake, so a method added to [InterviewAi] later does not break this harness.
  */
-class BankRoundHarness {
+class BankRoundHarness(
+    /**
+     * Defaults to a bare mock whose `getTransaction` hands back a status object, which is
+     * enough for every scenario except one: it never calls
+     * `TransactionSynchronizationManager.initSynchronization()`, the way a real
+     * `PlatformTransactionManager` does, so it cannot tell a test whether a transaction
+     * was actually open at a given moment. A test that needs to observe that (task 056,
+     * L4's transaction-boundary guard) passes its own.
+     */
+    transactionManager: PlatformTransactionManager =
+        mock(PlatformTransactionManager::class.java) { invocation ->
+            if (invocation.method.name == "getTransaction") SimpleTransactionStatus() else null
+        },
+) {
     val mapper: JsonMapper = JsonMapper.builder().addModule(KotlinModule.Builder().build()).build()
     val repository: SessionRepository = mock(SessionRepository::class.java)
     val directory: CompanyDirectory = mock(CompanyDirectory::class.java)
@@ -53,18 +67,29 @@ class BankRoundHarness {
     var case: ComposedCase? = null
     var assessment: AnswerAssessment? = null
     var report: ReportContent? = null
+    var hint: OfferedHint? = null
 
     /** What the model reads out of a candidate's one-line query, when a test exercises the round composer. */
     var composedRound: ComposedRound? = null
+
+    /**
+     * Called just before the mock resolves, with the name of the [InterviewAi] method
+     * invoked — lets a test observe ambient state (e.g. whether a transaction is open, via
+     * a [RecordingTransactionManager]) at the exact moment the model is "called" (task 056,
+     * L4).
+     */
+    var onAiCall: ((String) -> Unit)? = null
 
     val ai: InterviewAi =
         mock(InterviewAi::class.java) { invocation ->
             val brief = invocation.arguments.firstOrNull() as? InterviewBrief
             brief?.let { briefs += it }
+            onAiCall?.invoke(invocation.method.name)
             when (invocation.method.name) {
                 "composeCase" -> AiResult(checkNotNull(case), AiUsage.none("test"))
                 "composeRound" -> AiResult(checkNotNull(composedRound), AiUsage.none("test"))
                 "assessAnswer" -> AiResult(checkNotNull(assessment), AiUsage.none("test"))
+                "offerHint" -> AiResult(checkNotNull(hint), AiUsage.none("test"))
                 "composeReport" -> AiResult(checkNotNull(report), AiUsage.none("test"))
                 else -> RETURNS_DEFAULTS.answer(invocation)
             }
@@ -89,10 +114,7 @@ class BankRoundHarness {
             resumeService = resumeService,
             roundWorkspaceComposer = RoundWorkspaceComposer(ai, mapper, ProblemVerifier(ai, mapper), poolMaterial),
             codeRunner = mock(CodeRunner::class.java),
-            transactionManager =
-                mock(PlatformTransactionManager::class.java) { invocation ->
-                    if (invocation.method.name == "getTransaction") SimpleTransactionStatus() else null
-                },
+            transactionManager = transactionManager,
             backgroundExecutor = SyncTaskExecutor(),
         )
 

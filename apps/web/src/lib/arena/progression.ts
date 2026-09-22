@@ -177,3 +177,25 @@ export function dailyQuest(allChallenges: Challenge[], dateKey: string): Challen
   const shuffled = shuffle(allChallenges, rng);
   return shuffled.slice(0, Math.min(DAILY_QUEST_SIZE, shuffled.length));
 }
+
+/**
+ * Every calendar date (`YYYY-MM-DD`) that could be "today" for *someone* on Earth at this
+ * instant (task 056, L3). Real UTC offsets span UTC−12 to UTC+14 — 26 hours, so at most
+ * three distinct calendar dates are in play at once. Sampling every 15 minutes across that
+ * span (the finest offset granularity any timezone actually uses) and collecting the
+ * distinct dates is cheap and exact, without hard-coding an assumption about where the
+ * date boundaries inside the window fall.
+ *
+ * This lets a server component compute `dailyQuest` for every date a visitor could land on
+ * — still using the full corpus, server-side, where its size is free — and hand the client
+ * only the handful of challenges (at most `3 * DAILY_QUEST_SIZE`) those quests are made of,
+ * instead of all ~800.
+ */
+export function possibleDateKeysWorldwide(now: Date = new Date()): string[] {
+  const keys = new Set<string>();
+  for (let offsetMinutes = -12 * 60; offsetMinutes <= 14 * 60; offsetMinutes += 15) {
+    const shifted = new Date(now.getTime() + offsetMinutes * 60_000);
+    keys.add(localDateKey(shifted, "UTC"));
+  }
+  return Array.from(keys).sort();
+}

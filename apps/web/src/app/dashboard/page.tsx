@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/app-shell";
 import { ContinueLearning } from "@/components/continue-learning";
 import { DashboardPanel } from "@/components/dashboard-panel";
+import { getCourseOutlines } from "@/lib/course-outline";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -16,7 +17,7 @@ export default function DashboardPage() {
     <AppShell>
       <div className="flex flex-col gap-10">
         <DashboardPanel />
-        <ContinueLearning />
+        <ContinueLearning outlines={getCourseOutlines()} />
       </div>
     </AppShell>
   );

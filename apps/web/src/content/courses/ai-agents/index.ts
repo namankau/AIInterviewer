@@ -8,6 +8,12 @@ import { chapterExamplesBeatAdjectives } from "@/content/courses/ai-agents/07-ex
 import { chapterChainOfThought } from "@/content/courses/ai-agents/08-chain-of-thought";
 import { chapterAskingForStructure } from "@/content/courses/ai-agents/09-asking-for-structure";
 import { chapterWhenPromptingStopsWorking } from "@/content/courses/ai-agents/10-when-prompting-stops-working";
+import { chapterWhatAToolIs } from "@/content/courses/ai-agents/11-what-a-tool-is";
+import { chapterTheReactLoop } from "@/content/courses/ai-agents/12-the-react-loop";
+import { chapterWritingAToolDescription } from "@/content/courses/ai-agents/13-writing-a-tool-description";
+import { chapterStoppingConditions } from "@/content/courses/ai-agents/14-stopping-conditions";
+import { chapterObservationsAndRecovery } from "@/content/courses/ai-agents/15-observations-and-recovery";
+import { chapterHowAgenticIsYourSystem } from "@/content/courses/ai-agents/16-how-agentic-is-your-system";
 import type { Course } from "@/content/courses/types";
 
 /**
@@ -55,6 +61,17 @@ export const aiAgentsCourse: Course = {
         chapterChainOfThought,
         chapterAskingForStructure,
         chapterWhenPromptingStopsWorking,
+      ],
+    },
+    {
+      title: "From a model to an agent",
+      chapters: [
+        chapterWhatAToolIs,
+        chapterTheReactLoop,
+        chapterWritingAToolDescription,
+        chapterStoppingConditions,
+        chapterObservationsAndRecovery,
+        chapterHowAgenticIsYourSystem,
       ],
     },
   ],

@@ -19,6 +19,12 @@ import { chapterEmbeddings } from "@/content/courses/ai-agents/18-embeddings";
 import { chapterRetrievalAndRag } from "@/content/courses/ai-agents/19-retrieval-and-rag";
 import { chapterWhyVectorSearchIsNotMagic } from "@/content/courses/ai-agents/20-why-vector-search-is-not-magic";
 import { chapterShortAndLongTermMemory } from "@/content/courses/ai-agents/21-short-and-long-term-memory";
+import { chapterPromptChaining } from "@/content/courses/ai-agents/22-prompt-chaining";
+import { chapterRouting } from "@/content/courses/ai-agents/23-routing";
+import { chapterParallelisation } from "@/content/courses/ai-agents/24-parallelisation";
+import { chapterOrchestratorWorkers } from "@/content/courses/ai-agents/25-orchestrator-workers";
+import { chapterEvaluatorOptimiser } from "@/content/courses/ai-agents/26-evaluator-optimiser";
+import { chapterMultiAgentAndHandoffs } from "@/content/courses/ai-agents/27-multi-agent-and-handoffs";
 import type { Course } from "@/content/courses/types";
 
 /**
@@ -87,6 +93,17 @@ export const aiAgentsCourse: Course = {
         chapterRetrievalAndRag,
         chapterWhyVectorSearchIsNotMagic,
         chapterShortAndLongTermMemory,
+      ],
+    },
+    {
+      title: "More than one call",
+      chapters: [
+        chapterPromptChaining,
+        chapterRouting,
+        chapterParallelisation,
+        chapterOrchestratorWorkers,
+        chapterEvaluatorOptimiser,
+        chapterMultiAgentAndHandoffs,
       ],
     },
   ],

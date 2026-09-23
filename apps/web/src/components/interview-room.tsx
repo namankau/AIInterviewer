@@ -119,6 +119,8 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const answerRequestIds = useRef(new Map<number, string>());
+  const hintRequestIds = useRef(new Map<number, string>());
 
   // Consent, and only consent, decides whether the camera opens. Tying this to session
   // status meant a candidate who declined video was recorded anyway (PRD 12).
@@ -275,15 +277,19 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     liveTranscript.stop();
     setPhase("submitting");
     setError(null);
+    const requestId = answerRequestIds.current.get(turn.turnIndex) ?? crypto.randomUUID();
+    answerRequestIds.current.set(turn.turnIndex, requestId);
     try {
       const result = await submitAnswer(
         accessToken,
         sessionId,
         turn.turnIndex,
         captured.audio,
+        requestId,
         speaksLocally,
         endRound,
       );
+      answerRequestIds.current.delete(turn.turnIndex);
       if (result.sessionComplete || !result.nextTurn) {
         /*
          * A round ends with somebody saying it has.
@@ -415,8 +421,11 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     if (!accessToken || !turn || hintPending) return;
     setHintPending(true);
     setError(null);
+    const requestId = hintRequestIds.current.get(turn.turnIndex) ?? crypto.randomUUID();
+    hintRequestIds.current.set(turn.turnIndex, requestId);
     try {
-      setHint(await requestHint(accessToken, sessionId, turn.turnIndex));
+      setHint(await requestHint(accessToken, sessionId, turn.turnIndex, requestId));
+      hintRequestIds.current.delete(turn.turnIndex);
     } catch (cause) {
       setError(
         cause instanceof ApiRequestError

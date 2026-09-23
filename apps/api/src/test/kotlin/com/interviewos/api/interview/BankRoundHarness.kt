@@ -54,7 +54,11 @@ class BankRoundHarness(
     val mapper: JsonMapper = JsonMapper.builder().addModule(KotlinModule.Builder().build()).build()
     val repository: SessionRepository =
         mock(SessionRepository::class.java) { invocation ->
-            if (invocation.method.returnType == Boolean::class.javaPrimitiveType) true else RETURNS_DEFAULTS.answer(invocation)
+            when (invocation.method.returnType) {
+                Boolean::class.javaPrimitiveType -> true
+                TurnRequestClaim::class.java -> TurnRequestClaim(TurnRequestClaimStatus.ACQUIRED)
+                else -> RETURNS_DEFAULTS.answer(invocation)
+            }
         }
     val directory: CompanyDirectory = mock(CompanyDirectory::class.java)
     val bank: QuestionBankRepository = mock(QuestionBankRepository::class.java)

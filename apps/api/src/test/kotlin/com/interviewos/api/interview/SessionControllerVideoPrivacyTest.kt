@@ -5,6 +5,7 @@ import com.interviewos.api.common.ApiExceptionHandler
 import com.interviewos.api.config.ApiSecurityTestConfiguration
 import com.interviewos.api.config.SecurityConfig
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.mockingDetails
 import org.mockito.Mockito.verifyNoInteractions
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
@@ -18,6 +19,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multi
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
+import kotlin.test.assertEquals
 
 @WebMvcTest(SessionController::class)
 @Import(SecurityConfig::class, ApiErrorWriter::class, ApiExceptionHandler::class, ApiSecurityTestConfiguration::class)
@@ -51,9 +53,43 @@ class SessionControllerVideoPrivacyTest {
                     .file(audio)
                     .file(video)
                     .param("turnIndex", "0")
+                    .param("requestId", "176bd50a-e9a4-4df4-ad50-1c2f47a0c283")
                     .with(tokenFor(candidate)),
             ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.error").value("video_not_supported"))
+
+        verifyNoInteractions(interviewService)
+    }
+
+    @Test
+    fun `forwards the answer request ID to the idempotency boundary`() {
+        val requestId = UUID.fromString("176bd50a-e9a4-4df4-ad50-1c2f47a0c283")
+        val audio = MockMultipartFile("audio", "answer.webm", "audio/webm", byteArrayOf(1, 2, 3))
+
+        mockMvc
+            .perform(
+                multipart("/api/v1/sessions/$sessionId/turns")
+                    .file(audio)
+                    .param("turnIndex", "0")
+                    .param("requestId", requestId.toString())
+                    .with(tokenFor(candidate)),
+            ).andExpect(status().isOk)
+
+        val call = mockingDetails(interviewService).invocations.single { it.method.name == "submitAnswer" }
+        assertEquals(requestId, call.arguments[6])
+    }
+
+    @Test
+    fun `requires an answer request ID`() {
+        val audio = MockMultipartFile("audio", "answer.webm", "audio/webm", byteArrayOf(1, 2, 3))
+
+        mockMvc
+            .perform(
+                multipart("/api/v1/sessions/$sessionId/turns")
+                    .file(audio)
+                    .param("turnIndex", "0")
+                    .with(tokenFor(candidate)),
+            ).andExpect(status().isBadRequest)
 
         verifyNoInteractions(interviewService)
     }

@@ -91,6 +91,7 @@ class SessionController(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
         @RequestParam turnIndex: Int,
+        @RequestParam requestId: UUID,
         @RequestParam audio: MultipartFile,
         @RequestParam(required = false) video: MultipartFile?,
         // See StartSessionRequest.speaksLocally. Sent per turn because it describes the
@@ -115,6 +116,7 @@ class SessionController(
             audio = AnswerAudio(audio.bytes, audio.contentType ?: "audio/webm"),
             speaksLocally = speaksLocally,
             endRound = endRound,
+            requestId = requestId,
         )
     }
 
@@ -148,7 +150,8 @@ class SessionController(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
         @PathVariable turnIndex: Int,
-    ): HintView = interviewService.requestHint(callerOf(jwt), id, turnIndex)
+        @RequestParam requestId: UUID,
+    ): HintView = interviewService.requestHint(callerOf(jwt), id, turnIndex, requestId)
 
     @PostMapping("/sessions/{id}/abandon")
     @ResponseStatus(HttpStatus.NO_CONTENT)

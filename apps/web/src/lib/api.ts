@@ -287,9 +287,10 @@ export function requestHint(
   accessToken: string,
   sessionId: string,
   turnIndex: number,
+  requestId: string,
 ): Promise<HintView> {
   return apiSend<HintView>(
-    `/api/v1/sessions/${sessionId}/turns/${turnIndex}/hint`,
+    `/api/v1/sessions/${sessionId}/turns/${turnIndex}/hint?requestId=${encodeURIComponent(requestId)}`,
     "POST",
     accessToken,
   );
@@ -345,12 +346,14 @@ export function submitAnswer(
   sessionId: string,
   turnIndex: number,
   audio: Blob,
+  requestId: string,
   speaksLocally = false,
   /** Submit pressed mid-answer: assess this answer as the last one and end the round. */
   endRound = false,
 ): Promise<SubmitAnswerResponse> {
   const form = new FormData();
   form.append("turnIndex", String(turnIndex));
+  form.append("requestId", requestId);
   form.append("endRound", String(endRound));
   // Told per turn rather than per session: it describes this browser, and the same
   // candidate may come back on a phone with no usable voice.

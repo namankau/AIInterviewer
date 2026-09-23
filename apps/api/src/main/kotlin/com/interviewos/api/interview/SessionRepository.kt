@@ -537,6 +537,127 @@ class SessionRepository(
             .optional()
             .orElse(null)
 
+    fun claimAnswerRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+        leaseSeconds: Long,
+    ): TurnRequestClaim = claimTurnRequest(sessionId, userId, turnIndex, requestId, leaseSeconds, TurnRequestKind.ANSWER)
+
+    fun claimHintRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+        leaseSeconds: Long,
+    ): TurnRequestClaim = claimTurnRequest(sessionId, userId, turnIndex, requestId, leaseSeconds, TurnRequestKind.HINT)
+
+    private fun claimTurnRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+        leaseSeconds: Long,
+        kind: TurnRequestKind,
+    ): TurnRequestClaim {
+        val claimed =
+            jdbcClient
+                .sql(
+                    """
+                    update public.session_turns t
+                       set ${kind.requestColumn} = :request,
+                           ${kind.leaseColumn} = now() + (:leaseSeconds * interval '1 second')
+                     where t.session_id = :s and t.user_id = :u and t.turn_index = :i
+                       and t.${kind.completedColumn} is null
+                       and t.${kind.responseColumn} is null
+                       and (t.${kind.requestColumn} is null or t.${kind.leaseColumn} <= now())
+                       and exists (
+                           select 1
+                             from public.sessions s
+                            where s.id = t.session_id and s.user_id = t.user_id and s.status = 'in_progress'
+                       )
+                    returning ${kind.requestColumn}
+                    """.trimIndent(),
+                ).param("request", requestId)
+                .param("leaseSeconds", leaseSeconds)
+                .param("s", sessionId)
+                .param("u", userId)
+                .param("i", turnIndex)
+                .query(UUID::class.java)
+                .optional()
+                .isPresent
+        if (claimed) return TurnRequestClaim(TurnRequestClaimStatus.ACQUIRED)
+
+        return jdbcClient
+            .sql(
+                """
+                select ${kind.requestColumn} as request_id,
+                       ${kind.leaseColumn} as lease_until,
+                       ${kind.responseColumn}::text as response
+                  from public.session_turns
+                 where session_id = :s and user_id = :u and turn_index = :i
+                """.trimIndent(),
+            ).param("s", sessionId)
+            .param("u", userId)
+            .param("i", turnIndex)
+            .query { rs, _ ->
+                val response = rs.getString("response")
+                val leaseUntil = rs.getTimestamp("lease_until")?.toInstant()
+                when {
+                    response != null -> {
+                        TurnRequestClaim(TurnRequestClaimStatus.COMPLETED, response)
+                    }
+
+                    rs.getObject("request_id") != null && leaseUntil?.isAfter(Instant.now()) == true -> {
+                        TurnRequestClaim(TurnRequestClaimStatus.IN_PROGRESS)
+                    }
+
+                    else -> {
+                        TurnRequestClaim(TurnRequestClaimStatus.UNAVAILABLE)
+                    }
+                }
+            }.optional()
+            .orElse(TurnRequestClaim(TurnRequestClaimStatus.UNAVAILABLE))
+    }
+
+    fun releaseAnswerRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+    ) = releaseTurnRequest(sessionId, userId, turnIndex, requestId, TurnRequestKind.ANSWER)
+
+    fun releaseHintRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+    ) = releaseTurnRequest(sessionId, userId, turnIndex, requestId, TurnRequestKind.HINT)
+
+    private fun releaseTurnRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+        kind: TurnRequestKind,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                update public.session_turns
+                   set ${kind.requestColumn} = null,
+                       ${kind.leaseColumn} = null
+                 where session_id = :s and user_id = :u and turn_index = :i
+                   and ${kind.requestColumn} = :request
+                   and ${kind.responseColumn} is null
+                """.trimIndent(),
+            ).param("s", sessionId)
+            .param("u", userId)
+            .param("i", turnIndex)
+            .param("request", requestId)
+            .update() == 1
+
     /**
      * Records help the candidate asked for, on the turn they asked it on.
      *
@@ -550,23 +671,35 @@ class SessionRepository(
         turnIndex: Int,
         hintText: String,
         hintLevel: String,
-    ) {
+        requestId: UUID,
+        responseJson: String,
+    ): Boolean =
         jdbcClient
             .sql(
                 """
                 update public.session_turns
                    set hint_requested_at = now(),
                        hint_text = :hint,
-                       hint_level = cast(:level as public.intervention_type)
+                       hint_level = cast(:level as public.intervention_type),
+                       hint_response = cast(:response as jsonb)
                  where session_id = :s and user_id = :u and turn_index = :i
+                   and answered_at is null
+                   and hint_requested_at is null
+                   and hint_request_id = :request
+                   and exists (
+                       select 1
+                         from public.sessions s
+                        where s.id = :s and s.user_id = :u and s.status = 'in_progress'
+                   )
                 """.trimIndent(),
             ).param("hint", hintText)
             .param("level", hintLevel)
+            .param("response", responseJson)
+            .param("request", requestId)
             .param("s", sessionId)
             .param("u", userId)
             .param("i", turnIndex)
-            .update()
-    }
+            .update() == 1
 
     fun recordAnswer(
         sessionId: UUID,
@@ -580,6 +713,7 @@ class SessionRepository(
         intervention: String,
         interventionNote: String?,
         deliveryNote: String?,
+        requestId: UUID,
     ): Boolean =
         jdbcClient
             .sql(
@@ -596,6 +730,7 @@ class SessionRepository(
                        delivery_note = :delivery
                  where session_id = :s and user_id = :u and turn_index = :i
                    and answered_at is null
+                   and answer_request_id = :request
                    and exists (
                        select 1
                          from public.sessions s
@@ -610,6 +745,31 @@ class SessionRepository(
             .param("intervention", intervention)
             .param("note", interventionNote)
             .param("delivery", deliveryNote)
+            .param("request", requestId)
+            .param("s", sessionId)
+            .param("u", userId)
+            .param("i", turnIndex)
+            .update() == 1
+
+    fun completeAnswerRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+        responseJson: String,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                update public.session_turns
+                   set answer_response = cast(:response as jsonb)
+                 where session_id = :s and user_id = :u and turn_index = :i
+                   and answer_request_id = :request
+                   and answered_at is not null
+                   and answer_response is null
+                """.trimIndent(),
+            ).param("response", responseJson)
+            .param("request", requestId)
             .param("s", sessionId)
             .param("u", userId)
             .param("i", turnIndex)
@@ -834,7 +994,7 @@ data class TurnRow(
     val interventionNote: String? = null,
     /** Where this exchange sat in the round: `warmup`, `main` or `closing`. */
     val phase: String = TurnPhase.MAIN.dbValue,
-    /** What the interviewer observed about delivery, from the video when there was one. */
+    /** What the interviewer observed about delivery from the spoken answer. */
     val deliveryNote: String? = null,
     /** Set when the candidate asked for help on this question, rather than being offered it. */
     val hintRequestedAt: Instant? = null,
@@ -851,6 +1011,28 @@ data class TurnRow(
      */
     val poolStrongAnswerCovers: List<String> = emptyList(),
 )
+
+enum class TurnRequestClaimStatus {
+    ACQUIRED,
+    COMPLETED,
+    IN_PROGRESS,
+    UNAVAILABLE,
+}
+
+data class TurnRequestClaim(
+    val status: TurnRequestClaimStatus,
+    val responseJson: String? = null,
+)
+
+private enum class TurnRequestKind(
+    val requestColumn: String,
+    val leaseColumn: String,
+    val responseColumn: String,
+    val completedColumn: String,
+) {
+    ANSWER("answer_request_id", "answer_request_lease_until", "answer_response", "answered_at"),
+    HINT("hint_request_id", "hint_request_lease_until", "hint_response", "hint_requested_at"),
+}
 
 /** A bank question a candidate has been asked, for selection. */
 data class AskedBankQuestion(

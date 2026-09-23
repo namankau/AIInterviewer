@@ -24,6 +24,7 @@ class InterviewStateTransitionTest {
 
     @Test
     fun `a lost answer-write race cannot create a next turn`() {
+        val requestId = UUID.fromString("176bd50a-e9a4-4df4-ad50-1c2f47a0c283")
         givenRunningTurn()
         harness.assessment = assessment(nextQuestion = "What happened next?")
         given(
@@ -39,12 +40,20 @@ class InterviewStateTransitionTest {
                 "none",
                 null,
                 null,
+                requestId,
             ),
         ).willReturn(false)
 
         val failure =
             assertFailsWith<ApiException> {
-                harness.service.submitAnswer(candidate, sessionId, 2, AnswerAudio(byteArrayOf(1), "audio/webm"), speaksLocally = true)
+                harness.service.submitAnswer(
+                    candidate,
+                    sessionId,
+                    2,
+                    AnswerAudio(byteArrayOf(1), "audio/webm"),
+                    speaksLocally = true,
+                    requestId = requestId,
+                )
             }
 
         assertEquals("session_state_changed", failure.code)

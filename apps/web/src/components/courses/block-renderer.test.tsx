@@ -58,6 +58,10 @@ const ALL_KINDS: Block[] = [
       { label: "Step two", text: "Second stage." },
     ],
   },
+  // Task 057. A real scenario id, because the renderer resolves it through the scenario
+  // registry — a chapter naming a scenario that does not exist renders an honest error
+  // instead, which the case below asserts separately.
+  { kind: "agentlab", scenarioId: "refund-status" },
 ];
 
 // The Java/Python choice lives in `localStorage` (module-scoped, not React state — see
@@ -87,13 +91,30 @@ describe("BlockRenderer", () => {
     expect(screen.getByText("System.out.println(2);")).toBeInTheDocument();
     // The playground itself is code-split (next/dynamic) so a chapter with no playground
     // block never fetches it — its own content resolves asynchronously here.
-    expect(await screen.findByText("A prompt line.")).toBeInTheDocument();
-    expect(await screen.findByText(/Running Java in the browser isn.t available yet/)).toBeInTheDocument();
+    //
+    // The explicit timeout is not a weakened assertion: the element must still appear, and
+    // the test still fails if it never does. It is there because this is the one assertion
+    // in the suite that waits on a real dynamic `import()` of CodeMirror and both language
+    // grammars, and the default one-second budget is not reliably enough for that once the
+    // whole suite is running in parallel (task 057 — it failed here before this task's
+    // content was added, and with this task's fixture removed).
+    const wait = { timeout: 10_000 };
+    expect(await screen.findByText("A prompt line.", {}, wait)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Running Java in the browser isn.t available yet/, {}, wait),
+    ).toBeInTheDocument();
     expect(screen.getByText("A concept title")).toBeInTheDocument();
     expect(screen.getByText("A vs B")).toBeInTheDocument();
     expect(screen.getByText("Column A")).toBeInTheDocument();
     expect(screen.getByText("A pipeline")).toBeInTheDocument();
     expect(screen.getByText("First stage.")).toBeInTheDocument();
+    expect(screen.getByText(/simulation — no model is called/i)).toBeInTheDocument();
+  });
+
+  it("says so plainly when a chapter names an agent lab scenario that does not exist", () => {
+    render(<BlockRenderer blocks={[{ kind: "agentlab", scenarioId: "no-such-scenario" }]} />);
+
+    expect(screen.getByText(/no-such-scenario.*is not installed/i)).toBeInTheDocument();
   });
 
   it("caps prose blocks at 70ch but lets full-bleed blocks (viz, code, table, compare, steps, playground) use the full width", () => {
@@ -181,7 +202,7 @@ describe("BlockRenderer", () => {
     const { container } = render(
       <BlockRenderer
         blocks={[{ kind: "code", code: "int x = 1;" }]}
-        highlightedCode={[{ java: '<pre class="shiki" tabindex="0"><code>marked up</code></pre>', python: null }]}
+        highlightedCode={[{ base: '<pre class="shiki" tabindex="0"><code>marked up</code></pre>', python: null }]}
       />,
     );
 

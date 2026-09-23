@@ -8,12 +8,13 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { courses } from "@/content/courses";
 import { allArenaChallenges, challengesForCourse } from "@/lib/arena/corpus";
+import { dailyQuest, possibleDateKeysWorldwide } from "@/lib/arena/progression";
 
 export const metadata: Metadata = {
   title: "Arena — AceMyInterview",
   description:
-    "Short, sharp practice rounds derived from every Java and DSA chapter — spot the mistake, predict the " +
-    "output, say what happens next. Free, and playable with no account.",
+    "Short, sharp practice rounds derived from every chapter of every course — spot the mistake, predict " +
+    "the output, say what happens next. Free, and playable with no account.",
 };
 
 /**
@@ -23,6 +24,12 @@ export const metadata: Metadata = {
  * real derived corpus.
  */
 export default function ArenaPage() {
+  // Computed here, against the full corpus, server-side — only the resulting handful of
+  // challenges (at most 3 dates * DAILY_QUEST_SIZE) crosses into the client (task 056, L3).
+  const questsByDate = Object.fromEntries(
+    possibleDateKeysWorldwide().map((dateKey) => [dateKey, dailyQuest(allArenaChallenges, dateKey)]),
+  );
+
   return (
     <div className="min-h-dvh">
       <CourseSiteHeader />
@@ -32,15 +39,15 @@ export default function ArenaPage() {
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Free, always</p>
           <h1 className="text-display text-balance text-ink">Practice that feels like a game, taught from real chapters.</h1>
           <p className="max-w-xl text-body text-ink-muted">
-            Every question here comes straight from a Java or DSA chapter that already exists — a mistake to
-            spot, an output to predict, a diagram to read one step ahead. Answer, see why, and jump straight
-            back to the chapter behind it.
+            Every question here comes straight from a chapter that already exists — a mistake to spot, an
+            output to predict, a diagram to read one step ahead. Answer, see why, and jump straight back to
+            the chapter behind it.
           </p>
         </header>
 
         <div className="mt-10 flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="flex-1">
-            <ArenaDailyQuest allChallenges={allArenaChallenges} />
+            <ArenaDailyQuest questsByDate={questsByDate} />
           </div>
           <div className="lg:w-96 lg:shrink-0">
             <ProgressSummary />

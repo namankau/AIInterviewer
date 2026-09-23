@@ -10,6 +10,8 @@ import { InlineText } from "@/components/courses/inline-text";
 import { ConceptCard } from "@/components/courses/concept-card";
 import { CompareBlock } from "@/components/courses/compare-block";
 import { StepsBlock } from "@/components/courses/steps-block";
+import { AgentLab } from "@/components/courses/agent-lab";
+import { getScenario } from "@/lib/agent-lab/scenarios";
 
 /**
  * Block kinds allowed to break out of the ~70ch prose column (task 052) — the diagrams,
@@ -24,6 +26,7 @@ const FULL_BLEED_KINDS: ReadonlySet<Block["kind"]> = new Set([
   "table",
   "compare",
   "steps",
+  "agentlab",
 ]);
 
 /**
@@ -239,6 +242,21 @@ function BlockView({
 
     case "steps":
       return <StepsBlock block={block} />;
+
+    case "agentlab": {
+      // A chapter naming a scenario that does not exist is a content bug, caught by the
+      // content-integrity test. If one ever slips through, say so plainly rather than
+      // rendering an empty box the reader has to guess about.
+      const scenario = getScenario(block.scenarioId);
+      if (!scenario) {
+        return (
+          <p className="rounded-md border border-danger/30 bg-danger/5 px-5 py-4 text-caption text-ink-muted">
+            This chapter refers to an agent lab scenario ({block.scenarioId}) that is not installed.
+          </p>
+        );
+      }
+      return <AgentLab scenario={scenario} />;
+    }
 
     case "playground":
       return (

@@ -1,136 +1,146 @@
-# Handoff — 2026-09-21 (second run of the day)
+# Handoff — 2026-09-23 (run started 22 Sep)
 
 ## Task
-Add a gamified, interactive learning section "like scalequest.io", leveraging open source
-rather than reinventing it. `tasks/task-055-arena-gamified-practice.md`.
+Two things you asked for in one session: cut the latency you were feeling, and add an AI /
+Agentic AI course with somewhere to actually build an agent.
+`tasks/task-056-latency-hot-paths.md`, `tasks/task-057-ai-and-agentic-ai-course.md`.
 
 ---
 
-## The research changed the design — read this first
+## Part 1 — latency
 
-I had a researcher look at scalequest.io rather than assume what it was. **It is not a quiz
-bank with XP bolted on**, which is the obvious thing to build and the wrong thing:
+You said "a lot of latency in certain operations" without naming them, so I measured rather
+than guessed: a real `next build`, then the built output on disk. Four defects had numbers
+attached. **Every fix has a before/after and a guard test**, so none of them can quietly
+come back.
 
-- You read a short crisis narrative, you look at a **diagram of the system**, you make one
-  architectural call, and you are told immediately whether it was sound.
-- Progression runs through four **themed campaigns of rising difficulty**, checkpointed.
-- The mechanics underneath are plain multiple choice. **What makes it a game is the framing
-  — story plus diagram around each decision — not the scoring.**
-
-So the Arena leads with the picture where a chapter has one, and it does **not** copy
-scalequest's subject matter: its content is system design, which CLAUDE.md already settles is
-refused for a campus fresher. Authored story content is a content task, not this one.
-
-## What I built
-
-**`/arena`** — short, keyboard-first practice runs, public, free, and playable with no
-account.
-
-**The architecture that matters: the Arena has no content store of its own.**
-`lib/arena/derive.ts` is a pure function from `courses` to `Challenge[]` — no I/O, no clock,
-no `Math.random`. It derives **~800 challenges from the 65 chapters that already exist**:
-
-| Kind | Count | Derived from |
+| | Before | After |
 |---|---|---|
-| `mcq` | 195 | the existing `quiz` blocks, directly |
-| `what-next` | ~253 | a `viz` frame — "what does the next step say?" |
-| `spot-mistake` | ~239 | the mistake/fix pairs already inside `pitfall` blocks |
-| `predict-output` | ~74 | `code`/`playground` blocks with real pasted output |
-| `which-column` | ~41 | `compare` blocks |
+| `/dashboard` client JS | **744 KB chunk** carrying all 65 chapters of prose | gone; no chunk contains chapter content |
+| `/arena` HTML | 910,874 bytes | **38,126** (and that is now with *three* courses) |
+| `/arena/dsa` | 547,244 | 46,470 |
+| `/arena/java` | 445,855 | 48,892 |
+| Gemini call | held a pooled Postgres connection open for its whole duration | outside the transaction entirely |
+| Proxy, every navigation | network round trip to Supabase auth | local signature verification (**PR #14**, see below) |
 
-That corpus was already reviewed for accuracy, it **cannot drift** from the courses, and it
-grows every time a chapter is written. `derive.test.ts` pins a floor of 700 so a content
-refactor cannot silently empty the Arena.
+**What was actually wrong, in one line each:**
 
-**Distractors are never invented.** They are only ever real strings drawn from the same
-content — other frame notes in the same visualisation, other real outputs in the same course,
-the other half of a pitfall pair. When the pool cannot honestly supply one, the challenge is
-**dropped**. That rule is the difference between a learning tool and an actively harmful one:
-a plausible wrong answer that is secretly also right teaches the wrong thing.
+- **The dashboard** was shipping every code sample, quiz and diagram frame in both courses to
+  the browser — to draw a "Continue learning" card that needs slugs and titles.
+  `continue-learning.tsx` was a client component importing the content barrel.
+- **The Arena** serialised its entire ~800-challenge corpus, `Viz` frames included, into the
+  page as props. The daily quest genuinely cannot be chosen server-side, because "today" has
+  to be the visitor's own calendar day — but the server *can* narrow it to the at most three
+  dates anyone on earth could currently call today, and send only those.
+- **`submitAnswer` and `requestHint`** were `@Transactional` around the model call. The fix
+  was already written in that file: `inTransaction` exists so a method can bracket its writes
+  without bracketing the several-second model call between them.
+- **The proxy** called `supabase.auth.getUser()` on every request — a round trip to Supabase's
+  auth server on every navigation, and, because Next prefetches links entering the viewport,
+  on every prefetch too. The courses index alone has 65 links on it.
 
-**The rest, by file:**
-- `lib/arena/scheduler.ts` — the only place `ts-fsrs` is imported. Narrows FSRS's four grades
-  to two, deliberately: a right/wrong quiz gives no honest signal for "recalled but it was a
-  struggle", and guessing would invent precision the interaction does not support.
-- `lib/arena/progression.ts` — XP, level curve (`50·n²`), streak, badges, daily quest. All
-  hand-rolled, all named constants. **No streak multiplier** — a reward that varies in ways
-  the learner cannot see coming is closer to a slot machine than to honest progress.
-- `lib/arena/storage.ts` — `localStorage` behind a versioned key, every read and write in
-  try/catch.
-- `lib/arena/celebrate.ts` — `canvas-confetti`, gated on `prefers-reduced-motion` at the call
-  site rather than trusting the library's opt-in flag. Milestones only, never every answer.
-- `components/arena/*` — the session, challenge card, progress summary, daily quest.
-- Entry points: `rail-nav.tsx`, the course index, a chapter page, the landing page.
+**The guards:** a test that fails if any client component imports the course barrel again; a
+test capping how many challenges may cross into the client; a test that fails if the model
+call is ever put back inside a transaction. The last one was verified by putting the call
+back and watching it fail, then reverting.
+
+## Part 2 — the AI and Agentic AI course
+
+`/courses/ai-agents` — **33 chapters in six modules**, written to the bar the other two
+courses are held to.
+
+- **99 quizzes** (three per chapter), 33 everyday analogies, 33 runnable Python playgrounds,
+  and the pitfall / remember / interview boxes each chapter carries.
+- **Every analogy names the point where it stops being true.** An unbounded analogy is just
+  the next misconception.
+- **Grounded in the primary sources and cited in the prose**, per your "don't reinvent the
+  wheel" instruction — ReAct (arXiv:2210.03629), chain-of-thought (2201.11903), RAG
+  (2005.11401), the transformer paper (1706.03762), Anthropic's *Building Effective Agents*
+  for the workflow patterns, and the Model Context Protocol specification itself rather than
+  a blog summary of it.
+- The Arena picked the course up for free — `/arena/ai-agents` exists without anything being
+  authored twice, because challenges derive from the content.
+
+**The agent lab** is the interactive part you asked for. The learner picks a goal, writes the
+system prompt, chooses tools, sets a step limit, and steps through the thought / action /
+observation trace a frame at a time. It appears in four chapters and teaches by letting them
+break it: a vague tool description producing a wrong call, a loop with no stopping condition,
+an agent that cannot see its own observations.
+
+---
 
 ## Assumptions I made
-- **Campaigns map onto the existing module tree** rather than a new structure — that is the
-  half of scalequest's shape that carries most of the feel, and it was nearly free.
-- **The daily quest is 7 challenges**, seeded from the date string alone, so it is identical
-  across a refresh and across devices.
-- **Badges require real coverage**, not counts — "chapter cleared" means every derived
-  challenge from that chapter answered correctly. Deliberately hard; no participation
-  trophies.
-- **A `what-next` distractor is a *later* state of the same algorithm.** Only one is
-  literally next, so it is honest, and it tests order of operations rather than wording.
-- **Logged out only.** Account sync, server persistence and any leaderboard are out of scope
-  here — they touch user data and RLS, so they are their own task and go through a **PR**.
+
+- **The agent lab is a deterministic local simulation, and the UI says so in as many words**
+  ("Simulation — no model is called"). Rule 7 forbids live spend without you, and a lab that
+  let a reader believe a scripted trace came from a real model would be the same failure as a
+  report describing eye contact nothing watched. **It is built so wiring a real model in later
+  is a runtime swap, not a rewrite** — but that commits real spend, so it is yours to decide.
+- Code in this course is **Python, not Java** — that is what the field is written in, and the
+  playground genuinely runs Python in the browser.
+- **The landing page, `/courses` and `/arena` stopped saying "Java and DSA"** and their card
+  grids went to three columns. Three cards in a four-column grid leaves a hole.
+- `perf/auth-claims-in-proxy` went to a **PR rather than a merge** because it touches auth
+  (rule 1). The other two branches merged on green CI.
 
 ## What I could NOT verify
-- **Nothing has been looked at in a browser.** Still no browser automation in this session.
-  This is the third run in a row where that is the main gap. **Please look at:** `/arena`
-  (empty state, before any progress exists), a run mid-flight, the result screen, and
-  `/arena/[course]` — at 1280px, 1440px, 1920px, on mobile, and in dark mode.
-- **Nobody has played it.** Whether a 7-challenge run actually feels like a game rather than
-  a quiz is exactly the judgement CI cannot make, and it is the whole point of the task.
-- Whether `what-next` reads as fun or as tedious at ~253 challenges — it is the largest slice
-  of the corpus and the least proven.
-- Confetti on a real milestone, and its reduced-motion behaviour.
+
+- **Nothing has been looked at in a browser.** This is the fourth run in a row where that is
+  the main gap. Please look at: `/courses/ai-agents`, the agent lab in chapters 12, 13, 14
+  and 15 (does stepping through a trace actually teach the loop, or is it a toy?), the
+  three-card grids on `/` and `/courses`, and `/arena/ai-agents`.
+- **Nobody has taken the course.** Whether 33 chapters reads as approachable to a class-12
+  student or as a wall is exactly the judgement CI cannot make.
+- ~~**PR #14's benefit depends on something only you can check.**~~ **Resolved 23 Sep.** The
+  project's JWKS endpoint publishes an ES256 key, and the owner confirmed in the dashboard
+  that it is the **Current** signing key, with the legacy HS256 key demoted to previously-used.
+  So tokens are asymmetrically signed and `getClaims()` verifies them locally — PR #14 delivers
+  the full win, not the fallback. The one residual: tokens issued before the rotation are
+  HS256 and cannot be verified locally, so those still cost a server call until they expire
+  (an hour on Supabase's default). Self-clearing.
+- **No latency was timed against anything live.** Every number above is structural — bytes on
+  disk, transaction-open state — not a stopwatch against a real model or a real Supabase
+  project. Rule 7.
+- Whether `/arena/[course]`'s new on-demand fetch shows a visible loading flash worth
+  polishing.
 
 ## Verification status
-- typecheck / lint / tests / build: **pass**. CI green on the branch tip `3702248` (`headSha`
-  checked against the tip, not "latest green run"), and green again on `develop` at
-  `d3d2585` after the merge.
-- **No migrations in this task** — confirmed by diffing `supabase/migrations` across the
-  whole run. Nothing to `db:push`.
-- I ran `npm install` at the repo root after merging, so the two new packages exist on disk
-  locally. This is the one class of breakage green CI structurally cannot see — it runs
-  `npm ci` from clean — and it bit us with Shiki last run.
-
-## Dependencies
-Two, both pre-approved after a research pass read the actual LICENSE file rather than a
-README badge:
-- **`ts-fsrs` 5.4.2 (MIT, ~7.2KB gzipped, zero runtime deps)** — the reference TypeScript
-  implementation of FSRS, the algorithm that replaced SM-2 inside Anki. Scheduling review is
-  the one genuinely hard algorithm here. Rejected: `supermemo`, `@dtjv/sm-2`,
-  `@kirklin/supermemo2` (all older SM-2), and hand-rolling.
-- **`canvas-confetti` 1.9.4 (ISC, ~4.3KB gzipped, zero deps)** plus its `@types`.
-
-Everything else is hand-rolled, per the research: XP curves, streaks and badges have no
-library worth taking, and adopting one means bending our schema to someone else's.
+- typecheck / lint / tests / build: **pass**, both apps, on the merged result.
+  1,974 web tests pass; `./gradlew ktlintCheck test build` green.
+- CI verified **against the exact branch tip each time**, not "the latest green run" —
+  `f3cd4482` for the perf branch, `398d16e6` for the course branch.
+- Migrations checked with `migration list --linked` before merging: every local row has a
+  matching `remote`, and **neither branch adds a migration**. Nothing to `db:push`.
+- **No new dependencies** in either piece of work.
 
 ## Merge status
-- Merged into `develop` at **`d3d2585`**. Nothing pushed to `main`.
-- **The merge is 2683 lines, well over the ~800-line reviewability guideline** in CLAUDE.md.
-  It should probably have been split into two tasks — engine and UI — and I am recording that
-  rather than glossing it.
-- PR #9 (`develop` → `main`) is still open and now understates the release by two full rounds.
+- **`develop` at `0d508ea`** — both the latency work (`95dfb0c`) and the course (`0d508ea`).
+- **PR #14** (`perf/auth-claims-in-proxy` → `develop`) open, CI green, awaiting you because it
+  touches auth.
+- Nothing pushed to `main`. PR #9 (`develop` → `main`) is still open and now understates the
+  release by a full course and a latency pass.
+- The course merge is ~12,000 lines. That is far over the ~800-line guideline, and it is a
+  course, so I am recording it rather than pretending it is reviewable in one sitting — it
+  went in as seven commits, one per module, which is how to read it.
 
-## Interruptions
-`build-arena` was killed by the session usage limit (resets 1:50pm IST) with step 4 in hand —
-but step 4 had already been committed and pushed, and its worktree was clean, so **nothing
-was lost and no resume was needed**. CI failed on step 3 (`3b2acf2`); the agent fixed it
-itself and the branch tip is green.
+## Found, not fixed — worth its own task
+`SessionRepository.recordAnswer`'s UPDATE has **no `WHERE answered_at IS NULL` guard**. It is
+an unconditional overwrite keyed on `(session_id, user_id, turn_index)`. So protection against
+two concurrent submits for the same turn has never been a database-level guarantee — before
+or after this run — and rests on an application-level read-then-write plus the client not
+double-submitting. The comments in that file imply a stronger guard than exists.
+
+Separately: `block-renderer.test.tsx` flakes under full-suite load on this machine (a
+`findByText` racing the lazy playground import). It passes in isolation and on CI. Its timeout
+should be raised before it wastes somebody's afternoon.
 
 ## Suggested next task
-1. **Play it**, and tell me whether it feels like a game. Nothing else I can do substitutes.
-2. A dev-only report preview route (~30 lines) — still the cheapest permanent fix to the
-   "nobody has looked at it" problem.
+Open `/courses/ai-agents` and play the agent lab. If the lab works, the obvious follow-up is
+whether it should call a real model — which is a spend decision, so it is yours.
 
 ## Open questions for you
-- **Account sync and a leaderboard** — worth building? A leaderboard needs a privacy decision
-  about what a student's name looks like to strangers, which is yours, not mine.
-- **Do you want authored narrative content** (scalequest's actual differentiator) on top of
-  the campaign structure? That is a content-writing task of real size, not a code one.
-- Still open from earlier runs: the Java runner (self-hosted Piston — spend and an
-  arbitrary-code-execution surface), one live generation run for the aptitude generator
-  (**it has never produced a real question**), and whether 1600px is the right reader ceiling.
+- **Should the agent lab ever call a real model?** It is built for it. It costs money per run
+  and would need rate limiting and an abuse story, so I did not.
+- Still open from earlier runs: the Java runner (self-hosted Piston — spend plus an
+  arbitrary-code-execution surface), one live generation run for the aptitude generator (it
+  has still never produced a real question), and account sync / leaderboard for the Arena.

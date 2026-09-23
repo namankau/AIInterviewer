@@ -32,13 +32,16 @@ function StaticCode({ code, html }: { code: string; html: string | null }) {
 export function CodeBlock({ block, highlighted }: { block: CodeBlockData; highlighted: CodeBlockHighlight | null }) {
   const { language, setLanguage } = useCodeLanguage();
   const hasPython = Boolean(block.python);
-  // A block with no Python variant always shows Java, regardless of the page's shared
-  // choice — there's nothing to switch to.
+  // A block with no Python *variant* always shows its own source, regardless of the page's
+  // shared choice — there is nothing to switch to. `"java"` here means "the base source",
+  // which is Java in the Java and DSA courses and Python in the AI course (task 057); the
+  // highlighted HTML for it comes from `highlighted.base`, which the course's
+  // `codeLanguage` already decided.
   const shown: CodeLanguage = hasPython ? language : "java";
 
   const code = shown === "python" && block.python ? block.python : block.code;
   const output = shown === "python" ? block.pythonOutput : block.output;
-  const html = shown === "python" ? (highlighted?.python ?? null) : (highlighted?.java ?? null);
+  const html = shown === "python" ? (highlighted?.python ?? null) : (highlighted?.base ?? null);
 
   return (
     <figure className="flex flex-col gap-0 overflow-hidden rounded-md border border-line-strong">

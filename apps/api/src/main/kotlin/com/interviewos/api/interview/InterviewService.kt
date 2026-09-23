@@ -420,7 +420,18 @@ class InterviewService(
      */
     private fun <T> inTransaction(block: () -> T): T = transactions.execute { block() }
 
-    @Transactional
+    /**
+     * Not `@Transactional` (task 056, L4): `interviewAi.assessAnswer` below is the slow
+     * model call this whole method exists around, and an annotated method holds its
+     * connection open for the whole call if it wraps it. The reads before the call (the
+     * `already_answered` check included) run outside any transaction, same as they would
+     * inside one under READ_COMMITTED — a bare `SELECT` takes no row lock either way, so
+     * this does not narrow or widen the window a genuinely concurrent duplicate submit
+     * races in. What changes is what happens after the call: every write that has to land
+     * together — the answer record, then whichever of "mark the session completed" or
+     * "insert the next turn" follows it — is now one `inTransaction` block below, so a
+     * turn can never end up answered with no session-status change or next turn to match.
+     */
     fun submitAnswer(
         userId: UUID,
         sessionId: UUID,
@@ -549,109 +560,120 @@ class InterviewService(
         // The upload has almost always finished under the assessment by now. Joining it
         // cannot fail the turn: storeOrWarn has already turned its own errors into nulls.
         val media = storedMedia.join()
-        repository.recordAnswer(
-            sessionId = sessionId,
-            userId = userId,
-            turnIndex = turnIndex,
-            transcript = assessment.value.transcript,
-            audioPath = media.audioPath,
-            videoPath = media.videoPath,
-            assessmentJson = objectMapper.writeValueAsString(assessment.value),
-            nextAction = nextAction,
-            intervention = intervention.wireValue,
-            // Only keep a note when help was actually given, so the report cannot
-            // report assistance that did not happen.
-            interventionNote = assessment.value.interventionNote?.takeIf { intervention.isAssisted },
-            deliveryNote = assessment.value.deliveryObservation?.takeIf { it.isNotBlank() },
-        )
 
-        val answered = repository.countAnsweredTurns(sessionId, userId)
-        // The clock ends the round. `mustConclude` also covers the turn ceiling, which is
-        // there so a runaway session cannot run up an unbounded model bill.
-        val shouldConclude = endRound || plan.mustConclude || nextAction == "conclude"
-        if (shouldConclude) {
-            repository.markSessionStatus(sessionId, userId, "completed")
-            return SubmitAnswerResponse(
-                sessionComplete = true,
+        // Everything from here down writes to the database, and has to land together: the
+        // answer record, then whichever of "mark the session completed" or "insert the
+        // next turn" follows it. One `inTransaction` block, opened only now that the model
+        // call is behind us, so a crash or exception partway through can never leave a turn
+        // answered with no session-status change or next turn to match it (task 056, L4).
+        return inTransaction {
+            repository.recordAnswer(
+                sessionId = sessionId,
+                userId = userId,
+                turnIndex = turnIndex,
+                transcript = assessment.value.transcript,
+                audioPath = media.audioPath,
+                videoPath = media.videoPath,
+                assessmentJson = objectMapper.writeValueAsString(assessment.value),
+                nextAction = nextAction,
+                intervention = intervention.wireValue,
+                // Only keep a note when help was actually given, so the report cannot
+                // report assistance that did not happen.
+                interventionNote = assessment.value.interventionNote?.takeIf { intervention.isAssisted },
+                deliveryNote = assessment.value.deliveryObservation?.takeIf { it.isNotBlank() },
+            )
+
+            val answered = repository.countAnsweredTurns(sessionId, userId)
+            // The clock ends the round. `mustConclude` also covers the turn ceiling, which is
+            // there so a runaway session cannot run up an unbounded model bill.
+            val shouldConclude = endRound || plan.mustConclude || nextAction == "conclude"
+            if (shouldConclude) {
+                repository.markSessionStatus(sessionId, userId, "completed")
+                return@inTransaction SubmitAnswerResponse(
+                    sessionComplete = true,
+                    turnsCompleted = answered,
+                    nextTurn = null,
+                    // The clock wins over the button. When time runs out the room submits the
+                    // answer in progress itself, and it arrives here looking exactly like a
+                    // candidate pressing Submit — thanking them for a decision they did not make
+                    // would be the machine not noticing what happened.
+                    closingRemark =
+                        ClosingRemark.forRound(ranOutOfTime = plan.outOfTime, endedByCandidate = endRound && !plan.outOfTime),
+                )
+            }
+
+            // Trimmed here rather than trusted to the prompt: three rounds of telling the
+            // model not to open with "That's a great overview" did not stop it.
+            val modelText =
+                assessment.value.nextQuestionText
+                    ?.let { QuestionText.withoutPreamble(it) }
+                    ?.takeIf { it.isNotBlank() }
+            if (modelText == null) {
+                // The model had nothing left to ask. That is a conclusion too, and it gets the
+                // same goodbye — the candidate cannot tell this apart from a planned ending,
+                // and should not have to.
+                repository.markSessionStatus(sessionId, userId, "completed")
+                return@inTransaction SubmitAnswerResponse(
+                    sessionComplete = true,
+                    turnsCompleted = answered,
+                    nextTurn = null,
+                    closingRemark = ClosingRemark.forRound(ranOutOfTime = false),
+                )
+            }
+
+            // Whether this turn asks the planned question is the engine's call, checked against
+            // its stored wording; a drifted question is replaced after its lead-in.
+            val asked =
+                PlannedQuestionCheck.resolveText(planned?.text, askNow, assessment.value.askedPlannedQuestion, modelText)
+            val askedFrom = planned?.takeIf { asked.askedPlanned }
+            val nextText = asked.text
+            val nextIndex = turnIndex + 1
+            repository.insertTurn(
+                sessionId = sessionId,
+                userId = userId,
+                turnIndex = nextIndex,
+                questionText = nextText,
+                phase = plan.phase,
+                // Pending means "a voice is coming". Nothing is coming when the room
+                // speaks for itself, and saying otherwise leaves it polling for ever.
+                speechStatus = if (speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
+                provenanceJson =
+                    provenanceJson(
+                        company = session.companyName,
+                        basis = assessment.value.questionBasis,
+                        probes = assessment.value.questionProbes.takeIf { asked.faithful },
+                        askedBecause = assessment.value.questionAskedBecause.takeIf { asked.faithful },
+                        bankQuestion = (askedFrom as? PlannedFrom.Bank)?.question,
+                        poolQuestion = askedFrom as? PlannedFrom.Pool,
+                    ),
+                bankQuestionId = (askedFrom as? PlannedFrom.Bank)?.question?.id,
+                poolQuestionId = (askedFrom as? PlannedFrom.Pool)?.question?.id,
+            )
+            // Nothing to synthesise when the room is going to say it: that call is the single
+            // most expensive thing in a turn and it would be thrown away. Registered inside
+            // the transaction, same as `composeAndOpen`, so it runs once the turn this reads
+            // has actually committed.
+            if (!speaksLocally) {
+                questionSpeech.render(SpeechRequest(userId, sessionId, nextIndex, nextText, session.language))
+            }
+
+            // The question goes back in writing straight away and its voice follows, which
+            // the room asks for separately. A candidate ready to start talking should not be
+            // held behind audio they may well talk over.
+            SubmitAnswerResponse(
+                sessionComplete = false,
                 turnsCompleted = answered,
-                nextTurn = null,
-                // The clock wins over the button. When time runs out the room submits the
-                // answer in progress itself, and it arrives here looking exactly like a
-                // candidate pressing Submit — thanking them for a decision they did not make
-                // would be the machine not noticing what happened.
-                closingRemark =
-                    ClosingRemark.forRound(ranOutOfTime = plan.outOfTime, endedByCandidate = endRound && !plan.outOfTime),
+                nextTurn =
+                    TurnView(
+                        turnIndex = nextIndex,
+                        questionText = nextText,
+                        questionAudioUrl = null,
+                        questionAudioStatus = SpeechStatus.PENDING.dbValue,
+                        phase = plan.phase.dbValue,
+                        answered = false,
+                    ),
             )
         }
-
-        // Trimmed here rather than trusted to the prompt: three rounds of telling the
-        // model not to open with "That's a great overview" did not stop it.
-        val modelText =
-            assessment.value.nextQuestionText
-                ?.let { QuestionText.withoutPreamble(it) }
-                ?.takeIf { it.isNotBlank() }
-        if (modelText == null) {
-            // The model had nothing left to ask. That is a conclusion too, and it gets the
-            // same goodbye — the candidate cannot tell this apart from a planned ending,
-            // and should not have to.
-            repository.markSessionStatus(sessionId, userId, "completed")
-            return SubmitAnswerResponse(
-                sessionComplete = true,
-                turnsCompleted = answered,
-                nextTurn = null,
-                closingRemark = ClosingRemark.forRound(ranOutOfTime = false),
-            )
-        }
-
-        // Whether this turn asks the planned question is the engine's call, checked against
-        // its stored wording; a drifted question is replaced after its lead-in.
-        val asked = PlannedQuestionCheck.resolveText(planned?.text, askNow, assessment.value.askedPlannedQuestion, modelText)
-        val askedFrom = planned?.takeIf { asked.askedPlanned }
-        val nextText = asked.text
-        val nextIndex = turnIndex + 1
-        repository.insertTurn(
-            sessionId = sessionId,
-            userId = userId,
-            turnIndex = nextIndex,
-            questionText = nextText,
-            phase = plan.phase,
-            // Pending means "a voice is coming". Nothing is coming when the room
-            // speaks for itself, and saying otherwise leaves it polling for ever.
-            speechStatus = if (speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
-            provenanceJson =
-                provenanceJson(
-                    company = session.companyName,
-                    basis = assessment.value.questionBasis,
-                    probes = assessment.value.questionProbes.takeIf { asked.faithful },
-                    askedBecause = assessment.value.questionAskedBecause.takeIf { asked.faithful },
-                    bankQuestion = (askedFrom as? PlannedFrom.Bank)?.question,
-                    poolQuestion = askedFrom as? PlannedFrom.Pool,
-                ),
-            bankQuestionId = (askedFrom as? PlannedFrom.Bank)?.question?.id,
-            poolQuestionId = (askedFrom as? PlannedFrom.Pool)?.question?.id,
-        )
-        // Nothing to synthesise when the room is going to say it: that call is the single
-        // most expensive thing in a turn and it would be thrown away.
-        if (!speaksLocally) {
-            questionSpeech.render(SpeechRequest(userId, sessionId, nextIndex, nextText, session.language))
-        }
-
-        // The question goes back in writing straight away and its voice follows, which
-        // the room asks for separately. A candidate ready to start talking should not be
-        // held behind audio they may well talk over.
-        return SubmitAnswerResponse(
-            sessionComplete = false,
-            turnsCompleted = answered,
-            nextTurn =
-                TurnView(
-                    turnIndex = nextIndex,
-                    questionText = nextText,
-                    questionAudioUrl = null,
-                    questionAudioStatus = SpeechStatus.PENDING.dbValue,
-                    phase = plan.phase.dbValue,
-                    answered = false,
-                ),
-        )
     }
 
     /**
@@ -665,8 +687,12 @@ class InterviewService(
      *
      * A hint that cannot be produced does not fail the session. Unlike an assessment,
      * nothing is being scored here, so the round carries on without one.
+     *
+     * Not `@Transactional` (task 056, L4): `interviewAi.offerHint` below is the same shape
+     * of slow model call `submitAnswer` holds a connection open across. There is exactly
+     * one write after it (`recordHint`), so it needs no multi-statement atomicity — just to
+     * not run inside the same transaction as the call in front of it.
      */
-    @Transactional
     fun requestHint(
         userId: UUID,
         sessionId: UUID,
@@ -739,7 +765,7 @@ class InterviewService(
         // A level the model did not supply must not read as free help, so anything
         // unrecognised falls to `hinted` rather than to `none`.
         val level = Intervention.parse(offered.value.assistanceLevel).takeIf { it.isAssisted } ?: Intervention.HINTED
-        repository.recordHint(sessionId, userId, turnIndex, offered.value.text, level.wireValue)
+        inTransaction { repository.recordHint(sessionId, userId, turnIndex, offered.value.text, level.wireValue) }
 
         return HintView(turnIndex, offered.value.text, level.wireValue, level.label)
     }

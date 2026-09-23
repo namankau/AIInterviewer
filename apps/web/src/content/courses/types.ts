@@ -96,7 +96,26 @@ export type Block =
    * JVM, or backtracking's choose/explore/undo (task 052) — instead of a numbered prose
    * list the reader has to hold in their head.
    */
-  | { kind: "steps"; title?: string; steps: { label: string; text: string }[] };
+  | { kind: "steps"; title?: string; steps: { label: string; text: string }[] }
+  /**
+   * The agent lab (task 057): the learner assembles an agent — tools, system-prompt
+   * clauses, a step limit, whether observations are fed back — presses Run, and steps
+   * through the resulting thought / action / observation / answer trace one frame at a
+   * time.
+   *
+   * **It runs a scripted simulation, never a model.** CLAUDE.md rule 7 forbids live AI
+   * spend, and a lab that let a reader believe a scripted trace came from a real model
+   * would be the same class of failure as a report describing eye contact nobody watched.
+   * The runtime is a pure function over authored data (`lib/agent-lab/run.ts`) and the
+   * component says so on its face, in as many words. Wiring a real model in later is a
+   * change of runtime — `runAgentLab` in, an async call out — not a rewrite of the
+   * content, the controls, or the trace viewer.
+   *
+   * The scenario itself lives in `lib/agent-lab/scenarios.ts` rather than inline here, so
+   * a chapter file stays readable and the engine's tests can import a scenario directly
+   * without dragging a whole chapter in with it.
+   */
+  | { kind: "agentlab"; scenarioId: string };
 
 /**
  * One visualisation and its frames. Every shape's frame is *state*, never coordinates —
@@ -214,5 +233,15 @@ export interface Course {
   title: string;
   tagline: string;
   level: string;
+  /**
+   * The language every `code` block in this course is written in — what the syntax
+   * highlighter is told, and what the Arena labels a `predict-output` challenge with
+   * (task 057). Defaults to `"java"`, which is what both of the first two courses are.
+   *
+   * This is deliberately a course-level property rather than a per-block one: mixing
+   * languages inside one course is not a thing any course here does, and a per-block flag
+   * would be one more field for a chapter author to forget and mislabel.
+   */
+  codeLanguage?: "java" | "python";
   modules: Module[];
 }

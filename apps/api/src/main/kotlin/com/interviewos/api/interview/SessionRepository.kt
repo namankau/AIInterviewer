@@ -953,34 +953,120 @@ class SessionRepository(
 
     // -- reports --------------------------------------------------------------
 
+    fun claimReportGeneration(
+        sessionId: UUID,
+        userId: UUID,
+        leaseId: UUID,
+        leaseSeconds: Long,
+    ): ReportGenerationClaim {
+        val acquired =
+            jdbcClient
+                .sql(
+                    """
+                    update public.sessions s
+                       set report_generation_lease_id = :lease,
+                           report_generation_lease_until = now() + (:leaseSeconds * interval '1 second')
+                     where s.id = :s and s.user_id = :u
+                       and s.status = 'completed'
+                       and s.report_expired_at is null
+                       and not exists (select 1 from public.session_reports r where r.session_id = s.id)
+                       and (s.report_generation_lease_id is null or s.report_generation_lease_until <= now())
+                    returning s.id
+                    """.trimIndent(),
+                ).param("lease", leaseId)
+                .param("leaseSeconds", leaseSeconds)
+                .param("s", sessionId)
+                .param("u", userId)
+                .query(UUID::class.java)
+                .optional()
+                .isPresent
+        if (acquired) return ReportGenerationClaim(ReportGenerationClaimStatus.ACQUIRED)
+
+        return jdbcClient
+            .sql(
+                """
+                select s.report_generation_lease_id,
+                       s.report_generation_lease_until,
+                       r.payload::text as payload
+                  from public.sessions s
+                  left join public.session_reports r on r.session_id = s.id and r.user_id = s.user_id
+                 where s.id = :s and s.user_id = :u
+                """.trimIndent(),
+            ).param("s", sessionId)
+            .param("u", userId)
+            .query { rs, _ ->
+                val payload = rs.getString("payload")
+                val leaseUntil = rs.getTimestamp("report_generation_lease_until")?.toInstant()
+                when {
+                    payload != null -> {
+                        ReportGenerationClaim(ReportGenerationClaimStatus.COMPLETED, payload)
+                    }
+
+                    rs.getObject("report_generation_lease_id") != null && leaseUntil?.isAfter(Instant.now()) == true -> {
+                        ReportGenerationClaim(ReportGenerationClaimStatus.IN_PROGRESS)
+                    }
+
+                    else -> {
+                        ReportGenerationClaim(ReportGenerationClaimStatus.UNAVAILABLE)
+                    }
+                }
+            }.optional()
+            .orElse(ReportGenerationClaim(ReportGenerationClaimStatus.UNAVAILABLE))
+    }
+
+    fun releaseReportGeneration(
+        sessionId: UUID,
+        userId: UUID,
+        leaseId: UUID,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                update public.sessions
+                   set report_generation_lease_id = null,
+                       report_generation_lease_until = null
+                 where id = :s and user_id = :u and report_generation_lease_id = :lease
+                """.trimIndent(),
+            ).param("s", sessionId)
+            .param("u", userId)
+            .param("lease", leaseId)
+            .update() == 1
+
     fun saveReport(
         sessionId: UUID,
         userId: UUID,
+        leaseId: UUID,
         payloadJson: String,
         model: String,
         promptTokens: Int,
         outputTokens: Int,
-    ) {
+    ): Boolean =
         jdbcClient
             .sql(
                 """
+                with lease as (
+                    update public.sessions
+                       set report_generation_lease_id = null,
+                           report_generation_lease_until = null
+                     where id = :s and user_id = :u
+                       and status = 'completed'
+                       and report_expired_at is null
+                       and report_generation_lease_id = :lease
+                    returning id
+                )
                 insert into public.session_reports (session_id, user_id, payload, model, prompt_tokens, output_tokens)
-                values (:s, :u, cast(:p as jsonb), :m, :pt, :ot)
-                on conflict (session_id) do update
-                   set payload = excluded.payload,
-                       model = excluded.model,
-                       prompt_tokens = excluded.prompt_tokens,
-                       output_tokens = excluded.output_tokens,
-                       generated_at = now()
+                select :s, :u, cast(:p as jsonb), :m, :pt, :ot
+                  from lease
+                on conflict (session_id) do nothing
                 """.trimIndent(),
             ).param("s", sessionId)
             .param("u", userId)
+            .param("lease", leaseId)
             .param("p", payloadJson)
             .param("m", model)
             .param("pt", promptTokens)
             .param("ot", outputTokens)
-            .update()
-    }
+            .update() == 1
 
     fun findReportJson(
         sessionId: UUID,
@@ -1118,6 +1204,18 @@ data class StorageDeletionJobRow(
     val objectPrefix: String,
     val attempts: Int,
     val settleAfter: Instant,
+)
+
+enum class ReportGenerationClaimStatus {
+    ACQUIRED,
+    COMPLETED,
+    IN_PROGRESS,
+    UNAVAILABLE,
+}
+
+data class ReportGenerationClaim(
+    val status: ReportGenerationClaimStatus,
+    val payloadJson: String? = null,
 )
 
 data class TurnRow(

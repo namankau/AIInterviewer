@@ -11,7 +11,6 @@ import com.interviewos.api.common.ApiException
 import com.interviewos.api.resume.ResumeService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.ObjectMapper
 import java.util.UUID
 
@@ -33,10 +32,10 @@ class ReportService(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @Transactional
     fun report(
         userId: UUID,
         sessionId: UUID,
+        leaseId: UUID = UUID.randomUUID(),
     ): Map<String, Any?> {
         repository.findReportJson(sessionId, userId)?.let {
             @Suppress("UNCHECKED_CAST")
@@ -115,8 +114,35 @@ class ReportService(
         // judged on, so the model does not get to be generous about it.
         val assistance = AssistanceSummary.of(turns)
 
-        val composed =
-            try {
+        val claim = repository.claimReportGeneration(sessionId, userId, leaseId, REPORT_LEASE_SECONDS)
+        when (claim.status) {
+            ReportGenerationClaimStatus.COMPLETED -> {
+                @Suppress("UNCHECKED_CAST")
+                return withEveryField(objectMapper.readValue(checkNotNull(claim.payloadJson), Map::class.java) as Map<String, Any?>)
+            }
+
+            ReportGenerationClaimStatus.IN_PROGRESS -> {
+                throw ApiException.conflict(
+                    "This report is already being generated. Try again in a moment.",
+                    code = "report_generating",
+                )
+            }
+
+            ReportGenerationClaimStatus.UNAVAILABLE -> {
+                throw ApiException.conflict(
+                    "This report can no longer be generated from the current session state.",
+                    code = "report_generation_unavailable",
+                )
+            }
+
+            ReportGenerationClaimStatus.ACQUIRED -> {
+                Unit
+            }
+        }
+
+        var saved = false
+        try {
+            val composed =
                 AiSpendContext.of(userId, sessionId) {
                     interviewAi.composeReport(
                         brief,
@@ -135,30 +161,48 @@ class ReportService(
                         },
                     )
                 }
-            } catch (e: AiUnavailableException) {
-                log.warn("Report composition failed for session {}", sessionId, e)
-                throw ApiException.upstreamUnavailable(
-                    "Your interview is saved, but the report could not be generated just now. Try again shortly.",
+
+            val verified =
+                withVerifiedEvidence(composed.value, turns)
+                    .withoutCameraClaims()
+                    // Every answered question gets a note, whether or not the model wrote one
+                    // for it (see AnswerAnnotations).
+                    .let { it.copy(annotations = AnswerAnnotations.of(turns, it.annotations)) }
+            val payload = payloadOf(verified, session, roundType, archetype, turns, assistance)
+
+            if (!repository.saveReport(
+                    sessionId = sessionId,
+                    userId = userId,
+                    leaseId = leaseId,
+                    payloadJson = objectMapper.writeValueAsString(payload),
+                    model = composed.usage.model,
+                    promptTokens = composed.usage.promptTokens,
+                    outputTokens = composed.usage.outputTokens,
+                )
+            ) {
+                repository.findReportJson(sessionId, userId)?.let {
+                    @Suppress("UNCHECKED_CAST")
+                    saved = true
+                    return withEveryField(objectMapper.readValue(it, Map::class.java) as Map<String, Any?>)
+                }
+                throw ApiException.conflict(
+                    "The interview changed while its report was being generated. Refresh to see its current state.",
+                    code = "report_generation_invalidated",
                 )
             }
-
-        val verified =
-            withVerifiedEvidence(composed.value, turns)
-                .withoutCameraClaims()
-                // Every answered question gets a note, whether or not the model wrote one
-                // for it (see AnswerAnnotations).
-                .let { it.copy(annotations = AnswerAnnotations.of(turns, it.annotations)) }
-        val payload = payloadOf(verified, session, roundType, archetype, turns, assistance)
-
-        repository.saveReport(
-            sessionId = sessionId,
-            userId = userId,
-            payloadJson = objectMapper.writeValueAsString(payload),
-            model = composed.usage.model,
-            promptTokens = composed.usage.promptTokens,
-            outputTokens = composed.usage.outputTokens,
-        )
-        return payload
+            saved = true
+            return payload
+        } catch (e: AiUnavailableException) {
+            log.warn("Report composition failed for session {}", sessionId, e)
+            throw ApiException.upstreamUnavailable(
+                "Your interview is saved, but the report could not be generated just now. Try again shortly.",
+            )
+        } finally {
+            if (!saved) {
+                runCatching { repository.releaseReportGeneration(sessionId, userId, leaseId) }
+                    .onFailure { log.warn("Could not release report generation lease {}", leaseId, it) }
+            }
+        }
     }
 
     /**
@@ -437,6 +481,8 @@ class ReportService(
     }
 
     private companion object {
+        const val REPORT_LEASE_SECONDS = 10 * 60L
+
         /**
          * What an older stored report is missing, and what it should read as instead.
          *

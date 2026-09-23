@@ -57,6 +57,7 @@ class BankRoundHarness(
             when (invocation.method.returnType) {
                 Boolean::class.javaPrimitiveType -> true
                 TurnRequestClaim::class.java -> TurnRequestClaim(TurnRequestClaimStatus.ACQUIRED)
+                ReportGenerationClaim::class.java -> ReportGenerationClaim(ReportGenerationClaimStatus.ACQUIRED)
                 else -> RETURNS_DEFAULTS.answer(invocation)
             }
         }
@@ -125,6 +126,8 @@ class BankRoundHarness(
             transactionManager = transactionManager,
             backgroundExecutor = SyncTaskExecutor(),
         )
+
+    val reportService = ReportService(repository, ai, mapper, RetentionProperties(), resumeService)
 
     /** The bank holds [questions] for Amazon's [roundType] rounds. */
     fun bankHolds(

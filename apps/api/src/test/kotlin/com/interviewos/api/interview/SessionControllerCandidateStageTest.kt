@@ -195,6 +195,25 @@ class SessionControllerCandidateStageTest {
     }
 
     @Test
+    fun `an unsupported interview language is rejected before anything is written`() {
+        val body =
+            """
+            {"companyName":"Google","roleTitle":"Software Engineer","roundType":"coding_practical",
+             "language":"french","consentAudio":true,"consentVideo":false,"durationMinutes":40}
+            """.trimIndent()
+
+        mockMvc
+            .perform(
+                post("/api/v1/sessions")
+                    .with(tokenFor(candidate))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body),
+            ).andExpect(status().isBadRequest)
+
+        verifyNoInteractions(harness.repository)
+    }
+
+    @Test
     fun `rejects a start with no token even when candidateStage is set`() {
         val body =
             """

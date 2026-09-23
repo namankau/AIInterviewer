@@ -159,6 +159,21 @@ describe("DeviceCheck", () => {
     expect(onEnter).toHaveBeenCalled();
   });
 
+  it("surfaces a begin failure and prevents duplicate begin requests while retrying", () => {
+    render(
+      <DeviceCheck
+        session={session}
+        capture={capture()}
+        onEnter={vi.fn()}
+        entering
+        entryError="This interview has already ended."
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("This interview has already ended.");
+    expect(screen.getByRole("button", { name: "Starting the interview…" })).toBeDisabled();
+  });
+
   /**
    * The round is spoken, and it is half an hour of the candidate's time. Walking into
    * it with a blocked microphone would waste all of it, so entry is closed until the

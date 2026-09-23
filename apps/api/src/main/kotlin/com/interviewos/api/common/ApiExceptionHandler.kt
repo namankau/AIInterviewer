@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.multipart.MaxUploadSizeExceededException
@@ -31,6 +32,10 @@ class ApiExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleUnreadable(ex: HttpMessageNotReadableException): ResponseEntity<ApiError> =
         ResponseEntity.badRequest().body(ApiError("malformed_body", "The request body could not be read as JSON."))
+
+    @ExceptionHandler(MissingServletRequestParameterException::class)
+    fun handleMissingParameter(ex: MissingServletRequestParameterException): ResponseEntity<ApiError> =
+        ResponseEntity.badRequest().body(ApiError("missing_parameter", "${ex.parameterName} is required."))
 
     @ExceptionHandler(MaxUploadSizeExceededException::class)
     fun handleTooLarge(ex: MaxUploadSizeExceededException): ResponseEntity<ApiError> =

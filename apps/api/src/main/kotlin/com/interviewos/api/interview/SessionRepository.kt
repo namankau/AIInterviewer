@@ -188,7 +188,7 @@ class SessionRepository(
         sessionId: UUID,
         userId: UUID,
         status: String,
-    ) {
+    ): Boolean =
         jdbcClient
             .sql(
                 """
@@ -196,12 +196,12 @@ class SessionRepository(
                    set status = cast(:status as public.session_status),
                        ended_at = case when :status in ('completed', 'abandoned', 'failed') then now() else ended_at end
                  where id = :id and user_id = :u
+                   and status = 'in_progress'
                 """.trimIndent(),
             ).param("status", status)
             .param("id", sessionId)
             .param("u", userId)
-            .update()
-    }
+            .update() == 1
 
     /**
      * Starts the round's clock, once: the moment the candidate enters the room.
@@ -245,14 +245,18 @@ class SessionRepository(
         sessionId: UUID,
         userId: UUID,
         workspaceJson: String,
-    ) {
+    ): Boolean =
         jdbcClient
-            .sql("update public.sessions set workspace = cast(:w as jsonb) where id = :id and user_id = :u")
-            .param("w", workspaceJson)
+            .sql(
+                """
+                update public.sessions
+                   set workspace = cast(:w as jsonb)
+                 where id = :id and user_id = :u and status = 'in_progress'
+                """.trimIndent(),
+            ).param("w", workspaceJson)
             .param("id", sessionId)
             .param("u", userId)
-            .update()
-    }
+            .update() == 1
 
     /**
      * Stores what the candidate produced on the board — the design they drew, or the code
@@ -280,11 +284,9 @@ class SessionRepository(
     /**
      * Removes one round entirely, and says whether there was one to remove.
      *
-     * One statement, because `session_turns` and `session_reports` both cascade from
-     * `public.sessions` — the transcript and the report go with the row, enforced by the
-     * database rather than by three deletes here remembering to stay in step. That is the
-     * point: a fourth child table added later inherits this deletion for free if it
-     * declares its foreign key the way the other two do, and fails loudly if it does not.
+     * The storage outbox row and session deletion are one statement. The transcript and
+     * report cascade from `public.sessions`, while the outbox deliberately has no foreign
+     * key to that row: it must survive long enough to remove the external objects.
      *
      * The `user_id` predicate is the entire authorisation check. A caller asking for
      * somebody else's session gets `false` and, above this, a 404 — which is the same
@@ -293,14 +295,41 @@ class SessionRepository(
      * Returns false rather than throwing so the caller can decide; it also makes a second
      * delete of the same round idempotent rather than a 500.
      */
-    fun deleteSession(
+    fun enqueueAndDeleteSession(
         sessionId: UUID,
         userId: UUID,
+        bucket: String,
+        objectPrefix: String,
     ): Boolean =
         jdbcClient
-            .sql("delete from public.sessions where id = :id and user_id = :u")
-            .param("id", sessionId)
+            .sql(
+                """
+                with owned as (
+                    select id, user_id
+                      from public.sessions
+                     where id = :s and user_id = :u
+                ), enqueued as (
+                    insert into public.storage_deletion_jobs
+                           (user_id, session_id, bucket, object_prefix, reason)
+                    select user_id, id, :bucket, :prefix, 'candidate_deleted'
+                      from owned
+                    on conflict (bucket, object_prefix) do update
+                       set completed_at = null,
+                           next_attempt_at = now(),
+                           settle_after = greatest(public.storage_deletion_jobs.settle_after, now() + interval '15 minutes'),
+                           reason = excluded.reason,
+                           updated_at = now()
+                    returning object_prefix
+                )
+                delete from public.sessions s
+                 using owned
+                 where s.id = owned.id
+                   and exists (select 1 from enqueued)
+                """.trimIndent(),
+            ).param("s", sessionId)
             .param("u", userId)
+            .param("bucket", bucket)
+            .param("prefix", objectPrefix)
             .update() > 0
 
     /**
@@ -335,7 +364,8 @@ class SessionRepository(
             }.list()
 
     /**
-     * Clears one round's report and transcript and stamps it as expired, keeping the
+     * Clears one round's report, transcript and candidate-authored board, queues media
+     * deletion, and stamps it as expired while keeping the generated workspace and the
      * session row.
      *
      * **One statement, and it has to be.** Half of this — the report deleted, the turns
@@ -343,7 +373,7 @@ class SessionRepository(
      * report from the surviving transcript the next time the candidate opened it: a model
      * call producing a different report from the one they remember, silently, out of data
      * that was supposed to be gone. Postgres runs data-modifying CTEs exactly once and to
-     * completion, in one snapshot, so the three writes here cannot come apart. That is
+     * completion, in one snapshot, so the outbox and evidence writes cannot come apart. That is
      * also why this is not three calls behind an `@Transactional` service method — the
      * caller is in the same bean, and a self-invocation never reaches the proxy that would
      * have opened the transaction.
@@ -352,25 +382,130 @@ class SessionRepository(
      * return value: false means no such round belongs to that user, and the deletes above
      * it matched nothing either, both being scoped the same way.
      */
-    fun expireRound(
+    fun enqueueAndExpireRound(
         sessionId: UUID,
         userId: UUID,
+        bucket: String,
+        objectPrefix: String,
     ): Boolean =
         jdbcClient
             .sql(
                 """
-                with cleared_report as (
+                with owned as (
+                    select id, user_id
+                      from public.sessions
+                     where id = :s and user_id = :u and report_expired_at is null
+                ), enqueued as (
+                    insert into public.storage_deletion_jobs
+                           (user_id, session_id, bucket, object_prefix, reason)
+                    select user_id, id, :bucket, :prefix, 'retention_expired'
+                      from owned
+                    on conflict (bucket, object_prefix) do update
+                       set completed_at = null,
+                           next_attempt_at = now(),
+                           settle_after = greatest(public.storage_deletion_jobs.settle_after, now() + interval '15 minutes'),
+                           reason = excluded.reason,
+                           updated_at = now()
+                    returning object_prefix
+                ), cleared_report as (
                     delete from public.session_reports where session_id = :s and user_id = :u
                 ), cleared_turns as (
                     delete from public.session_turns where session_id = :s and user_id = :u
                 )
-                update public.sessions
-                   set report_expired_at = now()
-                 where id = :s and user_id = :u
+                update public.sessions s
+                   set report_expired_at = now(),
+                       board = null
+                  from owned
+                 where s.id = owned.id
+                   and exists (select 1 from enqueued)
                 """.trimIndent(),
             ).param("s", sessionId)
             .param("u", userId)
+            .param("bucket", bucket)
+            .param("prefix", objectPrefix)
             .update() > 0
+
+    fun claimStorageDeletionJobs(
+        now: Instant,
+        leaseUntil: Instant,
+        limit: Int,
+    ): List<StorageDeletionJobRow> =
+        jdbcClient
+            .sql(
+                """
+                with due as (
+                    select id
+                      from public.storage_deletion_jobs
+                     where completed_at is null
+                       and next_attempt_at <= :now
+                       and (lease_until is null or lease_until <= :now)
+                     order by next_attempt_at, created_at
+                     for update skip locked
+                     limit :limit
+                )
+                update public.storage_deletion_jobs j
+                   set lease_until = :leaseUntil,
+                       attempts = attempts + 1,
+                       updated_at = :now
+                  from due
+                 where j.id = due.id
+                returning j.id, j.bucket, j.object_prefix, j.attempts, j.settle_after
+                """.trimIndent(),
+            ).param("now", java.sql.Timestamp.from(now))
+            .param("leaseUntil", java.sql.Timestamp.from(leaseUntil))
+            .param("limit", limit)
+            .query { rs, _ ->
+                StorageDeletionJobRow(
+                    id = rs.getObject("id", UUID::class.java),
+                    bucket = rs.getString("bucket"),
+                    objectPrefix = rs.getString("object_prefix"),
+                    attempts = rs.getInt("attempts"),
+                    settleAfter = rs.getTimestamp("settle_after").toInstant(),
+                )
+            }.list()
+
+    fun markStorageDeletionSucceeded(
+        jobId: UUID,
+        now: Instant,
+        settled: Boolean,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                update public.storage_deletion_jobs
+                   set completed_at = case when :settled then :now else null end,
+                       next_attempt_at = case when :settled then next_attempt_at else settle_after end,
+                       lease_until = null,
+                       last_error = null,
+                       updated_at = :now
+                 where id = :id and completed_at is null
+                """.trimIndent(),
+            ).param("settled", settled)
+            .param("now", java.sql.Timestamp.from(now))
+            .param("id", jobId)
+            .update() == 1
+
+    fun markStorageDeletionFailed(
+        jobId: UUID,
+        error: String,
+        retryAt: Instant,
+        now: Instant,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                update public.storage_deletion_jobs
+                   set next_attempt_at = :retryAt,
+                       lease_until = null,
+                       last_error = :error,
+                       updated_at = :now
+                 where id = :id and completed_at is null
+                """.trimIndent(),
+            ).param("retryAt", java.sql.Timestamp.from(retryAt))
+            .param("error", error.take(1000))
+            .param("now", java.sql.Timestamp.from(now))
+            .param("id", jobId)
+            .update() == 1
 
     // -- turns ----------------------------------------------------------------
 
@@ -390,15 +525,17 @@ class SessionRepository(
         bankQuestionId: UUID? = null,
         /** The pool question this turn asked, when it asked one. See [askedPoolQuestions]. */
         poolQuestionId: UUID? = null,
-    ) {
+    ): Boolean =
         jdbcClient
             .sql(
                 """
                 insert into public.session_turns
                        (session_id, user_id, turn_index, question_text, phase, question_audio_status, provenance,
                         bank_question_id, pool_question_id)
-                values (:s, :u, :i, :q, cast(:phase as public.turn_phase), cast(:speech as public.speech_status),
-                        cast(:provenance as jsonb), :bank, :pool)
+                select :s, :u, :i, :q, cast(:phase as public.turn_phase), cast(:speech as public.speech_status),
+                       cast(:provenance as jsonb), :bank, :pool
+                  from public.sessions
+                 where id = :s and user_id = :u and status = 'in_progress'
                 on conflict (session_id, turn_index) do nothing
                 """.trimIndent(),
             ).param("s", sessionId)
@@ -410,8 +547,7 @@ class SessionRepository(
             .param("provenance", provenanceJson)
             .param("bank", bankQuestionId)
             .param("pool", poolQuestionId)
-            .update()
-    }
+            .update() == 1
 
     /**
      * Every bank question this candidate has been asked, in any round, with when it was last
@@ -532,6 +668,127 @@ class SessionRepository(
             .optional()
             .orElse(null)
 
+    fun claimAnswerRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+        leaseSeconds: Long,
+    ): TurnRequestClaim = claimTurnRequest(sessionId, userId, turnIndex, requestId, leaseSeconds, TurnRequestKind.ANSWER)
+
+    fun claimHintRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+        leaseSeconds: Long,
+    ): TurnRequestClaim = claimTurnRequest(sessionId, userId, turnIndex, requestId, leaseSeconds, TurnRequestKind.HINT)
+
+    private fun claimTurnRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+        leaseSeconds: Long,
+        kind: TurnRequestKind,
+    ): TurnRequestClaim {
+        val claimed =
+            jdbcClient
+                .sql(
+                    """
+                    update public.session_turns t
+                       set ${kind.requestColumn} = :request,
+                           ${kind.leaseColumn} = now() + (:leaseSeconds * interval '1 second')
+                     where t.session_id = :s and t.user_id = :u and t.turn_index = :i
+                       and t.${kind.completedColumn} is null
+                       and t.${kind.responseColumn} is null
+                       and (t.${kind.requestColumn} is null or t.${kind.leaseColumn} <= now())
+                       and exists (
+                           select 1
+                             from public.sessions s
+                            where s.id = t.session_id and s.user_id = t.user_id and s.status = 'in_progress'
+                       )
+                    returning ${kind.requestColumn}
+                    """.trimIndent(),
+                ).param("request", requestId)
+                .param("leaseSeconds", leaseSeconds)
+                .param("s", sessionId)
+                .param("u", userId)
+                .param("i", turnIndex)
+                .query(UUID::class.java)
+                .optional()
+                .isPresent
+        if (claimed) return TurnRequestClaim(TurnRequestClaimStatus.ACQUIRED)
+
+        return jdbcClient
+            .sql(
+                """
+                select ${kind.requestColumn} as request_id,
+                       ${kind.leaseColumn} as lease_until,
+                       ${kind.responseColumn}::text as response
+                  from public.session_turns
+                 where session_id = :s and user_id = :u and turn_index = :i
+                """.trimIndent(),
+            ).param("s", sessionId)
+            .param("u", userId)
+            .param("i", turnIndex)
+            .query { rs, _ ->
+                val response = rs.getString("response")
+                val leaseUntil = rs.getTimestamp("lease_until")?.toInstant()
+                when {
+                    response != null -> {
+                        TurnRequestClaim(TurnRequestClaimStatus.COMPLETED, response)
+                    }
+
+                    rs.getObject("request_id") != null && leaseUntil?.isAfter(Instant.now()) == true -> {
+                        TurnRequestClaim(TurnRequestClaimStatus.IN_PROGRESS)
+                    }
+
+                    else -> {
+                        TurnRequestClaim(TurnRequestClaimStatus.UNAVAILABLE)
+                    }
+                }
+            }.optional()
+            .orElse(TurnRequestClaim(TurnRequestClaimStatus.UNAVAILABLE))
+    }
+
+    fun releaseAnswerRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+    ) = releaseTurnRequest(sessionId, userId, turnIndex, requestId, TurnRequestKind.ANSWER)
+
+    fun releaseHintRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+    ) = releaseTurnRequest(sessionId, userId, turnIndex, requestId, TurnRequestKind.HINT)
+
+    private fun releaseTurnRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+        kind: TurnRequestKind,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                update public.session_turns
+                   set ${kind.requestColumn} = null,
+                       ${kind.leaseColumn} = null
+                 where session_id = :s and user_id = :u and turn_index = :i
+                   and ${kind.requestColumn} = :request
+                   and ${kind.responseColumn} is null
+                """.trimIndent(),
+            ).param("s", sessionId)
+            .param("u", userId)
+            .param("i", turnIndex)
+            .param("request", requestId)
+            .update() == 1
+
     /**
      * Records help the candidate asked for, on the turn they asked it on.
      *
@@ -545,23 +802,35 @@ class SessionRepository(
         turnIndex: Int,
         hintText: String,
         hintLevel: String,
-    ) {
+        requestId: UUID,
+        responseJson: String,
+    ): Boolean =
         jdbcClient
             .sql(
                 """
                 update public.session_turns
                    set hint_requested_at = now(),
                        hint_text = :hint,
-                       hint_level = cast(:level as public.intervention_type)
+                       hint_level = cast(:level as public.intervention_type),
+                       hint_response = cast(:response as jsonb)
                  where session_id = :s and user_id = :u and turn_index = :i
+                   and answered_at is null
+                   and hint_requested_at is null
+                   and hint_request_id = :request
+                   and exists (
+                       select 1
+                         from public.sessions s
+                        where s.id = :s and s.user_id = :u and s.status = 'in_progress'
+                   )
                 """.trimIndent(),
             ).param("hint", hintText)
             .param("level", hintLevel)
+            .param("response", responseJson)
+            .param("request", requestId)
             .param("s", sessionId)
             .param("u", userId)
             .param("i", turnIndex)
-            .update()
-    }
+            .update() == 1
 
     fun recordAnswer(
         sessionId: UUID,
@@ -575,7 +844,8 @@ class SessionRepository(
         intervention: String,
         interventionNote: String?,
         deliveryNote: String?,
-    ) {
+        requestId: UUID,
+    ): Boolean =
         jdbcClient
             .sql(
                 """
@@ -590,6 +860,13 @@ class SessionRepository(
                        intervention_note = :note,
                        delivery_note = :delivery
                  where session_id = :s and user_id = :u and turn_index = :i
+                   and answered_at is null
+                   and answer_request_id = :request
+                   and exists (
+                       select 1
+                         from public.sessions s
+                        where s.id = :s and s.user_id = :u and s.status = 'in_progress'
+                   )
                 """.trimIndent(),
             ).param("t", transcript)
             .param("audio", audioPath)
@@ -599,11 +876,35 @@ class SessionRepository(
             .param("intervention", intervention)
             .param("note", interventionNote)
             .param("delivery", deliveryNote)
+            .param("request", requestId)
             .param("s", sessionId)
             .param("u", userId)
             .param("i", turnIndex)
-            .update()
-    }
+            .update() == 1
+
+    fun completeAnswerRequest(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+        responseJson: String,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                update public.session_turns
+                   set answer_response = cast(:response as jsonb)
+                 where session_id = :s and user_id = :u and turn_index = :i
+                   and answer_request_id = :request
+                   and answered_at is not null
+                   and answer_response is null
+                """.trimIndent(),
+            ).param("response", responseJson)
+            .param("request", requestId)
+            .param("s", sessionId)
+            .param("u", userId)
+            .param("i", turnIndex)
+            .update() == 1
 
     fun countAnsweredTurns(
         sessionId: UUID,
@@ -652,34 +953,120 @@ class SessionRepository(
 
     // -- reports --------------------------------------------------------------
 
+    fun claimReportGeneration(
+        sessionId: UUID,
+        userId: UUID,
+        leaseId: UUID,
+        leaseSeconds: Long,
+    ): ReportGenerationClaim {
+        val acquired =
+            jdbcClient
+                .sql(
+                    """
+                    update public.sessions s
+                       set report_generation_lease_id = :lease,
+                           report_generation_lease_until = now() + (:leaseSeconds * interval '1 second')
+                     where s.id = :s and s.user_id = :u
+                       and s.status = 'completed'
+                       and s.report_expired_at is null
+                       and not exists (select 1 from public.session_reports r where r.session_id = s.id)
+                       and (s.report_generation_lease_id is null or s.report_generation_lease_until <= now())
+                    returning s.id
+                    """.trimIndent(),
+                ).param("lease", leaseId)
+                .param("leaseSeconds", leaseSeconds)
+                .param("s", sessionId)
+                .param("u", userId)
+                .query(UUID::class.java)
+                .optional()
+                .isPresent
+        if (acquired) return ReportGenerationClaim(ReportGenerationClaimStatus.ACQUIRED)
+
+        return jdbcClient
+            .sql(
+                """
+                select s.report_generation_lease_id,
+                       s.report_generation_lease_until,
+                       r.payload::text as payload
+                  from public.sessions s
+                  left join public.session_reports r on r.session_id = s.id and r.user_id = s.user_id
+                 where s.id = :s and s.user_id = :u
+                """.trimIndent(),
+            ).param("s", sessionId)
+            .param("u", userId)
+            .query { rs, _ ->
+                val payload = rs.getString("payload")
+                val leaseUntil = rs.getTimestamp("report_generation_lease_until")?.toInstant()
+                when {
+                    payload != null -> {
+                        ReportGenerationClaim(ReportGenerationClaimStatus.COMPLETED, payload)
+                    }
+
+                    rs.getObject("report_generation_lease_id") != null && leaseUntil?.isAfter(Instant.now()) == true -> {
+                        ReportGenerationClaim(ReportGenerationClaimStatus.IN_PROGRESS)
+                    }
+
+                    else -> {
+                        ReportGenerationClaim(ReportGenerationClaimStatus.UNAVAILABLE)
+                    }
+                }
+            }.optional()
+            .orElse(ReportGenerationClaim(ReportGenerationClaimStatus.UNAVAILABLE))
+    }
+
+    fun releaseReportGeneration(
+        sessionId: UUID,
+        userId: UUID,
+        leaseId: UUID,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                update public.sessions
+                   set report_generation_lease_id = null,
+                       report_generation_lease_until = null
+                 where id = :s and user_id = :u and report_generation_lease_id = :lease
+                """.trimIndent(),
+            ).param("s", sessionId)
+            .param("u", userId)
+            .param("lease", leaseId)
+            .update() == 1
+
     fun saveReport(
         sessionId: UUID,
         userId: UUID,
+        leaseId: UUID,
         payloadJson: String,
         model: String,
         promptTokens: Int,
         outputTokens: Int,
-    ) {
+    ): Boolean =
         jdbcClient
             .sql(
                 """
+                with lease as (
+                    update public.sessions
+                       set report_generation_lease_id = null,
+                           report_generation_lease_until = null
+                     where id = :s and user_id = :u
+                       and status = 'completed'
+                       and report_expired_at is null
+                       and report_generation_lease_id = :lease
+                    returning id
+                )
                 insert into public.session_reports (session_id, user_id, payload, model, prompt_tokens, output_tokens)
-                values (:s, :u, cast(:p as jsonb), :m, :pt, :ot)
-                on conflict (session_id) do update
-                   set payload = excluded.payload,
-                       model = excluded.model,
-                       prompt_tokens = excluded.prompt_tokens,
-                       output_tokens = excluded.output_tokens,
-                       generated_at = now()
+                select :s, :u, cast(:p as jsonb), :m, :pt, :ot
+                  from lease
+                on conflict (session_id) do nothing
                 """.trimIndent(),
             ).param("s", sessionId)
             .param("u", userId)
+            .param("lease", leaseId)
             .param("p", payloadJson)
             .param("m", model)
             .param("pt", promptTokens)
             .param("ot", outputTokens)
-            .update()
-    }
+            .update() == 1
 
     fun findReportJson(
         sessionId: UUID,
@@ -811,6 +1198,26 @@ data class ExpiringRound(
     val userId: UUID,
 )
 
+data class StorageDeletionJobRow(
+    val id: UUID,
+    val bucket: String,
+    val objectPrefix: String,
+    val attempts: Int,
+    val settleAfter: Instant,
+)
+
+enum class ReportGenerationClaimStatus {
+    ACQUIRED,
+    COMPLETED,
+    IN_PROGRESS,
+    UNAVAILABLE,
+}
+
+data class ReportGenerationClaim(
+    val status: ReportGenerationClaimStatus,
+    val payloadJson: String? = null,
+)
+
 data class TurnRow(
     val turnIndex: Int,
     val questionText: String,
@@ -824,7 +1231,7 @@ data class TurnRow(
     val interventionNote: String? = null,
     /** Where this exchange sat in the round: `warmup`, `main` or `closing`. */
     val phase: String = TurnPhase.MAIN.dbValue,
-    /** What the interviewer observed about delivery, from the video when there was one. */
+    /** What the interviewer observed about delivery from the spoken answer. */
     val deliveryNote: String? = null,
     /** Set when the candidate asked for help on this question, rather than being offered it. */
     val hintRequestedAt: Instant? = null,
@@ -841,6 +1248,28 @@ data class TurnRow(
      */
     val poolStrongAnswerCovers: List<String> = emptyList(),
 )
+
+enum class TurnRequestClaimStatus {
+    ACQUIRED,
+    COMPLETED,
+    IN_PROGRESS,
+    UNAVAILABLE,
+}
+
+data class TurnRequestClaim(
+    val status: TurnRequestClaimStatus,
+    val responseJson: String? = null,
+)
+
+private enum class TurnRequestKind(
+    val requestColumn: String,
+    val leaseColumn: String,
+    val responseColumn: String,
+    val completedColumn: String,
+) {
+    ANSWER("answer_request_id", "answer_request_lease_until", "answer_response", "answered_at"),
+    HINT("hint_request_id", "hint_request_lease_until", "hint_response", "hint_requested_at"),
+}
 
 /** A bank question a candidate has been asked, for selection. */
 data class AskedBankQuestion(

@@ -137,7 +137,7 @@ describe("ReportDocument — the evidence quote", () => {
 
 /**
  * Task 053 hard constraint: nothing on this page may describe how the candidate looked.
- * Nothing watches the candidate's camera (`RoundMediaProperties.presenceWasObserved`), so a
+ * Nothing watches the candidate's camera, so a
  * claim like "maintained good eye contact" would be fabricated evidence — the same failure
  * as an invented quote. This is a regression pin: none of these fixtures contain such a
  * claim today, and the assertion is that no future change introduces one as hardcoded copy.

@@ -6,7 +6,6 @@ import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.AiUsage
 import com.interviewos.api.ai.AnswerAssessment
 import com.interviewos.api.ai.AnswerAudio
-import com.interviewos.api.ai.AnswerVideo
 import com.interviewos.api.ai.AskedQuestion
 import com.interviewos.api.ai.ComposedCase
 import com.interviewos.api.ai.ComposedProblem
@@ -184,7 +183,6 @@ private abstract class StubAi : InterviewAi {
         priorTurns: List<TurnTranscript>,
         currentQuestion: String,
         answer: AnswerAudio,
-        video: AnswerVideo?,
     ): AiResult<AnswerAssessment> = unsupported()
 
     override fun offerHint(

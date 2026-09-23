@@ -1,4 +1,4 @@
-import type { CandidateStage, ResumeParseStatus, RoundType } from "./domain.js";
+import type { CandidateStage, InterviewLanguage, ResumeParseStatus, RoundType } from "./domain.js";
 
 /**
  * How much interviewing this product has done, across everyone.
@@ -65,7 +65,7 @@ export interface SessionView {
   roleTitle: string;
   roundType: RoundType;
   roundLabel: string;
-  language: string;
+  language: InterviewLanguage;
   status: "created" | "in_progress" | "completed" | "abandoned" | "failed";
   /** Whether video was consented to. The only thing that may open the camera. */
   consentVideo: boolean;
@@ -218,7 +218,7 @@ export interface RoundDraft {
   roundType: RoundType;
   roundLabel: string;
   durationMinutes: number;
-  language: string;
+  language: InterviewLanguage;
   /** One sentence back to the candidate, saying what was taken from what they wrote. */
   understood: string;
   /** Everything filled in that they did not say, so they can correct it at a glance. */
@@ -239,7 +239,7 @@ export interface StartSessionRequest {
   companyName: string;
   roleTitle: string;
   roundType: RoundType;
-  language: string;
+  language: InterviewLanguage;
   consentAudio: boolean;
   consentVideo: boolean;
   /**
@@ -345,6 +345,8 @@ export interface ReportCommunication {
   pace: string;
   rambling: string;
   handlingUncertainty: string;
+  /** Camera is local-only, so the API explicitly carries no visual assessment. */
+  presence?: null;
 }
 
 export interface ReportPracticeItem {

@@ -136,9 +136,9 @@ class SessionControllerPoolRoundTest {
         assertEquals(label, provenance.label)
 
         val entry = reportEntryFor(opening.questionText, provenance)
-        assertEquals("model_knowledge", entry["tier"])
-        assertEquals(label, entry["tierDisclosure"])
-        assertEquals(emptyList<Any>(), entry["sources"])
+        assertEquals("model_knowledge", entry.tier)
+        assertEquals(label, entry.tierDisclosure)
+        assertEquals(emptyList<Any>(), entry.sources)
     }
 
     @Test
@@ -176,7 +176,7 @@ class SessionControllerPoolRoundTest {
     private fun reportEntryFor(
         question: String,
         provenance: QuestionProvenance,
-    ): Map<*, *> {
+    ): ReportQuestionSourceView {
         given(harness.repository.findSession(sessionId, candidate)).willReturn(sessionRow(RoundType.CODING_PRACTICAL, "completed", null))
         given(harness.repository.listTranscript(sessionId, candidate)).willReturn(
             listOf(
@@ -206,13 +206,11 @@ class SessionControllerPoolRoundTest {
                 harness.repository,
                 harness.ai,
                 harness.mapper,
-                RoundMediaProperties(),
                 RetentionProperties(),
                 harness.resumeService,
             )
         val report = reports.report(candidate, sessionId)
-        val sources = report["questionSources"] as Map<*, *>
-        return (sources["entries"] as List<*>).single() as Map<*, *>
+        return report.questionSources.entries.single()
     }
 
     private fun givenStart(

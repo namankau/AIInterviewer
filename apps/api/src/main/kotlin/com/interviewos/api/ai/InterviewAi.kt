@@ -71,19 +71,13 @@ interface InterviewAi {
         round: RoundContext,
     ): AiResult<AskedQuestion>
 
-    /**
-     * Judges one spoken answer. [video] is sent when the candidate consented to the
-     * camera, so delivery is assessed on how they actually came across rather than on a
-     * transcript alone; it is null when they declined, and the model is told to stay
-     * silent about presence in that case.
-     */
+    /** Judges one spoken answer from its audio. Camera preview frames never leave the browser. */
     fun assessAnswer(
         brief: InterviewBrief,
         round: RoundContext,
         priorTurns: List<TurnTranscript>,
         currentQuestion: String,
         answer: AnswerAudio,
-        video: AnswerVideo?,
     ): AiResult<AnswerAssessment>
 
     /**

@@ -7,9 +7,13 @@
  * plain strings here and `text` in the database, deliberately.
  */
 
-/** PRD 05. `regional` is reserved; only English and Hindi-English ship in Phase 1. */
-export const INTERVIEW_LANGUAGES = ["english", "hindi_english", "regional"] as const;
+/** Languages an interview session can actively run in during Phase 1. */
+export const INTERVIEW_LANGUAGES = ["english", "hindi_english"] as const;
 export type InterviewLanguage = (typeof INTERVIEW_LANGUAGES)[number];
+
+/** Profile preference keeps `regional` reserved without claiming sessions support it yet. */
+export const PROFILE_LANGUAGES = [...INTERVIEW_LANGUAGES, "regional"] as const;
+export type ProfileLanguage = (typeof PROFILE_LANGUAGES)[number];
 
 /** PRD 03. Determines round structure and evaluation criteria for a session. */
 export const EMPLOYER_ARCHETYPES = [

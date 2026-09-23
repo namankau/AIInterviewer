@@ -3,6 +3,7 @@ package com.interviewos.api.interview
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import tools.jackson.databind.JsonNode
 import java.time.Instant
@@ -37,6 +38,10 @@ data class StartSessionRequest(
     val roleTitle: String = "",
     @field:NotBlank
     val roundType: String = "",
+    @field:Pattern(
+        regexp = "english|hindi_english",
+        message = "Language must be english or hindi_english.",
+    )
     val language: String = "english",
     /**
      * Consent is a hard gate and is recorded per stream, with a timestamp. The server

@@ -287,9 +287,10 @@ export function requestHint(
   accessToken: string,
   sessionId: string,
   turnIndex: number,
+  requestId: string,
 ): Promise<HintView> {
   return apiSend<HintView>(
-    `/api/v1/sessions/${sessionId}/turns/${turnIndex}/hint`,
+    `/api/v1/sessions/${sessionId}/turns/${turnIndex}/hint?requestId=${encodeURIComponent(requestId)}`,
     "POST",
     accessToken,
   );
@@ -339,27 +340,25 @@ export async function deleteSession(accessToken: string, id: string): Promise<vo
   await apiSend<void>(`/api/v1/sessions/${id}`, "DELETE", accessToken);
 }
 
-/** Uploads one spoken answer, plus video when the candidate consented to it. */
+/** Uploads one spoken answer. Camera preview frames never leave the browser. */
 export function submitAnswer(
   accessToken: string,
   sessionId: string,
   turnIndex: number,
   audio: Blob,
-  video: Blob | null,
+  requestId: string,
   speaksLocally = false,
   /** Submit pressed mid-answer: assess this answer as the last one and end the round. */
   endRound = false,
 ): Promise<SubmitAnswerResponse> {
   const form = new FormData();
   form.append("turnIndex", String(turnIndex));
+  form.append("requestId", requestId);
   form.append("endRound", String(endRound));
   // Told per turn rather than per session: it describes this browser, and the same
   // candidate may come back on a phone with no usable voice.
   form.append("speaksLocally", String(speaksLocally));
   form.append("audio", audio, "answer.webm");
-  if (video) {
-    form.append("video", video, "answer-video.webm");
-  }
   return apiSend<SubmitAnswerResponse>(`/api/v1/sessions/${sessionId}/turns`, "POST", accessToken, form);
 }
 

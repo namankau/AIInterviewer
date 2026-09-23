@@ -6,7 +6,6 @@ export type CaptureState = "idle" | "requesting" | "ready" | "recording" | "deni
 
 export interface CapturedAnswer {
   audio: Blob;
-  video: Blob | null;
   durationMs: number;
 }
 
@@ -19,7 +18,7 @@ interface UseInterviewCaptureOptions {
  * Microphone and camera capture for one interview.
  *
  * The answer is recorded as clean audio and assessed from that. **The camera is opened but
- * not recorded** — see [RECORD_CAMERA] — so nothing from it leaves the browser. It is on
+ * not recorded**, so nothing from it leaves the browser. It is on
  * so the candidate practises being looked at, facing the drawn interviewer, and that
  * benefit never leaves their own machine.
  *
@@ -36,9 +35,7 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
 
   const streamRef = useRef<MediaStream | null>(null);
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
-  const videoRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const videoChunksRef = useRef<Blob[]>([]);
   const startedAtRef = useRef(0);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -115,7 +112,6 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
     if (!stream) return false;
 
     audioChunksRef.current = [];
-    videoChunksRef.current = [];
 
     const audioStream = new MediaStream(stream.getAudioTracks());
     const audioRecorder = new MediaRecorder(audioStream, recorderOptions(AUDIO_TYPES, SPEECH_BITRATE));
@@ -125,20 +121,11 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
     audioRecorder.start();
     audioRecorderRef.current = audioRecorder;
 
-    if (withVideo && RECORD_CAMERA && stream.getVideoTracks().length > 0) {
-      const videoRecorder = new MediaRecorder(stream, recorderOptions(VIDEO_TYPES, SPEECH_BITRATE, CAMERA_BITRATE));
-      videoRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) videoChunksRef.current.push(event.data);
-      };
-      videoRecorder.start();
-      videoRecorderRef.current = videoRecorder;
-    }
-
     startedAtRef.current = Date.now();
     setState("recording");
     runMeter();
     return true;
-  }, [requestDevices, runMeter, withVideo]);
+  }, [requestDevices, runMeter]);
 
   const stop = useCallback(async (): Promise<CapturedAnswer | null> => {
     const audioRecorder = audioRecorderRef.current;
@@ -149,25 +136,21 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
     setLevel(0);
 
     const audio = await finish(audioRecorder, audioChunksRef);
-    const video = videoRecorderRef.current ? await finish(videoRecorderRef.current, videoChunksRef) : null;
 
     audioRecorderRef.current = null;
-    videoRecorderRef.current = null;
     setState("ready");
 
-    return { audio, video, durationMs };
+    return { audio, durationMs };
   }, [stopMeter]);
 
   /** Releases the camera light and the microphone. Called on unmount and on exit. */
   const release = useCallback(() => {
     stopMeter();
     audioRecorderRef.current?.stop();
-    videoRecorderRef.current?.stop();
     streamRef.current?.getTracks().forEach((track) => track.stop());
     void audioContextRef.current?.close().catch(() => undefined);
     streamRef.current = null;
     audioRecorderRef.current = null;
-    videoRecorderRef.current = null;
     audioContextRef.current = null;
     analyserRef.current = null;
     setStream(null);
@@ -190,7 +173,6 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
 }
 
 const AUDIO_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
-const VIDEO_TYPES = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
 
 /**
  * Opus, mono, speech. Well above what the model needs to transcribe an answer or hear how
@@ -199,55 +181,17 @@ const VIDEO_TYPES = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus",
 const SPEECH_BITRATE = 48_000;
 
 /**
- * Whether the camera is *recorded*, as opposed to merely shown.
- *
- * It is shown and not recorded, and the distinction is the whole point. The camera is on
- * so the candidate practises the thing they will actually do — sitting up, looking at a
- * face, being seen — and that benefit is entirely local to their own screen. Nothing
- * reads the video: it is not sent to the model (`RoundMediaProperties` on the server) and
- * the report is forbidden from describing how anybody looked. Uploading it would be
- * collecting and retaining somebody's face for a feature that does not exist.
- *
- * When body-language feedback is real and appears in the report, this flips to `true` and
- * the consent copy in `new-interview-form.tsx` has to change in the same commit — it
- * currently promises, in as many words, that nothing is uploaded.
- */
-const RECORD_CAMERA = false;
-
-/**
- * The bitrate the camera would be recorded at, if it were recorded. It is not; see
- * [RECORD_CAMERA]. Kept because the number was measured and would otherwise be worked out
- * again from scratch the day body-language feedback arrives.
- *
- * The camera would be recorded for a body-language analysis that does not exist yet — the
- * product decision was to capture it now and analyse it later, and that decision has since
- * been reversed: nothing is uploaded, because collecting somebody's face for a feature
- * that does not exist is a cost with no matching benefit to the person paying it. If it
- * comes back it only has to be good enough to read posture and eye contact from, later,
- * and not good enough to look at.
- *
- * Left to itself Chromium encodes VP9 at roughly 4.4 MB per minute of answer, measured
- * against its own capture device on a synthetic pattern that compresses better than a real
- * person in a room. None of that is uploaded until the candidate stops talking, so on a
- * 5 Mbps home uplink it is about seven seconds of the pause between their last word and
- * the next question, before the model has been asked anything at all. At 300 kbps it is
- * 1.6 MB per minute and under three seconds.
- */
-const CAMERA_BITRATE = 300_000;
-
-/**
  * Safari and Chrome disagree on supported containers; take the first that works.
  *
  * The bitrates are set explicitly because the default is chosen for watching, and nobody
  * watches these. Every byte is one the candidate waits to upload.
  */
-function recorderOptions(candidates: string[], audioBps: number, videoBps?: number): MediaRecorderOptions {
+function recorderOptions(candidates: string[], audioBps: number): MediaRecorderOptions {
   if (typeof MediaRecorder === "undefined") return {};
   const supported = candidates.find((type) => MediaRecorder.isTypeSupported(type));
   return {
     ...(supported ? { mimeType: supported } : {}),
     audioBitsPerSecond: audioBps,
-    ...(videoBps === undefined ? {} : { videoBitsPerSecond: videoBps }),
   };
 }
 

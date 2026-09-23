@@ -244,8 +244,6 @@ class BankRoundServiceTest {
             sessionId = sessionId,
             turnIndex = turnIndex,
             audio = AnswerAudio(byteArrayOf(1, 2, 3), "audio/webm"),
-            video = null,
-            videoContentType = null,
             speaksLocally = true,
         )
 

@@ -45,10 +45,14 @@ export function DeviceCheck({
   session,
   capture,
   onEnter,
+  entering = false,
+  entryError = null,
 }: {
   session: SessionView;
   capture: Capture;
   onEnter: () => void;
+  entering?: boolean;
+  entryError?: string | null;
 }) {
   const previewRef = useRef<HTMLVideoElement | null>(null);
   const requested = useRef(false);
@@ -399,14 +403,20 @@ export function DeviceCheck({
           </p>
         ) : null}
 
+        {entryError ? (
+          <p role="alert" className="text-body text-danger">
+            {entryError}
+          </p>
+        ) : null}
+
         <div className="flex flex-col gap-4">
           <button
             type="button"
             onClick={onEnter}
-            disabled={!ready}
+            disabled={!ready || entering}
             className="self-start rounded-lg bg-accent px-7 py-3.5 text-body font-medium text-accent-contrast transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Enter the room
+            {entering ? "Starting the interview…" : "Enter the room"}
           </button>
           {/*
             * Nothing here when the microphone is blocked and the alert above already says

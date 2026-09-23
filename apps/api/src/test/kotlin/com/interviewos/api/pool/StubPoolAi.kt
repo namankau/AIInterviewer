@@ -4,7 +4,6 @@ import com.interviewos.api.ai.AiCapability
 import com.interviewos.api.ai.AiResult
 import com.interviewos.api.ai.AnswerAssessment
 import com.interviewos.api.ai.AnswerAudio
-import com.interviewos.api.ai.AnswerVideo
 import com.interviewos.api.ai.AskedQuestion
 import com.interviewos.api.ai.ComposedCase
 import com.interviewos.api.ai.ComposedProblem
@@ -69,7 +68,6 @@ abstract class StubPoolAi : InterviewAi {
         priorTurns: List<TurnTranscript>,
         currentQuestion: String,
         answer: AnswerAudio,
-        video: AnswerVideo?,
     ): AiResult<AnswerAssessment> = unsupported()
 
     override fun offerHint(

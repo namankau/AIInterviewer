@@ -259,8 +259,7 @@ function RoundSetup({
         language,
         consentAudio,
         // Whether to open the camera, not whether to keep what it sees. Nothing from it
-        // is uploaded (`RECORD_CAMERA` in use-interview-capture.ts) or analysed
-        // (`RoundMediaProperties` on the server) — it is on so the candidate practises
+        // is recorded, uploaded or analysed — it is on so the candidate practises
         // being looked at, which is a benefit that never leaves their own screen.
         consentVideo: cameraOn,
         durationMinutes,
@@ -424,7 +423,10 @@ function RoundSetup({
         <Field label="Language" hint="The register the interviewer uses.">
           <select
             value={language}
-            onChange={(event) => setLanguage(event.target.value)}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value === "english" || value === "hindi_english") setLanguage(value);
+            }}
             className={INPUT}
           >
             <option value="english">English</option>

@@ -42,14 +42,11 @@ class RoundDeletionTest {
     @Test
     fun `deleting a round removes the row and the recordings under it`() {
         val repository = mock(SessionRepository::class.java)
-        val storage = mock(ObjectStorage::class.java)
-        given(repository.deleteSession(sessionId, userId)).willReturn(true)
+        given(repository.enqueueAndDeleteSession(sessionId, userId, "interview-media", "$userId/$sessionId")).willReturn(true)
 
-        deletion(repository, storage).delete(userId, sessionId)
+        deletion(repository).delete(userId, sessionId)
 
-        verify(repository).deleteSession(sessionId, userId)
-        // Media is keyed {userId}/{sessionId}/..., so the prefix is exactly this round.
-        verify(storage).deleteByPrefix("interview-media", "$userId/$sessionId")
+        verify(repository).enqueueAndDeleteSession(sessionId, userId, "interview-media", "$userId/$sessionId")
     }
 
     /**
@@ -64,40 +61,100 @@ class RoundDeletionTest {
      * audio by guessing a session id.
      */
     @Test
-    fun `a round belonging to somebody else is a 404 and nothing is touched`() {
+    fun `a round belonging to somebody else is a 404 and no durable job is created`() {
         val repository = mock(SessionRepository::class.java)
-        val storage = mock(ObjectStorage::class.java)
-        given(repository.deleteSession(sessionId, otherUserId)).willReturn(false)
+        given(
+            repository.enqueueAndDeleteSession(
+                sessionId,
+                otherUserId,
+                "interview-media",
+                "$otherUserId/$sessionId",
+            ),
+        ).willReturn(false)
 
         val failure =
             assertFailsWith<ApiException> {
-                deletion(repository, storage).delete(otherUserId, sessionId)
+                deletion(repository).delete(otherUserId, sessionId)
             }
 
         assertEquals(HttpStatus.NOT_FOUND, failure.status)
         assertEquals("not_found", failure.code)
-        verify(storage, never()).deleteByPrefix("interview-media", "$otherUserId/$sessionId")
     }
 
-    /**
-     * The row is already gone by the time storage is asked, so there is nothing to roll
-     * back and nothing the candidate could usefully retry. Failing the request now would
-     * tell them the deletion did not happen when most of it did. It is logged loudly
-     * instead — a stranded recording is a data-protection problem, and somebody has to be
-     * able to find it.
-     */
     @Test
-    fun `a storage failure does not turn a completed deletion into an error`() {
+    fun `a storage failure is durably rescheduled after the session row is gone`() {
         val repository = mock(SessionRepository::class.java)
         val storage = mock(ObjectStorage::class.java)
-        given(repository.deleteSession(sessionId, userId)).willReturn(true)
+        val now = Instant.parse("2026-09-23T10:00:00Z")
+        val jobId = UUID.fromString("78384af7-6042-45b3-a9fd-f2bf592d8e93")
+        val job =
+            StorageDeletionJobRow(
+                jobId,
+                "interview-media",
+                "$userId/$sessionId",
+                attempts = 1,
+                settleAfter = now.plus(Duration.ofMinutes(15)),
+            )
+        given(repository.enqueueAndDeleteSession(sessionId, userId, "interview-media", "$userId/$sessionId")).willReturn(true)
+        deletion(repository).delete(userId, sessionId)
+        given(repository.claimStorageDeletionJobs(now, now.plus(Duration.ofMinutes(2)), 100)).willReturn(listOf(job))
         willThrow(ObjectStorageException("bucket unreachable"))
             .given(storage)
             .deleteByPrefix("interview-media", "$userId/$sessionId")
 
-        deletion(repository, storage).delete(userId, sessionId)
+        StorageDeletionWorker(repository, storage).processDue(now)
 
         verify(storage).deleteByPrefix("interview-media", "$userId/$sessionId")
+        verify(repository).markStorageDeletionFailed(jobId, "bucket unreachable", now.plusSeconds(30), now)
+        verify(repository, never()).markStorageDeletionSucceeded(jobId, now, true)
+    }
+
+    @Test
+    fun `an early successful purge stays pending for a final post-upload sweep`() {
+        val repository = mock(SessionRepository::class.java)
+        val storage = mock(ObjectStorage::class.java)
+        val now = Instant.parse("2026-09-23T10:00:00Z")
+        val jobId = UUID.fromString("78384af7-6042-45b3-a9fd-f2bf592d8e93")
+        given(repository.claimStorageDeletionJobs(now, now.plus(Duration.ofMinutes(2)), 100)).willReturn(
+            listOf(
+                StorageDeletionJobRow(
+                    jobId,
+                    "interview-media",
+                    "$userId/$sessionId",
+                    attempts = 1,
+                    settleAfter = now.plus(Duration.ofMinutes(15)),
+                ),
+            ),
+        )
+
+        StorageDeletionWorker(repository, storage).processDue(now)
+
+        verify(storage).deleteByPrefix("interview-media", "$userId/$sessionId")
+        verify(repository).markStorageDeletionSucceeded(jobId, now, false)
+    }
+
+    @Test
+    fun `a purge after the settling window completes the durable job`() {
+        val repository = mock(SessionRepository::class.java)
+        val storage = mock(ObjectStorage::class.java)
+        val now = Instant.parse("2026-09-23T10:20:00Z")
+        val jobId = UUID.fromString("78384af7-6042-45b3-a9fd-f2bf592d8e93")
+        given(repository.claimStorageDeletionJobs(now, now.plus(Duration.ofMinutes(2)), 100)).willReturn(
+            listOf(
+                StorageDeletionJobRow(
+                    jobId,
+                    "interview-media",
+                    "$userId/$sessionId",
+                    attempts = 2,
+                    settleAfter = Instant.parse("2026-09-23T10:15:00Z"),
+                ),
+            ),
+        )
+
+        StorageDeletionWorker(repository, storage).processDue(now)
+
+        verify(storage).deleteByPrefix("interview-media", "$userId/$sessionId")
+        verify(repository).markStorageDeletionSucceeded(jobId, now, true)
     }
 
     // -- retention ------------------------------------------------------------
@@ -105,31 +162,27 @@ class RoundDeletionTest {
     @Test
     fun `expiry clears the report and the recordings but keeps the session row`() {
         val repository = mock(SessionRepository::class.java)
-        val storage = mock(ObjectStorage::class.java)
         val now = Instant.parse("2026-10-06T00:00:00Z")
         given(repository.listRoundsDueForExpiry(Instant.parse("2026-09-08T00:00:00Z"), 200))
             .willReturn(listOf(ExpiringRound(sessionId, userId)))
+        given(repository.enqueueAndExpireRound(sessionId, userId, "interview-media", "$userId/$sessionId")).willReturn(true)
 
-        val cleared = deletion(repository, storage).expireDueRounds(now)
+        val cleared = deletion(repository).expireDueRounds(now)
 
         assertEquals(1, cleared)
-        verify(repository).expireRound(sessionId, userId)
-        verify(storage).deleteByPrefix("interview-media", "$userId/$sessionId")
+        verify(repository).enqueueAndExpireRound(sessionId, userId, "interview-media", "$userId/$sessionId")
         // The round stays in the candidate's history. Progress is derived from completed
         // sessions, so deleting the row would tell them they never sat it.
-        verify(repository, never()).deleteSession(sessionId, userId)
+        verify(repository, never()).enqueueAndDeleteSession(sessionId, userId, "interview-media", "$userId/$sessionId")
     }
 
     @Test
-    fun `nothing due means nothing is asked of storage`() {
+    fun `nothing due means no durable job is created`() {
         val repository = mock(SessionRepository::class.java)
-        val storage = mock(ObjectStorage::class.java)
         given(repository.listRoundsDueForExpiry(Instant.parse("2026-09-08T00:00:00Z"), 200))
             .willReturn(emptyList())
 
-        assertEquals(0, deletion(repository, storage).expireDueRounds(Instant.parse("2026-10-06T00:00:00Z")))
-
-        verify(storage, never()).deleteByPrefix("interview-media", "$userId/$sessionId")
+        assertEquals(0, deletion(repository).expireDueRounds(Instant.parse("2026-10-06T00:00:00Z")))
     }
 
     /**
@@ -141,36 +194,31 @@ class RoundDeletionTest {
     @Test
     fun `one round failing does not stop the rest of the sweep`() {
         val repository = mock(SessionRepository::class.java)
-        val storage = mock(ObjectStorage::class.java)
         val secondSession = UUID.fromString("9f9d1a3e-5c44-4b7a-8a11-70f2e1c9d004")
         given(repository.listRoundsDueForExpiry(Instant.parse("2026-09-08T00:00:00Z"), 200))
             .willReturn(listOf(ExpiringRound(sessionId, userId), ExpiringRound(secondSession, userId)))
-        given(repository.expireRound(sessionId, userId)).willThrow(IllegalStateException("connection lost"))
-        given(repository.expireRound(secondSession, userId)).willReturn(true)
+        given(repository.enqueueAndExpireRound(sessionId, userId, "interview-media", "$userId/$sessionId"))
+            .willThrow(IllegalStateException("connection lost"))
+        given(repository.enqueueAndExpireRound(secondSession, userId, "interview-media", "$userId/$secondSession"))
+            .willReturn(true)
 
-        val cleared = deletion(repository, storage).expireDueRounds(Instant.parse("2026-10-06T00:00:00Z"))
+        val cleared = deletion(repository).expireDueRounds(Instant.parse("2026-10-06T00:00:00Z"))
 
         assertEquals(1, cleared)
-        verify(storage, never()).deleteByPrefix("interview-media", "$userId/$sessionId")
-        verify(storage).deleteByPrefix("interview-media", "$userId/$secondSession")
     }
 
     @Test
     fun `the configured window decides what is due`() {
         val repository = mock(SessionRepository::class.java)
-        val storage = mock(ObjectStorage::class.java)
         val ninetyDays = RetentionProperties(reportsKeptFor = Duration.ofDays(90), batchSize = 50)
         given(repository.listRoundsDueForExpiry(Instant.parse("2026-07-08T00:00:00Z"), 50))
             .willReturn(emptyList())
 
-        RoundDeletion(repository, storage, storageProperties, ninetyDays)
+        RoundDeletion(repository, storageProperties, ninetyDays)
             .expireDueRounds(Instant.parse("2026-10-06T00:00:00Z"))
 
         verify(repository).listRoundsDueForExpiry(Instant.parse("2026-07-08T00:00:00Z"), 50)
     }
 
-    private fun deletion(
-        repository: SessionRepository,
-        storage: ObjectStorage,
-    ) = RoundDeletion(repository, storage, storageProperties, RetentionProperties())
+    private fun deletion(repository: SessionRepository) = RoundDeletion(repository, storageProperties, RetentionProperties())
 }

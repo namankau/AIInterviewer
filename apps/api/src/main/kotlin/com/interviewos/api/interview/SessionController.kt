@@ -83,14 +83,15 @@ class SessionController(
     ): SessionView = interviewService.begin(callerOf(jwt), id)
 
     /**
-     * Submits one spoken answer. Multipart because the browser sends captured audio and,
-     * when the candidate consented, video.
+     * Submits one spoken answer. The camera is a local preview and never leaves the
+     * browser; an unexpected video part is rejected before the service can store it.
      */
     @PostMapping("/sessions/{id}/turns")
     fun submitAnswer(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
         @RequestParam turnIndex: Int,
+        @RequestParam requestId: UUID,
         @RequestParam audio: MultipartFile,
         @RequestParam(required = false) video: MultipartFile?,
         // See StartSessionRequest.speaksLocally. Sent per turn because it describes the
@@ -102,15 +103,20 @@ class SessionController(
         if (audio.isEmpty) {
             throw ApiException.badRequest("We did not receive any audio for that answer.", code = "empty_answer")
         }
+        if (video?.isEmpty == false) {
+            throw ApiException.badRequest(
+                "Camera video is not uploaded or analysed. Only the spoken answer may be submitted.",
+                code = "video_not_supported",
+            )
+        }
         return interviewService.submitAnswer(
             userId = callerOf(jwt),
             sessionId = id,
             turnIndex = turnIndex,
             audio = AnswerAudio(audio.bytes, audio.contentType ?: "audio/webm"),
-            video = video?.takeIf { !it.isEmpty }?.bytes,
-            videoContentType = video?.contentType,
             speaksLocally = speaksLocally,
             endRound = endRound,
+            requestId = requestId,
         )
     }
 
@@ -144,7 +150,8 @@ class SessionController(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
         @PathVariable turnIndex: Int,
-    ): HintView = interviewService.requestHint(callerOf(jwt), id, turnIndex)
+        @RequestParam requestId: UUID,
+    ): HintView = interviewService.requestHint(callerOf(jwt), id, turnIndex, requestId)
 
     @PostMapping("/sessions/{id}/abandon")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -206,7 +213,7 @@ class SessionController(
     fun report(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
-    ): Map<String, Any?> = reportService.report(callerOf(jwt), id)
+    ): SessionReportView = reportService.report(callerOf(jwt), id)
 
     @GetMapping("/readiness")
     fun readiness(

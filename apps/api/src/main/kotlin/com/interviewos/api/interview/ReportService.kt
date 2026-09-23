@@ -28,7 +28,6 @@ class ReportService(
     private val repository: SessionRepository,
     private val interviewAi: InterviewAi,
     private val objectMapper: ObjectMapper,
-    private val roundMedia: RoundMediaProperties,
     private val retention: RetentionProperties,
     private val resumeService: ResumeService,
 ) {
@@ -145,7 +144,7 @@ class ReportService(
 
         val verified =
             withVerifiedEvidence(composed.value, turns)
-                .withoutUnseenPresence(roundMedia.presenceWasObserved(session.consentVideo))
+                .withoutCameraClaims()
                 // Every answered question gets a note, whether or not the model wrote one
                 // for it (see AnswerAnnotations).
                 .let { it.copy(annotations = AnswerAnnotations.of(turns, it.annotations)) }
@@ -182,11 +181,10 @@ class ReportService(
      * "maintained good eye contact" in an audio-only round is fabricated evidence — the
      * same failure as an invented quote, in a different costume.
      *
-     * [seen] is whether the camera reached the model, not whether the candidate agreed to
-     * it being recorded. Those came apart when video came off the round's critical path.
+     * The camera is a local preview only, so nothing can honestly make a presence claim.
      */
-    private fun ReportContent.withoutUnseenPresence(seen: Boolean): ReportContent =
-        if (seen || communication.presence == null) {
+    private fun ReportContent.withoutCameraClaims(): ReportContent =
+        if (communication.presence == null) {
             this
         } else {
             copy(communication = communication.copy(presence = null))

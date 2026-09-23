@@ -185,8 +185,6 @@ class FresherRoundServiceTest {
             sessionId = sessionId,
             turnIndex = 4,
             audio = AnswerAudio(byteArrayOf(1, 2, 3), "audio/webm"),
-            video = null,
-            videoContentType = null,
             speaksLocally = true,
         )
 

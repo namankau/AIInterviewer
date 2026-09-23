@@ -209,20 +209,10 @@ class GeminiInterviewAi(
         priorTurns: List<TurnTranscript>,
         currentQuestion: String,
         answer: AnswerAudio,
-        video: AnswerVideo?,
     ): AiResult<AnswerAssessment> {
         val prompt = prompts.assessAnswer(brief, round, priorTurns, currentQuestion)
 
-        val parts =
-            buildList {
-                add(textPart(prompt))
-                add(inlineDataPart(answer.contentType, answer.bytes))
-                // Inline parts share one request budget, so an oversized take is dropped
-                // rather than allowed to fail the turn. Delivery falls back to the audio.
-                video?.takeIf { it.bytes.size <= MAX_INLINE_VIDEO_BYTES }?.let {
-                    add(inlineDataPart(it.contentType, it.bytes))
-                }
-            }
+        val parts = listOf(textPart(prompt), inlineDataPart(answer.contentType, answer.bytes))
         val (node, usage) = generateJson(reasoningModel, parts, prompts.schema("assess-answer"), Thinking.IN_THE_ROOM)
         return AiResult(objectMapper.treeToValue(node, AnswerAssessment::class.java), usage)
     }
@@ -535,7 +525,6 @@ class GeminiInterviewAi(
          * Gemini caps a single request's inline payload at 20 MB. Answers are short, so a
          * take larger than this is a runaway recorder rather than a thorough candidate.
          */
-        const val MAX_INLINE_VIDEO_BYTES = 15 * 1024 * 1024
         const val WARMUP_PHASE = "warm-up"
         const val CLOSING_PHASE = "closing"
     }

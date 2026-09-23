@@ -61,6 +61,7 @@ class BankRoundHarness(
 
     /** Returns null for every candidate unless a test says otherwise: no resume, as most rounds run. */
     val resumeService: ResumeService = mock(ResumeService::class.java)
+    val storage: ObjectStorage = mock(ObjectStorage::class.java)
 
     /** What the model is asked, in order. */
     val briefs = mutableListOf<InterviewBrief>()
@@ -101,14 +102,13 @@ class BankRoundHarness(
             userRepository = mock(UserRepository::class.java),
             archetypeResolver = archetypes,
             interviewAi = ai,
-            storage = mock(ObjectStorage::class.java),
+            storage = storage,
             storageProperties = StorageProperties(),
             objectMapper = mapper,
             questionSpeech = mock(QuestionSpeech::class.java),
             entitlementProperties = EntitlementProperties(),
             roundsProperties = RoundsProperties(),
             retentionProperties = RetentionProperties(),
-            roundMedia = RoundMediaProperties(),
             bankRounds = BankRoundPlanner(directory, bank, repository),
             poolRounds = PoolRoundPlanner(directory, pool, repository, poolMaterial),
             resumeService = resumeService,

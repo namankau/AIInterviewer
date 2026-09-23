@@ -206,7 +206,6 @@ class SessionControllerPoolRoundTest {
                 harness.repository,
                 harness.ai,
                 harness.mapper,
-                RoundMediaProperties(),
                 RetentionProperties(),
                 harness.resumeService,
             )

@@ -281,7 +281,6 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         sessionId,
         turn.turnIndex,
         captured.audio,
-        captured.video,
         speaksLocally,
         endRound,
       );

@@ -339,13 +339,12 @@ export async function deleteSession(accessToken: string, id: string): Promise<vo
   await apiSend<void>(`/api/v1/sessions/${id}`, "DELETE", accessToken);
 }
 
-/** Uploads one spoken answer, plus video when the candidate consented to it. */
+/** Uploads one spoken answer. Camera preview frames never leave the browser. */
 export function submitAnswer(
   accessToken: string,
   sessionId: string,
   turnIndex: number,
   audio: Blob,
-  video: Blob | null,
   speaksLocally = false,
   /** Submit pressed mid-answer: assess this answer as the last one and end the round. */
   endRound = false,
@@ -357,9 +356,6 @@ export function submitAnswer(
   // candidate may come back on a phone with no usable voice.
   form.append("speaksLocally", String(speaksLocally));
   form.append("audio", audio, "answer.webm");
-  if (video) {
-    form.append("video", video, "answer-video.webm");
-  }
   return apiSend<SubmitAnswerResponse>(`/api/v1/sessions/${sessionId}/turns`, "POST", accessToken, form);
 }
 

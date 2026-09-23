@@ -83,11 +83,10 @@ class FallbackInterviewAi(
         priorTurns: List<TurnTranscript>,
         currentQuestion: String,
         answer: AnswerAudio,
-        video: AnswerVideo?,
     ): AiResult<AnswerAssessment> =
         // The one call that cannot fall back to a text model, however cheap.
         attempt(AiCapability.AUDIO_UNDERSTANDING, "assessAnswer") {
-            it.assessAnswer(brief, round, priorTurns, currentQuestion, answer, video)
+            it.assessAnswer(brief, round, priorTurns, currentQuestion, answer)
         }
 
     override fun offerHint(

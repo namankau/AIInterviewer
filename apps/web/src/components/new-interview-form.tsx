@@ -259,8 +259,7 @@ function RoundSetup({
         language,
         consentAudio,
         // Whether to open the camera, not whether to keep what it sees. Nothing from it
-        // is uploaded (`RECORD_CAMERA` in use-interview-capture.ts) or analysed
-        // (`RoundMediaProperties` on the server) — it is on so the candidate practises
+        // is recorded, uploaded or analysed — it is on so the candidate practises
         // being looked at, which is a benefit that never leaves their own screen.
         consentVideo: cameraOn,
         durationMinutes,

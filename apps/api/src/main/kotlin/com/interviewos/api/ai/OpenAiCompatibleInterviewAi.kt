@@ -48,7 +48,6 @@ class OpenAiCompatibleInterviewAi(
         priorTurns: List<TurnTranscript>,
         currentQuestion: String,
         answer: AnswerAudio,
-        video: AnswerVideo?,
     ): AiResult<AnswerAssessment> = unsupported("listening to a spoken answer")
 
     override fun composeRound(query: String): AiResult<ComposedRound> =

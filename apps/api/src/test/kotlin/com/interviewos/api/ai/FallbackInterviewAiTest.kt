@@ -75,7 +75,7 @@ class FallbackInterviewAiTest {
         val gemini = FakeAi("gemini", MULTIMODAL, fails = AiUnavailableException("over the spend cap"))
 
         assertFailsWith<AiUnavailableException> {
-            FallbackInterviewAi(listOf(gemini, textOnly)).assessAnswer(brief, round, emptyList(), "Q?", audio, null)
+            FallbackInterviewAi(listOf(gemini, textOnly)).assessAnswer(brief, round, emptyList(), "Q?", audio)
         }
 
         assertEquals(0, textOnly.calls, "the text-only model must never see the audio")
@@ -241,7 +241,7 @@ class FallbackInterviewAiTest {
         val records = mutableListOf<AiCallRecord>()
         val chain = FallbackInterviewAi(listOf(FakeAi("gemini-lite", MULTIMODAL)), records::add)
 
-        chain.assessAnswer(brief, round, emptyList(), "Why sharding?", audio, null)
+        chain.assessAnswer(brief, round, emptyList(), "Why sharding?", audio)
         chain.composeReport(brief, emptyList())
 
         assertEquals(listOf("assessAnswer", "composeReport"), records.map { it.call })
@@ -324,7 +324,6 @@ class FallbackInterviewAiTest {
             priorTurns: List<TurnTranscript>,
             currentQuestion: String,
             answer: AnswerAudio,
-            video: AnswerVideo?,
         ) = answer(AnswerAssessment("transcript", "move_on", nextQuestionText = null))
 
         override fun offerHint(

@@ -58,7 +58,6 @@ class InterviewService(
     private val entitlementProperties: EntitlementProperties,
     private val roundsProperties: RoundsProperties,
     private val retentionProperties: RetentionProperties,
-    private val roundMedia: RoundMediaProperties,
     private val bankRounds: BankRoundPlanner,
     private val poolRounds: PoolRoundPlanner,
     private val resumeService: ResumeService,
@@ -437,8 +436,6 @@ class InterviewService(
         sessionId: UUID,
         turnIndex: Int,
         audio: AnswerAudio,
-        video: ByteArray?,
-        videoContentType: String?,
         /** The browser will read the next question out itself. See [StartSessionRequest]. */
         speaksLocally: Boolean = false,
         /**
@@ -466,17 +463,9 @@ class InterviewService(
         // It also has no bearing on what gets asked next, so it uploads alongside the
         // assessment rather than ahead of it: the candidate waits for the longer of the
         // two rather than for their sum.
-        val storedMedia =
+        val storedAudio =
             CompletableFuture.supplyAsync(
-                {
-                    StoredMedia(
-                        audioPath = storeOrWarn(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType),
-                        videoPath =
-                            video?.let {
-                                storeOrWarn(userId, sessionId, "turn-$turnIndex-video", it, videoContentType ?: "video/webm")
-                            },
-                    )
-                },
+                { storeOrWarn(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType) },
                 backgroundExecutor,
             )
 
@@ -539,12 +528,6 @@ class InterviewService(
                         priorTurns = priorTurns,
                         currentQuestion = turn.questionText,
                         answer = audio,
-                        // Stored either way, and analysed only if the round is configured to.
-                        // A minute of camera is several times the size of the whole prompt and
-                        // roughly doubles the wait the candidate sits through, for one sentence
-                        // about body language that is not in the report yet. See
-                        // [RoundMediaProperties].
-                        video = roundMedia.videoForRound(video, videoContentType),
                     )
                 }
             } catch (e: AiUnavailableException) {
@@ -559,7 +542,7 @@ class InterviewService(
         val intervention = Intervention.parse(assessment.value.intervention)
         // The upload has almost always finished under the assessment by now. Joining it
         // cannot fail the turn: storeOrWarn has already turned its own errors into nulls.
-        val media = storedMedia.join()
+        val audioPath = storedAudio.join()
 
         // Everything from here down writes to the database, and has to land together: the
         // answer record, then whichever of "mark the session completed" or "insert the
@@ -572,8 +555,8 @@ class InterviewService(
                 userId = userId,
                 turnIndex = turnIndex,
                 transcript = assessment.value.transcript,
-                audioPath = media.audioPath,
-                videoPath = media.videoPath,
+                audioPath = audioPath,
+                videoPath = null,
                 assessmentJson = objectMapper.writeValueAsString(assessment.value),
                 nextAction = nextAction,
                 intervention = intervention.wireValue,
@@ -1233,9 +1216,3 @@ class InterviewService(
             )
     }
 }
-
-/** Where an answer's recordings ended up. Either may be null: storage is not a gate. */
-private data class StoredMedia(
-    val audioPath: String?,
-    val videoPath: String?,
-)

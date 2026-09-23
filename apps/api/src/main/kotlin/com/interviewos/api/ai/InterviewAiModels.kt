@@ -313,16 +313,6 @@ data class AnswerAudio(
 )
 
 /**
- * The same answer as video, when the candidate consented to the camera. Sent to the
- * model alongside the audio so delivery is judged on how someone actually came across —
- * composure, eye contact, whether they froze — and not on a transcript alone.
- */
-data class AnswerVideo(
-    val bytes: ByteArray,
-    val contentType: String,
-)
-
-/**
  * Where the round is up to, as the model needs to be told it.
  *
  * The engine decides all of this. A model left to pace itself opens on the hardest

@@ -45,17 +45,16 @@ public contracts. `tasks/task-058-interview-integrity.md`.
 - Linked migration list: pass, read-only; no branch migrations applied.
 
 ## Merge status
-- Branch `fix/interview-integrity` has seven implementation commits through `7e15c06`
-  plus this handoff update, and is not pushed or merged. Remote push was not explicitly
-  authorised.
-- Open a PR to `develop` after pushing because this touches privacy and data deletion.
+- Branch `fix/interview-integrity` is pushed. PR #16 targets `develop`:
+  https://github.com/namankau/AIInterviewer/pull/16
+- The PR remains unmerged because this touches privacy and data deletion and its four
+  migrations have not been applied.
 - Do not merge until CI is green and all four migrations have been reviewed and applied.
 
 ## Suggested next task
-- Review the four migrations, authorise the branch push, apply the migrations, and run CI
-  on the PR before merging to `develop`.
+- Review and apply the four migrations, confirm PR #16 CI is green, then approve and merge
+  it into `develop`.
 
 ## Open questions for you
-- Authorise pushing `fix/interview-integrity` to `origin` when you are ready for the PR.
 - Decide whether to add PostgreSQL/Testcontainers coverage to CI before merging, or accept
   the current service-level concurrency coverage for this change.

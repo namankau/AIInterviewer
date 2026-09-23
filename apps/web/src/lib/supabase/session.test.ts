@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { updateSession } from "./session";
 
+const getClaims = vi.hoisted(() => vi.fn());
+/** Kept only so a test can assert the proxy never reaches for it. See the last test here. */
 const getUser = vi.hoisted(() => vi.fn());
 
 vi.mock("@supabase/ssr", () => ({
-  createServerClient: () => ({ auth: { getUser } }),
+  createServerClient: () => ({ auth: { getClaims, getUser } }),
 }));
 
 function requestFor(path: string): NextRequest {
@@ -14,11 +16,15 @@ function requestFor(path: string): NextRequest {
 }
 
 function signedIn() {
-  getUser.mockResolvedValue({ data: { user: { id: "6f1b7f4c-2b2a-4c3e-9a51-0a5f4f2f2a11" } } });
+  getClaims.mockResolvedValue({
+    data: { claims: { sub: "6f1b7f4c-2b2a-4c3e-9a51-0a5f4f2f2a11" } },
+    error: null,
+  });
 }
 
+/** What `getClaims` returns when there is no token at all, or it does not verify. */
 function signedOut() {
-  getUser.mockResolvedValue({ data: { user: null } });
+  getClaims.mockResolvedValue({ data: null, error: null });
 }
 
 describe("updateSession", () => {
@@ -105,6 +111,25 @@ describe("updateSession", () => {
     const response = await updateSession(requestFor("/login"));
 
     expect(new URL(response.headers.get("location") ?? "").pathname).toBe("/dashboard");
+  });
+
+  it("verifies the token locally instead of asking the auth server who this is", async () => {
+    signedIn();
+
+    await updateSession(requestFor("/dashboard"));
+
+    expect(getClaims).toHaveBeenCalledTimes(1);
+    // The whole point of the change: this proxy runs on every navigation and every RSC
+    // prefetch, so a round trip to Supabase here is a round trip on all of them.
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it("treats a token that does not verify as signed out", async () => {
+    getClaims.mockResolvedValue({ data: null, error: { message: "invalid claim: signature" } });
+
+    const response = await updateSession(requestFor("/dashboard"));
+
+    expect(new URL(response.headers.get("location") ?? "").pathname).toBe("/login");
   });
 
   it("leaves the public landing page reachable either way", async () => {

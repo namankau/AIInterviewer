@@ -284,11 +284,9 @@ class SessionRepository(
     /**
      * Removes one round entirely, and says whether there was one to remove.
      *
-     * One statement, because `session_turns` and `session_reports` both cascade from
-     * `public.sessions` — the transcript and the report go with the row, enforced by the
-     * database rather than by three deletes here remembering to stay in step. That is the
-     * point: a fourth child table added later inherits this deletion for free if it
-     * declares its foreign key the way the other two do, and fails loudly if it does not.
+     * The storage outbox row and session deletion are one statement. The transcript and
+     * report cascade from `public.sessions`, while the outbox deliberately has no foreign
+     * key to that row: it must survive long enough to remove the external objects.
      *
      * The `user_id` predicate is the entire authorisation check. A caller asking for
      * somebody else's session gets `false` and, above this, a 404 — which is the same
@@ -297,14 +295,41 @@ class SessionRepository(
      * Returns false rather than throwing so the caller can decide; it also makes a second
      * delete of the same round idempotent rather than a 500.
      */
-    fun deleteSession(
+    fun enqueueAndDeleteSession(
         sessionId: UUID,
         userId: UUID,
+        bucket: String,
+        objectPrefix: String,
     ): Boolean =
         jdbcClient
-            .sql("delete from public.sessions where id = :id and user_id = :u")
-            .param("id", sessionId)
+            .sql(
+                """
+                with owned as (
+                    select id, user_id
+                      from public.sessions
+                     where id = :s and user_id = :u
+                ), enqueued as (
+                    insert into public.storage_deletion_jobs
+                           (user_id, session_id, bucket, object_prefix, reason)
+                    select user_id, id, :bucket, :prefix, 'candidate_deleted'
+                      from owned
+                    on conflict (bucket, object_prefix) do update
+                       set completed_at = null,
+                           next_attempt_at = now(),
+                           settle_after = greatest(public.storage_deletion_jobs.settle_after, now() + interval '15 minutes'),
+                           reason = excluded.reason,
+                           updated_at = now()
+                    returning object_prefix
+                )
+                delete from public.sessions s
+                 using owned
+                 where s.id = owned.id
+                   and exists (select 1 from enqueued)
+                """.trimIndent(),
+            ).param("s", sessionId)
             .param("u", userId)
+            .param("bucket", bucket)
+            .param("prefix", objectPrefix)
             .update() > 0
 
     /**
@@ -339,7 +364,8 @@ class SessionRepository(
             }.list()
 
     /**
-     * Clears one round's report and transcript and stamps it as expired, keeping the
+     * Clears one round's report, transcript and candidate-authored board, queues media
+     * deletion, and stamps it as expired while keeping the generated workspace and the
      * session row.
      *
      * **One statement, and it has to be.** Half of this — the report deleted, the turns
@@ -347,7 +373,7 @@ class SessionRepository(
      * report from the surviving transcript the next time the candidate opened it: a model
      * call producing a different report from the one they remember, silently, out of data
      * that was supposed to be gone. Postgres runs data-modifying CTEs exactly once and to
-     * completion, in one snapshot, so the three writes here cannot come apart. That is
+     * completion, in one snapshot, so the outbox and evidence writes cannot come apart. That is
      * also why this is not three calls behind an `@Transactional` service method — the
      * caller is in the same bean, and a self-invocation never reaches the proxy that would
      * have opened the transaction.
@@ -356,25 +382,130 @@ class SessionRepository(
      * return value: false means no such round belongs to that user, and the deletes above
      * it matched nothing either, both being scoped the same way.
      */
-    fun expireRound(
+    fun enqueueAndExpireRound(
         sessionId: UUID,
         userId: UUID,
+        bucket: String,
+        objectPrefix: String,
     ): Boolean =
         jdbcClient
             .sql(
                 """
-                with cleared_report as (
+                with owned as (
+                    select id, user_id
+                      from public.sessions
+                     where id = :s and user_id = :u and report_expired_at is null
+                ), enqueued as (
+                    insert into public.storage_deletion_jobs
+                           (user_id, session_id, bucket, object_prefix, reason)
+                    select user_id, id, :bucket, :prefix, 'retention_expired'
+                      from owned
+                    on conflict (bucket, object_prefix) do update
+                       set completed_at = null,
+                           next_attempt_at = now(),
+                           settle_after = greatest(public.storage_deletion_jobs.settle_after, now() + interval '15 minutes'),
+                           reason = excluded.reason,
+                           updated_at = now()
+                    returning object_prefix
+                ), cleared_report as (
                     delete from public.session_reports where session_id = :s and user_id = :u
                 ), cleared_turns as (
                     delete from public.session_turns where session_id = :s and user_id = :u
                 )
-                update public.sessions
-                   set report_expired_at = now()
-                 where id = :s and user_id = :u
+                update public.sessions s
+                   set report_expired_at = now(),
+                       board = null
+                  from owned
+                 where s.id = owned.id
+                   and exists (select 1 from enqueued)
                 """.trimIndent(),
             ).param("s", sessionId)
             .param("u", userId)
+            .param("bucket", bucket)
+            .param("prefix", objectPrefix)
             .update() > 0
+
+    fun claimStorageDeletionJobs(
+        now: Instant,
+        leaseUntil: Instant,
+        limit: Int,
+    ): List<StorageDeletionJobRow> =
+        jdbcClient
+            .sql(
+                """
+                with due as (
+                    select id
+                      from public.storage_deletion_jobs
+                     where completed_at is null
+                       and next_attempt_at <= :now
+                       and (lease_until is null or lease_until <= :now)
+                     order by next_attempt_at, created_at
+                     for update skip locked
+                     limit :limit
+                )
+                update public.storage_deletion_jobs j
+                   set lease_until = :leaseUntil,
+                       attempts = attempts + 1,
+                       updated_at = :now
+                  from due
+                 where j.id = due.id
+                returning j.id, j.bucket, j.object_prefix, j.attempts, j.settle_after
+                """.trimIndent(),
+            ).param("now", java.sql.Timestamp.from(now))
+            .param("leaseUntil", java.sql.Timestamp.from(leaseUntil))
+            .param("limit", limit)
+            .query { rs, _ ->
+                StorageDeletionJobRow(
+                    id = rs.getObject("id", UUID::class.java),
+                    bucket = rs.getString("bucket"),
+                    objectPrefix = rs.getString("object_prefix"),
+                    attempts = rs.getInt("attempts"),
+                    settleAfter = rs.getTimestamp("settle_after").toInstant(),
+                )
+            }.list()
+
+    fun markStorageDeletionSucceeded(
+        jobId: UUID,
+        now: Instant,
+        settled: Boolean,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                update public.storage_deletion_jobs
+                   set completed_at = case when :settled then :now else null end,
+                       next_attempt_at = case when :settled then next_attempt_at else settle_after end,
+                       lease_until = null,
+                       last_error = null,
+                       updated_at = :now
+                 where id = :id and completed_at is null
+                """.trimIndent(),
+            ).param("settled", settled)
+            .param("now", java.sql.Timestamp.from(now))
+            .param("id", jobId)
+            .update() == 1
+
+    fun markStorageDeletionFailed(
+        jobId: UUID,
+        error: String,
+        retryAt: Instant,
+        now: Instant,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                update public.storage_deletion_jobs
+                   set next_attempt_at = :retryAt,
+                       lease_until = null,
+                       last_error = :error,
+                       updated_at = :now
+                 where id = :id and completed_at is null
+                """.trimIndent(),
+            ).param("retryAt", java.sql.Timestamp.from(retryAt))
+            .param("error", error.take(1000))
+            .param("now", java.sql.Timestamp.from(now))
+            .param("id", jobId)
+            .update() == 1
 
     // -- turns ----------------------------------------------------------------
 
@@ -979,6 +1110,14 @@ data class SessionListRow(
 data class ExpiringRound(
     val sessionId: UUID,
     val userId: UUID,
+)
+
+data class StorageDeletionJobRow(
+    val id: UUID,
+    val bucket: String,
+    val objectPrefix: String,
+    val attempts: Int,
+    val settleAfter: Instant,
 )
 
 data class TurnRow(

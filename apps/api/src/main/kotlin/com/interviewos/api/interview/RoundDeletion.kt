@@ -2,12 +2,12 @@ package com.interviewos.api.interview
 
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.storage.ObjectStorage
-import com.interviewos.api.storage.ObjectStorageException
 import com.interviewos.api.storage.StorageProperties
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
@@ -35,15 +35,15 @@ import java.util.UUID
 @Service
 class RoundDeletion(
     private val repository: SessionRepository,
-    private val storage: ObjectStorage,
     private val storageProperties: StorageProperties,
     private val retention: RetentionProperties,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
-     * Deletes one of the caller's own rounds: the session, its turns, its report and its
-     * recordings.
+     * Deletes one of the caller's own rounds and atomically records the durable job that
+     * removes its recordings. The HTTP request can finish once that job exists; storage
+     * cleanup continues independently and is retried until it succeeds.
      *
      * [userId] comes from the verified token and nowhere else. A session belonging to
      * somebody else does not delete and is reported as [ApiException.notFound] — not 403,
@@ -60,10 +60,10 @@ class RoundDeletion(
         userId: UUID,
         sessionId: UUID,
     ) {
-        if (!repository.deleteSession(sessionId, userId)) {
+        val prefix = "$userId/$sessionId"
+        if (!repository.enqueueAndDeleteSession(sessionId, userId, storageProperties.mediaBucket, prefix)) {
             throw ApiException.notFound()
         }
-        purgeRecordings(userId, sessionId, "deleted")
     }
 
     /**
@@ -80,9 +80,10 @@ class RoundDeletion(
         var cleared = 0
         due.forEach { round ->
             try {
-                repository.expireRound(round.sessionId, round.userId)
-                purgeRecordings(round.userId, round.sessionId, "expired")
-                cleared++
+                val prefix = "${round.userId}/${round.sessionId}"
+                if (repository.enqueueAndExpireRound(round.sessionId, round.userId, storageProperties.mediaBucket, prefix)) {
+                    cleared++
+                }
             } catch (e: RuntimeException) {
                 // Logged and stepped over. The round keeps its null `report_expired_at`,
                 // so it is still in the due list and the next pass tries it again.
@@ -93,39 +94,43 @@ class RoundDeletion(
         log.info("Cleared {} round(s) past the {}-day retention window", cleared, retention.days)
         return cleared
     }
+}
 
-    /**
-     * Removes every recording belonging to one round.
-     *
-     * By prefix rather than by the paths on the turn rows, and that is not laziness. Media
-     * is keyed `{userId}/{sessionId}/...` (`InterviewService.storeOrWarn`), so the prefix
-     * is exactly this round and can reach nothing else — while the recorded paths only
-     * cover uploads whose database write also succeeded. An upload that landed and then
-     * lost its row is precisely the object nobody would ever come looking for again.
-     *
-     * The rows are gone by the time this runs, so a storage failure cannot be retried by
-     * the candidate and must not be swallowed either. It is logged at error with the
-     * prefix in it, because what is left behind is somebody's voice in a bucket after they
-     * were told it had been deleted, and somebody has to be able to find it.
-     */
-    private fun purgeRecordings(
-        userId: UUID,
-        sessionId: UUID,
-        what: String,
-    ) {
-        try {
-            storage.deleteByPrefix(storageProperties.mediaBucket, "$userId/$sessionId")
-        } catch (e: ObjectStorageException) {
-            log.error(
-                "Round {} was {} but its recordings remain at {}/{}/{}",
-                sessionId,
-                what,
-                storageProperties.mediaBucket,
-                userId,
-                sessionId,
-                e,
-            )
+/** Processes durable storage cleanup independently of the rows that requested it. */
+@Service
+class StorageDeletionWorker(
+    private val repository: SessionRepository,
+    private val storage: ObjectStorage,
+) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    fun processDue(now: Instant): Int {
+        val jobs = repository.claimStorageDeletionJobs(now, now.plus(JOB_LEASE), JOB_BATCH_SIZE)
+        jobs.forEach { job ->
+            try {
+                storage.deleteByPrefix(job.bucket, job.objectPrefix)
+                val settled = !now.isBefore(job.settleAfter)
+                if (!repository.markStorageDeletionSucceeded(job.id, now, settled)) {
+                    log.warn("Storage deletion job {} lost its lease before completion", job.id)
+                }
+            } catch (e: RuntimeException) {
+                val retryAt = now.plusSeconds(retryDelaySeconds(job.attempts))
+                runCatching { repository.markStorageDeletionFailed(job.id, e.message ?: e.javaClass.simpleName, retryAt, now) }
+                    .onFailure { log.error("Could not reschedule storage deletion job {}", job.id, it) }
+                log.error("Could not delete storage prefix {}/{}; job {} will retry", job.bucket, job.objectPrefix, job.id, e)
+            }
         }
+        return jobs.size
+    }
+
+    private fun retryDelaySeconds(attempts: Int): Long {
+        val multiplier = 1L shl (attempts - 1).coerceIn(0, 7)
+        return (30L * multiplier).coerceAtMost(3600L)
+    }
+
+    private companion object {
+        val JOB_LEASE: Duration = Duration.ofMinutes(2)
+        const val JOB_BATCH_SIZE = 100
     }
 }
 
@@ -144,5 +149,15 @@ class ReportRetentionJob(
     @Scheduled(initialDelayString = "PT5M", fixedDelayString = "PT12H")
     fun expire() {
         roundDeletion.expireDueRounds(Instant.now())
+    }
+}
+
+@Component
+class StorageDeletionRetryJob(
+    private val worker: StorageDeletionWorker,
+) {
+    @Scheduled(initialDelayString = "PT10S", fixedDelayString = "PT1M")
+    fun deleteDuePrefixes() {
+        worker.processDue(Instant.now())
     }
 }

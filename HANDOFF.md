@@ -43,13 +43,15 @@ public contracts. `tasks/task-058-interview-integrity.md`.
 - Web production build: pass with `next build --webpack` and synthetic public env values.
 - API `ktlintCheck test build`: pass.
 - Linked migration list: pass, read-only; no branch migrations applied.
+- PR #16 CI passed on code tip `6caf106`: both the web and API jobs are green.
 
 ## Merge status
 - Branch `fix/interview-integrity` is pushed. PR #16 targets `develop`:
   https://github.com/namankau/AIInterviewer/pull/16
 - The PR remains unmerged because this touches privacy and data deletion and its four
   migrations have not been applied.
-- Do not merge until CI is green and all four migrations have been reviewed and applied.
+- Do not merge until all four migrations have been reviewed and applied and the final
+  handoff-only tip remains green.
 
 ## Suggested next task
 - Review and apply the four migrations, confirm PR #16 CI is green, then approve and merge

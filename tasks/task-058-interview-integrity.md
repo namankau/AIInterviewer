@@ -6,7 +6,7 @@ and storage failures while keeping the public API suitable for future mobile cli
 
 ## Status
 Implementation and local verification complete on `fix/interview-integrity`. Awaiting
-migration review/application, PR #16 CI, and human review before merge.
+migration review/application and human review of green PR #16 before merge.
 
 ## Settled product behavior
 - Candidate camera is a local preview only. Camera frames are never uploaded, retained,

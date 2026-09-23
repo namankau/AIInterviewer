@@ -1,4 +1,4 @@
-import type { InterviewLanguage, RelocationIntent } from "./domain.js";
+import type { ProfileLanguage, RelocationIntent } from "./domain.js";
 
 /** Error envelope returned by every non-2xx response from the API. */
 export interface ApiError {
@@ -45,7 +45,7 @@ export interface MeResponse {
   id: string;
   email: string;
   displayName: string | null;
-  preferredLanguage: InterviewLanguage;
+  preferredLanguage: ProfileLanguage;
   /** ISO-8601 instant. */
   createdAt: string;
   profile: ProfileResponse;

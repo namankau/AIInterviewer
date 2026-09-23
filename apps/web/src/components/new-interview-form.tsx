@@ -423,7 +423,10 @@ function RoundSetup({
         <Field label="Language" hint="The register the interviewer uses.">
           <select
             value={language}
-            onChange={(event) => setLanguage(event.target.value)}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value === "english" || value === "hindi_english") setLanguage(value);
+            }}
             className={INPUT}
           >
             <option value="english">English</option>

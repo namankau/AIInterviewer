@@ -125,7 +125,7 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
     setState("recording");
     runMeter();
     return true;
-  }, [requestDevices, runMeter, withVideo]);
+  }, [requestDevices, runMeter]);
 
   const stop = useCallback(async (): Promise<CapturedAnswer | null> => {
     const audioRecorder = audioRecorderRef.current;

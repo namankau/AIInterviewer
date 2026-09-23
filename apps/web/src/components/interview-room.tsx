@@ -63,13 +63,6 @@ const ROUND_CLOCK_TICK_MS = 10_000;
 const READING_TIME_MS = 4_000;
 
 /**
- * How long entering the room waits for the server to start the clock before opening
- * anyway. The call is normally a fraction of a second; a slow network should cost the
- * candidate a slightly early clock, never a room that will not open.
- */
-const BEGIN_WAIT_MS = 3_000;
-
-/**
  * The longest one unbroken turn runs in a room with a workspace before the interviewer
  * comes in on their own.
  *
@@ -89,6 +82,7 @@ type Phase =
   /** The interviewer is saying goodbye. A round ends with somebody saying it has. */
   | "closing"
   | "complete"
+  | "terminal"
   | "error";
 
 /**
@@ -116,6 +110,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   const [hint, setHint] = useState<HintView | null>(null);
   const [hintPending, setHintPending] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
+  const [entering, setEntering] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -223,9 +218,13 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         if (!active) return;
         setSession(loaded);
         setTurn(loaded.currentTurn);
-        setPhase(
-          loaded.status === "completed" || !loaded.currentTurn ? "complete" : "checking",
-        );
+        if (loaded.status === "completed") {
+          setPhase("complete");
+        } else if (loaded.status === "in_progress" && loaded.currentTurn) {
+          setPhase("checking");
+        } else {
+          setPhase("terminal");
+        }
       })
       .catch((cause) => {
         if (!active) return;
@@ -621,17 +620,26 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
    * finds it already running and changes nothing.
    */
   async function enterRoom() {
-    if (accessToken) {
-      const begun = beginSession(accessToken, sessionId)
-        .then((view) =>
-          setSession((current) =>
-            current ? { ...current, startedAt: view.startedAt, scheduledEndAt: view.scheduledEndAt } : current,
-          ),
-        )
-        .catch(() => undefined);
-      await Promise.race([begun, new Promise((resolve) => setTimeout(resolve, BEGIN_WAIT_MS))]);
+    if (!accessToken || entering) return;
+    setEntering(true);
+    setError(null);
+    try {
+      const view = await beginSession(accessToken, sessionId);
+      setSession((current) =>
+        current
+          ? { ...current, startedAt: view.startedAt, scheduledEndAt: view.scheduledEndAt }
+          : current,
+      );
+      setPhase("asking");
+    } catch (cause) {
+      setError(
+        cause instanceof ApiRequestError
+          ? cause.message
+          : "This interview could not be started. Check your connection and try again.",
+      );
+    } finally {
+      setEntering(false);
     }
-    setPhase("asking");
   }
 
   async function leave() {
@@ -688,8 +696,20 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     );
   }
 
+  if (phase === "terminal" && session) {
+    return <TerminalSession session={session} />;
+  }
+
   if (phase === "checking" && session) {
-    return <DeviceCheck session={session} capture={capture} onEnter={() => void enterRoom()} />;
+    return (
+      <DeviceCheck
+        session={session}
+        capture={capture}
+        onEnter={() => void enterRoom()}
+        entering={entering}
+        entryError={error}
+      />
+    );
   }
 
   return (
@@ -920,6 +940,51 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         />
       ) : null}
     </div>
+  );
+}
+
+function TerminalSession({ session }: { session: SessionView }) {
+  const content =
+    session.status === "abandoned"
+      ? {
+          eyebrow: "Interview ended",
+          title: "This round was forfeited.",
+          detail: "Its answers are not assessed, so there is no report for this round.",
+        }
+      : session.status === "failed"
+        ? {
+            eyebrow: "Interview stopped",
+            title: "This round could not continue.",
+            detail: "Nothing more can be submitted to this session. Start a new round when you are ready.",
+          }
+        : session.status === "created"
+          ? {
+              eyebrow: "Interview not ready",
+              title: "This round is still being prepared.",
+              detail: "Return to your dashboard and open it again once the first question is ready.",
+            }
+          : {
+              eyebrow: "Interview unavailable",
+              title: "This round cannot be opened.",
+              detail: "Return to your dashboard to review its current state.",
+            };
+
+  return (
+    <Centered>
+      <div className="flex max-w-md flex-col items-center gap-6 text-center">
+        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+          {content.eyebrow}
+        </p>
+        <h1 className="text-title text-ink">{content.title}</h1>
+        <p className="text-body text-ink-muted">{content.detail}</p>
+        <a
+          href="/dashboard"
+          className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
+        >
+          Back to dashboard
+        </a>
+      </div>
+    </Centered>
   );
 }
 

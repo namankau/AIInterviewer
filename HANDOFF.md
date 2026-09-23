@@ -91,10 +91,13 @@ an agent that cannot see its own observations.
   three-card grids on `/` and `/courses`, and `/arena/ai-agents`.
 - **Nobody has taken the course.** Whether 33 chapters reads as approachable to a class-12
   student or as a wall is exactly the judgement CI cannot make.
-- **PR #14's benefit depends on something only you can check.** `getClaims()` only avoids the
-  network round trip if your Supabase project signs JWTs with **asymmetric keys**. On the
-  legacy shared secret it falls back to asking the server, exactly as before — no regression,
-  no gain. Switching signing keys is a dashboard action.
+- ~~**PR #14's benefit depends on something only you can check.**~~ **Resolved 23 Sep.** The
+  project's JWKS endpoint publishes an ES256 key, and the owner confirmed in the dashboard
+  that it is the **Current** signing key, with the legacy HS256 key demoted to previously-used.
+  So tokens are asymmetrically signed and `getClaims()` verifies them locally — PR #14 delivers
+  the full win, not the fallback. The one residual: tokens issued before the rotation are
+  HS256 and cannot be verified locally, so those still cost a server call until they expire
+  (an hour on Supabase's default). Self-clearing.
 - **No latency was timed against anything live.** Every number above is structural — bytes on
   disk, transaction-open state — not a stopwatch against a real model or a real Supabase
   project. Rule 7.

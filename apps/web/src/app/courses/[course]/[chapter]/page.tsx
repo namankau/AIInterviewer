@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { BlockRenderer } from "@/components/courses/block-renderer";
 import { CodeLanguageProvider } from "@/components/courses/code-language-context";
 import { MarkCompleteButton } from "@/components/courses/course-progress";
+import { GuidedLesson } from "@/components/courses/guided-lesson";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { CourseToc } from "@/components/courses/course-toc";
-import { OnThisPage } from "@/components/courses/on-this-page";
 import {
   courses,
   flattenChapters,
@@ -20,6 +19,7 @@ import {
 import { InlineText, plainText } from "@/components/courses/inline-text";
 import { highlightChapterBlocks } from "@/lib/highlight-code";
 import { challengesForChapter } from "@/lib/arena/corpus";
+import { toCourseTocData } from "@/lib/course-toc-data";
 
 export function generateStaticParams() {
   return courses.flatMap((course) =>
@@ -42,10 +42,10 @@ export async function generateMetadata({
 }
 
 /**
- * The chapter reader: TOC on the left, "on this page" anchors on wide screens, prev/next
- * at the bottom (PRD design brief, 15 Sep 2026).
+ * The chapter reader: course navigation on the left, a guided five-beat lesson in the
+ * main track, and previous/next chapter navigation at the bottom (task 059).
  *
- * The middle grid track is fluid (`minmax(0,1fr)`), not a fixed prose width (task 052) —
+ * The lesson track is fluid (`minmax(0,1fr)`), not a fixed prose width (task 052) —
  * prose blocks (paragraphs, asides, lists) cap themselves at 70ch in `BlockRenderer` so a
  * sentence never gets harder to read, but `viz`/`code`/`table`/`compare`/`steps`/
  * `playground` blocks fill the whole track, so a 1920px screen gives a diagram real room
@@ -65,6 +65,7 @@ export default async function ChapterPage({
   const chapterModule = getModuleForChapter(course, chapterSlug);
   const { prev, next } = getAdjacentChapters(course, chapterSlug);
   const arenaCount = challengesForChapter(course.slug, chapter.slug).length;
+  const courseToc = toCourseTocData(course);
   // Shiki runs here, at build time (this page is statically generated via
   // generateStaticParams), so the highlighted HTML ships with the page and zero
   // highlighting JS reaches the browser (task 049).
@@ -95,8 +96,8 @@ export default async function ChapterPage({
         </p>
       </div>
 
-      <main className="mx-auto grid max-w-[100rem] gap-10 px-6 py-10 md:px-12 md:py-14 xl:grid-cols-[240px_minmax(0,1fr)_220px] xl:gap-12">
-        <CourseToc course={course} currentSlug={chapter.slug} />
+      <main className="mx-auto grid max-w-[92rem] gap-10 px-6 py-10 md:px-12 md:py-14 xl:grid-cols-[240px_minmax(0,1fr)] xl:gap-12">
+        <CourseToc course={courseToc} currentSlug={chapter.slug} />
 
         <article className="min-w-0">
           <div className="max-w-[70ch]">
@@ -118,7 +119,7 @@ export default async function ChapterPage({
 
           <div className="mt-10">
             <CodeLanguageProvider>
-              <BlockRenderer blocks={chapter.blocks} highlightedCode={highlightedCode} />
+              <GuidedLesson blocks={chapter.blocks} highlightedCode={highlightedCode} />
             </CodeLanguageProvider>
           </div>
 
@@ -152,8 +153,6 @@ export default async function ChapterPage({
             )}
           </nav>
         </article>
-
-        <OnThisPage blocks={chapter.blocks} />
       </main>
       <CourseSiteFooter />
     </div>

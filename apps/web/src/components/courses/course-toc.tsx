@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import type { Course } from "@/content/courses/types";
+import type { CourseTocData } from "@/lib/course-toc-data";
 import { useCourseProgress } from "@/lib/use-course-progress";
 import { CheckIcon } from "@/components/courses/course-progress";
 import { InlineText } from "@/components/courses/inline-text";
@@ -12,7 +12,7 @@ import { InlineText } from "@/components/courses/inline-text";
  * The reader's left sidebar: modules -> chapters, current chapter highlighted. Collapses
  * into a disclosure drawer on mobile so the reading column isn't squeezed on a phone.
  */
-export function CourseToc({ course, currentSlug }: { course: Course; currentSlug: string }) {
+export function CourseToc({ course, currentSlug }: { course: CourseTocData; currentSlug: string }) {
   const [open, setOpen] = useState(false);
   const { completed } = useCourseProgress(course.slug);
 

@@ -13,8 +13,8 @@ import { dailyQuest, possibleDateKeysWorldwide } from "@/lib/arena/progression";
 export const metadata: Metadata = {
   title: "Arena — AceMyInterview",
   description:
-    "Short, sharp practice rounds derived from every Java and DSA chapter — spot the mistake, predict the " +
-    "output, say what happens next. Free, and playable with no account.",
+    "Short, sharp practice rounds derived from every chapter of every course — spot the mistake, predict " +
+    "the output, say what happens next. Free, and playable with no account.",
 };
 
 /**
@@ -39,9 +39,9 @@ export default function ArenaPage() {
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Free, always</p>
           <h1 className="text-display text-balance text-ink">Practice that feels like a game, taught from real chapters.</h1>
           <p className="max-w-xl text-body text-ink-muted">
-            Every question here comes straight from a Java or DSA chapter that already exists — a mistake to
-            spot, an output to predict, a diagram to read one step ahead. Answer, see why, and jump straight
-            back to the chapter behind it.
+            Every question here comes straight from a chapter that already exists — a mistake to spot, an
+            output to predict, a diagram to read one step ahead. Answer, see why, and jump straight back to
+            the chapter behind it.
           </p>
         </header>
 

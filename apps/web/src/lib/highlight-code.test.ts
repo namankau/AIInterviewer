@@ -36,9 +36,9 @@ describe("highlightChapterBlocks", () => {
 
     expect(result).toHaveLength(4);
     expect(result[0]).toBeNull();
-    // A `code` block yields a { java, python } pair (task 050) -- java only here, since
+    // A `code` block yields a { base, python } pair (task 050/057) -- base only here, since
     // this block carries no python field.
-    expect(result[1]).toEqual({ java: expect.stringContaining("shiki"), python: null });
+    expect(result[1]).toEqual({ base: expect.stringContaining("shiki"), python: null });
     // A `playground` block still yields a single highlighted string -- it has exactly one
     // language, unlike a switchable `code` block.
     expect(result[2]).toContain("shiki");
@@ -50,8 +50,23 @@ describe("highlightChapterBlocks", () => {
 
     const result = await highlightChapterBlocks(blocks);
 
-    const highlight = result[0] as { java: string | null; python: string | null };
-    expect(highlight.java).toContain("shiki");
+    const highlight = result[0] as { base: string | null; python: string | null };
+    expect(highlight.base).toContain("shiki");
     expect(highlight.python).toContain("shiki");
+  });
+
+  // Task 057: the AI course's `code` blocks are Python, so the base language is a
+  // parameter rather than a hard-coded "java". Python keywords must come back marked up.
+  it("highlights a code block in the course's own base language", async () => {
+    const blocks: Block[] = [{ kind: "code", code: "def total(items):\n    return sum(items)\n" }];
+
+    const asPython = (await highlightChapterBlocks(blocks, "python"))[0] as {
+      base: string | null;
+      python: string | null;
+    };
+
+    expect(asPython.base).toContain("shiki");
+    expect(asPython.base).toContain("def");
+    expect(asPython.python).toBeNull();
   });
 });

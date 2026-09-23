@@ -479,10 +479,11 @@ function Courses() {
           <span className="pill pill-highlight w-fit">Free courses</span>
           <h2 className="text-display text-balance text-ink">Study before you sit the round.</h2>
           <p className="max-w-2xl text-body text-ink-muted">
-            Free, self-paced material for the two things a coding round tests most.
+            Free, self-paced material — the fundamentals a coding round tests, and the AI work everyone is
+            now being asked about.
           </p>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {courses.map((course) => (
             <Link
               key={course.slug}

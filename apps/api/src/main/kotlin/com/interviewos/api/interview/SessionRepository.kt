@@ -188,7 +188,7 @@ class SessionRepository(
         sessionId: UUID,
         userId: UUID,
         status: String,
-    ) {
+    ): Boolean =
         jdbcClient
             .sql(
                 """
@@ -196,12 +196,12 @@ class SessionRepository(
                    set status = cast(:status as public.session_status),
                        ended_at = case when :status in ('completed', 'abandoned', 'failed') then now() else ended_at end
                  where id = :id and user_id = :u
+                   and status = 'in_progress'
                 """.trimIndent(),
             ).param("status", status)
             .param("id", sessionId)
             .param("u", userId)
-            .update()
-    }
+            .update() == 1
 
     /**
      * Starts the round's clock, once: the moment the candidate enters the room.
@@ -245,14 +245,18 @@ class SessionRepository(
         sessionId: UUID,
         userId: UUID,
         workspaceJson: String,
-    ) {
+    ): Boolean =
         jdbcClient
-            .sql("update public.sessions set workspace = cast(:w as jsonb) where id = :id and user_id = :u")
-            .param("w", workspaceJson)
+            .sql(
+                """
+                update public.sessions
+                   set workspace = cast(:w as jsonb)
+                 where id = :id and user_id = :u and status = 'in_progress'
+                """.trimIndent(),
+            ).param("w", workspaceJson)
             .param("id", sessionId)
             .param("u", userId)
-            .update()
-    }
+            .update() == 1
 
     /**
      * Stores what the candidate produced on the board — the design they drew, or the code
@@ -390,15 +394,17 @@ class SessionRepository(
         bankQuestionId: UUID? = null,
         /** The pool question this turn asked, when it asked one. See [askedPoolQuestions]. */
         poolQuestionId: UUID? = null,
-    ) {
+    ): Boolean =
         jdbcClient
             .sql(
                 """
                 insert into public.session_turns
                        (session_id, user_id, turn_index, question_text, phase, question_audio_status, provenance,
                         bank_question_id, pool_question_id)
-                values (:s, :u, :i, :q, cast(:phase as public.turn_phase), cast(:speech as public.speech_status),
-                        cast(:provenance as jsonb), :bank, :pool)
+                select :s, :u, :i, :q, cast(:phase as public.turn_phase), cast(:speech as public.speech_status),
+                       cast(:provenance as jsonb), :bank, :pool
+                  from public.sessions
+                 where id = :s and user_id = :u and status = 'in_progress'
                 on conflict (session_id, turn_index) do nothing
                 """.trimIndent(),
             ).param("s", sessionId)
@@ -410,8 +416,7 @@ class SessionRepository(
             .param("provenance", provenanceJson)
             .param("bank", bankQuestionId)
             .param("pool", poolQuestionId)
-            .update()
-    }
+            .update() == 1
 
     /**
      * Every bank question this candidate has been asked, in any round, with when it was last
@@ -575,7 +580,7 @@ class SessionRepository(
         intervention: String,
         interventionNote: String?,
         deliveryNote: String?,
-    ) {
+    ): Boolean =
         jdbcClient
             .sql(
                 """
@@ -590,6 +595,12 @@ class SessionRepository(
                        intervention_note = :note,
                        delivery_note = :delivery
                  where session_id = :s and user_id = :u and turn_index = :i
+                   and answered_at is null
+                   and exists (
+                       select 1
+                         from public.sessions s
+                        where s.id = :s and s.user_id = :u and s.status = 'in_progress'
+                   )
                 """.trimIndent(),
             ).param("t", transcript)
             .param("audio", audioPath)
@@ -602,8 +613,7 @@ class SessionRepository(
             .param("s", sessionId)
             .param("u", userId)
             .param("i", turnIndex)
-            .update()
-    }
+            .update() == 1
 
     fun countAnsweredTurns(
         sessionId: UUID,

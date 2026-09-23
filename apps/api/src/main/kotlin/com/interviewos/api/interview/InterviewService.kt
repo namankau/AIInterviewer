@@ -23,6 +23,7 @@ import com.interviewos.api.user.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.task.TaskExecutor
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
@@ -233,6 +234,9 @@ class InterviewService(
             composeAndOpen(userId, sessionId, request, roundType, resolution, background, stage, declaredStage)
         } catch (e: RuntimeException) {
             runCatching { repository.markSessionStatus(sessionId, userId, "failed") }
+                .onSuccess { changed ->
+                    if (!changed) log.info("Session {} was already terminal when setup failed", sessionId)
+                }
             throw e
         }
     }
@@ -288,19 +292,26 @@ class InterviewService(
             }
         }
 
-        return repository.insertSession(
-            userId = userId,
-            companyName = request.companyName.trim(),
-            archetype = resolution.archetype,
-            confidence = resolution.confidence,
-            roleTitle = request.roleTitle.trim(),
-            roundType = roundType.dbValue,
-            language = request.language,
-            consentAudio = request.consentAudio,
-            consentVideo = request.consentVideo,
-            durationMinutes = request.durationMinutes,
-            declaredStage = declaredStage,
-        )
+        return try {
+            repository.insertSession(
+                userId = userId,
+                companyName = request.companyName.trim(),
+                archetype = resolution.archetype,
+                confidence = resolution.confidence,
+                roleTitle = request.roleTitle.trim(),
+                roundType = roundType.dbValue,
+                language = request.language,
+                consentAudio = request.consentAudio,
+                consentVideo = request.consentVideo,
+                durationMinutes = request.durationMinutes,
+                declaredStage = declaredStage,
+            )
+        } catch (e: DuplicateKeyException) {
+            throw ApiException.conflict(
+                "Finish or leave your current interview before starting another one.",
+                code = "session_in_progress",
+            )
+        }
     }
 
     /**
@@ -369,7 +380,9 @@ class InterviewService(
                         interviewAi.composeOpeningQuestion(brief, plan.toContext(stage))
                     }.value
             } catch (e: AiUnavailableException) {
-                repository.markSessionStatus(sessionId, userId, "failed")
+                if (!repository.markSessionStatus(sessionId, userId, "failed")) {
+                    log.info("Session {} was already terminal when opening-question generation failed", sessionId)
+                }
                 log.warn("Opening question failed for session {}", sessionId, e)
                 throw ApiException.upstreamUnavailable(
                     "The interviewer could not be reached just now. Nothing was charged — please try again.",
@@ -377,28 +390,32 @@ class InterviewService(
             }
 
         inTransaction {
-            workspace?.let { repository.setWorkspace(sessionId, userId, it.json) }
-            repository.insertTurn(
-                sessionId = sessionId,
-                userId = userId,
-                turnIndex = 0,
-                questionText = opening.text,
-                phase = plan.phase,
-                // Pending means "a voice is coming". Nothing is coming when the room
-                // speaks for itself, and saying otherwise leaves it polling for ever.
-                speechStatus = if (request.speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
-                provenanceJson =
-                    provenanceJson(
-                        company = request.companyName.trim(),
-                        basis = opening.questionBasis,
-                        probes = opening.questionProbes,
-                        askedBecause = opening.questionAskedBecause,
-                        bankQuestion = workspace?.bankQuestion,
-                        poolQuestion = workspace?.poolQuestion,
-                    ),
-                bankQuestionId = workspace?.bankQuestion?.id,
-                poolQuestionId = workspace?.poolQuestion?.question?.id,
-            )
+            workspace?.let {
+                if (!repository.setWorkspace(sessionId, userId, it.json)) throw sessionStateChanged()
+            }
+            val opened =
+                repository.insertTurn(
+                    sessionId = sessionId,
+                    userId = userId,
+                    turnIndex = 0,
+                    questionText = opening.text,
+                    phase = plan.phase,
+                    // Pending means "a voice is coming". Nothing is coming when the room
+                    // speaks for itself, and saying otherwise leaves it polling for ever.
+                    speechStatus = if (request.speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
+                    provenanceJson =
+                        provenanceJson(
+                            company = request.companyName.trim(),
+                            basis = opening.questionBasis,
+                            probes = opening.questionProbes,
+                            askedBecause = opening.questionAskedBecause,
+                            bankQuestion = workspace?.bankQuestion,
+                            poolQuestion = workspace?.poolQuestion,
+                        ),
+                    bankQuestionId = workspace?.bankQuestion?.id,
+                    poolQuestionId = workspace?.poolQuestion?.question?.id,
+                )
+            if (!opened) throw sessionStateChanged()
             // Registered inside the transaction so it runs once the turn has committed —
             // the background renderer writes to the row this has just inserted.
             if (!request.speaksLocally) {
@@ -531,7 +548,9 @@ class InterviewService(
                     )
                 }
             } catch (e: AiUnavailableException) {
-                repository.markSessionStatus(sessionId, userId, "failed")
+                if (!repository.markSessionStatus(sessionId, userId, "failed")) {
+                    log.info("Session {} was already terminal when answer assessment failed", sessionId)
+                }
                 log.warn("Answer assessment failed for session {} turn {}", sessionId, turnIndex, e)
                 throw ApiException.upstreamUnavailable(
                     "We could not process that answer. The interview has been stopped rather than scored unfairly.",
@@ -550,28 +569,30 @@ class InterviewService(
         // call is behind us, so a crash or exception partway through can never leave a turn
         // answered with no session-status change or next turn to match it (task 056, L4).
         return inTransaction {
-            repository.recordAnswer(
-                sessionId = sessionId,
-                userId = userId,
-                turnIndex = turnIndex,
-                transcript = assessment.value.transcript,
-                audioPath = audioPath,
-                videoPath = null,
-                assessmentJson = objectMapper.writeValueAsString(assessment.value),
-                nextAction = nextAction,
-                intervention = intervention.wireValue,
-                // Only keep a note when help was actually given, so the report cannot
-                // report assistance that did not happen.
-                interventionNote = assessment.value.interventionNote?.takeIf { intervention.isAssisted },
-                deliveryNote = assessment.value.deliveryObservation?.takeIf { it.isNotBlank() },
-            )
+            val recorded =
+                repository.recordAnswer(
+                    sessionId = sessionId,
+                    userId = userId,
+                    turnIndex = turnIndex,
+                    transcript = assessment.value.transcript,
+                    audioPath = audioPath,
+                    videoPath = null,
+                    assessmentJson = objectMapper.writeValueAsString(assessment.value),
+                    nextAction = nextAction,
+                    intervention = intervention.wireValue,
+                    // Only keep a note when help was actually given, so the report cannot
+                    // report assistance that did not happen.
+                    interventionNote = assessment.value.interventionNote?.takeIf { intervention.isAssisted },
+                    deliveryNote = assessment.value.deliveryObservation?.takeIf { it.isNotBlank() },
+                )
+            if (!recorded) throw sessionStateChanged()
 
             val answered = repository.countAnsweredTurns(sessionId, userId)
             // The clock ends the round. `mustConclude` also covers the turn ceiling, which is
             // there so a runaway session cannot run up an unbounded model bill.
             val shouldConclude = endRound || plan.mustConclude || nextAction == "conclude"
             if (shouldConclude) {
-                repository.markSessionStatus(sessionId, userId, "completed")
+                if (!repository.markSessionStatus(sessionId, userId, "completed")) throw sessionStateChanged()
                 return@inTransaction SubmitAnswerResponse(
                     sessionComplete = true,
                     turnsCompleted = answered,
@@ -595,7 +616,7 @@ class InterviewService(
                 // The model had nothing left to ask. That is a conclusion too, and it gets the
                 // same goodbye — the candidate cannot tell this apart from a planned ending,
                 // and should not have to.
-                repository.markSessionStatus(sessionId, userId, "completed")
+                if (!repository.markSessionStatus(sessionId, userId, "completed")) throw sessionStateChanged()
                 return@inTransaction SubmitAnswerResponse(
                     sessionComplete = true,
                     turnsCompleted = answered,
@@ -611,27 +632,29 @@ class InterviewService(
             val askedFrom = planned?.takeIf { asked.askedPlanned }
             val nextText = asked.text
             val nextIndex = turnIndex + 1
-            repository.insertTurn(
-                sessionId = sessionId,
-                userId = userId,
-                turnIndex = nextIndex,
-                questionText = nextText,
-                phase = plan.phase,
-                // Pending means "a voice is coming". Nothing is coming when the room
-                // speaks for itself, and saying otherwise leaves it polling for ever.
-                speechStatus = if (speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
-                provenanceJson =
-                    provenanceJson(
-                        company = session.companyName,
-                        basis = assessment.value.questionBasis,
-                        probes = assessment.value.questionProbes.takeIf { asked.faithful },
-                        askedBecause = assessment.value.questionAskedBecause.takeIf { asked.faithful },
-                        bankQuestion = (askedFrom as? PlannedFrom.Bank)?.question,
-                        poolQuestion = askedFrom as? PlannedFrom.Pool,
-                    ),
-                bankQuestionId = (askedFrom as? PlannedFrom.Bank)?.question?.id,
-                poolQuestionId = (askedFrom as? PlannedFrom.Pool)?.question?.id,
-            )
+            val inserted =
+                repository.insertTurn(
+                    sessionId = sessionId,
+                    userId = userId,
+                    turnIndex = nextIndex,
+                    questionText = nextText,
+                    phase = plan.phase,
+                    // Pending means "a voice is coming". Nothing is coming when the room
+                    // speaks for itself, and saying otherwise leaves it polling for ever.
+                    speechStatus = if (speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
+                    provenanceJson =
+                        provenanceJson(
+                            company = session.companyName,
+                            basis = assessment.value.questionBasis,
+                            probes = assessment.value.questionProbes.takeIf { asked.faithful },
+                            askedBecause = assessment.value.questionAskedBecause.takeIf { asked.faithful },
+                            bankQuestion = (askedFrom as? PlannedFrom.Bank)?.question,
+                            poolQuestion = askedFrom as? PlannedFrom.Pool,
+                        ),
+                    bankQuestionId = (askedFrom as? PlannedFrom.Bank)?.question?.id,
+                    poolQuestionId = (askedFrom as? PlannedFrom.Pool)?.question?.id,
+                )
+            if (!inserted) throw sessionStateChanged()
             // Nothing to synthesise when the room is going to say it: that call is the single
             // most expensive thing in a turn and it would be thrown away. Registered inside
             // the transaction, same as `composeAndOpen`, so it runs once the turn this reads
@@ -759,7 +782,10 @@ class InterviewService(
     ) {
         val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
         if (session.status == "in_progress") {
-            repository.markSessionStatus(sessionId, userId, "abandoned")
+            val abandoned = repository.markSessionStatus(sessionId, userId, "abandoned")
+            if (!abandoned && repository.findSession(sessionId, userId)?.status == "in_progress") {
+                throw sessionStateChanged()
+            }
         }
     }
 
@@ -831,7 +857,7 @@ class InterviewService(
                     durationMinutes = session.durationMinutes,
                     now = Instant.now(),
                 ).outOfTime
-        repository.markSessionStatus(sessionId, userId, "completed")
+        if (!repository.markSessionStatus(sessionId, userId, "completed")) throw sessionStateChanged()
         return SubmitAnswerResponse(
             sessionComplete = true,
             turnsCompleted = answered,
@@ -850,10 +876,17 @@ class InterviewService(
         userId: UUID,
         sessionId: UUID,
     ): SessionView {
-        repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
+        val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
+        if (session.status != "in_progress") throw sessionStateChanged()
         repository.startClock(sessionId, userId)
         return view(userId, sessionId)
     }
+
+    private fun sessionStateChanged() =
+        ApiException.conflict(
+            "This interview changed while the request was being processed. Refresh to see its current state.",
+            code = "session_state_changed",
+        )
 
     fun view(
         userId: UUID,

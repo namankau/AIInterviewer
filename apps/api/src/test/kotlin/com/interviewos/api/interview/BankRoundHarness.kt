@@ -52,7 +52,10 @@ class BankRoundHarness(
         },
 ) {
     val mapper: JsonMapper = JsonMapper.builder().addModule(KotlinModule.Builder().build()).build()
-    val repository: SessionRepository = mock(SessionRepository::class.java)
+    val repository: SessionRepository =
+        mock(SessionRepository::class.java) { invocation ->
+            if (invocation.method.returnType == Boolean::class.javaPrimitiveType) true else RETURNS_DEFAULTS.answer(invocation)
+        }
     val directory: CompanyDirectory = mock(CompanyDirectory::class.java)
     val bank: QuestionBankRepository = mock(QuestionBankRepository::class.java)
     val pool: QuestionPoolRepository = mock(QuestionPoolRepository::class.java)
@@ -62,6 +65,7 @@ class BankRoundHarness(
     /** Returns null for every candidate unless a test says otherwise: no resume, as most rounds run. */
     val resumeService: ResumeService = mock(ResumeService::class.java)
     val storage: ObjectStorage = mock(ObjectStorage::class.java)
+    val userRepository: UserRepository = mock(UserRepository::class.java)
 
     /** What the model is asked, in order. */
     val briefs = mutableListOf<InterviewBrief>()
@@ -99,7 +103,7 @@ class BankRoundHarness(
     val service =
         InterviewService(
             repository = repository,
-            userRepository = mock(UserRepository::class.java),
+            userRepository = userRepository,
             archetypeResolver = archetypes,
             interviewAi = ai,
             storage = storage,

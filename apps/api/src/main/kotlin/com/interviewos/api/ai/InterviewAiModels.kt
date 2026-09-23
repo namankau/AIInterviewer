@@ -380,9 +380,8 @@ data class AnswerAssessment(
     /** One sentence naming what was supplied, so the report can tell the candidate. */
     val interventionNote: String? = null,
     /**
-     * How the candidate came across on this turn — pace, structure, composure, and, when
-     * video was sent, what their body language actually showed. Observation only: it
-     * never becomes a score on its own.
+     * How the candidate came across on this turn through their answer: pace, structure,
+     * and composure. Observation only: it never becomes a score on its own.
      */
     val deliveryObservation: String? = null,
     val nextQuestionText: String?,

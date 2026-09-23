@@ -4,6 +4,10 @@
 Make the interview loop trustworthy under retries, concurrent requests, provider latency,
 and storage failures while keeping the public API suitable for future mobile clients.
 
+## Status
+Implementation and local verification complete on `fix/interview-integrity`. Awaiting
+migration review/application, remote push, PR CI, and human review before merge.
+
 ## Settled product behavior
 - Candidate camera is a local preview only. Camera frames are never uploaded, retained,
   or sent to an AI model.

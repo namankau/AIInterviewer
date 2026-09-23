@@ -32,13 +32,13 @@ class ReportGenerationLeaseTest {
             .willReturn(
                 ReportGenerationClaim(
                     ReportGenerationClaimStatus.COMPLETED,
-                    """{"headline":"Already generated"}""",
+                    harness.mapper.writeValueAsString(reportView("Already generated")),
                 ),
             )
 
         val report = harness.reportService.report(candidate, sessionId, leaseId)
 
-        assertThat(report["headline"]).isEqualTo("Already generated")
+        assertThat(report.headline).isEqualTo("Already generated")
         assertThat(aiCalls("composeReport")).isZero()
     }
 
@@ -79,7 +79,7 @@ class ReportGenerationLeaseTest {
         }
 
         Executors.newSingleThreadExecutor().use { executor ->
-            val first = executor.submit<Map<String, Any?>> { harness.reportService.report(candidate, sessionId, leaseId) }
+            val first = executor.submit<SessionReportView> { harness.reportService.report(candidate, sessionId, leaseId) }
             assertThat(modelEntered.await(5, TimeUnit.SECONDS)).isTrue()
 
             assertThatThrownBy { harness.reportService.report(candidate, sessionId, leaseId) }
@@ -88,7 +88,7 @@ class ReportGenerationLeaseTest {
                 }
 
             releaseModel.countDown()
-            assertThat(first.get(5, TimeUnit.SECONDS)["headline"]).isEqualTo("Evidence-backed feedback")
+            assertThat(first.get(5, TimeUnit.SECONDS).headline).isEqualTo("Evidence-backed feedback")
         }
 
         assertThat(aiCalls("composeReport")).isEqualTo(1)
@@ -130,4 +130,25 @@ class ReportGenerationLeaseTest {
     }
 
     private fun aiCalls(methodName: String): Int = mockingDetails(harness.ai).invocations.count { it.method.name == methodName }
+
+    private fun reportView(headline: String) =
+        SessionReportView(
+            sessionId = sessionId,
+            companyName = "Amazon",
+            roleTitle = "SDE 2",
+            roundType = "behavioural_competency",
+            roundLabel = "Behavioural and competency",
+            archetypeLabel = "Global product company",
+            answeredTurns = 1,
+            generatedAt = Instant.parse("2026-09-23T08:31:00Z"),
+            headline = headline,
+            summary = "A concise report.",
+            assistance = ReportAssistanceView(1, 1, 0, "Unaided", null, emptyList(), emptyList()),
+            competencies = emptyList(),
+            annotations = emptyList(),
+            communication = ReportCommunicationView("Clear", "Low", "Steady", "No", "Direct"),
+            practicePlan = emptyList(),
+            recommendedNextSession = "System design",
+            outcomeSimulation = ReportOutcomeView("Simulation", "Likely", "Grounded in the answer."),
+        )
 }

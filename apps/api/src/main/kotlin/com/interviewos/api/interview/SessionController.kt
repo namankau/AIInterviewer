@@ -213,7 +213,7 @@ class SessionController(
     fun report(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
-    ): Map<String, Any?> = reportService.report(callerOf(jwt), id)
+    ): SessionReportView = reportService.report(callerOf(jwt), id)
 
     @GetMapping("/readiness")
     fun readiness(

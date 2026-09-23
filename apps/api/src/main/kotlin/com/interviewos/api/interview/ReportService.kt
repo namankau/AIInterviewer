@@ -36,10 +36,9 @@ class ReportService(
         userId: UUID,
         sessionId: UUID,
         leaseId: UUID = UUID.randomUUID(),
-    ): Map<String, Any?> {
+    ): SessionReportView {
         repository.findReportJson(sessionId, userId)?.let {
-            @Suppress("UNCHECKED_CAST")
-            return withEveryField(objectMapper.readValue(it, Map::class.java) as Map<String, Any?>)
+            return storedReport(it)
         }
 
         val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
@@ -117,8 +116,7 @@ class ReportService(
         val claim = repository.claimReportGeneration(sessionId, userId, leaseId, REPORT_LEASE_SECONDS)
         when (claim.status) {
             ReportGenerationClaimStatus.COMPLETED -> {
-                @Suppress("UNCHECKED_CAST")
-                return withEveryField(objectMapper.readValue(checkNotNull(claim.payloadJson), Map::class.java) as Map<String, Any?>)
+                return storedReport(checkNotNull(claim.payloadJson))
             }
 
             ReportGenerationClaimStatus.IN_PROGRESS -> {
@@ -181,9 +179,8 @@ class ReportService(
                 )
             ) {
                 repository.findReportJson(sessionId, userId)?.let {
-                    @Suppress("UNCHECKED_CAST")
                     saved = true
-                    return withEveryField(objectMapper.readValue(it, Map::class.java) as Map<String, Any?>)
+                    return storedReport(it)
                 }
                 throw ApiException.conflict(
                     "The interview changed while its report was being generated. Refresh to see its current state.",
@@ -217,7 +214,12 @@ class ReportService(
      * once, including the mobile apps that do not exist yet — and it keeps the shape of
      * the response a promise the API keeps rather than one each client has to re-check.
      */
-    private fun withEveryField(stored: Map<String, Any?>): Map<String, Any?> = stored + EMPTY_SECTIONS.filterKeys { it !in stored }
+    private fun storedReport(payloadJson: String): SessionReportView {
+        @Suppress("UNCHECKED_CAST")
+        val stored = objectMapper.readValue(payloadJson, Map::class.java) as Map<String, Any?>
+        val complete = stored + EMPTY_SECTIONS.filterKeys { it !in stored }
+        return objectMapper.readValue(objectMapper.writeValueAsString(complete), SessionReportView::class.java)
+    }
 
     /**
      * Strips any claim about how the candidate looked when nothing looked at them. A model
@@ -286,97 +288,94 @@ class ReportService(
         archetype: Archetype,
         turns: List<TurnRow>,
         assistance: AssistanceSummary,
-    ): Map<String, Any?> =
-        mapOf(
-            "sessionId" to session.id.toString(),
-            "companyName" to session.companyName,
-            "roleTitle" to session.roleTitle,
-            "roundType" to roundType.dbValue,
-            "roundLabel" to roundType.label,
-            "archetypeLabel" to archetype.label,
-            "answeredTurns" to turns.size,
-            "generatedAt" to
-                java.time.Instant
-                    .now()
-                    .toString(),
-            "headline" to content.headline,
-            "summary" to content.summary,
+    ): SessionReportView =
+        SessionReportView(
+            sessionId = session.id,
+            companyName = session.companyName,
+            roleTitle = session.roleTitle,
+            roundType = roundType.dbValue,
+            roundLabel = roundType.label,
+            archetypeLabel = archetype.label,
+            answeredTurns = turns.size,
+            generatedAt = java.time.Instant.now(),
+            headline = content.headline,
+            summary = content.summary,
             // Counts are computed from the turns; the narrative is the model's, written
             // against those counts. Both are shown, so the two cannot quietly diverge.
-            "assistance" to
-                mapOf(
-                    "totalAnswers" to assistance.totalAnswers,
-                    "unaidedAnswers" to assistance.unaidedAnswers,
-                    "assistedAnswers" to assistance.assistedAnswers,
-                    "headline" to assistance.headline,
-                    "narrative" to content.assistedPerformance,
-                    "breakdown" to
+            assistance =
+                ReportAssistanceView(
+                    totalAnswers = assistance.totalAnswers,
+                    unaidedAnswers = assistance.unaidedAnswers,
+                    assistedAnswers = assistance.assistedAnswers,
+                    headline = assistance.headline,
+                    narrative = content.assistedPerformance,
+                    breakdown =
                         assistance.breakdown
                             .filterKeys { it.isAssisted }
                             .map { (intervention, count) ->
-                                mapOf("label" to intervention.label, "count" to count)
+                                ReportAssistanceBreakdownView(intervention.label, count)
                             },
-                    "moments" to assistance.notes,
+                    moments = assistance.notes,
                 ),
-            "competencies" to
+            competencies =
                 content.competencies.map {
-                    mapOf(
-                        "competency" to it.competency,
-                        "score" to it.score,
-                        "maxScore" to it.maxScore,
-                        "rationale" to it.rationale,
-                        "evidenceQuote" to it.evidenceQuote,
-                        "turnIndex" to it.turnIndex,
+                    ReportCompetencyView(
+                        competency = it.competency,
+                        score = it.score,
+                        maxScore = it.maxScore,
+                        rationale = it.rationale,
+                        evidenceQuote = it.evidenceQuote,
+                        turnIndex = it.turnIndex,
                     )
                 },
-            "annotations" to
+            annotations =
                 content.annotations.map {
-                    mapOf(
-                        "turnIndex" to it.turnIndex,
-                        "question" to it.question,
-                        "worked" to it.worked,
-                        "vague" to it.vague,
-                        "wouldProbe" to it.wouldProbe,
-                        "strongerFraming" to it.strongerFraming,
+                    ReportAnnotationView(
+                        turnIndex = it.turnIndex,
+                        question = it.question,
+                        worked = it.worked,
+                        vague = it.vague,
+                        wouldProbe = it.wouldProbe,
+                        strongerFraming = it.strongerFraming,
                     )
                 },
-            "communication" to
-                mapOf(
-                    "structure" to content.communication.structure,
-                    "fillerDensity" to content.communication.fillerDensity,
-                    "pace" to content.communication.pace,
-                    "rambling" to content.communication.rambling,
-                    "handlingUncertainty" to content.communication.handlingUncertainty,
+            communication =
+                ReportCommunicationView(
+                    structure = content.communication.structure,
+                    fillerDensity = content.communication.fillerDensity,
+                    pace = content.communication.pace,
+                    rambling = content.communication.rambling,
+                    handlingUncertainty = content.communication.handlingUncertainty,
                     // Null unless the candidate had the camera on. The report never
                     // describes presence it did not see.
-                    "presence" to content.communication.presence,
+                    presence = content.communication.presence,
                 ),
-            "strengths" to content.strengths.map { areaOf(it) },
-            "developmentAreas" to content.developmentAreas.map { areaOf(it) },
+            strengths = content.strengths.map { areaOf(it) },
+            developmentAreas = content.developmentAreas.map { areaOf(it) },
             // Why each question was asked, taken from what was recorded when it was
             // composed rather than reconstructed now. Reconstructing it would mean asking
             // a model to recall its own reasoning, which is how invented citations happen.
-            "questionSources" to questionSourcesOf(session, archetype, turns),
-            "practicePlan" to
+            questionSources = questionSourcesOf(session, archetype, turns),
+            practicePlan =
                 content.practicePlan.map {
-                    mapOf("focus" to it.focus, "why" to it.why, "drill" to it.drill)
+                    ReportPracticeItemView(it.focus, it.why, it.drill)
                 },
-            "recommendedNextSession" to content.recommendedNextSession,
-            "outcomeSimulation" to
-                mapOf(
-                    "label" to content.outcomeSimulation.label,
-                    "likelihood" to content.outcomeSimulation.likelihood,
-                    "reasoning" to content.outcomeSimulation.reasoning,
+            recommendedNextSession = content.recommendedNextSession,
+            outcomeSimulation =
+                ReportOutcomeView(
+                    label = content.outcomeSimulation.label,
+                    likelihood = content.outcomeSimulation.likelihood,
+                    reasoning = content.outcomeSimulation.reasoning,
                 ),
         )
 
-    private fun areaOf(area: com.interviewos.api.ai.AssessedArea): Map<String, Any?> =
-        mapOf(
-            "area" to area.area,
-            "evidenceQuote" to area.evidenceQuote,
-            "turnIndex" to area.turnIndex,
-            "whyItMatters" to area.whyItMatters,
-            "whatToDo" to area.whatToDo,
+    private fun areaOf(area: com.interviewos.api.ai.AssessedArea): ReportAssessedAreaView =
+        ReportAssessedAreaView(
+            area = area.area,
+            evidenceQuote = area.evidenceQuote,
+            turnIndex = area.turnIndex,
+            whyItMatters = area.whyItMatters,
+            whatToDo = area.whatToDo,
         )
 
     /**
@@ -401,7 +400,7 @@ class ReportService(
         session: SessionRow,
         archetype: Archetype,
         turns: List<TurnRow>,
-    ): Map<String, Any?> {
+    ): ReportQuestionSourcesView {
         val entries =
             turns.mapNotNull { turn ->
                 val provenance =
@@ -414,24 +413,24 @@ class ReportService(
                         }
                     } ?: return@mapNotNull null
 
-                mapOf(
-                    "turnIndex" to turn.turnIndex,
-                    "question" to turn.questionText,
-                    "phase" to turn.phase,
-                    "probes" to provenance.probes,
-                    "askedBecause" to provenance.askedBecause,
-                    "basis" to provenance.basis,
-                    "tier" to provenance.tier.dbValue,
+                ReportQuestionSourceView(
+                    turnIndex = turn.turnIndex,
+                    question = turn.questionText,
+                    phase = turn.phase,
+                    probes = provenance.probes,
+                    askedBecause = provenance.askedBecause,
+                    basis = provenance.basis,
+                    tier = provenance.tier.dbValue,
                     // A pool question's own label replaces the tier's general sentence: it is
                     // the one thing the report says about where that question came from.
-                    "tierDisclosure" to (provenance.label ?: provenance.tier.disclosure),
-                    "sources" to
+                    tierDisclosure = provenance.label ?: provenance.tier.disclosure,
+                    sources =
                         provenance.sources.map {
-                            mapOf(
-                                "title" to it.title,
-                                "publisher" to it.publisher,
-                                "url" to it.url,
-                                "year" to it.year,
+                            ReportProvenanceSourceView(
+                                title = it.title,
+                                publisher = it.publisher,
+                                url = it.url,
+                                year = it.year,
                             )
                         },
                 )
@@ -441,42 +440,44 @@ class ReportService(
         // Counted from the tiers recorded per turn, which the engine set when each question
         // was asked. A round with bank questions in it is still mostly follow-ups, and the
         // header has to say which is which rather than lend the whole round the citations.
-        val sourced = entries.count { it["tier"] == ProvenanceTier.PUBLISHED_SOURCE.dbValue }
+        val sourced = entries.count { it.tier == ProvenanceTier.PUBLISHED_SOURCE.dbValue }
         val company = session.companyName
-        return mapOf(
-            "entries" to entries,
-            "employerRecognised" to recognised,
-            "archetypeLabel" to archetype.label,
-            "headline" to
-                when {
-                    sourced > 0 -> {
-                        val which = if (sourced == 1) "One of these questions was" else "$sourced of these questions were"
-                        "$which reported for $company by sources we hold, and each is cited beneath it. The rest " +
-                            "were written for this round from your answers and from how ${archetype.inProse} interviews."
-                    }
+        val headline =
+            when {
+                sourced > 0 -> {
+                    val which = if (sourced == 1) "One of these questions was" else "$sourced of these questions were"
+                    "$which reported for $company by sources we hold, and each is cited beneath it. The rest " +
+                        "were written for this round from your answers and from how ${archetype.inProse} interviews."
+                }
 
-                    recognised -> {
-                        "These questions were composed for ${archetype.inProse}, ${session.roleTitle}, from " +
-                            "general knowledge of how that kind of employer interviews."
-                    }
+                recognised -> {
+                    "These questions were composed for ${archetype.inProse}, ${session.roleTitle}, from " +
+                        "general knowledge of how that kind of employer interviews."
+                }
 
-                    else -> {
-                        "We do not have specific information about $company, so these questions " +
-                            "were composed from the general patterns of ${archetype.inProse}."
-                    }
-                },
-            // Said plainly, and said even though it is unflattering. It is the difference
-            // between a citation and a claim.
-            "disclosure" to
-                if (sourced > 0) {
-                    "Only a question with a citation under it is one a source reports $company asking. " +
-                        "Follow-ups and anything else we wrote are labelled as general knowledge, because that " +
-                        "is what they are."
-                } else {
-                    "None of these are sourced reports of questions $company has actually asked. We held no " +
-                        "reported questions to ask you in this round, and we would rather tell you that than " +
-                        "show you a citation we cannot stand behind."
-                },
+                else -> {
+                    "We do not have specific information about $company, so these questions " +
+                        "were composed from the general patterns of ${archetype.inProse}."
+                }
+            }
+        // Said plainly, and said even though it is unflattering. It is the difference
+        // between a citation and a claim.
+        val disclosure =
+            if (sourced > 0) {
+                "Only a question with a citation under it is one a source reports $company asking. " +
+                    "Follow-ups and anything else we wrote are labelled as general knowledge, because that " +
+                    "is what they are."
+            } else {
+                "None of these are sourced reports of questions $company has actually asked. We held no " +
+                    "reported questions to ask you in this round, and we would rather tell you that than " +
+                    "show you a citation we cannot stand behind."
+            }
+        return ReportQuestionSourcesView(
+            entries = entries,
+            employerRecognised = recognised,
+            archetypeLabel = archetype.label,
+            headline = headline,
+            disclosure = disclosure,
         )
     }
 

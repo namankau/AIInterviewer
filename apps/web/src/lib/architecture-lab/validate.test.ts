@@ -8,8 +8,8 @@ import {
 } from "@/lib/architecture-lab/validate";
 
 describe("architecture scenario registry", () => {
-  it("contains four valid, sourced, independently addressable scenarios", () => {
-    expect(architectureScenarios).toHaveLength(4);
+  it("contains eight valid, sourced, independently addressable scenarios", () => {
+    expect(architectureScenarios).toHaveLength(8);
     for (const scenario of architectureScenarios) {
       expect(validateScenarioDefinition(scenario), scenario.id).toEqual([]);
       expect(getArchitectureScenario(scenario.id)).toBe(scenario);

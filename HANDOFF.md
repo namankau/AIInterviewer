@@ -1,42 +1,42 @@
 # Handoff — 2026-09-24
 
 ## Task
-Unify the signed-in learning experience, modernise course progression, enrich Profile, and add per-course daily Arena practice (`tasks/task-062-unified-learning-experience.md`).
+Add a fourth System Design course with AI/agent architecture, case studies, Arena practice, and an interactive architecture-composition USP (`tasks/task-063-system-design-course.md`).
 
 ## What I built
-- Replaced the separate Courses/Arena top navigation with the same persistent left workspace rail used by Home, Rounds, and Profile; the live interview room remains intentionally navigation-free.
-- Redesigned the three course cards with stable Java/DSA/AI accent motifs, outcome and practice summaries, real module/chapter/time metadata, and account-backed progress.
-- Replaced the square-grid course hero with a milestone route and roadmap, and made the next-chapter link a prominent primary action while keeping Previous secondary.
-- Added a profile overview with the existing avatar upload, course/chapter completion, completed interview count, Arena streak, latest round, and per-course continuation links. All values come from existing public APIs.
-- Added deterministic daily sets for Java, DSA, and AI, labelled by topic and rotated by the learner's local date. Personalised course practice still uses the existing `ts-fsrs` schedule.
-- Added six reviewed questions adapted from pinned MIT-licensed Exercism and Microsoft learning sources, source links in answer feedback, and `apps/web/src/content/arena/THIRD_PARTY_NOTICES.md`. There is no scraper, runtime third-party request, or model spend.
-- Added/updated behavior, payload-boundary, source-provenance, scheduling, profile, and route tests.
+- Added a 38-chapter System Design path in `apps/web/src/content/courses/system-design/index.ts`: foundations, distributed-system building blocks, AI/agent system design, and reusable case-study patterns.
+- Added original daily Arena material through every chapter's quizzes; the registry-driven scheduler now serves a deterministic, topic-labelled System Design set alongside Java, DSA, and AI.
+- Added four interactive architecture labs (URL shortener, ticket booking, RAG assistant, and tool-using agent) with deterministic validation, multiple valid placements, per-component feedback, reset, and open-source references.
+- Added accessible drag-and-drop via MIT-licensed `@dnd-kit/react@0.5.0`, while preserving equivalent keyboard and always-visible select controls, ARIA announcements, visible focus, and reduced-motion behaviour.
+- Added a distinct System Design catalogue motif and updated the Courses and Arena surfaces for four paths without introducing a separate navigation experience.
+- Added pinned source/licence notes in `apps/web/src/content/courses/system-design/THIRD_PARTY_NOTICES.md`. Lesson and exercise prose is original; no Educative, ByteByteGo, LeetCode company-tag, or other paywalled/non-redistributable content was copied.
+- Added architecture definition/validator/component tests, all-course payload checks, course integrity checks for 38 chapters and four scenarios, four-course daily scheduling tests, and a jsdom geometry shim required by CodeMirror under full-suite load.
 
 ## Assumptions I made
-- “Uniformity” means every signed-in non-live-interview product page uses the left workspace rail; chapters retain their local course table of contents inside that shell.
-- Each daily course set contains three questions so all three courses remain visible and a set stays finishable in a few minutes.
-- Open-source material is a small pinned and reviewed supplement to the much larger course-derived corpus, not an uncontrolled bulk import. The existing derived questions remain because they link directly back to the chapter being studied.
-- Crio.Do informed the outcome-first cards, visible learning route, and stateful next action; no Crio text, imagery, claims, or proprietary assets were copied.
-- The 1,214-line change is larger than the normal review target because it joins four user-requested surfaces plus their tests and required license notices; it was kept in one task because navigation, daily practice, and profile all need to present one coherent signed-in workspace.
+- “TinyURL, Google Docs, BookMyShow” means generic product-shaped exercises (URL shortening, collaborative editing, ticket booking), not claims about those companies' private production architectures.
+- System Design is conceptual, so `Course.requiresCodeExamples` is explicitly false; chapters use code only when honest rather than adding fake snippets to satisfy a generic test.
+- The first architecture-lab release belongs inside guided lessons. Arena still derives substantial multiple-choice/trade-off practice from the same course, but its current one-answer schema should not be distorted into fake drag-and-drop scoring.
+- Open-source repositories are pinned teaching references and coverage checks. They are not scraped, fetched at runtime, or copied wholesale.
+- The 1,282-line product diff exceeds the usual review target because the reusable interaction engine and full curriculum were checkpointed as separate commits (`42bfcdd`, `5acae8c`, `c50ca3f`) and independently passed CI before one gated merge.
 
 ## What I could NOT verify
-- Final visual judgement still needs the owner. I did not start another local server after the owner asked to run localhost themselves, so no authenticated browser session or real account writes were used for visual QA.
-- I did not run live interviews, Gemini calls, data generation, or any paid third-party request.
+- Final visual judgement and touch-device feel need the owner. I did not start a localhost server, enter a real account, or perform authenticated browser writes.
+- I did not run a live interview, Gemini call, model-backed content generation, scraper, or any paid third-party request.
 
 ## Verification status
 - Frontend typecheck / lint: pass.
-- Frontend tests: pass — 54 files, 2,008 tests.
-- Frontend production build: pass — 116 pages generated.
+- Frontend tests: pass — 56 files, 2,517 tests.
+- Frontend production build: pass — 156 pages generated, including System Design course and Arena routes.
 - Backend `ktlintCheck test build`: pass.
-- Feature CI: pass — web and API jobs on commit `4710dfc566967f7287e529f68ed602826ef61136`, run `35986359467`.
-- Post-merge `develop` CI: pass — web and API jobs on merge commit `3e3cabb7f77f582bff9fab9ce21ecb19bb716df9`, run `35986645204`.
-- Diff check: pass. No migration or dependency added.
+- Feature CI: pass — web and API jobs on `c50ca3fb3f55b3b05fc8791cd49620ec9d2931d7`, run `36013388973`.
+- Post-merge `develop` CI: pass — web and API jobs on `33eba8f167aa3224110016c011ca18746849559c`, run `36013810128`.
+- Diff check: pass. No migration or live API spend. One audited MIT dependency added and justified above.
 
 ## Merge status
-- Merged into `develop` at `3e3cabb7f77f582bff9fab9ce21ecb19bb716df9` after green feature CI; pushed to `origin/develop`; `main` is untouched.
+- Merged into `develop` at `33eba8f167aa3224110016c011ca18746849559c` after green feature CI; pushed to `origin/develop`; `main` is untouched.
 
 ## Suggested next task
-- Run an authenticated visual QA pass on desktop and mobile using the owner's local server, then make only evidence-backed spacing or responsive corrections.
+- Run an authenticated desktop/mobile/touch visual QA pass on the four architecture labs, then refine only evidence-backed layout or interaction issues.
 
 ## Open questions for you
-- None.
+- None. Please do not send Educative course material unless you hold explicit redistribution rights; the current course is complete without it.

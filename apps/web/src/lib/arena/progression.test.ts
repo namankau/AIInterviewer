@@ -234,6 +234,7 @@ describe("dailyCourseQuests", () => {
     { slug: "java", title: "Java Programming" },
     { slug: "dsa", title: "Data Structures & Algorithms" },
     { slug: "ai-agents", title: "AI and Agentic AI" },
+    { slug: "system-design", title: "System Design" },
   ];
   const pool = courseLabels.flatMap(({ slug, title }) =>
     Array.from({ length: 12 }, (_, index) =>
@@ -245,12 +246,12 @@ describe("dailyCourseQuests", () => {
     ),
   );
 
-  it("returns a stable, course-scoped set for all three courses on the same day", () => {
+  it("returns a stable, course-scoped set for every course on the same day", () => {
     const first = dailyCourseQuests(pool, courseLabels, "2026-09-24");
     const second = dailyCourseQuests(pool, courseLabels, "2026-09-24");
 
     expect(second).toEqual(first);
-    expect(first.map((group) => group.courseSlug)).toEqual(["java", "dsa", "ai-agents"]);
+    expect(first.map((group) => group.courseSlug)).toEqual(["java", "dsa", "ai-agents", "system-design"]);
     for (const group of first) {
       expect(group.challenges).toHaveLength(DAILY_COURSE_QUEST_SIZE);
       expect(group.challenges.every((challenge) => challenge.courseSlug === group.courseSlug)).toBe(true);

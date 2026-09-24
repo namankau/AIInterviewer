@@ -6,7 +6,7 @@ import { ArenaPlayPanel } from "@/components/arena/arena-play-panel";
 import { localDateKey, type DailyCourseQuest } from "@/lib/arena/progression";
 
 /**
- * Today's three fixed, course-scoped sets, seeded from the calendar date (task 055, §2).
+ * Today's fixed, course-scoped sets, seeded from the calendar date (task 055, §2).
  * Which calendar date "today" is has to be read on the client (not the server component
  * around it), since it's the visitor's own local day, not the server's.
  *
@@ -29,7 +29,7 @@ export function ArenaDailyQuest({ questsByDate }: { questsByDate: Record<string,
           Pick a course. Its three questions stay fixed for your local day, then rotate tomorrow.
         </p>
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {quests.map((quest, index) => {
           const topics = Array.from(new Set(quest.challenges.map((challenge) => challenge.moduleTitle)));
           return (

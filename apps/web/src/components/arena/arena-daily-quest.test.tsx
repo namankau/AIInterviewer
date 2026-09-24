@@ -47,6 +47,11 @@ describe("ArenaDailyQuest", () => {
         courseTitle: "AI and Agentic AI",
         challenges: [challenge("ai-agents", "Tool use", "ai-1")],
       },
+      {
+        courseSlug: "system-design",
+        courseTitle: "System Design",
+        challenges: [challenge("system-design", "Architecture", "system-design-1")],
+      },
     ];
 
     render(<ArenaDailyQuest questsByDate={{ [today]: quests }} />);
@@ -55,8 +60,9 @@ describe("ArenaDailyQuest", () => {
     expect(screen.getByText("2 questions · Arrays · Methods")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Data Structures & Algorithms" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "AI and Agentic AI" })).toBeInTheDocument();
-    expect(capturedPanels).toHaveLength(3);
+    expect(screen.getByRole("heading", { name: "System Design" })).toBeInTheDocument();
+    expect(capturedPanels).toHaveLength(4);
     expect(capturedPanels.every((props) => props.selectionMode === "fixed")).toBe(true);
-    expect(capturedPanels.map((props) => props.courseSlug)).toEqual(["java", "dsa", "ai-agents"]);
+    expect(capturedPanels.map((props) => props.courseSlug)).toEqual(["java", "dsa", "ai-agents", "system-design"]);
   });
 });

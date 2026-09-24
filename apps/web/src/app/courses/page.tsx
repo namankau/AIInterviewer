@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   title: "Courses — AceMyInterview",
   description:
     "Free courses that teach the fundamentals from the very start, chapter by chapter — Java " +
-    "programming, data structures & algorithms, and AI and agentic AI, written so you never forget " +
-    "what you read.",
+    "programming, data structures & algorithms, AI and agentic AI, and system design with interactive " +
+    "architecture practice.",
 };
 
 /** The signed-in learning catalogue, presented inside the same workspace as the Arena and rounds. */
@@ -38,11 +38,11 @@ export default function CoursesPage() {
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="font-mono text-micro tracking-widest text-accent uppercase">Choose your focus</p>
-            <h2 id="learning-paths" className="mt-2 text-heading text-ink">Three paths, one interview toolkit</h2>
+            <h2 id="learning-paths" className="mt-2 text-heading text-ink">Four paths, one interview toolkit</h2>
           </div>
           <p className="text-caption text-ink-muted">Continue from exactly where you stopped.</p>
         </div>
-        <ul className="grid gap-5 lg:grid-cols-3">
+        <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {courses.map((course) => (
             <li key={course.slug} className="min-w-0">
               <Link

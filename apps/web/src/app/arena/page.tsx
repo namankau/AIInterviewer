@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: "Arena — AceMyInterview",
   description:
     "Short, sharp practice rounds derived from every chapter of every course — spot the mistake, predict " +
-    "the output, say what happens next. Free, and playable with no account.",
+    "the output, say what happens next. Included free in the signed-in learning workspace.",
 };
 
 /**
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
  */
 export default function ArenaPage() {
   // Computed here, against the full corpus, server-side — only the resulting handful of
-  // challenges (at most 3 dates * 3 courses * 3 questions) crosses into the client (task 056, L3).
+  // challenges (at most 3 dates * number of courses * 3 questions) crosses into the client (task 056, L3).
   const questsByDate = Object.fromEntries(
     possibleDateKeysWorldwide().map((dateKey) => [
       dateKey,
@@ -41,14 +41,14 @@ export default function ArenaPage() {
           <div aria-hidden="true" className="absolute -top-32 right-0 size-80 rounded-full bg-accent/25 blur-3xl" />
           <div className="relative flex flex-col gap-5">
             <p className="w-fit rounded-full border border-accent/20 bg-surface-raised px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase shadow-[var(--shadow-sm)]">
-              Daily practice · all three courses
+              Daily practice · all four courses
             </p>
             <h1 className="max-w-4xl text-display text-balance text-on-navy">
               A few sharp questions. A different set tomorrow.
             </h1>
             <p className="max-w-2xl text-body leading-relaxed text-on-navy-muted">
-              Choose Java, DSA or AI. Each course gets its own topic-labelled daily set, with explanations and
-              a direct route back to the chapter when something does not click.
+              Choose Java, DSA, AI or System Design. Each course gets its own topic-labelled daily set, with
+              explanations and a direct route back to the chapter when something does not click.
             </p>
           </div>
         </header>

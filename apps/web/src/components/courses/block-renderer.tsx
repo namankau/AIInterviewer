@@ -12,6 +12,8 @@ import { CompareBlock } from "@/components/courses/compare-block";
 import { StepsBlock } from "@/components/courses/steps-block";
 import { AgentLab } from "@/components/courses/agent-lab";
 import { getScenario } from "@/lib/agent-lab/scenarios";
+import { ArchitectureLab } from "@/components/courses/architecture-lab";
+import { getArchitectureScenario } from "@/lib/architecture-lab/scenarios";
 
 /**
  * Block kinds allowed to break out of the ~70ch prose column (task 052) — the diagrams,
@@ -27,6 +29,7 @@ const FULL_BLEED_KINDS: ReadonlySet<Block["kind"]> = new Set([
   "compare",
   "steps",
   "agentlab",
+  "architecturelab",
 ]);
 
 /**
@@ -256,6 +259,18 @@ function BlockView({
         );
       }
       return <AgentLab scenario={scenario} />;
+    }
+
+    case "architecturelab": {
+      const scenario = getArchitectureScenario(block.scenarioId);
+      if (!scenario) {
+        return (
+          <p className="rounded-md border border-danger/30 bg-danger/5 px-5 py-4 text-caption text-ink-muted">
+            This chapter refers to an architecture lab scenario ({block.scenarioId}) that is not installed.
+          </p>
+        );
+      }
+      return <ArchitectureLab scenario={scenario} />;
     }
 
     case "playground":

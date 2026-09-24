@@ -21,6 +21,7 @@ import {
   MarkCompleteButton,
   ModuleProgress,
 } from "@/components/courses/course-progress";
+import { GuidedLessonControls } from "@/components/courses/guided-lesson-controls";
 import { resetCourseProgress } from "@/lib/use-course-progress";
 
 const chapters = [
@@ -28,6 +29,20 @@ const chapters = [
   { slug: "two", title: "Second steps" },
   { slug: "three", title: "Third steps" },
 ];
+
+const guidedBeats = [
+  { key: "see" as const, label: "See the idea", shortLabel: "See it", description: "See", cardCount: 1, content: <p>See</p> },
+  { key: "predict" as const, label: "Take a first guess", shortLabel: "Predict", description: "Predict", cardCount: 1, content: <p>Predict</p> },
+  { key: "interact" as const, label: "Try it yourself", shortLabel: "Try it", description: "Try", cardCount: 1, content: <p>Try</p> },
+  { key: "explain" as const, label: "Explain and remember", shortLabel: "Remember", description: "Remember", cardCount: 1, content: <p>Remember</p> },
+  { key: "check" as const, label: "Final checkpoint", shortLabel: "Check", description: "Check", cardCount: 1, content: <p>Check</p> },
+];
+
+async function visitRemainingBeats(user: ReturnType<typeof userEvent.setup>) {
+  for (const beat of guidedBeats.slice(1)) {
+    await user.click(screen.getByRole("button", { name: beat.label }));
+  }
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -39,6 +54,60 @@ beforeEach(() => {
 });
 
 describe("MarkCompleteButton", () => {
+  it("unlocks only after the learner has visited every guided beat", async () => {
+    const user = userEvent.setup();
+    render(
+      <GuidedLessonControls
+        beats={guidedBeats}
+        completion={<MarkCompleteButton courseSlug="java" chapterSlug="one" />}
+      />,
+    );
+
+    const locked = await screen.findByRole("button", { name: /visit all lesson beats/i });
+    await waitFor(() => expect(fetchCourseProgress).toHaveBeenCalled());
+    expect(locked).toBeDisabled();
+    expect(screen.getByText(/1 of 5 beats explored/i)).toBeInTheDocument();
+
+    await visitRemainingBeats(user);
+
+    expect(screen.getByText(/explored every beat/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /mark chapter as complete/i })).toBeEnabled();
+  });
+
+  it("lets a learner undo an existing completion without revisiting every beat", async () => {
+    fetchCourseProgress.mockResolvedValue({ completed: { java: ["one"] } });
+    render(
+      <GuidedLessonControls
+        beats={guidedBeats}
+        completion={<MarkCompleteButton courseSlug="java" chapterSlug="one" />}
+      />,
+    );
+
+    const button = await screen.findByRole("button", { name: /completed/i });
+    await waitFor(() => expect(button).toBeEnabled());
+  });
+
+  it("allows a save retry after the initial progress read fails", async () => {
+    fetchCourseProgress.mockRejectedValue(new Error("offline"));
+    const user = userEvent.setup();
+    render(
+      <GuidedLessonControls
+        beats={guidedBeats}
+        completion={<MarkCompleteButton courseSlug="java" chapterSlug="one" />}
+      />,
+    );
+
+    await visitRemainingBeats(user);
+    const button = await screen.findByRole("button", { name: /mark chapter as complete/i });
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(screen.getByText(/saved progress could not be loaded/i)).toBeInTheDocument();
+
+    await user.click(button);
+
+    expect(markChapterComplete).toHaveBeenCalledWith("token-abc", "java", "one");
+    expect(await screen.findByRole("button", { name: /completed/i })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("saves the tick to the account and reflects it", async () => {
     const user = userEvent.setup();
     render(<MarkCompleteButton courseSlug="java" chapterSlug="one" />);

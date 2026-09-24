@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { courses, flattenChapters, getAdjacentChapters } from "@/content/courses";
 import { agentLabScenarios, getScenario } from "@/lib/agent-lab/scenarios";
+import { architectureScenarios, getArchitectureScenario } from "@/lib/architecture-lab/scenarios";
 import type {
   ArrayFrame,
   Block,
@@ -86,6 +87,34 @@ describe("course: ai-agents, as a whole", () => {
   });
 });
 
+describe("course: system-design, as a whole", () => {
+  const systemDesignCourse = courses.find((course) => course.slug === "system-design");
+  const systemDesignChapters = systemDesignCourse ? flattenChapters(systemDesignCourse) : [];
+  const systemDesignBlocks = systemDesignChapters.flatMap((chapter) => chapter.blocks);
+
+  it("covers foundations, building blocks, AI systems, and compositional cases", () => {
+    expect(systemDesignCourse).toBeDefined();
+    expect(systemDesignCourse?.modules).toHaveLength(4);
+    expect(systemDesignChapters).toHaveLength(38);
+    expect(systemDesignCourse?.requiresCodeExamples).toBe(false);
+  });
+
+  it("gives every chapter enough material for Arena practice", () => {
+    for (const chapter of systemDesignChapters) {
+      expect(chapter.blocks.filter((block) => block.kind === "quiz").length, chapter.slug).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it("uses every architecture lab scenario and resolves every scenario reference", () => {
+    const labs = systemDesignBlocks.filter((block) => block.kind === "architecturelab");
+    const used = new Set(labs.map((block) => block.scenarioId));
+
+    expect(used.size).toBe(architectureScenarios.length);
+    for (const scenario of architectureScenarios) expect(used.has(scenario.id), scenario.id).toBe(true);
+    for (const block of labs) expect(getArchitectureScenario(block.scenarioId), block.scenarioId).toBeDefined();
+  });
+});
+
 describe.each(courses)("course: $slug", (course: Course) => {
   const chapters = flattenChapters(course);
 
@@ -115,9 +144,11 @@ describe.each(courses)("course: $slug", (course: Course) => {
       expect(blocksOf("analogy", chapter).length).toBeGreaterThanOrEqual(1);
     });
 
-    it("has at least one code block with real, non-empty code", () => {
+    it("has a real code example when the course teaches through code", () => {
       const codeBlocks = blocksOf("code", chapter) as Extract<Block, { kind: "code" }>[];
-      expect(codeBlocks.length).toBeGreaterThanOrEqual(1);
+      if (course.requiresCodeExamples !== false) {
+        expect(codeBlocks.length).toBeGreaterThanOrEqual(1);
+      }
       for (const block of codeBlocks) {
         expect(block.code.trim().length).toBeGreaterThan(0);
       }

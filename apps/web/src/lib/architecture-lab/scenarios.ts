@@ -2,19 +2,19 @@ import type { ArchitectureScenario } from "@/lib/architecture-lab/types";
 
 const primer = {
   title: "System Design Primer",
-  url: "https://github.com/donnemartin/system-design-primer",
+  url: "https://github.com/donnemartin/system-design-primer/tree/ae9bbd7b02d90b9866215de185217d33f39ab733",
   license: "CC BY 4.0",
 } as const;
 
 const aiAgents = {
   title: "AI Agents for Beginners",
-  url: "https://github.com/microsoft/ai-agents-for-beginners",
+  url: "https://github.com/microsoft/ai-agents-for-beginners/tree/25b7985f3b2dc37a84f4a7387ccd3c9f0e5b1595",
   license: "MIT",
 } as const;
 
 const generativeAi = {
   title: "Generative AI for Beginners",
-  url: "https://github.com/microsoft/generative-ai-for-beginners",
+  url: "https://github.com/microsoft/generative-ai-for-beginners/tree/d8ec07e31c4b32bd283d565c1abd9b58bb5cf2e8",
   license: "MIT",
 } as const;
 

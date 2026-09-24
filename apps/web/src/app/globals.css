@@ -33,6 +33,7 @@
   --accent: #1a64f0;
   --accent-strong: #1550c4;
   --accent-contrast: #ffffff;
+  --accent-on-navy: #8db5ff;
   --accent-wash: #eaf1ff;
 
   /* Secondary accents for badges, status and the "how it works" rhythm. Never used as
@@ -42,7 +43,25 @@
 
   --danger: #b3261e;
   --positive: #0a7d3c;
+  --warning: #9a5b08;
+  --info: #1550c4;
+  --danger-wash: #fff0ef;
+  --positive-wash: #eaf8ef;
+  --warning-wash: #fff7e5;
+  --info-wash: #eaf1ff;
   --grid: rgba(15, 23, 42, 0.05);
+
+  /* One geometry and motion vocabulary keeps independently-built surfaces feeling like
+     one product. Components may choose a size, but should not invent another curve. */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.35rem;
+  --radius-pill: 999px;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+  --motion-fast: 140ms;
+  --motion-base: 200ms;
+  --ease-product: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 1px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05);
@@ -69,6 +88,7 @@
     --accent: #5b93f7;
     --accent-strong: #8ab2fa;
     --accent-contrast: #071023;
+    --accent-on-navy: #a8c5ff;
     --accent-wash: #12203f;
 
     --accent-2: #3fc383;
@@ -76,6 +96,12 @@
 
     --danger: #f0938c;
     --positive: #4cc987;
+    --warning: #f7bb55;
+    --info: #8ab2fa;
+    --danger-wash: #351918;
+    --positive-wash: #102c20;
+    --warning-wash: #302411;
+    --info-wash: #12203f;
     --grid: rgba(238, 241, 246, 0.05);
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
@@ -101,11 +127,18 @@
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-contrast: var(--accent-contrast);
+  --color-accent-on-navy: var(--accent-on-navy);
   --color-accent-wash: var(--accent-wash);
   --color-accent-2: var(--accent-2);
   --color-highlight: var(--highlight);
   --color-danger: var(--danger);
   --color-positive: var(--positive);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-danger-wash: var(--danger-wash);
+  --color-positive-wash: var(--positive-wash);
+  --color-warning-wash: var(--warning-wash);
+  --color-info-wash: var(--info-wash);
 
   --font-sans:
     var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
@@ -169,7 +202,13 @@
 
   :focus-visible {
     outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    outline-offset: 3px;
+    box-shadow: var(--focus-ring);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 24%, transparent);
+    color: var(--ink);
   }
 }
 
@@ -194,8 +233,90 @@
   .card {
     background-color: var(--surface-raised);
     border: 1px solid var(--line);
-    border-radius: 0.9rem;
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
+  }
+
+  .card-interactive {
+    transition:
+      border-color var(--motion-base) var(--ease-product),
+      box-shadow var(--motion-base) var(--ease-product),
+      transform var(--motion-base) var(--ease-product);
+  }
+  .card-interactive:hover {
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .action-primary,
+  .action-secondary,
+  .action-quiet {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-md);
+    padding: 0.65rem 1.1rem;
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    font-weight: 700;
+    transition:
+      background-color var(--motion-fast) var(--ease-product),
+      border-color var(--motion-fast) var(--ease-product),
+      color var(--motion-fast) var(--ease-product),
+      box-shadow var(--motion-fast) var(--ease-product),
+      transform var(--motion-fast) var(--ease-product);
+  }
+  .action-primary {
+    background: var(--accent);
+    color: var(--accent-contrast);
+    box-shadow: var(--shadow-sm);
+  }
+  .action-primary:hover {
+    background: var(--accent-strong);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  .action-secondary {
+    border: 1px solid var(--line-strong);
+    background: var(--surface-raised);
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+  }
+  .action-secondary:hover {
+    border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+    background: var(--accent-wash);
+    color: var(--accent-strong);
+  }
+  .action-quiet {
+    color: var(--ink-muted);
+  }
+  .action-quiet:hover {
+    background: var(--surface-sunken);
+    color: var(--ink);
+  }
+
+  .field-control {
+    min-height: 2.75rem;
+    width: 100%;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    background: var(--surface-raised);
+    color: var(--ink);
+    padding: 0.65rem 0.8rem;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition:
+      border-color var(--motion-fast) var(--ease-product),
+      box-shadow var(--motion-fast) var(--ease-product);
+  }
+  .field-control::placeholder {
+    color: var(--ink-subtle);
+  }
+  .field-control:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: var(--focus-ring);
   }
 
   /* Small rounded label — status, tag, coverage archetype. Never the primary action. */
@@ -216,12 +337,12 @@
     color: var(--accent-strong);
   }
   .pill-positive {
-    background-color: color-mix(in srgb, var(--accent-2) 14%, transparent);
+    background-color: var(--positive-wash);
     color: var(--positive);
   }
   .pill-highlight {
-    background-color: color-mix(in srgb, var(--highlight) 20%, transparent);
-    color: #8a5a10;
+    background-color: var(--warning-wash);
+    color: var(--warning);
   }
   .pill-navy {
     background-color: color-mix(in srgb, var(--on-navy) 14%, transparent);
@@ -297,6 +418,15 @@
  * information that the text beside it does not already carry.
  */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
   .presence-figure,
   .presence-speaking .presence-mouth,
   .presence-thinking .presence-eyes {

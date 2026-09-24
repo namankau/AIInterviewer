@@ -67,7 +67,7 @@ export function ChallengeCard({
   }, [submitted, selected, challenge.options.length, onSelect, onSubmit, onNext]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-7">
       <div className="flex items-center gap-2.5">
         <span className="rounded-full bg-accent-wash px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase">
           {KIND_LABEL[challenge.kind]}
@@ -76,13 +76,13 @@ export function ChallengeCard({
       </div>
 
       {challenge.kind === "what-next" && challenge.viz && challenge.frameIndex !== undefined ? (
-        <div className="flex justify-center rounded-md bg-surface-sunken px-3 py-5">
+        <div className="flex justify-center rounded-xl border border-line bg-surface-sunken px-3 py-5">
           <ArenaVizFrame viz={challenge.viz} frameIndex={challenge.frameIndex} />
         </div>
       ) : null}
 
       {challenge.kind === "predict-output" && challenge.code ? (
-        <pre className="overflow-x-auto rounded-md border border-line-strong bg-surface-sunken px-4 py-3 font-mono text-caption text-ink">
+        <pre className="overflow-x-auto rounded-xl border border-line-strong bg-surface-sunken px-4 py-3 font-mono text-caption text-ink">
           <code>{challenge.code}</code>
         </pre>
       ) : null}
@@ -104,14 +104,14 @@ export function ChallengeCard({
                 aria-pressed={isSelected}
                 onClick={() => onSelect(i)}
                 className={[
-                  "flex w-full items-center gap-3 rounded-md border px-4 py-3 text-left text-body transition-colors",
+                  "flex w-full items-center gap-3 rounded-xl border bg-surface-raised px-4 py-3 text-left text-body shadow-[var(--shadow-sm)] transition-[border-color,background-color,transform]",
                   isCorrectOption
                     ? "border-positive/50 bg-positive/10 text-ink"
                     : isWrongPick
                       ? "border-danger/50 bg-danger/10 text-ink"
                       : isSelected
                         ? "border-accent bg-accent-wash text-ink"
-                        : "border-line-strong text-ink hover:border-accent disabled:hover:border-line-strong",
+                        : "border-line text-ink hover:-translate-y-0.5 hover:border-accent disabled:hover:translate-y-0 disabled:hover:border-line",
                 ].join(" ")}
               >
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current font-mono text-micro">
@@ -131,17 +131,31 @@ export function ChallengeCard({
           type="button"
           onClick={onSubmit}
           disabled={selected === null}
-          className="self-start rounded-md bg-accent px-5 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40"
+          className="self-start rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40"
         >
           Confirm (Enter)
         </button>
       ) : (
-        <div role="status" aria-live="polite" className="flex flex-col gap-3 rounded-md border border-line-strong bg-surface-raised px-5 py-4">
+        <div role="status" aria-live="polite" className="flex flex-col gap-3 rounded-xl border border-line bg-surface-sunken px-5 py-4">
           <p className={`flex items-center gap-2 text-body font-semibold ${wasCorrect ? "text-positive" : "text-danger"}`}>
             {wasCorrect ? <StatusIcon kind="correct" /> : <StatusIcon kind="incorrect" />}
             {wasCorrect ? "Correct" : "Not quite"}
           </p>
           <p className="text-caption leading-relaxed text-ink-muted">{challenge.why}</p>
+          {challenge.source ? (
+            <p className="text-caption text-ink-subtle">
+              Adapted from{" "}
+              <a
+                href={challenge.source.url}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-accent hover:underline"
+              >
+                {challenge.source.title}
+              </a>{" "}
+              by {challenge.source.publisher} ({challenge.source.license}).
+            </p>
+          ) : null}
           <div className="flex items-center gap-3">
             <Link
               href={`/courses/${challenge.courseSlug}/${challenge.chapterSlug}` as Route}
@@ -152,7 +166,7 @@ export function ChallengeCard({
             <button
               type="button"
               onClick={onNext}
-              className="ml-auto rounded-md bg-accent px-5 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-strong"
+              className="ml-auto rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong"
             >
               Next (Enter)
             </button>

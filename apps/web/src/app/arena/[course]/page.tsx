@@ -3,9 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { AppShell } from "@/components/app-shell";
 import { ArenaCoursePractice } from "@/components/arena/arena-course-practice";
-import { Breadcrumbs } from "@/components/breadcrumbs";
-import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { courses, getCourse } from "@/content/courses";
 import { challengesForCourse } from "@/lib/arena/corpus";
 
@@ -23,7 +22,7 @@ export async function generateMetadata({
   if (!course) return {};
   return {
     title: `${course.title} — Arena — AceMyInterview`,
-    description: `Practise ${course.title} as short rounds derived from its own chapters — free, no account needed.`,
+    description: `Practise ${course.title} as short rounds derived from its own chapters.`,
   };
 }
 
@@ -47,38 +46,29 @@ export default async function ArenaCoursePage({ params }: { params: Promise<{ co
   const chapters = course.modules.flatMap((module) => module.chapters).map((c) => ({ slug: c.slug, title: c.title }));
 
   return (
-    <div className="min-h-dvh">
-      <CourseSiteHeader />
-      <Breadcrumbs
-        items={[{ label: "home", href: "/dashboard" }, { label: "arena", href: "/arena" }, { label: course.title.toLowerCase() }]}
-      />
-      <div className="border-b border-line px-6 py-3 md:px-12">
-        <p className="mx-auto max-w-6xl font-mono text-micro tracking-widest text-ink-subtle lowercase">
-          <Link href="/arena" className="hover:text-ink">
-            arena
-          </Link>
-          <span className="px-1.5">/</span>
-          <span className="text-ink-muted">{course.slug}</span>
-        </p>
-      </div>
-
-      <main className="mx-auto max-w-6xl px-6 py-14 md:py-20">
-        <header className="flex flex-col gap-4">
-          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">{course.level}</p>
-          <h1 className="text-display text-balance text-ink">{course.title}</h1>
-          <p className="max-w-xl text-body text-ink-muted">{course.tagline}</p>
+    <AppShell breadcrumb={course.title.toLowerCase()} parent={{ label: "arena", href: "/arena" }}>
+      <div className="flex flex-col gap-10">
+        <header className="relative overflow-hidden rounded-[1.75rem] border border-accent/20 bg-accent-wash px-7 py-9 shadow-[var(--shadow-sm)] sm:px-10 sm:py-11">
+          <div aria-hidden="true" className="absolute -right-16 -bottom-24 size-64 rounded-full bg-accent/15 blur-3xl" />
+          <div className="relative flex flex-col gap-4">
+            <p className="w-fit rounded-full border border-accent/20 bg-surface-raised px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase shadow-[var(--shadow-sm)]">
+              {course.level} · personalised review
+            </p>
+            <h1 className="max-w-3xl text-display text-balance text-ink">{course.title}</h1>
+            <p className="max-w-2xl text-body leading-relaxed text-ink-muted">{course.tagline}</p>
+          </div>
         </header>
 
-        <div className="mt-8">
+        <div className="rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] md:p-8">
           <Suspense fallback={null}>
             <ArenaCoursePractice key={course.slug} courseSlug={course.slug} chapters={chapters} />
           </Suspense>
         </div>
 
-        <section className="mt-14 flex flex-col gap-8">
+        <section className="flex flex-col gap-6">
           <h2 className="text-title text-ink">Campaigns</h2>
           {course.modules.map((module, moduleIndex) => (
-            <div key={module.title} className="flex flex-col gap-3 rounded-md border border-line-strong bg-surface-raised px-6 py-5">
+            <div key={module.title} className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised px-6 py-5 shadow-[var(--shadow-sm)]">
               <div className="flex items-baseline gap-3">
                 <span className="font-mono text-micro tracking-widest text-accent uppercase">
                   Campaign {moduleIndex + 1}
@@ -92,7 +82,7 @@ export default async function ArenaCoursePage({ params }: { params: Promise<{ co
                     <li key={chapter.slug}>
                       <Link
                         href={`/courses/${course.slug}/${chapter.slug}`}
-                        className="rounded-full border border-line-strong px-3 py-1 text-caption text-ink-muted transition-colors hover:border-accent hover:text-ink"
+                        className="rounded-full border border-line bg-surface-sunken px-3 py-1 text-caption text-ink-muted transition-colors hover:border-accent hover:bg-accent-wash hover:text-ink"
                       >
                         {chapter.title}
                         {count > 0 ? <span className="ml-1.5 text-ink-subtle">· {count}</span> : null}
@@ -104,8 +94,7 @@ export default async function ArenaCoursePage({ params }: { params: Promise<{ co
             </div>
           ))}
         </section>
-      </main>
-      <CourseSiteFooter />
-    </div>
+      </div>
+    </AppShell>
   );
 }

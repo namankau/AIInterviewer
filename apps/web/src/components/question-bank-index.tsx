@@ -53,7 +53,7 @@ export function QuestionBankIndex() {
 export function QuestionBankIndexView({ companies }: { companies: BankCompany[] }) {
   if (companies.length === 0) {
     return (
-      <section aria-labelledby="bank-empty" className="flex max-w-xl flex-col gap-3 border-t border-line pt-8">
+      <section aria-labelledby="bank-empty" className="flex max-w-xl flex-col gap-3 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)]">
         <h2 id="bank-empty" className="text-heading text-ink">
           Nothing sourced yet.
         </h2>
@@ -74,15 +74,15 @@ export function QuestionBankIndexView({ companies }: { companies: BankCompany[] 
   }
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="grid gap-5 md:grid-cols-2">
       {[...groups.entries()].map(([initial, members]) => (
-        <section key={initial} aria-labelledby={`initial-${initial}`} className="grid gap-3 md:grid-cols-[3rem_minmax(0,1fr)]">
+        <section key={initial} aria-labelledby={`initial-${initial}`} className="grid gap-4 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:grid-cols-[3rem_minmax(0,1fr)]">
           <h2 id={`initial-${initial}`} className="font-display text-title text-ink-subtle">
             {initial}
           </h2>
-          <ul className="flex flex-col divide-y divide-line border-t border-line">
+          <ul className="flex flex-col divide-y divide-line">
             {members.map((company) => (
-              <li key={company.slug} className="flex flex-col gap-1.5 py-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+              <li key={company.slug} className="flex flex-col gap-1.5 py-4 first:pt-0 last:pb-0 sm:gap-2">
                 <Link
                   href={`/questions/${company.slug}`}
                   className="text-heading text-ink underline-offset-4 hover:underline"

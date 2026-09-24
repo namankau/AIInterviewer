@@ -27,28 +27,28 @@ export const metadata: Metadata = {
 export default function RoundsPage() {
   return (
     <AppShell breadcrumb="rounds">
-      <div className="flex max-w-4xl flex-col gap-12">
-        <header className="flex flex-col gap-4">
-          <h1 className="text-display text-balance text-ink">The rounds.</h1>
-          <p className="max-w-xl text-body text-ink-muted">
+      <div className="flex max-w-5xl flex-col gap-12">
+        <header className="-mx-6 flex flex-col gap-5 rounded-2xl border border-accent/20 bg-accent-wash px-6 py-10 shadow-[var(--shadow-sm)] sm:mx-0 sm:px-10">
+          <p className="w-fit rounded-full bg-surface-raised px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase shadow-[var(--shadow-sm)]">
+            All rounds · {ROUND_CATALOGUE.length}
+          </p>
+          <h1 className="max-w-3xl text-display text-balance text-ink">The rounds.</h1>
+          <p className="max-w-2xl text-body leading-relaxed text-ink-muted">
             Nine rounds, each with its own structure and its own rubric. An Infosys
             techno-managerial panel is not a Google system design round, and preparing for one
             does not prepare you for the other.
           </p>
-          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-            All rounds · {ROUND_CATALOGUE.length}
-          </p>
         </header>
 
-        <ul className="flex flex-col divide-y divide-line border-y border-line">
+        <ul className="grid gap-5 md:grid-cols-2">
           {ROUND_CATALOGUE.map((round) => (
-            <li key={round.value} className="flex flex-col gap-2.5 py-7">
-              <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+            <li key={round.value} className="flex flex-col gap-3 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] transition-shadow hover:shadow-[var(--shadow-md)]">
+              <p className="w-fit rounded-full bg-surface-sunken px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase">
                 {round.eyebrow}
               </p>
               <h2 className="text-heading text-ink">{round.label}</h2>
-              <p className="max-w-xl text-body text-ink-muted">{round.blurb}</p>
-              <p className="max-w-xl border-l-2 border-line-strong pl-3 text-caption text-ink-muted">
+              <p className="text-body leading-relaxed text-ink-muted">{round.blurb}</p>
+              <p className="mt-auto rounded-xl border border-positive/20 bg-positive/10 p-4 text-caption leading-relaxed text-ink-muted">
                 <span className="text-ink">What the interviewer is listening for:</span>{" "}
                 {round.listeningFor}
               </p>
@@ -57,7 +57,7 @@ export default function RoundsPage() {
           ))}
         </ul>
 
-        <section className="flex flex-col items-start gap-4">
+        <section className="flex flex-col items-start gap-4 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8">
           <h2 className="text-heading text-ink">Not sure which one you are sitting?</h2>
           <p className="max-w-xl text-body text-ink-muted">
             Describe the interview in one line — the employer, when it is, what you are worried

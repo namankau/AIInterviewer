@@ -3,6 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { BlockRenderer } from "@/components/courses/block-renderer";
+// Preload the real code-split module during collection so the smoke test's five-second
+// behavior budget measures rendering and assertions rather than worker-contended module
+// compilation. The test still renders the lazy boundary and asserts its real output.
+import "@/components/courses/playground";
 import type { Block } from "@/content/courses/types";
 
 const ALL_KINDS: Block[] = [

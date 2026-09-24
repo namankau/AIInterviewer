@@ -126,19 +126,22 @@ export function CompanyQuestionsView({
   const nothingSourced = company.questionCount === 0;
 
   return (
-    <div className="flex flex-col gap-10">
-      <header className="flex flex-col gap-3">
-        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Question bank</p>
-        <h1 className="text-display text-balance text-ink">{company.name}</h1>
-        <p className="max-w-xl text-body text-ink-muted">
+    <div className="flex flex-col gap-8">
+      <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] sm:p-9">
+        <div aria-hidden="true" className="absolute -top-24 -right-16 size-64 rounded-full bg-accent/20 blur-3xl" />
+        <div className="relative flex flex-col gap-3">
+        <p className="pill pill-navy w-fit">Question bank</p>
+        <h1 className="text-display text-balance text-on-navy">{company.name}</h1>
+        <p className="max-w-2xl text-body text-on-navy-muted">
           {nothingSourced
             ? `${company.archetypeLabel}.`
             : `${questionCount(company.questionCount)} reported by sources you can open and check. ${company.archetypeLabel}.`}
         </p>
+        </div>
       </header>
 
       {nothingSourced ? (
-        <section aria-labelledby="nothing-sourced" className="flex max-w-xl flex-col gap-3 border-t border-line pt-8">
+        <section aria-labelledby="nothing-sourced" className="flex max-w-2xl flex-col gap-3 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)]">
           <h2 id="nothing-sourced" className="text-heading text-ink">
             Nothing sourced for {company.name} yet.
           </h2>
@@ -181,7 +184,7 @@ export function CompanyQuestionsView({
               None of {company.name}’s sourced questions are from a {roundLabel(roundType).toLowerCase()} round.
             </p>
           ) : (
-            <ol className="flex flex-col divide-y divide-line border-y border-line">
+            <ol className="grid gap-4">
               {questions.map((question) => (
                 <QuestionEntry key={question.id} question={question} current={company.slug} />
               ))}
@@ -220,8 +223,8 @@ function FilterButton({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className={`rounded-md border px-3 py-1.5 text-caption transition-colors ${
-        pressed ? "border-accent bg-accent-wash text-ink" : "border-line text-ink-muted hover:border-line-strong hover:text-ink"
+      className={`rounded-full border px-3.5 py-2 text-caption transition-colors ${
+        pressed ? "border-accent bg-accent-wash text-ink shadow-[var(--shadow-sm)]" : "border-line bg-surface-raised text-ink-muted hover:border-line-strong hover:text-ink"
       }`}
     >
       {children}
@@ -233,7 +236,7 @@ function QuestionEntry({ question, current }: { question: BankQuestion; current:
   const reported = monthYear(question.lastReported);
 
   return (
-    <li className="flex flex-col gap-3 py-7">
+    <li className="flex flex-col gap-3 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)]">
       <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">{roundLabel(question.roundType)}</p>
       <p className="max-w-2xl font-display text-title text-balance text-ink">{question.text}</p>
       <p className="text-caption text-ink-muted">

@@ -1,19 +1,28 @@
 "use client";
 
-import type { ProfileDetails, ResumeView } from "@acemyinterview/shared";
+import type { ArenaProgressView, MeResponse, ProfileDetails, ResumeView, SessionSummary } from "@acemyinterview/shared";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { ProgressBar } from "@/components/courses/course-progress";
 import { Button } from "@/components/ui/button";
+import { CONTROL_CLASS } from "@/components/ui/field";
 import {
   ApiRequestError,
   deleteSkill,
+  fetchArenaProgress,
+  fetchMe,
   fetchProfile,
+  fetchSessions,
   updateProfile,
   uploadAvatar,
   uploadResume,
   upsertSkill,
 } from "@/lib/api";
+import type { CourseOutline } from "@/lib/course-outline";
+import { summarizeChapters } from "@/lib/course-progress";
 import { useAccessToken } from "@/lib/use-access-token";
+import { useAllCourseProgress } from "@/lib/use-course-progress";
 
 /**
  * The candidate's profile.
@@ -27,9 +36,13 @@ import { useAccessToken } from "@/lib/use-access-token";
  * mis-read employer degrades every future round, and the candidate is the only person who
  * can catch it.
  */
-export function ProfilePanel() {
+export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) {
   const accessToken = useAccessToken();
+  const courseProgress = useAllCourseProgress();
   const [details, setDetails] = useState<ProfileDetails | null>(null);
+  const [me, setMe] = useState<MeResponse | null>(null);
+  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [arena, setArena] = useState<ArenaProgressView | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<null | "resume" | "avatar" | "profile" | "skill">(null);
@@ -47,10 +60,19 @@ export function ProfilePanel() {
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
-    fetchProfile({ accessToken })
-      .then((it) => active && setDetails(it))
-      .catch(() => undefined)
-      .finally(() => active && setLoaded(true));
+    Promise.allSettled([
+      fetchProfile({ accessToken }),
+      fetchMe({ accessToken }),
+      fetchSessions({ accessToken }),
+      fetchArenaProgress({ accessToken }),
+    ]).then(([profile, candidate, history, arenaProgress]) => {
+      if (!active) return;
+      if (profile.status === "fulfilled") setDetails(profile.value);
+      if (candidate.status === "fulfilled") setMe(candidate.value);
+      if (history.status === "fulfilled") setSessions(history.value);
+      if (arenaProgress.status === "fulfilled") setArena(arenaProgress.value);
+      setLoaded(true);
+    });
     return () => {
       active = false;
     };
@@ -107,8 +129,27 @@ export function ProfilePanel() {
   const resume = details?.resume ?? null;
 
   return (
-    <div className="flex flex-col gap-16">
-      <section aria-labelledby="resume" className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
+      <ProfileOverview
+        details={details}
+        me={me}
+        sessions={sessions}
+        arena={arena}
+        outlines={outlines}
+        completed={courseProgress.completed}
+        progressReady={courseProgress.status === "ready"}
+        avatarInput={avatarInput}
+        avatarBusy={busy === "avatar"}
+        disabled={busy !== null}
+        onAvatar={(file) =>
+          run("avatar", async () => setDetails(await uploadAvatar(accessToken!, file)))
+        }
+      />
+
+      <section
+        aria-labelledby="resume"
+        className="flex flex-col gap-5 rounded-2xl border border-accent/20 bg-accent-wash p-6 shadow-[var(--shadow-sm)] sm:p-8"
+      >
         <div className="flex flex-col gap-1">
           <h2 id="resume" className="text-title text-ink">
             Your resume
@@ -158,7 +199,10 @@ export function ProfilePanel() {
         }
       />
 
-      <section aria-labelledby="skills" className="flex flex-col gap-5">
+      <section
+        aria-labelledby="skills"
+        className="flex flex-col gap-5 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8"
+      >
         <div className="flex flex-col gap-1">
           <h2 id="skills" className="text-heading text-ink">
             Skills
@@ -191,62 +235,215 @@ export function ProfilePanel() {
         />
       </section>
 
-      <section aria-labelledby="photo" className="flex flex-col gap-4">
-        <h2 id="photo" className="text-heading text-ink">
-          Photo
-        </h2>
-        <div className="flex items-center gap-5">
-          {details?.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- a signed, expiring URL
-            <img
-              src={details.avatarUrl}
-              alt=""
-              className="size-16 rounded-full border border-line object-cover"
-            />
-          ) : (
-            <span aria-hidden className="size-16 rounded-full border border-line bg-surface-sunken" />
-          )}
-          <input
-            ref={avatarInput}
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                void run("avatar", async () => setDetails(await uploadAvatar(accessToken!, file)));
-              }
-              event.target.value = "";
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => avatarInput.current?.click()}
-            disabled={busy !== null}
-            className="text-caption text-accent underline-offset-4 hover:underline disabled:opacity-50"
-          >
-            {details?.avatarUrl ? "Change photo" : "Add a photo"}
-          </button>
-        </div>
-      </section>
-
       {/*
         * Both live at the bottom, both announced. `role="status"` rather than `alert`
         * for the success case: a screen reader should mention it, not interrupt for it.
         */}
       {error ? (
-        <p role="alert" className="text-body text-danger">
+        <p role="alert" className="rounded-xl border border-danger/25 bg-danger/5 px-4 py-3 text-body text-danger">
           {error}
         </p>
       ) : null}
 
       {saved && !error ? (
-        <p role="status" className="text-body text-positive">
+        <p role="status" className="rounded-xl border border-positive/25 bg-positive/5 px-4 py-3 text-body text-positive">
           {saved}
         </p>
       ) : null}
     </div>
   );
+}
+
+/**
+ * The profile's front door: identity plus the useful evidence of practice already held
+ * by the account. All numbers are derived from existing APIs; there is no second profile
+ * model and no invented "readiness" score.
+ */
+function ProfileOverview({
+  details,
+  me,
+  sessions,
+  arena,
+  outlines,
+  completed,
+  progressReady,
+  avatarInput,
+  avatarBusy,
+  disabled,
+  onAvatar,
+}: {
+  details: ProfileDetails | null;
+  me: MeResponse | null;
+  sessions: SessionSummary[];
+  arena: ArenaProgressView | null;
+  outlines: CourseOutline[];
+  completed: Record<string, string[]>;
+  progressReady: boolean;
+  avatarInput: React.RefObject<HTMLInputElement | null>;
+  avatarBusy: boolean;
+  disabled: boolean;
+  onAvatar: (file: File) => void;
+}) {
+  const courseSummaries = outlines.map((course) => ({
+    course,
+    summary: summarizeChapters(course.chapters, completed[course.slug] ?? []),
+  }));
+  const completedCourses = courseSummaries.filter(({ summary }) => summary.finished).length;
+  const completedChapters = courseSummaries.reduce((total, { summary }) => total + summary.done, 0);
+  const finishedRounds = sessions.filter((session) => session.status === "completed");
+  const latestRound = [...finishedRounds].sort((a, b) =>
+    (b.endedAt ?? b.startedAt ?? "").localeCompare(a.endedAt ?? a.startedAt ?? ""),
+  )[0];
+  const name = me?.displayName ?? me?.email ?? "Your profile";
+  const initials = initialsOf(name);
+
+  return (
+    <section
+      aria-labelledby="profile-overview"
+      className="overflow-hidden rounded-[1.5rem] border border-line bg-surface-raised shadow-[var(--shadow-md)]"
+    >
+      <div className="grid gap-8 bg-[linear-gradient(135deg,var(--accent-wash),var(--surface-raised)_62%)] p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="flex min-w-0 items-center gap-5">
+          <div className="relative shrink-0">
+            {details?.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- signed, expiring API URL
+              <img
+                src={details.avatarUrl}
+                alt="Profile photo"
+                className="size-24 rounded-2xl border-4 border-white object-cover shadow-[var(--shadow-md)]"
+              />
+            ) : (
+              <span
+                aria-label="Profile photo placeholder"
+                className="grid size-24 place-items-center rounded-2xl bg-navy font-mono text-title font-bold text-on-navy shadow-[var(--shadow-md)]"
+              >
+                {initials}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => avatarInput.current?.click()}
+              disabled={disabled}
+              aria-label={details?.avatarUrl ? "Change profile photo" : "Add profile photo"}
+              className="absolute -right-2 -bottom-2 grid size-9 place-items-center rounded-full border-2 border-white bg-accent text-heading text-accent-contrast shadow-[var(--shadow-sm)] transition-transform hover:-translate-y-0.5 disabled:opacity-50"
+            >
+              <span aria-hidden>{avatarBusy ? "…" : "+"}</span>
+            </button>
+            <input
+              ref={avatarInput}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onAvatar(file);
+                event.target.value = "";
+              }}
+            />
+          </div>
+
+          <div className="min-w-0">
+            <p className="font-mono text-micro tracking-widest text-accent-strong uppercase">Candidate workspace</p>
+            <h2 id="profile-overview" className="mt-1 truncate text-title text-ink">
+              {name}
+            </h2>
+            <p className="mt-1 text-caption text-ink-muted">
+              {details?.targetLevel ? `Working toward ${details.targetLevel}` : "Add a target role to shape future rounds."}
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="/interview/new"
+          className="w-fit rounded-xl bg-accent px-5 py-3 text-caption font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-accent-strong"
+        >
+          Start a new round
+        </Link>
+      </div>
+
+      <div className="grid border-t border-line sm:grid-cols-2 lg:grid-cols-4">
+        <OverviewStat label="Courses complete" value={progressReady ? `${completedCourses} / ${outlines.length}` : "—"} />
+        <OverviewStat label="Chapters complete" value={progressReady ? String(completedChapters) : "—"} />
+        <OverviewStat label="Rounds completed" value={String(finishedRounds.length)} />
+        <OverviewStat label="Arena streak" value={arena ? `${arena.streak.current} day${arena.streak.current === 1 ? "" : "s"}` : "—"} />
+      </div>
+
+      <div className="grid gap-7 border-t border-line p-6 sm:p-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(15rem,0.8fr)]">
+        <div>
+          <div className="flex items-baseline justify-between gap-4">
+            <h3 className="text-heading text-ink">Course progress</h3>
+            <Link href="/courses" className="text-caption font-medium text-accent hover:underline">
+              View courses
+            </Link>
+          </div>
+          <ul className="mt-4 grid gap-3">
+            {courseSummaries.map(({ course, summary }) => (
+              <li key={course.slug} className="rounded-xl border border-line bg-surface-sunken/70 px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Link href={`/courses/${course.slug}`} className="text-caption font-semibold text-ink hover:text-accent">
+                    {course.title}
+                  </Link>
+                  {summary.next ? (
+                    <Link
+                      href={`/courses/${course.slug}/${summary.next.slug}`}
+                      className="text-micro font-semibold text-accent hover:underline"
+                    >
+                      {summary.started ? "Continue" : "Start"}
+                    </Link>
+                  ) : (
+                    <span className="text-micro font-semibold text-positive">Complete</span>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <ProgressBar done={summary.done} total={summary.total} label={`${course.title} progress`} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-2xl bg-navy p-5 text-on-navy">
+          <p className="font-mono text-micro tracking-widest text-on-navy-muted uppercase">Latest interview</p>
+          {latestRound ? (
+            <div className="mt-3 flex h-[calc(100%-1rem)] flex-col">
+              <p className="text-heading text-on-navy">{latestRound.companyName}</p>
+              <p className="mt-1 text-caption text-on-navy-muted">{latestRound.roleTitle}</p>
+              <p className="mt-3 text-micro text-on-navy-muted">{roundLabel(latestRound.roundType)}</p>
+              <Link
+                href="/rounds"
+                className="mt-auto pt-6 text-caption font-semibold text-on-navy underline decoration-white/30 underline-offset-4 hover:decoration-white"
+              >
+                Open interview history
+              </Link>
+            </div>
+          ) : (
+            <div className="mt-3">
+              <p className="text-body text-on-navy">No completed round yet.</p>
+              <p className="mt-1 text-caption text-on-navy-muted">Your latest company, role and round type will appear here.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function OverviewStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-b border-line px-6 py-5 sm:[&:nth-child(odd)]:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 lg:border-r lg:border-b-0 lg:last:border-r-0">
+      <p className="font-mono text-heading font-bold tabular-nums text-ink">{value}</p>
+      <p className="mt-1 text-micro text-ink-subtle">{label}</p>
+    </div>
+  );
+}
+
+function initialsOf(value: string): string {
+  const parts = value.split(/[\s@._-]+/).filter(Boolean);
+  return (parts.length > 1 ? `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}` : parts[0]?.slice(0, 2) ?? "ME").toUpperCase();
+}
+
+function roundLabel(value: SessionSummary["roundType"]): string {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 /**
@@ -259,7 +456,7 @@ function ResumeSummary({ resume }: { resume: ResumeView }) {
   const years = resume.totalExperienceMonths ? Math.round(resume.totalExperienceMonths / 12) : null;
 
   return (
-    <div className="flex flex-col gap-5 rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] p-5">
+    <div className="flex flex-col gap-5 rounded-xl border border-accent/20 bg-surface-raised p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <span className="text-body text-ink">{resume.filename}</span>
         <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
@@ -346,7 +543,7 @@ function SkillList({
       {skills.map((skill) => (
         <li
           key={skill.name}
-          className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-caption ${
+          className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-caption transition-colors ${
             skill.flaggedAsWeak
               ? "border-line-strong bg-surface-sunken text-ink-subtle"
               : "border-line text-ink"
@@ -417,7 +614,10 @@ function ProfileForm({
   };
 
   return (
-    <section aria-labelledby="details" className="flex flex-col gap-5">
+    <section
+      aria-labelledby="details"
+      className="flex flex-col gap-5 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8"
+    >
       <div className="flex flex-col gap-1">
         <h2 id="details" className="text-heading text-ink">
           Role and level
@@ -430,17 +630,17 @@ function ProfileForm({
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Current level" hint="As your employer titles it.">
-          <input value={fields.currentLevel} onChange={set("currentLevel")} className={INPUT} maxLength={60} />
+          <input value={fields.currentLevel} onChange={set("currentLevel")} className={CONTROL_CLASS} maxLength={60} />
         </Field>
         <Field label="Target level" hint="What you are interviewing for.">
-          <input value={fields.targetLevel} onChange={set("targetLevel")} className={INPUT} maxLength={60} />
+          <input value={fields.targetLevel} onChange={set("targetLevel")} className={CONTROL_CLASS} maxLength={60} />
         </Field>
         <Field label="LinkedIn" hint="Optional. Stored, shown back to you, and not fetched.">
           <input
             value={fields.linkedinUrl}
             onChange={set("linkedinUrl")}
             placeholder="https://linkedin.com/in/…"
-            className={INPUT}
+            className={CONTROL_CLASS}
             maxLength={300}
           />
         </Field>
@@ -474,10 +674,6 @@ function currentRoleFrom(details: ProfileDetails | null): string | null {
   const current = employments.find((it) => it.current) ?? employments[0];
   return current?.title ?? null;
 }
-
-const INPUT =
-  "w-full rounded-md border border-line bg-surface-raised px-3.5 py-2.5 text-body text-ink " +
-  "placeholder:text-ink-subtle focus:border-accent focus:outline-none";
 
 function Field({
   label,

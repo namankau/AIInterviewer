@@ -4,12 +4,21 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProfilePanel } from "./profile-panel";
+import { resetCourseProgress } from "@/lib/use-course-progress";
 
 const fetchProfile = vi.hoisted(() => vi.fn());
 const updateProfile = vi.hoisted(() => vi.fn());
+const fetchMe = vi.hoisted(() => vi.fn());
+const fetchSessions = vi.hoisted(() => vi.fn());
+const fetchArenaProgress = vi.hoisted(() => vi.fn());
+const fetchCourseProgress = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api", () => ({
   fetchProfile,
+  fetchMe,
+  fetchSessions,
+  fetchArenaProgress,
+  fetchCourseProgress,
   updateProfile,
   uploadResume: vi.fn(),
   deleteResume: vi.fn(),
@@ -37,8 +46,90 @@ const profile = (over: Partial<ProfileDetails> = {}): ProfileDetails => ({
  */
 describe("ProfilePanel", () => {
   beforeEach(() => {
+    resetCourseProgress();
     fetchProfile.mockReset();
     updateProfile.mockReset();
+    fetchMe.mockReset();
+    fetchSessions.mockReset();
+    fetchArenaProgress.mockReset();
+    fetchCourseProgress.mockReset();
+    fetchMe.mockResolvedValue({
+      id: "candidate-1",
+      email: "candidate@example.com",
+      displayName: "Candidate",
+      preferredLanguage: "english",
+      createdAt: "2026-09-01T00:00:00Z",
+      profile: {},
+    });
+    fetchSessions.mockResolvedValue([]);
+    fetchArenaProgress.mockResolvedValue({
+      xp: 0,
+      streak: { current: 0, longest: 0, lastActiveDate: null },
+      badges: [],
+      cards: {},
+      masteredChallengeIds: [],
+    });
+    fetchCourseProgress.mockResolvedValue({ completed: {} });
+  });
+
+  it("puts identity, learning progress, interview history and Arena activity in one overview", async () => {
+    fetchProfile.mockResolvedValue(profile({ avatarUrl: "https://example.com/avatar.png", targetLevel: "Staff Engineer" }));
+    fetchCourseProgress.mockResolvedValue({
+      completed: { java: ["intro", "loops"], dsa: ["arrays"] },
+    });
+    fetchSessions.mockResolvedValue([
+      {
+        id: "round-1",
+        companyName: "Acme",
+        roleTitle: "Backend Engineer",
+        roundType: "technical_fundamentals",
+        status: "completed",
+        startedAt: "2026-09-20T10:00:00Z",
+        endedAt: "2026-09-20T10:30:00Z",
+        hasReport: true,
+        reportExpired: false,
+        reportExpiresAt: null,
+        reportRetentionDays: 30,
+      },
+      {
+        id: "round-2",
+        companyName: "Example Co",
+        roleTitle: "Platform Engineer",
+        roundType: "behavioural_competency",
+        status: "completed",
+        startedAt: "2026-09-21T10:00:00Z",
+        endedAt: "2026-09-21T10:30:00Z",
+        hasReport: true,
+        reportExpired: false,
+        reportExpiresAt: null,
+        reportRetentionDays: 30,
+      },
+    ]);
+    fetchArenaProgress.mockResolvedValue({
+      xp: 120,
+      streak: { current: 4, longest: 7, lastActiveDate: "2026-09-24" },
+      badges: [],
+      cards: {},
+      masteredChallengeIds: [],
+    });
+
+    render(
+      <ProfilePanel
+        outlines={[
+          { slug: "java", title: "Java Programming", chapters: [{ slug: "intro", title: "Intro" }, { slug: "loops", title: "Loops" }] },
+          { slug: "dsa", title: "Data Structures", chapters: [{ slug: "arrays", title: "Arrays" }, { slug: "trees", title: "Trees" }] },
+        ]}
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Candidate" })).toBeInTheDocument();
+    expect(screen.getByAltText("Profile photo")).toHaveAttribute("src", "https://example.com/avatar.png");
+    expect(await screen.findByText("1 / 2")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("4 days")).toBeInTheDocument();
+    expect(screen.getByText("Example Co")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Continue" })).toHaveAttribute("href", "/courses/dsa/trees");
   });
 
   it("shows back what was saved, rather than an empty form", async () => {

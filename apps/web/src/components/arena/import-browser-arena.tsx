@@ -76,7 +76,7 @@ export function ImportBrowserArenaProgress() {
 
   return (
     <aside className="mt-6">
-      <div className="flex flex-col gap-3 rounded-md border border-line-strong bg-surface-raised px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-highlight/30 bg-highlight/10 px-5 py-4 shadow-[var(--shadow-sm)] sm:flex-row sm:items-center sm:justify-between">
         <p className="text-caption text-ink-muted">
           <span className="font-medium text-ink">
             {legacy.xp} XP and {answeredCount} answered challenge{answeredCount === 1 ? "" : "s"} saved in this browser.
@@ -88,7 +88,7 @@ export function ImportBrowserArenaProgress() {
             type="button"
             onClick={keep}
             disabled={busy || !accessToken}
-            className="rounded-md bg-accent px-4 py-2 text-caption font-medium text-accent-contrast transition-colors hover:bg-accent-strong disabled:opacity-60"
+            className="rounded-xl bg-accent px-4 py-2 text-caption font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:opacity-60"
           >
             {busy ? "Adding…" : "Add to my account"}
           </button>
@@ -96,7 +96,7 @@ export function ImportBrowserArenaProgress() {
             type="button"
             onClick={forget}
             disabled={busy}
-            className="rounded-md border border-line-strong px-4 py-2 text-caption font-medium text-ink transition-colors hover:bg-surface-sunken disabled:opacity-60"
+            className="rounded-xl border border-line-strong bg-surface-raised px-4 py-2 text-caption font-medium text-ink transition-colors hover:bg-surface-sunken disabled:opacity-60"
           >
             Not mine
           </button>

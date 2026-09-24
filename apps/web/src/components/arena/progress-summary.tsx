@@ -18,10 +18,10 @@ export function ProgressSummary() {
   if (!ready) return null;
 
   return (
-    <div className="flex flex-col gap-4 rounded-md border border-line-strong bg-surface-raised px-6 py-5">
+    <div className="flex flex-col gap-5 rounded-2xl border border-line bg-surface-raised px-6 py-6 shadow-[var(--shadow-sm)]">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-baseline gap-3">
-          <span className="text-title text-ink">Level {level.level}</span>
+          <span className="text-title text-accent-strong">Level {level.level}</span>
           <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">{progress.xp} XP total</span>
         </div>
         <p className="flex items-center gap-2 text-caption text-ink-muted">
@@ -38,7 +38,7 @@ export function ProgressSummary() {
         aria-valuemax={level.xpForNextLevel}
         aria-valuenow={level.xpIntoLevel}
         aria-label={`${level.xpIntoLevel} of ${level.xpForNextLevel} XP into level ${level.level + 1}`}
-        className="h-2 w-full overflow-hidden rounded-full bg-surface-sunken"
+        className="h-2.5 w-full overflow-hidden rounded-full bg-surface-sunken"
       >
         <div className="h-full rounded-full bg-accent" style={{ width: `${percentIntoLevel}%` }} />
       </div>
@@ -49,7 +49,7 @@ export function ProgressSummary() {
             <li
               key={badge.id}
               title={badge.description}
-              className="rounded-full bg-highlight/15 px-3 py-1 text-micro font-medium text-ink"
+              className="rounded-full border border-highlight/30 bg-highlight/15 px-3 py-1 text-micro font-medium text-ink"
             >
               {badge.title}
             </li>

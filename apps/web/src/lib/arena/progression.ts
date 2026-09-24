@@ -164,6 +164,15 @@ export function checkNewBadges(input: BadgeCheckInput, alreadyEarned: string[]):
  * enough to finish in the "3-5 minutes" a session is meant to take (task 055, §1). */
 export const DAILY_QUEST_SIZE = 7;
 
+/** Three short checks per course keeps each daily set finishable in a few minutes. */
+export const DAILY_COURSE_QUEST_SIZE = 3;
+
+export interface DailyCourseQuest {
+  courseSlug: string;
+  courseTitle: string;
+  challenges: Challenge[];
+}
+
 /**
  * The same fixed set of challenges for everyone on a given calendar day, seeded
  * deterministically from the date string alone — refreshing the page, or opening it on a
@@ -171,11 +180,38 @@ export const DAILY_QUEST_SIZE = 7;
  * (typically `localDateKey(new Date())`), not a `Date`, so the caller decides once what
  * "today" means and every call this module makes agrees with it.
  */
-export function dailyQuest(allChallenges: Challenge[], dateKey: string): Challenge[] {
+export function dailyQuest(
+  allChallenges: Challenge[],
+  dateKey: string,
+  size: number = DAILY_QUEST_SIZE,
+): Challenge[] {
   if (allChallenges.length === 0) return [];
   const rng = mulberry32(cyrb53(`daily-quest|${dateKey}`) >>> 0);
   const shuffled = shuffle(allChallenges, rng);
-  return shuffled.slice(0, Math.min(DAILY_QUEST_SIZE, shuffled.length));
+  return shuffled.slice(0, Math.min(size, shuffled.length));
+}
+
+/**
+ * Builds one independently rotating daily set for every course. Filtering happens before
+ * `dailyQuest`, so a course can never borrow a question from another course. The course
+ * slug is part of the seed to avoid making the three groups accidental slices of one
+ * shared shuffle while retaining the existing deterministic daily-quest machinery.
+ */
+export function dailyCourseQuests(
+  allChallenges: Challenge[],
+  courseLabels: { slug: string; title: string }[],
+  dateKey: string,
+  sizePerCourse: number = DAILY_COURSE_QUEST_SIZE,
+): DailyCourseQuest[] {
+  return courseLabels.map(({ slug, title }) => ({
+    courseSlug: slug,
+    courseTitle: title,
+    challenges: dailyQuest(
+      allChallenges.filter((challenge) => challenge.courseSlug === slug),
+      `${dateKey}|${slug}`,
+      sizePerCourse,
+    ),
+  }));
 }
 
 /**
@@ -188,7 +224,7 @@ export function dailyQuest(allChallenges: Challenge[], dateKey: string): Challen
  *
  * This lets a server component compute `dailyQuest` for every date a visitor could land on
  * — still using the full corpus, server-side, where its size is free — and hand the client
- * only the handful of challenges (at most `3 * DAILY_QUEST_SIZE`) those quests are made of,
+ * only the handful of challenges (at most three dates of short course sets) those quests are made of,
  * instead of all ~800.
  */
 export function possibleDateKeysWorldwide(now: Date = new Date()): string[] {

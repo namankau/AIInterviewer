@@ -1,4 +1,5 @@
 import { courses } from "@/content/courses";
+import { openSourceArenaChallenges } from "@/content/arena/open-source-challenges";
 import { deriveChallenges } from "@/lib/arena/derive";
 import type { Challenge } from "@/lib/arena/types";
 
@@ -8,7 +9,7 @@ import type { Challenge } from "@/lib/arena/types";
  * this rather than calling `deriveChallenges` again — same result either way, since it's
  * a pure function, but one call site keeps the derivation visible in one place.
  */
-export const allArenaChallenges: Challenge[] = deriveChallenges(courses);
+export const allArenaChallenges: Challenge[] = [...deriveChallenges(courses), ...openSourceArenaChallenges];
 
 export function challengesForCourse(courseSlug: string): Challenge[] {
   return allArenaChallenges.filter((c) => c.courseSlug === courseSlug);

@@ -36,7 +36,7 @@ export function SignInWithGoogle({ next }: SignInWithGoogleProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <Button onClick={signIn} disabled={pending} aria-busy={pending}>
+      <Button className="w-full" onClick={signIn} disabled={pending} aria-busy={pending}>
         {pending ? "Redirecting to Google…" : "Continue with Google"}
       </Button>
       {error ? (

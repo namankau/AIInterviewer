@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   checkNewBadges,
+  dailyCourseQuests,
   dailyQuest,
+  DAILY_COURSE_QUEST_SIZE,
   DAILY_QUEST_SIZE,
   levelForXp,
   localDateKey,
@@ -224,5 +226,48 @@ describe("dailyQuest", () => {
     expect(dailyQuest([], "2026-01-01")).toEqual([]);
     const tiny = pool.slice(0, 3);
     expect(dailyQuest(tiny, "2026-01-01")).toHaveLength(3);
+  });
+});
+
+describe("dailyCourseQuests", () => {
+  const courseLabels = [
+    { slug: "java", title: "Java Programming" },
+    { slug: "dsa", title: "Data Structures & Algorithms" },
+    { slug: "ai-agents", title: "AI and Agentic AI" },
+  ];
+  const pool = courseLabels.flatMap(({ slug, title }) =>
+    Array.from({ length: 12 }, (_, index) =>
+      makeChallenge({
+        id: `${slug}-${index}`,
+        courseSlug: slug,
+        moduleTitle: `${title} topic ${index % 2}`,
+      }),
+    ),
+  );
+
+  it("returns a stable, course-scoped set for all three courses on the same day", () => {
+    const first = dailyCourseQuests(pool, courseLabels, "2026-09-24");
+    const second = dailyCourseQuests(pool, courseLabels, "2026-09-24");
+
+    expect(second).toEqual(first);
+    expect(first.map((group) => group.courseSlug)).toEqual(["java", "dsa", "ai-agents"]);
+    for (const group of first) {
+      expect(group.challenges).toHaveLength(DAILY_COURSE_QUEST_SIZE);
+      expect(group.challenges.every((challenge) => challenge.courseSlug === group.courseSlug)).toBe(true);
+      expect(group.challenges.every((challenge) => challenge.moduleTitle.length > 0)).toBe(true);
+    }
+  });
+
+  it("rotates every course's set on a different calendar date", () => {
+    const dayOne = dailyCourseQuests(pool, courseLabels, "2026-09-24");
+    const dayTwo = dailyCourseQuests(pool, courseLabels, "2026-09-25");
+
+    for (const group of dayOne) {
+      const nextGroup = dayTwo.find((candidate) => candidate.courseSlug === group.courseSlug);
+      expect(nextGroup).toBeDefined();
+      expect(nextGroup!.challenges.map((challenge) => challenge.id)).not.toEqual(
+        group.challenges.map((challenge) => challenge.id),
+      );
+    }
   });
 });

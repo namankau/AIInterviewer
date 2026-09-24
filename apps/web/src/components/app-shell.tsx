@@ -24,11 +24,14 @@ import { ActionLink } from "@/components/ui/action-link";
 export function AppShell({
   breadcrumb,
   parent,
+  wide = false,
   children,
 }: {
   breadcrumb?: string;
   /** A page this one sits under (a report under rounds); adds a middle crumb and a back link. */
   parent?: { label: string; href: Route };
+  /** Gives document-like tools (such as the chapter reader) room for their own local navigation. */
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -100,7 +103,11 @@ export function AppShell({
           * screen it was on, with the entire right-hand side empty — not restraint, just
           * an unused canvas.
           */}
-        <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 md:px-12 md:py-14">
+        <main
+          className={`mx-auto w-full flex-1 px-6 py-10 md:px-12 md:py-14 ${
+            wide ? "max-w-[100rem]" : "max-w-6xl"
+          }`}
+        >
           {children}
         </main>
       </div>

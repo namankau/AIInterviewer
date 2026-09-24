@@ -19,16 +19,19 @@ import type { Challenge } from "@/lib/arena/types";
 export function ArenaSession({
   challenges,
   courseSlug,
+  selectionMode = "scheduled",
   onPlayAgain,
 }: {
   challenges: Challenge[];
   courseSlug?: string;
+  /** Daily sets are fixed by calendar date; course practice remains FSRS-scheduled. */
+  selectionMode?: "scheduled" | "fixed";
   /** Called instead of rendering a "play again" link, when the caller wants to remount a
    * fresh run itself (e.g. `ArenaPlayPanel`, since navigating to the same route as the
    * current page does not force a remount). */
   onPlayAgain?: () => void;
 }) {
-  const session = useArenaSession(challenges, courseSlug);
+  const session = useArenaSession(challenges, courseSlug, selectionMode);
   const reducedMotion = usePrefersReducedMotion();
   const celebratedRef = useRef(false);
 

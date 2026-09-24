@@ -111,6 +111,13 @@ describe("ArenaSession", () => {
     expect(screen.getByRole("button", { name: /Alpha/ })).toBeInTheDocument();
   });
 
+  it("keeps a daily set in its supplied order instead of applying the FSRS picker", () => {
+    render(<ArenaSession challenges={challenges} selectionMode="fixed" />);
+
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(challenges[0]!.prompt);
+    expect(screen.getByText(/1 of 2/)).toBeInTheDocument();
+  });
+
   it("selecting the correct option and confirming with Enter shows feedback naming it correct", async () => {
     const user = userEvent.setup();
     render(<ArenaSession challenges={[challenges[0]!]} />);
@@ -122,6 +129,30 @@ describe("ArenaSession", () => {
     await user.keyboard("{Enter}");
     expect(await screen.findByRole("status")).toHaveTextContent(/Correct/);
     expect(screen.getByText(/Beta is right because of reasons\./)).toBeInTheDocument();
+  });
+
+  it("shows pinned open-source attribution in feedback when a challenge has it", async () => {
+    const user = userEvent.setup();
+    const sourced: Challenge = {
+      ...challenges[0]!,
+      source: {
+        title: "Reviewed lesson",
+        publisher: "Example publisher",
+        url: "https://example.test/repo/blob/0123456789012345678901234567890123456789/lesson.md",
+        license: "MIT",
+        revision: "0123456789012345678901234567890123456789",
+        revisionDate: "2026-09-22",
+        reviewedOn: "2026-09-24",
+      },
+    };
+    render(<ArenaSession challenges={[sourced]} selectionMode="fixed" />);
+
+    await user.click(screen.getByRole("button", { name: /Beta/ }));
+    await user.keyboard("{Enter}");
+
+    const sourceLink = await screen.findByRole("link", { name: "Reviewed lesson" });
+    expect(sourceLink).toHaveAttribute("href", sourced.source!.url);
+    expect(screen.getByText(/Example publisher \(MIT\)/)).toBeInTheDocument();
   });
 
   it("a number key selects the option in that position", async () => {

@@ -51,7 +51,11 @@ export interface UseArenaSessionResult {
   next: () => void;
 }
 
-export function useArenaSession(allChallenges: Challenge[], courseSlug?: string): UseArenaSessionResult {
+export function useArenaSession(
+  allChallenges: Challenge[],
+  courseSlug?: string,
+  selectionMode: "scheduled" | "fixed" = "scheduled",
+): UseArenaSessionResult {
   const seed = useId();
   const { progress, recordAnswer, awardBadges } = useArenaProgress();
 
@@ -60,7 +64,9 @@ export function useArenaSession(allChallenges: Challenge[], courseSlug?: string)
   // React-sanctioned place for this kind of one-time setup. The caller does not mount this
   // until progress has loaded, so the due cards are real rather than an empty guess.
   const [challenges] = useState<Challenge[]>(() =>
-    pickSessionChallenges(allChallenges, progress.cards, new Date(), `session-${seed}`, SESSION_SIZE, courseSlug),
+    selectionMode === "fixed"
+      ? allChallenges
+      : pickSessionChallenges(allChallenges, progress.cards, new Date(), `session-${seed}`, SESSION_SIZE, courseSlug),
   );
   const [saveFailed, setSaveFailed] = useState(false);
   const [index, setIndex] = useState(0);

@@ -12,6 +12,10 @@ const captured = vi.hoisted(() => ({
   lessons: [] as Block[][],
 }));
 
+vi.mock("@/components/app-shell", () => ({
+  AppShell: ({ children }: { children: ReactNode }) => children,
+}));
+
 vi.mock("@/components/courses/course-toc", () => ({
   CourseToc: ({ course }: { course: CourseTocData }) => {
     captured.toc.push(course);

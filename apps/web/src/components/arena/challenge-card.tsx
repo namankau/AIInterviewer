@@ -142,6 +142,20 @@ export function ChallengeCard({
             {wasCorrect ? "Correct" : "Not quite"}
           </p>
           <p className="text-caption leading-relaxed text-ink-muted">{challenge.why}</p>
+          {challenge.source ? (
+            <p className="text-caption text-ink-subtle">
+              Adapted from{" "}
+              <a
+                href={challenge.source.url}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-accent hover:underline"
+              >
+                {challenge.source.title}
+              </a>{" "}
+              by {challenge.source.publisher} ({challenge.source.license}).
+            </p>
+          ) : null}
           <div className="flex items-center gap-3">
             <Link
               href={`/courses/${challenge.courseSlug}/${challenge.chapterSlug}` as Route}

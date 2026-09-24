@@ -15,11 +15,13 @@ import type { Challenge } from "@/lib/arena/types";
 export function ArenaPlayPanel({
   challenges,
   courseSlug,
+  selectionMode = "scheduled",
   startLabel,
   emptyLabel,
 }: {
   challenges: Challenge[];
   courseSlug?: string;
+  selectionMode?: "scheduled" | "fixed";
   startLabel: string;
   emptyLabel?: string;
 }) {
@@ -59,5 +61,13 @@ export function ArenaPlayPanel({
   // `key` changes on "play again" so the whole run remounts from scratch rather than the
   // finished session lingering — the result screen's "play again" calls `playAgain`
   // instead of navigating, since navigating to the same route doesn't force a remount.
-  return <ArenaSession challenges={challenges} courseSlug={courseSlug} onPlayAgain={playAgain} key={sessionKey} />;
+  return (
+    <ArenaSession
+      challenges={challenges}
+      courseSlug={courseSlug}
+      selectionMode={selectionMode}
+      onPlayAgain={playAgain}
+      key={sessionKey}
+    />
+  );
 }

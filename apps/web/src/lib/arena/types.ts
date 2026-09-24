@@ -19,6 +19,21 @@ import type { Viz } from "@/content/courses/types";
  */
 export type ChallengeKind = "mcq" | "predict-output" | "spot-mistake" | "which-column" | "what-next";
 
+/**
+ * Provenance for a locally reviewed challenge adapted from an open educational source.
+ * The revision is deliberately carried with the challenge so the attribution shown to a
+ * learner describes the exact material we reviewed, not whatever later lands on `main`.
+ */
+export interface ChallengeSource {
+  title: string;
+  publisher: string;
+  url: string;
+  license: "MIT";
+  revision: string;
+  revisionDate: string;
+  reviewedOn: string;
+}
+
 export interface Challenge {
   /**
    * Deterministic and derived from content, never an array index — inserting a chapter
@@ -41,4 +56,6 @@ export interface Challenge {
   /** The diagram to render at `frameIndex`, for kind `what-next` only. */
   viz?: Viz;
   frameIndex?: number;
+  /** Present only for the small, locally vendored open-source supplement. */
+  source?: ChallengeSource;
 }

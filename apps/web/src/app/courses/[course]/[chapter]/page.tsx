@@ -1,11 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AppShell } from "@/components/app-shell";
 import { CodeLanguageProvider } from "@/components/courses/code-language-context";
 import { GuidedLesson } from "@/components/courses/guided-lesson";
-import { Breadcrumbs } from "@/components/breadcrumbs";
-import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { CourseToc } from "@/components/courses/course-toc";
 import {
   courses,
@@ -71,31 +70,12 @@ export default async function ChapterPage({
   const highlightedCode = await highlightChapterBlocks(chapter.blocks, course.codeLanguage ?? "java");
 
   return (
-    <div className="min-h-dvh">
-      <CourseSiteHeader />
-      <Breadcrumbs
-        wide
-        items={[
-          { label: "courses", href: "/courses" },
-          { label: course.title.toLowerCase(), href: `/courses/${course.slug}` },
-          { label: chapter.title.toLowerCase() },
-        ]}
-      />
-      <div className="border-b border-line px-6 py-3 md:px-12">
-        <p className="mx-auto max-w-[100rem] font-mono text-micro tracking-widest text-ink-subtle lowercase">
-          <Link href="/courses" className="hover:text-ink">
-            courses
-          </Link>
-          <span className="px-1.5">/</span>
-          <Link href={`/courses/${course.slug}`} className="hover:text-ink">
-            {course.slug}
-          </Link>
-          <span className="px-1.5">/</span>
-          <span className="text-ink-muted">{chapter.slug}</span>
-        </p>
-      </div>
-
-      <main className="mx-auto grid max-w-[92rem] gap-10 px-6 py-10 md:px-12 md:py-14 xl:grid-cols-[240px_minmax(0,1fr)] xl:gap-12">
+    <AppShell
+      wide
+      breadcrumb={chapter.slug}
+      parent={{ label: course.title.toLowerCase(), href: `/courses/${course.slug}` as Route }}
+    >
+      <div className="grid gap-10 xl:grid-cols-[240px_minmax(0,1fr)] xl:gap-12">
         <CourseToc course={courseToc} currentSlug={chapter.slug} />
 
         <article className="min-w-0">
@@ -142,18 +122,20 @@ export default async function ChapterPage({
             {next ? (
               <Link
                 href={`/courses/${course.slug}/${next.slug}`}
-                className="flex flex-col rounded-md border border-line px-4 py-3 text-right text-caption transition-colors hover:border-line-strong sm:ml-auto sm:max-w-[48%]"
+                className="group flex flex-col rounded-xl border border-accent bg-accent px-5 py-3.5 text-left text-caption text-accent-contrast shadow-[var(--shadow-sm)] transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-accent-strong hover:shadow-[var(--shadow-md)] sm:ml-auto sm:max-w-[52%] sm:text-right"
               >
-                <span className="font-mono text-micro text-ink-subtle uppercase">Next</span>
-                <span className="text-ink"><InlineText text={next.title} /></span>
+                <span className="font-mono text-micro text-accent-contrast/75 uppercase">Next chapter</span>
+                <span className="mt-0.5 flex items-center gap-2 font-semibold sm:justify-end">
+                  <InlineText text={next.title} />
+                  <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">→</span>
+                </span>
               </Link>
             ) : (
               <span />
             )}
           </nav>
         </article>
-      </main>
-      <CourseSiteFooter />
-    </div>
+      </div>
+    </AppShell>
   );
 }

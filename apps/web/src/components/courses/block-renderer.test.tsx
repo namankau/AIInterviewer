@@ -159,6 +159,39 @@ describe("BlockRenderer", () => {
     expect(screen.getByText("immutable", { selector: "strong" })).toBeInTheDocument();
   });
 
+  it("uses readable body text for teaching copy and an accented interview callout", () => {
+    render(
+      <BlockRenderer
+        blocks={[
+          { kind: "p", text: "Main explanation" },
+          { kind: "list", items: ["Teaching point"] },
+          { kind: "interview", items: ["Interview advice"] },
+          { kind: "concept", title: "Core idea", text: "Concept explanation" },
+          { kind: "compare", columns: [{ label: "Choice", items: ["Comparison point"] }] },
+          { kind: "steps", steps: [{ label: "First", text: "Step explanation" }] },
+          {
+            kind: "quiz",
+            question: "Readable question?",
+            options: ["Readable option"],
+            answer: 0,
+            why: "Readable reason",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Main explanation").closest("p")).toHaveClass("text-body", "text-ink");
+    expect(screen.getByText("Teaching point").closest("ul")).toHaveClass("text-body", "text-ink");
+    const interview = screen.getByText("How this comes up in interviews").closest("aside");
+    expect(interview).toHaveClass("border-accent/30", "bg-accent-wash");
+    expect(screen.getByText("How this comes up in interviews")).toHaveClass("text-accent-strong");
+    expect(screen.getByText("Interview advice").closest("ul")).toHaveClass("text-body", "text-ink");
+    expect(screen.getByText("Concept explanation").closest("p")).toHaveClass("text-body", "text-ink");
+    expect(screen.getByText("Comparison point").closest("ul")).toHaveClass("text-body", "text-ink");
+    expect(screen.getByText("Step explanation").closest("p")).toHaveClass("text-body", "text-ink");
+    expect(screen.getByRole("radio", { name: "Readable option" })).toHaveClass("text-body", "text-ink");
+  });
+
   it("gives every h block an anchor id derived from its text", () => {
     render(<BlockRenderer blocks={[{ kind: "h", text: "What Java Is" }]} />);
 

@@ -43,7 +43,7 @@ export function ArenaPlayPanel({
           type="button"
           disabled={!ready}
           onClick={() => setPlaying(true)}
-          className="self-start rounded-md bg-accent px-6 py-3 text-body font-medium text-white transition-colors hover:bg-accent-strong disabled:opacity-60"
+          className="self-start rounded-xl bg-accent px-6 py-3 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-accent-strong disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {ready ? startLabel : "Loading your progress…"}
         </button>

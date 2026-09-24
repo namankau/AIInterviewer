@@ -687,7 +687,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           </p>
           <a
             href={`/report/${sessionId}`}
-            className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
+            className="rounded-xl bg-accent px-5 py-2.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-strong"
           >
             Read the report
           </a>
@@ -714,7 +714,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line px-6 py-4">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line bg-surface-raised/90 px-6 py-4 backdrop-blur-sm">
         <div className="flex items-baseline gap-3">
           <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
             {session?.roundLabel}
@@ -734,7 +734,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
                 ? "End the round now and get your report"
                 : "Answer at least one question before submitting"
             }
-            className="rounded-md bg-accent px-3 py-1.5 text-caption font-medium text-accent-contrast transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg bg-accent px-3.5 py-2 text-caption font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40"
           >
             Submit and finish
           </button>
@@ -854,7 +854,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         ) : null}
 
         {hint ? (
-          <aside className="rounded-lg border border-line bg-accent-wash px-5 py-4">
+          <aside className="rounded-xl border border-accent/25 bg-accent-wash px-5 py-4 shadow-[var(--shadow-sm)]">
             <p className="pb-1.5 font-mono text-micro tracking-widest text-ink-subtle uppercase">
               You asked for help · recorded as &ldquo;{hint.assistanceLabel.toLowerCase()}&rdquo;
             </p>
@@ -894,7 +894,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
             <button
               type="button"
               onClick={() => void finishAnswer()}
-              className="rounded-md border border-line px-3 py-1.5 text-caption font-medium text-ink transition-colors hover:bg-surface-sunken"
+              className="rounded-lg border border-line bg-surface-raised px-3.5 py-2 text-caption font-medium text-ink shadow-[var(--shadow-sm)] transition-colors hover:bg-surface-sunken"
             >
               Over to you
             </button>
@@ -936,7 +936,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           autoPlay
           playsInline
           aria-label="Your camera preview"
-          className="fixed right-6 bottom-6 h-28 w-36 rounded-lg border border-line bg-surface-sunken object-cover"
+          className="fixed right-6 bottom-6 h-28 w-36 rounded-2xl border border-line bg-surface-sunken object-cover shadow-[var(--shadow-lg)]"
         />
       ) : null}
     </div>
@@ -979,7 +979,7 @@ function TerminalSession({ session }: { session: SessionView }) {
         <p className="text-body text-ink-muted">{content.detail}</p>
         <a
           href="/dashboard"
-          className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
+          className="rounded-xl bg-accent px-5 py-2.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-strong"
         >
           Back to dashboard
         </a>
@@ -1000,7 +1000,7 @@ function SpeakingDot({ active, level }: { active: boolean; level: number }) {
 
 function Centered({ children, role }: { children: React.ReactNode; role?: "status" | "alert" }) {
   return (
-    <div className="flex min-h-dvh items-center justify-center px-6">
+    <div className="flex min-h-dvh items-center justify-center bg-surface-sunken px-6">
       <div role={role} className="text-body text-ink-muted">
         {children}
       </div>

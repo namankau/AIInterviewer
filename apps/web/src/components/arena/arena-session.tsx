@@ -86,7 +86,7 @@ export function ArenaSession({
 
 function ProgressDots({ total, index, correctCount }: { total: number; index: number; correctCount: number }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3 rounded-xl bg-surface-sunken px-4 py-3">
       <ul className="flex gap-1.5" aria-hidden="true">
         {Array.from({ length: total }, (_, i) => (
           <li
@@ -140,9 +140,9 @@ function ResultScreen({
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Run complete</p>
+    <div className="flex flex-col gap-8 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] md:p-8">
+      <div className="flex flex-col gap-2 rounded-2xl border border-positive/20 bg-positive/10 p-5">
+        <p className="font-mono text-micro tracking-widest text-positive uppercase">Run complete</p>
         <h2 className="text-title text-ink">
           {correctCount} of {total} correct
         </h2>
@@ -158,7 +158,7 @@ function ResultScreen({
         </p>
       ) : null}
       {newBadges.length > 0 ? (
-        <div className="flex flex-col gap-2 rounded-md border border-highlight/40 bg-highlight/10 px-5 py-4">
+        <div className="flex flex-col gap-2 rounded-2xl border border-highlight/40 bg-highlight/10 px-5 py-4">
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
             New badge{newBadges.length > 1 ? "s" : ""}
           </p>
@@ -197,14 +197,14 @@ function ResultScreen({
           <button
             type="button"
             onClick={onPlayAgain}
-            className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-strong"
+            className="rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong"
           >
             Play again
           </button>
         ) : (
           <Link
             href={(courseSlug ? `/arena/${courseSlug}` : "/arena") as Route}
-            className="rounded-md bg-accent px-5 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-strong"
+            className="rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong"
           >
             Play again
           </Link>

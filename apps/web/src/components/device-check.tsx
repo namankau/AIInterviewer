@@ -312,26 +312,29 @@ export function DeviceCheck({
      * On a phone this is one column and the DOM order is already the right one — greeting,
      * their own face, the checks, the button, then the notes.
      */
-    <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col justify-center gap-10 px-6 py-12 lg:grid lg:grid-cols-[minmax(0,1fr)_17rem] lg:content-center lg:gap-x-14 lg:gap-y-10">
-      <header className="flex max-w-2xl flex-col gap-3 lg:col-start-1 lg:row-start-1">
-        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+    <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col justify-center gap-6 px-6 py-10 lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:content-center lg:gap-6">
+      <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] lg:col-start-1 lg:row-start-1 sm:p-9">
+        <div aria-hidden="true" className="absolute -top-20 -right-14 size-56 rounded-full bg-accent/25 blur-3xl" />
+        <div className="relative flex max-w-2xl flex-col gap-3">
+        <p className="pill pill-navy w-fit">
           {session.companyName} · {session.roundLabel} · {session.durationMinutes} minutes
         </p>
-        <h1 className="text-display text-balance text-ink">
+        <h1 className="text-display text-balance text-on-navy">
           {firstName ? `Hi ${firstName}.` : "Before you go in."}
         </h1>
-        <p className="max-w-prose text-body text-ink-muted">
+        <p className="max-w-prose text-body text-on-navy-muted">
           A short check first, so nothing has to be discovered mid-answer: your microphone,
           the interviewer&rsquo;s voice, and what you will see on screen while you talk.
         </p>
-        <p className="max-w-prose text-caption text-ink-subtle">{session.groundingNote}</p>
+        <p className="max-w-prose text-caption text-on-navy-muted">{session.groundingNote}</p>
+        </div>
       </header>
 
       {session.consentVideo ? (
         // Capped on a phone. A self-view is a mirror, not the content: at full width it
         // pushes the checks and the button that follow them off the screen entirely.
-        <figure className="flex max-w-64 flex-col gap-2.5 lg:max-w-none lg:col-start-2 lg:row-start-1 lg:self-start">
-          <div className="relative overflow-hidden rounded-lg border border-line bg-surface-sunken">
+        <figure className="flex max-w-64 flex-col gap-2.5 rounded-2xl border border-line bg-surface-raised p-3 shadow-[var(--shadow-md)] lg:max-w-none lg:col-start-2 lg:row-start-1 lg:self-stretch">
+          <div className="relative overflow-hidden rounded-xl border border-line bg-surface-sunken">
             <video
               ref={previewRef}
               muted
@@ -366,7 +369,7 @@ export function DeviceCheck({
       ) : null}
 
       <div className="flex flex-col gap-8 lg:col-start-1 lg:row-start-2">
-        <section aria-labelledby="preflight" className="rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)]">
+        <section aria-labelledby="preflight" className="overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-[var(--shadow-md)]">
           <div className="flex items-baseline justify-between gap-4 px-5 py-3">
             <h2 id="preflight" className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
               System check
@@ -414,7 +417,7 @@ export function DeviceCheck({
             type="button"
             onClick={onEnter}
             disabled={!ready || entering}
-            className="self-start rounded-lg bg-accent px-7 py-3.5 text-body font-medium text-accent-contrast transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+            className="self-start rounded-xl bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             {entering ? "Starting the interview…" : "Enter the room"}
           </button>
@@ -434,14 +437,14 @@ export function DeviceCheck({
       {/* Beside the checks, or up level with the greeting when there is no camera tile
           to hold that corner. An empty column would read as something failing to load. */}
       <section
-        className={`flex flex-col gap-3 lg:col-start-2 ${
+        className={`flex flex-col gap-3 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] lg:col-start-2 ${
           session.consentVideo ? "lg:row-start-2" : "lg:row-span-2 lg:row-start-1 lg:self-start"
         }`}
       >
         <h2 className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
           How this round runs
         </h2>
-        <dl className="flex flex-col divide-y divide-line border-y border-line">
+        <dl className="flex flex-col divide-y divide-line">
           <Note term="It is spoken" detail="You answer out loud. There is nothing to type." />
           <Note
             term="It is on a clock"

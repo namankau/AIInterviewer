@@ -42,10 +42,10 @@ export function ContinueLearning({ outlines }: { outlines: CourseOutline[] }) {
   const next = summary.next!;
 
   return (
-    <section className="rounded-lg border border-line bg-surface-raised px-6 py-5">
+    <section className="rounded-2xl border border-accent/20 bg-accent-wash px-6 py-6 shadow-[var(--shadow-sm)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-col gap-2">
-          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Continue learning</p>
+          <p className="font-mono text-micro tracking-widest text-accent-strong uppercase">Continue learning</p>
           <p className="text-heading text-ink">{course.title}</p>
           <p className="text-caption text-ink-muted">
             Up next: <InlineText text={next.title} />
@@ -53,7 +53,7 @@ export function ContinueLearning({ outlines }: { outlines: CourseOutline[] }) {
         </div>
         <Link
           href={`/courses/${course.slug}/${next.slug}`}
-          className="shrink-0 rounded-lg border border-line-strong px-4 py-2.5 text-caption font-medium text-ink transition-colors hover:bg-surface-sunken"
+          className="shrink-0 rounded-xl bg-accent px-5 py-2.5 text-caption font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-accent-strong"
         >
           Resume
         </Link>

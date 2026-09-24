@@ -23,9 +23,9 @@ export function ArenaDailyQuest({ questsByDate }: { questsByDate: Record<string,
   const [quest] = useState<Challenge[]>(() => questsByDate[localDateKey(new Date())] ?? []);
 
   return (
-    <div className="flex flex-col gap-4 rounded-md border border-line-strong bg-surface-raised px-6 py-6">
+    <div className="flex flex-col gap-5 rounded-2xl border border-accent/20 bg-accent-wash px-6 py-7 shadow-[var(--shadow-sm)] md:px-8">
       <div className="flex flex-col gap-1.5">
-        <p className="font-mono text-micro tracking-widest text-accent uppercase">Today&rsquo;s quest</p>
+        <p className="w-fit rounded-full bg-surface-raised px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase shadow-[var(--shadow-sm)]">Today&rsquo;s quest</p>
         <p className="text-body text-ink-muted">
           {quest.length} challenges, the same ones everyone gets today &mdash; about 3-5 minutes.
         </p>

@@ -44,7 +44,7 @@ export function GuidedLessonControls({ beats }: { beats: GuidedBeat[] }) {
 
         <nav aria-label="Learning beats" className="mt-5 grid grid-cols-5 gap-1.5 sm:gap-2">
           {beats.map((beat, index) => (
-            <button key={beat.key} type="button" aria-label={beat.label} aria-current={activeBeat === index ? "step" : undefined} aria-controls={`${lessonId}-${beat.key}`} onClick={() => setActiveBeat(index)} className={["group flex min-h-11 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-left text-caption font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:justify-start sm:px-3", activeBeat === index ? "border-accent/40 bg-accent text-white" : "border-line bg-surface-raised text-ink-muted hover:border-accent/40 hover:text-ink"].join(" ")}>
+            <button key={beat.key} type="button" aria-label={beat.label} aria-current={activeBeat === index ? "step" : undefined} aria-controls={`${lessonId}-${beat.key}`} onClick={() => setActiveBeat(index)} className={["group flex min-h-11 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-left text-caption font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:justify-start sm:px-3", activeBeat === index ? "border-accent/40 bg-accent text-accent-contrast" : "border-line bg-surface-raised text-ink-muted hover:border-accent/40 hover:text-ink"].join(" ")}>
               <span className="shrink-0"><BeatIcon beat={beat.key} /></span>
               <span className="hidden min-w-0 sm:block"><span className="block truncate">{beat.shortLabel}</span></span>
             </button>
@@ -64,7 +64,7 @@ export function GuidedLessonControls({ beats }: { beats: GuidedBeat[] }) {
               {beat.content ?? <p className="max-w-[65ch] rounded-md border border-dashed border-line-strong bg-surface-sunken px-4 py-3 text-caption leading-relaxed text-ink-muted">This chapter does not need a separate activity for this beat. Continue when you are ready.</p>}
               <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
                 <p className="font-mono text-micro text-ink-subtle">{beat.cardCount} learning {beat.cardCount === 1 ? "card" : "cards"}</p>
-                {index < beats.length - 1 ? <button type="button" onClick={() => setActiveBeat(index + 1)} className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 py-2 text-caption font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Continue to {beats[index + 1]!.shortLabel}</button> : null}
+                {index < beats.length - 1 ? <button type="button" onClick={() => setActiveBeat(index + 1)} className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 py-2 text-caption font-medium text-accent-contrast transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Continue to {beats[index + 1]!.shortLabel}</button> : null}
               </div>
             </div>
           </details>

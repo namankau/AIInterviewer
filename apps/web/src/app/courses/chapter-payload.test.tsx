@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import ChapterPage from "@/app/courses/[course]/[chapter]/page";
 import type { Block } from "@/content/courses/types";
 import type { CourseTocData } from "@/lib/course-toc-data";
 
@@ -42,7 +43,6 @@ afterEach(() => {
 
 describe("course chapter route", () => {
   it("uses the guided lesson for Java, DSA, and AI Agents without sending course bodies to the client rail", async () => {
-    const { default: ChapterPage } = await import("@/app/courses/[course]/[chapter]/page");
     const chapters = [
       { course: "java", chapter: "what-is-java-and-how-it-runs" },
       { course: "dsa", chapter: "what-is-dsa" },

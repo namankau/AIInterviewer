@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { CONTROL_CLASS } from "@/components/ui/field";
 import { LoopBriefStep } from "@/components/loop-brief-step";
 import { ApiRequestError, composeRound, startSession } from "@/lib/api";
 import { loadVoices, pickVoice } from "@/lib/browser-speech";
@@ -123,17 +124,20 @@ export function NewInterviewForm() {
   }
 
   return (
-    <form onSubmit={read} className="flex flex-col gap-8">
-      <header className="flex flex-col gap-3">
-        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">New interview</p>
-        <h1 className="text-title text-balance text-ink">What are you walking into?</h1>
-        <p className="max-w-prose text-body text-ink-muted">
+    <form onSubmit={read} className="flex flex-col gap-6">
+      <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] sm:p-9">
+        <div aria-hidden="true" className="absolute -top-20 -right-14 size-56 rounded-full bg-accent/25 blur-3xl" />
+        <div className="relative flex flex-col gap-3">
+        <p className="pill pill-navy w-fit">New interview</p>
+        <h1 className="text-display text-balance text-on-navy">What are you walking into?</h1>
+        <p className="max-w-prose text-body text-on-navy-muted">
           Say it in one line — the employer, the round, whatever you are worried about. The round
           gets set up from that, and you get to correct it before anything starts.
         </p>
+        </div>
       </header>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-6">
         <label htmlFor="composer" className="sr-only">
           Describe the interview you are preparing for
         </label>
@@ -145,7 +149,7 @@ export function NewInterviewForm() {
           maxLength={600}
           required
           placeholder="Infosys MR round next Tuesday. 5 years, Java backend."
-          className="w-full resize-none rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] px-4 py-3.5 text-body text-ink placeholder:text-ink-subtle focus:border-accent focus:outline-none"
+          className="w-full resize-none rounded-xl border border-line bg-surface px-5 py-4 text-body text-ink shadow-[var(--shadow-sm)] placeholder:text-ink-subtle transition-colors focus:border-accent focus:outline-none"
         />
 
         <div className="flex flex-wrap items-center gap-3">
@@ -163,22 +167,22 @@ export function NewInterviewForm() {
       </div>
 
       {error ? (
-        <p role="alert" className="text-body text-danger">
+        <p role="alert" className="rounded-xl border border-danger/25 bg-danger/5 px-4 py-3 text-body text-danger">
           {error}
         </p>
       ) : null}
 
-      <section className="flex flex-col gap-3 border-t border-line pt-6">
+      <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-sunken p-5 sm:p-6">
         <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
           Or start from one of these
         </p>
-        <ul className="flex flex-col gap-2">
+        <ul className="grid gap-2">
           {EXAMPLES.map((example) => (
             <li key={example}>
               <button
                 type="button"
                 onClick={() => setQuery(example)}
-                className="text-left text-caption text-ink-muted underline-offset-4 hover:text-ink hover:underline"
+                className="w-full rounded-xl border border-line bg-surface-raised px-4 py-3 text-left text-caption text-ink-muted transition-colors hover:border-accent/40 hover:bg-accent-wash hover:text-ink"
               >
                 {example}
               </button>
@@ -277,43 +281,46 @@ function RoundSetup({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-10">
-      <header className="flex flex-col gap-3">
-        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">New interview</p>
+    <form onSubmit={submit} className="flex flex-col gap-8">
+      <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] sm:p-9">
+        <div aria-hidden="true" className="absolute -top-20 -right-14 size-56 rounded-full bg-accent/25 blur-3xl" />
+        <div className="relative flex flex-col gap-3">
+        <p className="pill pill-navy w-fit">Confirm your round</p>
         {onBackToBrief ? (
           <button
             type="button"
             onClick={onBackToBrief}
-            className="self-start text-caption text-accent underline-offset-4 hover:underline"
+            className="self-start text-caption text-on-navy-muted underline-offset-4 hover:text-on-navy hover:underline"
           >
             ← Back to how {draft.companyName} interviews
           </button>
         ) : null}
-        <h1 className="text-title text-balance text-ink">
+        <h1 className="text-title text-balance text-on-navy">
           {draft.understood || "Set up your round"}
         </h1>
         {query ? (
-          <p className="text-caption text-ink-subtle">
+          <p className="text-caption text-on-navy-muted">
             From: &ldquo;{query}&rdquo;{" "}
             <button
               type="button"
               onClick={onEdit}
-              className="text-accent underline-offset-4 hover:underline"
+              className="text-on-navy underline-offset-4 hover:underline"
             >
               edit
             </button>
           </p>
         ) : null}
+        </div>
       </header>
 
       {composeError ? (
-        <p role="alert" className="text-body text-danger">
+        <p role="alert" className="rounded-xl border border-danger/25 bg-danger/5 px-4 py-3 text-body text-danger">
           {composeError}
         </p>
       ) : null}
 
       {draft.assumptions.length > 0 ? (
-        <section aria-labelledby="assumed" className="rounded-lg border border-line bg-surface-sunken p-5">
+        <section aria-labelledby="assumed" className="rounded-2xl border border-highlight/35 bg-highlight/10 p-5 sm:p-6">
           <h2 id="assumed" className="pb-2 font-mono text-micro tracking-widest text-ink-subtle uppercase">
             What we filled in for you
           </h2>
@@ -340,7 +347,7 @@ function RoundSetup({
             autoComplete="organization"
             required
             maxLength={120}
-            className={INPUT}
+            className={CONTROL_CLASS}
           />
         </Field>
         <Field label="Role" hint="As it appears on the job posting.">
@@ -351,7 +358,7 @@ function RoundSetup({
             autoComplete="organization-title"
             required
             maxLength={120}
-            className={INPUT}
+            className={CONTROL_CLASS}
           />
         </Field>
       </div>
@@ -367,7 +374,7 @@ function RoundSetup({
         <select
           value={candidateStage}
           onChange={(event) => setCandidateStage(event.target.value as CandidateStage | "")}
-          className={INPUT}
+          className={CONTROL_CLASS}
         >
           <option value="">Prefer not to say</option>
           <option value="student">Student, still studying</option>
@@ -376,16 +383,18 @@ function RoundSetup({
         </select>
       </Field>
 
-      <fieldset className="flex flex-col gap-4">
+      <fieldset className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-6">
         <legend className="pb-1 text-heading text-ink">Which round?</legend>
-        <div className="grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {ROUND_CATALOGUE.map((round) => {
             const selected = roundType === round.value;
             return (
               <label
                 key={round.value}
-                className={`flex cursor-pointer flex-col gap-1 bg-surface-raised p-4 transition-colors ${
-                  selected ? "bg-surface-sunken" : "hover:bg-surface-sunken"
+                className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition-colors ${
+                  selected
+                    ? "border-accent/40 bg-accent-wash shadow-[var(--shadow-sm)]"
+                    : "border-line bg-surface hover:border-line-strong hover:bg-surface-sunken"
                 }`}
               >
                 <span className="flex items-center gap-2.5">
@@ -411,7 +420,7 @@ function RoundSetup({
           <select
             value={durationMinutes}
             onChange={(event) => setDurationMinutes(Number(event.target.value))}
-            className={INPUT}
+            className={CONTROL_CLASS}
           >
             <option value={5}>5 minutes — just testing the room</option>
             <option value={20}>20 minutes — a short round</option>
@@ -427,7 +436,7 @@ function RoundSetup({
               const value = event.target.value;
               if (value === "english" || value === "hindi_english") setLanguage(value);
             }}
-            className={INPUT}
+            className={CONTROL_CLASS}
           >
             <option value="english">English</option>
             <option value="hindi_english">Hindi-English, code-switched</option>
@@ -435,7 +444,7 @@ function RoundSetup({
         </Field>
       </div>
 
-      <fieldset className="flex flex-col gap-4 rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] p-5">
+      <fieldset className="flex flex-col gap-4 rounded-2xl border border-accent/25 bg-accent-wash p-5 shadow-[var(--shadow-sm)] sm:p-6">
         <legend className="px-2 text-heading text-ink">Before we start</legend>
         <p className="text-caption text-ink-muted">
           This interview is spoken. Nothing is recorded until you agree, and everything
@@ -456,7 +465,7 @@ function RoundSetup({
       </fieldset>
 
       {error ? (
-        <p role="alert" className="text-body text-danger">
+        <p role="alert" className="rounded-xl border border-danger/25 bg-danger/5 px-4 py-3 text-body text-danger">
           {error}
         </p>
       ) : null}
@@ -492,10 +501,6 @@ function blankDraft(): RoundDraft {
   };
 }
 
-const INPUT =
-  "w-full rounded-md border border-line bg-surface-raised px-3.5 py-2.5 text-body text-ink " +
-  "placeholder:text-ink-subtle focus:border-accent focus:outline-none";
-
 function Field({
   label,
   hint,
@@ -526,7 +531,7 @@ function Consent({
   detail: string;
 }) {
   return (
-    <label className="flex cursor-pointer items-start gap-3">
+    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-surface-raised p-4 transition-colors hover:border-accent/30">
       <input
         type="checkbox"
         checked={checked}

@@ -34,40 +34,47 @@ export default function ArenaPage() {
     <div className="min-h-dvh">
       <CourseSiteHeader />
       <Breadcrumbs items={[{ label: "home", href: "/dashboard" }, { label: "arena" }]} />
-      <main className="mx-auto max-w-6xl px-6 py-14 md:py-20">
-        <header className="flex flex-col gap-4">
-          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Free, always</p>
-          <h1 className="text-display text-balance text-ink">Practice that feels like a game, taught from real chapters.</h1>
-          <p className="max-w-xl text-body text-ink-muted">
-            Every question here comes straight from a chapter that already exists — a mistake to spot, an
-            output to predict, a diagram to read one step ahead. Answer, see why, and jump straight back to
-            the chapter behind it.
-          </p>
+      <main>
+        <header className="border-b border-line bg-accent-wash/60">
+          <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 py-14 md:py-20">
+            <p className="w-fit rounded-full border border-accent/20 bg-surface-raised px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase shadow-[var(--shadow-sm)]">
+              Free, always
+            </p>
+            <h1 className="max-w-4xl text-display text-balance text-ink">
+              Practice that feels like a game, taught from real chapters.
+            </h1>
+            <p className="max-w-2xl text-body leading-relaxed text-ink-muted">
+              Every question here comes straight from a chapter that already exists — a mistake to spot, an
+              output to predict, a diagram to read one step ahead. Answer, see why, and jump straight back to
+              the chapter behind it.
+            </p>
+          </div>
         </header>
 
-        <div className="mt-10 flex flex-col gap-6 lg:flex-row lg:items-start">
-          <div className="flex-1">
-            <ArenaDailyQuest questsByDate={questsByDate} />
+        <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+            <div className="flex-1">
+              <ArenaDailyQuest questsByDate={questsByDate} />
+            </div>
+            <div className="lg:w-96 lg:shrink-0">
+              <ProgressSummary />
+              <ImportBrowserArenaProgress />
+            </div>
           </div>
-          <div className="lg:w-96 lg:shrink-0">
-            <ProgressSummary />
-            <ImportBrowserArenaProgress />
-          </div>
-        </div>
 
-        <section className="mt-14">
-          <h2 className="text-title text-ink">Pick a course to practise</h2>
-          <ul className="mt-6 grid gap-5 sm:grid-cols-2">
+          <section className="mt-14">
+            <h2 className="text-title text-ink">Pick a course to practise</h2>
+            <ul className="mt-6 grid gap-5 sm:grid-cols-2">
             {courses.map((course) => {
               const count = challengesForCourse(course.slug).length;
               return (
                 <li key={course.slug}>
                   <Link
                     href={`/arena/${course.slug}`}
-                    className="group flex h-full flex-col justify-between gap-6 rounded-md border border-line-strong bg-surface-raised px-6 py-6 transition-colors hover:border-accent"
+                    className="group flex h-full flex-col justify-between gap-7 rounded-2xl border border-line bg-surface-raised px-6 py-7 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-1 hover:border-accent/40 hover:shadow-[var(--shadow-md)]"
                   >
                     <div className="flex flex-col gap-2.5">
-                      <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">{course.level}</p>
+                      <p className="w-fit rounded-full bg-accent-wash px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase">{course.level}</p>
                       <h3 className="text-title text-ink group-hover:text-accent">{course.title}</h3>
                       <p className="text-caption text-ink-muted">{course.tagline}</p>
                     </div>
@@ -78,8 +85,9 @@ export default function ArenaPage() {
                 </li>
               );
             })}
-          </ul>
-        </section>
+            </ul>
+          </section>
+        </div>
       </main>
       <CourseSiteFooter />
     </div>

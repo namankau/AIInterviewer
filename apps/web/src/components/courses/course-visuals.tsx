@@ -23,6 +23,14 @@ const coursePresentation = {
     line: "bg-accent",
     motif: "spark",
   },
+  "system-design": {
+    shortLabel: "Architecture",
+    outcome: "Turn requirements into resilient, explainable systems",
+    practice: "Trade-off checks and drag-and-drop architecture labs",
+    accent: "border-warning/30 bg-[linear-gradient(135deg,var(--warning-wash),var(--accent-wash))] text-accent-strong",
+    line: "bg-[linear-gradient(90deg,var(--warning),var(--accent))]",
+    motif: "architecture",
+  },
 } as const;
 
 export function getCoursePresentation(courseSlug: string) {
@@ -53,6 +61,15 @@ export function CourseMotif({ courseSlug, large = false }: { courseSlug: string;
         <svg viewBox="0 0 48 48" className={large ? "size-14" : "size-8"} fill="none">
           <path d="M24 6c1.8 10.3 7.7 16.2 18 18-10.3 1.8-16.2 7.7-18 18-1.8-10.3-7.7-16.2-18-18C16.3 22.2 22.2 16.3 24 6Z" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" />
           <path d="M38 5v8M34 9h8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      ) : null}
+      {presentation.motif === "architecture" ? (
+        <svg viewBox="0 0 48 48" className={large ? "size-14" : "size-8"} fill="none">
+          <rect x="5" y="7" width="14" height="11" rx="3" stroke="currentColor" strokeWidth="2.5" />
+          <rect x="29" y="7" width="14" height="11" rx="3" stroke="currentColor" strokeWidth="2.5" />
+          <rect x="17" y="30" width="14" height="11" rx="3" stroke="currentColor" strokeWidth="2.5" />
+          <path d="M19 12.5h10M12 18v6h12v6M36 18v6H24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="24" cy="24" r="2.5" fill="currentColor" />
         </svg>
       ) : null}
     </div>

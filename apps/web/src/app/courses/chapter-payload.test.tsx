@@ -46,11 +46,12 @@ afterEach(() => {
 });
 
 describe("course chapter route", () => {
-  it("uses the guided lesson for Java, DSA, and AI Agents without sending course bodies to the client rail", async () => {
+  it("uses the guided lesson for every course without sending course bodies to the client rail", async () => {
     const chapters = [
       { course: "java", chapter: "what-is-java-and-how-it-runs" },
       { course: "dsa", chapter: "what-is-dsa" },
       { course: "ai-agents", chapter: "what-is-a-language-model" },
+      { course: "system-design", chapter: "requirements-first" },
     ];
 
     for (const params of chapters) {
@@ -58,9 +59,9 @@ describe("course chapter route", () => {
       render(element);
     }
 
-    expect(captured.lessons).toHaveLength(3);
+    expect(captured.lessons).toHaveLength(4);
     expect(captured.lessons.every((blocks) => blocks.length > 0)).toBe(true);
-    expect(captured.toc).toHaveLength(3);
+    expect(captured.toc).toHaveLength(4);
 
     for (const course of captured.toc) {
       const payload = JSON.stringify(course);

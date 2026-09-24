@@ -28,6 +28,7 @@ const INTERACTIVE_KINDS: ReadonlySet<Block["kind"]> = new Set([
   "compare",
   "steps",
   "agentlab",
+  "architecturelab",
 ]);
 
 const BEAT_COPY = {

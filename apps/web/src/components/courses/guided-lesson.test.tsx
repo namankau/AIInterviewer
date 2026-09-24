@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { buildGuidedLessonBeats, GuidedLesson } from "@/components/courses/guided-lesson";
 import type { Block } from "@/content/courses/types";
 
-const THREE_COURSE_BLOCKS: Block[] = [
+const FOUR_COURSE_BLOCKS: Block[] = [
   { kind: "p", text: "Java starts by turning source into bytecode." },
   { kind: "analogy", title: "A universal instruction sheet", text: "One recipe can work in many kitchens." },
   {
@@ -25,6 +25,7 @@ const THREE_COURSE_BLOCKS: Block[] = [
     viz: { type: "array", frames: [{ cells: [{ value: 2, pointers: ["left"] }, { value: 8 }], note: "Move left." }] },
   },
   { kind: "agentlab", scenarioId: "refund-status" },
+  { kind: "architecturelab", scenarioId: "url-shortener" },
   { kind: "remember", items: ["AI agents need observations, not guesses."] },
   {
     kind: "quiz",
@@ -38,7 +39,7 @@ const THREE_COURSE_BLOCKS: Block[] = [
 describe("GuidedLesson", () => {
   it("moves through all five beats with accessible buttons and continue controls", async () => {
     const user = userEvent.setup();
-    render(<GuidedLesson blocks={THREE_COURSE_BLOCKS} />);
+    render(<GuidedLesson blocks={FOUR_COURSE_BLOCKS} />);
 
     expect(screen.getByText("Beat 1 of 5")).toBeInTheDocument();
     expect(screen.getByTestId("lesson-beat-see")).toHaveAttribute("open");
@@ -54,22 +55,24 @@ describe("GuidedLesson", () => {
   });
 
   it("keeps every authored block in the initial HTML, including closed beats", () => {
-    const html = renderToStaticMarkup(<GuidedLesson blocks={THREE_COURSE_BLOCKS} />);
+    const html = renderToStaticMarkup(<GuidedLesson blocks={FOUR_COURSE_BLOCKS} />);
 
     expect(html).toContain("Java starts by turning source into bytecode.");
     expect(html).toContain("What should happen before you reveal the Java answer?");
     expect(html).toContain("DSA pointer movement");
     expect(html).toContain("AI agents need observations, not guesses.");
+    expect(html).toContain("Make a short-link service");
     expect(html).toContain("What proves the lesson stuck?");
     expect(html).toContain('data-testid="lesson-beat-check"');
   });
 
-  it("covers Java, DSA, and AI-agent content through the same generic presentation", () => {
-    render(<GuidedLesson blocks={THREE_COURSE_BLOCKS} />);
+  it("covers Java, DSA, AI-agent, and system-design content through the same generic presentation", () => {
+    render(<GuidedLesson blocks={FOUR_COURSE_BLOCKS} />);
 
     expect(screen.getByText(/Java starts/)).toBeInTheDocument();
     expect(screen.getByText("DSA pointer movement")).toBeInTheDocument();
     expect(screen.getByText(/AI agents need observations/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Make a short-link service" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /See the idea|Take a first guess|Try it yourself|Explain and remember|Final checkpoint/ })).toHaveLength(5);
   });
 
@@ -115,7 +118,7 @@ describe("GuidedLesson", () => {
 
   it("keeps the active details panel aligned with the beat indicator", async () => {
     const user = userEvent.setup();
-    render(<GuidedLesson blocks={THREE_COURSE_BLOCKS} />);
+    render(<GuidedLesson blocks={FOUR_COURSE_BLOCKS} />);
 
     await user.click(screen.getByText("See the idea"));
 

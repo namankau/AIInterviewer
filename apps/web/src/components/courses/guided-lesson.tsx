@@ -1,4 +1,5 @@
 import { BlockRenderer } from "@/components/courses/block-renderer";
+import { MarkCompleteButton } from "@/components/courses/course-progress";
 import { GuidedLessonControls } from "@/components/courses/guided-lesson-controls";
 import type { Block } from "@/content/courses/types";
 import type { CodeBlockHighlight } from "@/lib/highlight-code";
@@ -123,15 +124,24 @@ export function buildGuidedLessonBeats(blocks: Block[], highlightedCode: Highlig
 
 export function GuidedLesson({
   blocks,
+  chapterSlug,
+  courseSlug,
   highlightedCode = [],
 }: {
   blocks: Block[];
+  chapterSlug?: string;
+  courseSlug?: string;
   highlightedCode?: Highlight[];
 }) {
   const beats = buildGuidedLessonBeats(blocks, highlightedCode);
 
   return (
     <GuidedLessonControls
+      completion={
+        courseSlug && chapterSlug ? (
+          <MarkCompleteButton courseSlug={courseSlug} chapterSlug={chapterSlug} />
+        ) : undefined
+      }
       beats={beats.map((beat) => ({
         key: beat.key,
         label: beat.label,

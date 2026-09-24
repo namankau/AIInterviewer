@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { InlineText } from "@/components/courses/inline-text";
+import { useGuidedLessonProgress } from "@/components/courses/guided-lesson-progress";
 import { summarizeChapters } from "@/lib/course-progress";
 import { useCourseProgress } from "@/lib/use-course-progress";
 
@@ -117,10 +118,13 @@ export function ChapterDoneMark({ courseSlug, chapterSlug }: { courseSlug: strin
  * is said out loud rather than leaving somebody believing it was recorded.
  */
 export function MarkCompleteButton({ courseSlug, chapterSlug }: { courseSlug: string; chapterSlug: string }) {
-  const { completed, ready, setChapterDone } = useCourseProgress(courseSlug);
+  const { completed, status, setChapterDone } = useCourseProgress(courseSlug);
+  const lessonProgress = useGuidedLessonProgress();
   const [failed, setFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const done = completed.has(chapterSlug);
+  const lessonLocked = !done && lessonProgress !== null && !lessonProgress.allBeatsVisited;
+  const progressLoading = status === "loading";
 
   async function toggle() {
     setSaving(true);
@@ -135,7 +139,7 @@ export function MarkCompleteButton({ courseSlug, chapterSlug }: { courseSlug: st
       <button
         type="button"
         aria-pressed={done}
-        disabled={!ready || saving}
+        disabled={lessonLocked || progressLoading || saving}
         onClick={toggle}
         className={`inline-flex w-fit items-center gap-2 rounded-md border px-4 py-2.5 text-caption font-medium transition-colors disabled:opacity-60 ${
           done
@@ -144,8 +148,19 @@ export function MarkCompleteButton({ courseSlug, chapterSlug }: { courseSlug: st
         }`}
       >
         {done ? <CheckIcon className="text-positive" /> : null}
-        {done ? "Completed — click to undo" : "Mark chapter as complete"}
+        {done
+          ? "Completed — click to undo"
+          : lessonLocked
+            ? "Visit all lesson beats to complete"
+            : progressLoading
+              ? "Loading progress…"
+              : "Mark chapter as complete"}
       </button>
+      {status === "error" && !failed ? (
+        <p role="status" className="text-caption text-ink-muted">
+          Saved progress could not be loaded. You can still try to mark this chapter complete.
+        </p>
+      ) : null}
       {failed ? (
         <p role="alert" className="text-caption text-danger">
           That didn&apos;t save. Check your connection and try again.

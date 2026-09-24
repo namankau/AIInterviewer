@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CodeLanguageProvider } from "@/components/courses/code-language-context";
-import { MarkCompleteButton } from "@/components/courses/course-progress";
 import { GuidedLesson } from "@/components/courses/guided-lesson";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
@@ -119,13 +118,13 @@ export default async function ChapterPage({
 
           <div className="mt-10">
             <CodeLanguageProvider>
-              <GuidedLesson blocks={chapter.blocks} highlightedCode={highlightedCode} />
+              <GuidedLesson
+                blocks={chapter.blocks}
+                chapterSlug={chapter.slug}
+                courseSlug={course.slug}
+                highlightedCode={highlightedCode}
+              />
             </CodeLanguageProvider>
-          </div>
-
-          <div className="mt-14 flex flex-col items-start gap-2 rounded-md border border-line bg-surface-raised px-5 py-4">
-            <p className="text-caption text-ink-muted">Finished this chapter? Tick it off to track your progress.</p>
-            <MarkCompleteButton courseSlug={course.slug} chapterSlug={chapter.slug} />
           </div>
 
           <nav aria-label="Chapter navigation" className="mt-8 flex flex-col gap-3 border-t border-line pt-8 sm:flex-row sm:justify-between">

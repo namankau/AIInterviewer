@@ -100,6 +100,7 @@ async function write(
   done: boolean,
 ): Promise<boolean> {
   const before = state.completed;
+  const beforeStatus = state.status;
   setState({ status: "ready", completed: withChapter(before, courseSlug, chapterSlug, done) });
 
   try {
@@ -107,7 +108,7 @@ async function write(
     else await markChapterIncomplete(accessToken, courseSlug, chapterSlug);
     return true;
   } catch {
-    setState({ status: state.status, completed: before });
+    setState({ status: beforeStatus, completed: before });
     return false;
   }
 }

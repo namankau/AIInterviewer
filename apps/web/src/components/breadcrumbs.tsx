@@ -17,11 +17,11 @@ export function Breadcrumbs({ items, wide = false }: { items: Crumb[]; wide?: bo
 
   return (
     <div className={`mx-auto px-6 pt-5 ${wide ? "max-w-[100rem] md:px-12" : "max-w-6xl"}`}>
-      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-x-4 gap-y-1">
+      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {parent?.href ? (
           <Link
             href={parent.href as Route}
-            className="inline-flex items-center gap-1.5 rounded-md text-caption font-medium text-accent-strong hover:underline"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-accent-wash px-3 text-caption font-semibold text-accent-strong transition-colors hover:bg-accent hover:text-accent-contrast"
           >
             <span aria-hidden="true">←</span>
             Back to {parent.label}
@@ -30,7 +30,7 @@ export function Breadcrumbs({ items, wide = false }: { items: Crumb[]; wide?: bo
         <ol className="flex flex-wrap items-center gap-1.5 font-mono text-micro tracking-widest text-ink-subtle lowercase">
           {items.map((item, i) => (
             <li key={`${item.label}-${i}`} className="flex items-center gap-1.5">
-              {i > 0 ? <span aria-hidden="true">/</span> : null}
+              {i > 0 ? <span aria-hidden="true" className="text-line-strong">/</span> : null}
               {item.href ? (
                 <Link href={item.href as Route} className="hover:text-ink">
                   {item.label}

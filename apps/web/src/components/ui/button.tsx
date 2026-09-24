@@ -2,24 +2,52 @@ import type { ButtonHTMLAttributes } from "react";
 
 import { cn } from "@/lib/cn";
 
-type Variant = "primary" | "secondary" | "quiet";
+export type ButtonVariant = "primary" | "secondary" | "quiet";
+export type ButtonSize = "sm" | "md" | "lg";
 
-const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-lg text-body font-semibold " +
-  "transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+const BASE = "disabled:cursor-not-allowed disabled:opacity-50";
 
-const SIZES = "px-5 py-2.5";
+const SIZES: Record<ButtonSize, string> = {
+  sm: "min-h-9 px-3 py-1.5 text-caption",
+  md: "min-h-11 px-5 py-2.5 text-body",
+  lg: "min-h-12 px-6 py-3 text-body",
+};
 
-const VARIANTS: Record<Variant, string> = {
-  primary: "bg-accent text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-strong",
-  secondary: "border border-line bg-surface-raised text-ink hover:bg-surface-sunken",
-  quiet: "text-ink-muted hover:text-ink",
+const VARIANTS: Record<ButtonVariant, string> = {
+  primary: "action-primary",
+  secondary: "action-secondary",
+  quiet: "action-quiet",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
 }
 
-export function Button({ variant = "primary", className, type = "button", ...props }: ButtonProps) {
-  return <button type={type} className={cn(BASE, SIZES, VARIANTS[variant], className)} {...props} />;
+export function buttonStyles({
+  variant = "primary",
+  size = "md",
+  className,
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+} = {}) {
+  return cn(BASE, VARIANTS[variant], SIZES[size], className);
+}
+
+export function Button({
+  variant = "primary",
+  size = "md",
+  className,
+  type = "button",
+  ...props
+}: ButtonProps) {
+  return (
+    <button
+      type={type}
+      className={buttonStyles({ variant, size, className })}
+      {...props}
+    />
+  );
 }

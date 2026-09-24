@@ -1,38 +1,42 @@
 # Handoff — 2026-09-24
 
 ## Task
-Unlock learner-controlled chapter completion after all guided lesson phases (`tasks/task-061-course-completion-unlock.md`).
+Unify the signed-in learning experience, modernise course progression, enrich Profile, and add per-course daily Arena practice (`tasks/task-062-unified-learning-experience.md`).
 
 ## What I built
-- Connected the shared five-beat guided lesson to its chapter completion action across Java, DSA, and AI Agents.
-- Track each beat when it is opened through the tab, disclosure, or Continue control; the completion card shows `n of 5 beats explored` and unlocks after all five have been visited.
-- Keep an already-completed chapter immediately undoable, even after a reload where its lesson beats have not been revisited.
-- Changed a failed initial progress read from a permanent disabled state into an explicit, retryable save path; an unsuccessful write still reverts the optimistic tick and announces the failure.
-- Added integration coverage for the lesson gate, the undo exception, and recovery after an initial progress-load failure.
+- Replaced the separate Courses/Arena top navigation with the same persistent left workspace rail used by Home, Rounds, and Profile; the live interview room remains intentionally navigation-free.
+- Redesigned the three course cards with stable Java/DSA/AI accent motifs, outcome and practice summaries, real module/chapter/time metadata, and account-backed progress.
+- Replaced the square-grid course hero with a milestone route and roadmap, and made the next-chapter link a prominent primary action while keeping Previous secondary.
+- Added a profile overview with the existing avatar upload, course/chapter completion, completed interview count, Arena streak, latest round, and per-course continuation links. All values come from existing public APIs.
+- Added deterministic daily sets for Java, DSA, and AI, labelled by topic and rotated by the learner's local date. Personalised course practice still uses the existing `ts-fsrs` schedule.
+- Added six reviewed questions adapted from pinned MIT-licensed Exercism and Microsoft learning sources, source links in answer feedback, and `apps/web/src/content/arena/THIRD_PARTY_NOTICES.md`. There is no scraper, runtime third-party request, or model spend.
+- Added/updated behavior, payload-boundary, source-provenance, scheduling, profile, and route tests.
 
 ## Assumptions I made
-- “Gone through all phases” means the learner deliberately opened every beat; it does not require a correct quiz answer or inferred mastery.
-- Account-backed progress remains the authority. The browser does not invent an offline completion cache when the API is unavailable.
-- Because all 98 chapters use the shared guided lesson and completion components, the fix applies consistently to all three courses without chapter-specific code.
+- “Uniformity” means every signed-in non-live-interview product page uses the left workspace rail; chapters retain their local course table of contents inside that shell.
+- Each daily course set contains three questions so all three courses remain visible and a set stays finishable in a few minutes.
+- Open-source material is a small pinned and reviewed supplement to the much larger course-derived corpus, not an uncontrolled bulk import. The existing derived questions remain because they link directly back to the chapter being studied.
+- Crio.Do informed the outcome-first cards, visible learning route, and stateful next action; no Crio text, imagery, claims, or proprietary assets were copied.
+- The 1,214-line change is larger than the normal review target because it joins four user-requested surfaces plus their tests and required license notices; it was kept in one task because navigation, daily practice, and profile all need to present one coherent signed-in workspace.
 
 ## What I could NOT verify
-- I did not write real course progress to the owner's account during browser QA. The save/revert behavior is covered by mocked boundary tests and CI.
-- With the local API intentionally stopped, browser QA verified the recovery UI and enabled retry state, but an actual successful persistence request requires the API on port 8080.
+- Final visual judgement still needs the owner. I did not start another local server after the owner asked to run localhost themselves, so no authenticated browser session or real account writes were used for visual QA.
+- I did not run live interviews, Gemini calls, data generation, or any paid third-party request.
 
 ## Verification status
 - Frontend typecheck / lint: pass.
-- Frontend tests: pass — 52 files, 1,998 tests; focused completion/lesson/payload suite: 22 tests.
+- Frontend tests: pass — 54 files, 2,008 tests.
 - Frontend production build: pass — 116 pages generated.
 - Backend `ktlintCheck test build`: pass.
-- Browser QA: pass — reproduced the API-offline state, observed `1 of 5 beats explored`, visited beats 2–5, and confirmed the enabled `Mark chapter as complete` action at beat 5.
-- CI: exact feature SHA `89a4c4b9d3ff22a9c52791d63451b6dc6e7ded3d` passed run `35955276173` (web and API jobs).
-- Supabase migration state: linked local and remote migrations match through `20260923120000`; this task adds no migration.
+- Feature CI: pass — web and API jobs on commit `4710dfc566967f7287e529f68ed602826ef61136`, run `35986359467`.
+- Post-merge `develop` CI: pass — web and API jobs on merge commit `3e3cabb7f77f582bff9fab9ce21ecb19bb716df9`, run `35986645204`.
+- Diff check: pass. No migration or dependency added.
 
 ## Merge status
-- Merged into `develop` at `259564bebdfc23bf58ce0ceb7653e81b98431054` after green feature CI; `develop` is the only branch pushed and `main` is untouched.
+- Merged into `develop` at `3e3cabb7f77f582bff9fab9ce21ecb19bb716df9` after green feature CI; pushed to `origin/develop`; `main` is untouched.
 
 ## Suggested next task
-- Persist the learner's last-opened beat per chapter if cross-session lesson-position resume becomes a product priority.
+- Run an authenticated visual QA pass on desktop and mobile using the owner's local server, then make only evidence-backed spacing or responsive corrections.
 
 ## Open questions for you
 - None.

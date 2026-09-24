@@ -27,23 +27,27 @@ export default function QuestionsPage() {
 
   return (
     <AppShell breadcrumb="questions">
-      <div className="flex max-w-4xl flex-col gap-12">
-        <header className="flex flex-col gap-4">
-          <h1 className="text-display text-balance text-ink">Questions employers have asked.</h1>
-          <p className="max-w-xl text-body text-ink-muted">
+      <div className="flex max-w-5xl flex-col gap-8">
+        <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] sm:p-9">
+          <div aria-hidden="true" className="absolute -top-24 -right-16 size-64 rounded-full bg-accent/20 blur-3xl" />
+          <div className="relative flex flex-col gap-4">
+          <span className="pill pill-navy w-fit">Sourced question bank</span>
+          <h1 className="text-display text-balance text-on-navy">Questions employers have asked.</h1>
+          <p className="max-w-2xl text-body text-on-navy-muted">
             Each one is here because a document says it was asked — the employer’s own careers
             pages, openly licensed collections, or someone’s own published account of their loop —
             and each links to where it was read. A question reported at Amazon and at Microsoft
             carries both.
           </p>
-          <p className="max-w-xl text-caption text-ink-subtle">
+          <p className="max-w-2xl text-caption text-on-navy-muted">
             Nothing here was written by a model, and nothing was scraped from forums. Looking for how
             a round runs rather than what it asks?{" "}
-            <Link href="/rounds" className="underline underline-offset-4 hover:text-ink">
+            <Link href="/rounds" className="text-on-navy underline underline-offset-4">
               The rounds
             </Link>
             .
           </p>
+          </div>
         </header>
 
         <QuestionBankIndex />

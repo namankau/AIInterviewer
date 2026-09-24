@@ -55,8 +55,11 @@ export function ReportView({ sessionId }: { sessionId: string }) {
 
   if (expired) {
     return (
-      <section aria-labelledby="expired" className="flex flex-col items-start gap-5">
-        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+      <section
+        aria-labelledby="expired"
+        className="flex flex-col items-start gap-5 rounded-[1.5rem] border border-line bg-surface-raised p-7 shadow-[var(--shadow-md)] sm:p-10"
+      >
+        <p className="pill pill-highlight">
           No longer held
         </p>
         <h1 id="expired" className="max-w-2xl text-display text-balance text-ink">
@@ -122,17 +125,20 @@ export function ReportDocument({ report }: { report: SessionReport }) {
   const developmentAreas = report.developmentAreas ?? [];
 
   return (
-    <article className="flex flex-col gap-16">
-      <header className="flex flex-col gap-4 border-b border-line pb-10">
-        <p className="text-caption tracking-wide text-ink-subtle uppercase">
+    <article className="flex flex-col gap-8 md:gap-10">
+      <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-lg)] sm:p-10">
+        <div aria-hidden="true" className="absolute -top-24 -right-20 size-72 rounded-full bg-accent/20 blur-3xl" />
+        <div className="relative flex flex-col gap-4">
+        <p className="pill pill-navy w-fit">
           {report.roundLabel} · {report.companyName}
         </p>
-        <h1 className="text-display text-balance text-ink">{report.headline}</h1>
-        <p className="max-w-prose text-body text-ink-muted">{report.summary}</p>
-        <p className="text-caption text-ink-subtle">
+        <h1 className="text-display text-balance text-on-navy">{report.headline}</h1>
+        <p className="max-w-3xl text-body text-on-navy-muted">{report.summary}</p>
+        <p className="text-caption text-on-navy-muted">
           {report.roleTitle} · {report.answeredTurns} answers · assessed against a{" "}
           {report.archetypeLabel.toLowerCase()} rubric
         </p>
+        </div>
       </header>
 
       {/*
@@ -142,7 +148,7 @@ export function ReportDocument({ report }: { report: SessionReport }) {
         * and where it came from side by side, wide, before any prose at all. At `lg` and up
         * there is room for both; below it they stack in the order that matters more first.
         */}
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-14">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
         <OverallScore competencies={competencies} />
         <CompetencyHighlights competencies={competencies} />
       </div>
@@ -292,7 +298,7 @@ export function ReportDocument({ report }: { report: SessionReport }) {
         </div>
       </Section>
 
-      <footer className="flex flex-wrap items-center gap-4 border-t border-line pt-10">
+      <footer className="flex flex-wrap items-center gap-4 rounded-2xl border border-accent/20 bg-accent-wash p-6 sm:p-8">
         <Link
           href="/interview/new"
           className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
@@ -322,7 +328,11 @@ function AssistancePanel({ assistance }: { assistance: ReportAssistance }) {
   return (
     <section
       aria-labelledby="assistance"
-      className="flex flex-col gap-4 rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] p-6"
+      className={`flex flex-col gap-4 rounded-2xl border p-6 shadow-[var(--shadow-sm)] sm:p-7 ${
+        unaided
+          ? "border-positive/25 bg-positive/5"
+          : "border-highlight/35 bg-highlight/10"
+      }`}
     >
       <div className="flex flex-col gap-1">
         <h2 id="assistance" className="text-heading text-ink">
@@ -372,7 +382,7 @@ function PracticePlanPanel({ items }: { items: ReportPracticeItem[] }) {
   return (
     <section
       aria-labelledby="practice-plan"
-      className="flex flex-col gap-5 rounded-xl border border-accent/30 bg-surface-raised p-6 shadow-[var(--shadow-sm)]"
+      className="flex flex-col gap-5 rounded-2xl border border-accent/25 bg-accent-wash p-6 shadow-[var(--shadow-sm)] sm:p-7"
     >
       <div className="flex flex-col gap-1">
         <h2 id="practice-plan" className="text-heading text-ink">
@@ -590,7 +600,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-6">
+    <section className="flex flex-col gap-6 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8">
       <div className="flex flex-col gap-1">
         <h2 className="text-title text-ink">{title}</h2>
         <p className="text-caption text-ink-subtle">{lead}</p>

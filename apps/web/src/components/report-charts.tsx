@@ -136,7 +136,7 @@ export function OverallScore({ competencies }: { competencies: ReportCompetency[
   const marker = Math.min(100, Math.max(0, percent));
 
   return (
-    <figure className="flex flex-col gap-7">
+    <figure className="flex flex-col gap-7 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-7">
       <div className="flex flex-col gap-2">
         <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
           Overall
@@ -281,7 +281,7 @@ export function CompetencyHighlights({ competencies }: { competencies: ReportCom
 
   if (weakest.length === 0) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-7">
         <h2 className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
           At a glance
         </h2>
@@ -291,7 +291,7 @@ export function CompetencyHighlights({ competencies }: { competencies: ReportCom
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-7">
       <h2 className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
         At a glance
       </h2>

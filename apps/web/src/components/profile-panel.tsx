@@ -4,6 +4,7 @@ import type { ProfileDetails, ResumeView } from "@acemyinterview/shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { CONTROL_CLASS } from "@/components/ui/field";
 import {
   ApiRequestError,
   deleteSkill,
@@ -107,8 +108,11 @@ export function ProfilePanel() {
   const resume = details?.resume ?? null;
 
   return (
-    <div className="flex flex-col gap-16">
-      <section aria-labelledby="resume" className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
+      <section
+        aria-labelledby="resume"
+        className="flex flex-col gap-5 rounded-2xl border border-accent/20 bg-accent-wash p-6 shadow-[var(--shadow-sm)] sm:p-8"
+      >
         <div className="flex flex-col gap-1">
           <h2 id="resume" className="text-title text-ink">
             Your resume
@@ -158,7 +162,10 @@ export function ProfilePanel() {
         }
       />
 
-      <section aria-labelledby="skills" className="flex flex-col gap-5">
+      <section
+        aria-labelledby="skills"
+        className="flex flex-col gap-5 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8"
+      >
         <div className="flex flex-col gap-1">
           <h2 id="skills" className="text-heading text-ink">
             Skills
@@ -191,7 +198,10 @@ export function ProfilePanel() {
         />
       </section>
 
-      <section aria-labelledby="photo" className="flex flex-col gap-4">
+      <section
+        aria-labelledby="photo"
+        className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8"
+      >
         <h2 id="photo" className="text-heading text-ink">
           Photo
         </h2>
@@ -235,13 +245,13 @@ export function ProfilePanel() {
         * for the success case: a screen reader should mention it, not interrupt for it.
         */}
       {error ? (
-        <p role="alert" className="text-body text-danger">
+        <p role="alert" className="rounded-xl border border-danger/25 bg-danger/5 px-4 py-3 text-body text-danger">
           {error}
         </p>
       ) : null}
 
       {saved && !error ? (
-        <p role="status" className="text-body text-positive">
+        <p role="status" className="rounded-xl border border-positive/25 bg-positive/5 px-4 py-3 text-body text-positive">
           {saved}
         </p>
       ) : null}
@@ -259,7 +269,7 @@ function ResumeSummary({ resume }: { resume: ResumeView }) {
   const years = resume.totalExperienceMonths ? Math.round(resume.totalExperienceMonths / 12) : null;
 
   return (
-    <div className="flex flex-col gap-5 rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] p-5">
+    <div className="flex flex-col gap-5 rounded-xl border border-accent/20 bg-surface-raised p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <span className="text-body text-ink">{resume.filename}</span>
         <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
@@ -346,7 +356,7 @@ function SkillList({
       {skills.map((skill) => (
         <li
           key={skill.name}
-          className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-caption ${
+          className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-caption transition-colors ${
             skill.flaggedAsWeak
               ? "border-line-strong bg-surface-sunken text-ink-subtle"
               : "border-line text-ink"
@@ -417,7 +427,10 @@ function ProfileForm({
   };
 
   return (
-    <section aria-labelledby="details" className="flex flex-col gap-5">
+    <section
+      aria-labelledby="details"
+      className="flex flex-col gap-5 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8"
+    >
       <div className="flex flex-col gap-1">
         <h2 id="details" className="text-heading text-ink">
           Role and level
@@ -430,17 +443,17 @@ function ProfileForm({
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Current level" hint="As your employer titles it.">
-          <input value={fields.currentLevel} onChange={set("currentLevel")} className={INPUT} maxLength={60} />
+          <input value={fields.currentLevel} onChange={set("currentLevel")} className={CONTROL_CLASS} maxLength={60} />
         </Field>
         <Field label="Target level" hint="What you are interviewing for.">
-          <input value={fields.targetLevel} onChange={set("targetLevel")} className={INPUT} maxLength={60} />
+          <input value={fields.targetLevel} onChange={set("targetLevel")} className={CONTROL_CLASS} maxLength={60} />
         </Field>
         <Field label="LinkedIn" hint="Optional. Stored, shown back to you, and not fetched.">
           <input
             value={fields.linkedinUrl}
             onChange={set("linkedinUrl")}
             placeholder="https://linkedin.com/in/…"
-            className={INPUT}
+            className={CONTROL_CLASS}
             maxLength={300}
           />
         </Field>
@@ -474,10 +487,6 @@ function currentRoleFrom(details: ProfileDetails | null): string | null {
   const current = employments.find((it) => it.current) ?? employments[0];
   return current?.title ?? null;
 }
-
-const INPUT =
-  "w-full rounded-md border border-line bg-surface-raised px-3.5 py-2.5 text-body text-ink " +
-  "placeholder:text-ink-subtle focus:border-accent focus:outline-none";
 
 function Field({
   label,

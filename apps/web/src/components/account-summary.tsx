@@ -67,31 +67,31 @@ export function AccountSummary() {
   }, []);
 
   return (
-    <div className="border-t border-line pt-4">
+    <div className="border-t border-white/12 pt-4">
       {state.status === "loading" ? (
-        <p role="status" className="text-caption text-ink-subtle">
+        <p role="status" className="text-caption text-on-navy-muted">
           Loading your profile…
         </p>
       ) : state.status === "error" ? (
-        <p role="alert" className="text-caption text-danger">
+        <p role="alert" className="rounded-lg bg-danger-wash px-3 py-2 text-caption text-danger">
           {state.message}
         </p>
       ) : (
         <Link
           href="/profile"
-          className="-mx-2 flex items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-raised"
+          className="-mx-2 flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-white/8"
         >
           <span
             aria-hidden
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-accent-wash font-mono text-micro text-accent"
+            className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/12 font-mono text-micro font-bold text-on-navy ring-1 ring-white/15"
           >
             {initialsOf(state.me.displayName ?? state.me.email)}
           </span>
           <span className="flex min-w-0 flex-col">
-            <span className="truncate text-caption text-ink">
+            <span className="truncate text-caption font-semibold text-on-navy">
               {state.me.displayName ?? state.me.email}
             </span>
-            <span className="truncate text-micro text-ink-subtle">
+            <span className="truncate text-micro text-on-navy-muted">
               {LANGUAGE_LABELS[state.me.preferredLanguage] ?? state.me.preferredLanguage}
             </span>
           </span>

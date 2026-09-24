@@ -109,14 +109,17 @@ export function DashboardView({
   const retentionDays = sessions.find((s) => s.reportRetentionDays > 0)?.reportRetentionDays ?? null;
 
   return (
-    <div className="flex flex-col gap-14">
-      <section aria-labelledby="next-interview" className="flex flex-col gap-5">
-        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+    <div className="flex flex-col gap-12">
+      <section
+        aria-labelledby="next-interview"
+        className="-mx-6 flex flex-col gap-5 rounded-2xl border border-accent/20 bg-accent-wash px-6 py-9 shadow-[var(--shadow-sm)] sm:mx-0 sm:px-10 sm:py-10"
+      >
+        <p className="w-fit rounded-full bg-surface-raised px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase shadow-[var(--shadow-sm)]">
           {sessions.length === 0
             ? "Nothing practised yet"
             : `${sessions.length} ${sessions.length === 1 ? "round" : "rounds"} behind you`}
         </p>
-        <h1 id="next-interview" className="max-w-2xl text-display text-balance text-ink">
+        <h1 id="next-interview" className="max-w-3xl text-display text-balance text-ink">
           {sessions.length === 0 ? "Start your first interview" : "Start your next interview"}
         </h1>
         <p className="max-w-prose text-body text-ink-muted">
@@ -168,7 +171,7 @@ export function DashboardView({
       {sessions.length > 0 || readiness.length > 0 ? (
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:gap-16">
           {sessions.length > 0 ? (
-            <section aria-labelledby="history" className="flex flex-col gap-4">
+            <section aria-labelledby="history" className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-6">
               <SectionHead title="Past interviews" id="history" note={`${sessions.length} total`} />
               {/*
                 * The rule, stated before it bites rather than explained afterwards. A
@@ -183,7 +186,7 @@ export function DashboardView({
                   without one. You can delete any round yourself before then.
                 </p>
               ) : null}
-              <ul className="flex flex-col divide-y divide-line border-t border-line">
+              <ul className="flex flex-col divide-y divide-line">
                 {sessions.map((session) => (
                   <PastRound key={session.id} session={session} onDelete={onDelete} />
                 ))}
@@ -198,7 +201,7 @@ export function DashboardView({
                 {readiness.map((group) => (
                   <li
                     key={`${group.companyName}-${group.roleTitle}`}
-                    className="flex flex-col gap-2 rounded-xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] px-5 py-4"
+                    className="flex flex-col gap-3 rounded-2xl border border-line bg-surface-raised px-5 py-5 shadow-[var(--shadow-sm)] transition-shadow hover:shadow-[var(--shadow-md)]"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <span className="text-body text-ink">
@@ -267,7 +270,7 @@ function PastRound({
   const soon = expiringSoon(session);
 
   return (
-    <li className="flex flex-wrap items-baseline justify-between gap-3 py-3.5">
+    <li className="flex flex-wrap items-baseline justify-between gap-3 py-4">
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate text-body text-ink">
           {session.companyName} · {session.roleTitle}
@@ -396,7 +399,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 /** A heading and its aside on one baseline, over a rule. Used for every list on the page. */
 function SectionHead({ title, id, note }: { title: string; id: string; note?: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
+    <div className="flex items-baseline justify-between gap-4 border-b border-line pb-3">
       <h2 id={id} className="text-heading text-ink">
         {title}
       </h2>

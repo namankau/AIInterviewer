@@ -12,7 +12,7 @@ export function SiteNavLinks() {
   const pathname = usePathname();
 
   return (
-    <ul className="flex flex-wrap items-center gap-1">
+    <ul className="flex flex-wrap items-center gap-1 rounded-xl bg-surface-sunken p-1">
       {NAV_LINKS.filter((link) => link.href !== "/questions" || questionBankBrowsable()).map((link) => {
         const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
         return (
@@ -20,10 +20,10 @@ export function SiteNavLinks() {
             <Link
               href={link.href as Route}
               aria-current={active ? "page" : undefined}
-              className={`block rounded-lg px-3 py-1.5 text-caption transition-colors ${
+              className={`block rounded-lg px-3 py-1.5 text-caption transition-all ${
                 active
-                  ? "bg-accent-wash font-semibold text-accent-strong"
-                  : "text-ink-muted hover:bg-surface-sunken hover:text-ink"
+                  ? "bg-surface-raised font-semibold text-accent-strong shadow-[var(--shadow-sm)]"
+                  : "text-ink-muted hover:bg-surface-raised/70 hover:text-ink"
               }`}
             >
               {link.label}

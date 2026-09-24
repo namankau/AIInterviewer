@@ -87,7 +87,7 @@ export function LoopBriefStep({
 
   if (error) {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 rounded-2xl border border-danger/25 bg-danger/5 p-6">
         <p role="alert" className="text-body text-danger">
           {error}
         </p>
@@ -103,32 +103,42 @@ export function LoopBriefStep({
   }
 
   if (!brief) {
-    return <p className="text-body text-ink-muted">Reading how {companyName} interviews…</p>;
+    return (
+      <p className="rounded-2xl border border-line bg-surface-raised p-6 text-body text-ink-muted shadow-[var(--shadow-sm)]">
+        Reading how {companyName} interviews…
+      </p>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-10">
-      <header className="flex flex-col gap-3">
-        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+    <div className="flex flex-col gap-6">
+      <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] sm:p-9">
+        <div aria-hidden="true" className="absolute -top-20 -right-14 size-56 rounded-full bg-accent/25 blur-3xl" />
+        <div className="relative flex flex-col gap-3">
+        <p className="pill pill-navy w-fit">
           {roleTitle} at {brief.company.name}
         </p>
-        <h1 className="text-title text-balance text-ink">
+        <h1 className="text-title text-balance text-on-navy">
           How {brief.company.name} interviews for {roleTitle}
         </h1>
-        {caveat ? <p className="max-w-prose text-body text-ink-muted">{caveat}</p> : null}
+        {caveat ? <p className="max-w-prose text-body text-on-navy-muted">{caveat}</p> : null}
         <button
           type="button"
           onClick={onEdit}
-          className="self-start text-caption text-accent underline-offset-4 hover:underline"
+          className="self-start text-caption text-on-navy-muted underline-offset-4 hover:text-on-navy hover:underline"
         >
           Edit the description this was built from
         </button>
+        </div>
       </header>
 
       {contentfulSourcedStages.length > 0 ? (
-        <ol className="flex flex-col gap-5 border-l border-line pl-6">
+        <ol className="grid gap-3 sm:grid-cols-2">
           {contentfulSourcedStages.map((stage, index) => (
-            <li key={`${stage.stageName}-${index}`} className="flex flex-col gap-1.5">
+            <li
+              key={`${stage.stageName}-${index}`}
+              className="flex flex-col gap-2 rounded-2xl border border-positive/20 bg-positive/5 p-5"
+            >
               <p className="font-mono text-micro tracking-widest text-accent uppercase">
                 From {stage.citations[0]?.publisher ?? brief.company.name}&apos;s own record
               </p>
@@ -178,13 +188,13 @@ export function LoopBriefStep({
       ) : null}
 
       {brief.generalPattern.length > 0 ? (
-        <section className="flex flex-col gap-3 border-t border-line pt-6">
+        <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)]">
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
             General pattern for {brief.company.archetypeInProse}
           </p>
-          <ol className="flex flex-col gap-2">
+          <ol className="grid gap-3 sm:grid-cols-2">
             {brief.generalPattern.map((stage) => (
-              <li key={stage.order} className="text-body text-ink-muted">
+              <li key={stage.order} className="rounded-xl bg-surface-sunken p-4 text-body text-ink-muted">
                 <span className="text-ink">{stage.stageName}.</span> {stage.assesses}
               </li>
             ))}
@@ -193,8 +203,8 @@ export function LoopBriefStep({
       ) : null}
 
       {plan && plan.items.length > 0 ? (
-        <section className="flex flex-col gap-4 border-t border-line pt-6">
-          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">The plan</p>
+        <section className="flex flex-col gap-4 rounded-2xl border border-accent/25 bg-accent-wash p-6">
+          <p className="pill pill-accent w-fit">The plan</p>
           <ol className="flex flex-col gap-4">
             {plan.items.map((item) => (
               <li key={item.roundType} className="flex flex-col gap-1">
@@ -221,13 +231,13 @@ export function LoopBriefStep({
         </section>
       ) : null}
 
-      <div className="flex flex-col gap-4 border-t border-line pt-6">
+      <div className="flex flex-col gap-5 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)]">
         <div className="flex flex-wrap items-center gap-4">
           {firstPlanItem ? (
             <button
               type="button"
               onClick={() => onChooseRound(firstPlanItem.roundType)}
-              className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-white hover:opacity-90"
+              className="rounded-xl bg-accent px-5 py-3 text-body font-semibold text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-strong"
             >
               Start with {firstPlanItem.roundLabel}
             </button>
@@ -235,7 +245,7 @@ export function LoopBriefStep({
             <button
               type="button"
               onClick={onSkip}
-              className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-white hover:opacity-90"
+              className="rounded-xl bg-accent px-5 py-3 text-body font-semibold text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-strong"
             >
               Set up a round
             </button>
@@ -257,7 +267,7 @@ export function LoopBriefStep({
                 <button
                   type="button"
                   onClick={() => onChooseRound(round.value)}
-                  className="rounded-full border border-line px-3.5 py-1.5 text-caption text-ink-muted hover:border-accent hover:text-ink"
+                  className="rounded-full border border-line bg-surface px-3.5 py-2 text-caption text-ink-muted transition-colors hover:border-accent hover:bg-accent-wash hover:text-ink"
                 >
                   {round.label}
                 </button>

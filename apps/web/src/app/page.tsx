@@ -2,6 +2,7 @@ import type { UsageCounts } from "@acemyinterview/shared";
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 
+import { ActionLink } from "@/components/ui/action-link";
 import { courses, totalChapters, totalMinutes } from "@/content/courses";
 import { fetchUsage } from "@/lib/api";
 
@@ -48,9 +49,12 @@ export default async function LandingPage() {
 
 function SiteHeader() {
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-line bg-surface-raised/90 shadow-[var(--shadow-sm)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
-        <Link href="/" className="flex items-baseline gap-2">
+        <Link href="/" className="group flex items-center gap-2.5">
+          <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast shadow-[var(--shadow-sm)] transition-transform group-hover:-rotate-3">
+            AI
+          </span>
           <span className="text-heading font-bold tracking-tight text-ink">AceMyInterview</span>
           <span className="hidden font-mono text-micro tracking-widest text-ink-subtle uppercase sm:inline">
             beta
@@ -71,12 +75,9 @@ function SiteHeader() {
           >
             Sign in
           </Link>
-          <Link
-            href="/login"
-            className="rounded-lg bg-accent px-4 py-2.5 text-caption font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong"
-          >
+          <ActionLink href="/login" size="sm">
             Start free
-          </Link>
+          </ActionLink>
         </div>
       </div>
     </header>
@@ -92,7 +93,7 @@ function Hero({ usage }: { usage: UsageCounts | null }) {
             Voice · a face across the table · scored on what you actually said
           </span>
           <h1 className="text-hero text-balance text-on-navy">
-            A mock interview that <span className="text-accent-strong">interrupts you.</span>
+            A mock interview that <span className="text-accent-on-navy">interrupts you.</span>
           </h1>
           <p className="max-w-xl text-body text-on-navy-muted">
             You speak your answers. It follows up on what you actually said, cuts in when you
@@ -568,27 +569,32 @@ function CtaBand() {
 
 function SiteFooter() {
   return (
-    <footer className="border-t border-line">
+    <footer className="border-t border-white/10 bg-navy text-on-navy">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <span className="text-heading font-bold text-ink">AceMyInterview</span>
+          <span className="flex items-center gap-2.5 text-heading font-bold text-on-navy">
+            <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast">
+              AI
+            </span>
+            AceMyInterview
+          </span>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
-            <Link href="/login" className="text-caption text-ink-muted hover:text-ink">
+            <Link href="/login" className="text-caption text-on-navy-muted hover:text-on-navy">
               Mock interviews
             </Link>
-            <Link href={"/courses" as Route} className="text-caption text-ink-muted hover:text-ink">
+            <Link href={"/courses" as Route} className="text-caption text-on-navy-muted hover:text-on-navy">
               Courses
             </Link>
-            <Link href="/login" className="text-caption text-ink-muted hover:text-ink">
+            <Link href="/login" className="text-caption text-on-navy-muted hover:text-on-navy">
               Sign in
             </Link>
           </nav>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
-          <span className="text-caption text-ink-subtle">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-6">
+          <span className="text-caption text-on-navy-muted">
             AceMyInterview — practice interviews, not interview help.
           </span>
-          <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+          <span className="font-mono text-micro tracking-widest text-on-navy-muted uppercase">
             Recorded with consent · deletable at any time
           </span>
         </div>

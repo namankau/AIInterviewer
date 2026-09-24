@@ -20,7 +20,7 @@ export function RailNav() {
   const pathname = usePathname();
 
   return (
-    <ul className="flex flex-wrap gap-1.5 md:flex-col">
+    <ul className="flex flex-wrap gap-1.5 md:flex-col" aria-label="Workspace">
       {NAV_LINKS.filter((link) => link.href !== "/questions" || questionBankBrowsable()).map((link) => {
         const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
         return (
@@ -28,10 +28,10 @@ export function RailNav() {
             <Link
               href={link.href as Route}
               aria-current={active ? "page" : undefined}
-              className={`block rounded-lg px-3 py-1.5 text-caption transition-colors ${
+              className={`block rounded-xl px-3 py-2.5 text-caption transition-colors ${
                 active
-                  ? "bg-accent-wash font-semibold text-accent-strong"
-                  : "text-ink-muted hover:bg-surface-raised hover:text-ink"
+                  ? "bg-white/14 font-semibold text-on-navy shadow-[inset_3px_0_0_var(--accent)]"
+                  : "text-on-navy-muted hover:bg-white/8 hover:text-on-navy"
               }`}
             >
               {link.label}

@@ -15,14 +15,17 @@ export const metadata: Metadata = { title: "Your profile" };
 export default function ProfilePage() {
   return (
     <AppShell breadcrumb="profile">
-      <div className="flex w-full max-w-4xl flex-col gap-10">
-        <header className="flex flex-col gap-2">
-          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Profile</p>
-          <h1 className="text-title text-ink">What the interviewer knows about you.</h1>
-          <p className="max-w-prose text-body text-ink-muted">
+      <div className="flex w-full max-w-5xl flex-col gap-8">
+        <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] sm:p-9">
+          <div aria-hidden="true" className="absolute -top-24 -right-16 size-64 rounded-full bg-accent/20 blur-3xl" />
+          <div className="relative flex flex-col gap-3">
+          <p className="pill pill-navy w-fit">Your interview context</p>
+          <h1 className="text-display text-balance text-on-navy">What the interviewer knows about you.</h1>
+          <p className="max-w-2xl text-body text-on-navy-muted">
             All of it is optional and none of it is shared. It exists so a round can be about your
             work rather than about a job title.
           </p>
+          </div>
         </header>
 
         <ProfilePanel />
@@ -33,7 +36,10 @@ export default function ProfilePage() {
           * navigation is both clutter and something to hit by accident. This is the page
           * that is already about "my account", so this is where leaving it belongs.
           */}
-        <section aria-labelledby="session" className="flex flex-col gap-3 border-t border-line pt-8">
+        <section
+          aria-labelledby="session"
+          className="flex flex-col gap-3 rounded-2xl border border-line bg-surface-sunken p-6"
+        >
           <h2 id="session" className="text-heading text-ink">
             This browser
           </h2>

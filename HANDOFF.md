@@ -1,42 +1,39 @@
-# Handoff — 2026-09-24
+# Handoff — 2026-09-25
 
 ## Task
-Add a fourth System Design course with AI/agent architecture, case studies, Arena practice, and an interactive architecture-composition USP (`tasks/task-063-system-design-course.md`).
+Improve course readability across all four courses and deepen beginner-first System Design teaching using safe references (`tasks/task-064-course-readability-and-depth.md`).
 
 ## What I built
-- Added a 38-chapter System Design path in `apps/web/src/content/courses/system-design/index.ts`: foundations, distributed-system building blocks, AI/agent system design, and reusable case-study patterns.
-- Added original daily Arena material through every chapter's quizzes; the registry-driven scheduler now serves a deterministic, topic-labelled System Design set alongside Java, DSA, and AI.
-- Added four interactive architecture labs (URL shortener, ticket booking, RAG assistant, and tool-using agent) with deterministic validation, multiple valid placements, per-component feedback, reset, and open-source references.
-- Added accessible drag-and-drop via MIT-licensed `@dnd-kit/react@0.5.0`, while preserving equivalent keyboard and always-visible select controls, ARIA announcements, visible focus, and reduced-motion behaviour.
-- Added a distinct System Design catalogue motif and updated the Courses and Arena surfaces for four paths without introducing a separate navigation experience.
-- Added pinned source/licence notes in `apps/web/src/content/courses/system-design/THIRD_PARTY_NOTICES.md`. Lesson and exercise prose is original; no Educative, ByteByteGo, LeetCode company-tag, or other paywalled/non-redistributable content was copied.
-- Added architecture definition/validator/component tests, all-course payload checks, course integrity checks for 38 chapters and four scenarios, four-course daily scheduling tests, and a jsdom geometry shim required by CodeMirror under full-suite load.
+- Promoted instructional prose, lists, comparisons, steps, tables and quiz feedback from small muted metadata styling to the existing readable body/ink tokens across every course; secondary metadata remains muted.
+- Restyled “How this comes up in interviews” as an accessible accent callout and renamed the unclear “learning cards” count to “lesson items”.
+- Expanded System Design from 38 to 56 chapters. Added protocols, proxies/service discovery, consistent hashing, leader election/leases, realtime transports, safe configuration/deployment, peer-to-peer systems, batch/MapReduce, and ten generic product-shaped cases.
+- Gave every System Design chapter its own plain-language explanation, concrete request walk-through, unique worked example, 3–5 term glossary, explicit trade-off/failure treatment, recap, pitfalls, interview guidance and two quizzes. Required fields and integrity tests prevent generated fallback filler.
+- Expanded the interactive architecture lab from four to eight scenarios with safe deployment, retail brokerage/order routing, on-demand video streaming and ride dispatch.
+- Updated pinned source/licence notices. The local `Course Materials/SysDesign` PDFs and videos were used only as a filename coverage checklist; no text, transcript, image, sequence or estimate was copied or paraphrased.
 
 ## Assumptions I made
-- “TinyURL, Google Docs, BookMyShow” means generic product-shaped exercises (URL shortening, collaborative editing, ticket booking), not claims about those companies' private production architectures.
-- System Design is conceptual, so `Course.requiresCodeExamples` is explicitly false; chapters use code only when honest rather than adding fake snippets to satisfy a generic test.
-- The first architecture-lab release belongs inside guided lessons. Arena still derives substantial multiple-choice/trade-off practice from the same course, but its current one-answer schema should not be distorted into fake drag-and-drop scoring.
-- Open-source repositories are pinned teaching references and coverage checks. They are not scraped, fetched at runtime, or copied wholesale.
-- The 1,282-line product diff exceeds the usual review target because the reusable interaction engine and full curriculum were checkpointed as separate commits (`42bfcdd`, `5acae8c`, `c50ca3f`) and independently passed CI before one gated merge.
+- The shared typography fix applies to Java, DSA, AI/Agent AI and System Design. Java, DSA and AI already contain substantial chapter-specific beginner teaching, so content expansion targeted System Design, the only structurally terse course.
+- Named prompts such as Google Drive, Netflix, Uber, Reddit, Slack, Airbnb, BookMyShow and AlgoExpert mean generic categories, not evidence about those companies' private architecture. The course therefore uses names such as file sync, streaming, ride dispatch, community API, team chat, accommodation booking, ticket booking and online learning.
+- Unlicensed and paid local material is not redistributable. It informed topic coverage only; retained factual checks use pinned public/open-source repositories and all learner-facing expression is original.
 
 ## What I could NOT verify
-- Final visual judgement and touch-device feel need the owner. I did not start a localhost server, enter a real account, or perform authenticated browser writes.
-- I did not run a live interview, Gemini call, model-backed content generation, scraper, or any paid third-party request.
+- Final visual taste and touch-device feel require the owner. I did not start localhost, sign into a real account, or perform authenticated browser writes.
+- I did not run a live interview, Gemini call, scraper, video transcription, or paid third-party request.
 
 ## Verification status
-- Frontend typecheck / lint: pass.
-- Frontend tests: pass — 56 files, 2,517 tests.
-- Frontend production build: pass — 156 pages generated, including System Design course and Arena routes.
+- Frontend typecheck / lint / full tests / production build: pass; 174 static pages generated.
+- Focused readability tests: pass — 35 tests.
+- Focused course integrity / architecture / Arena tests: pass — 2,329 tests.
 - Backend `ktlintCheck test build`: pass.
-- Feature CI: pass — web and API jobs on `c50ca3fb3f55b3b05fc8791cd49620ec9d2931d7`, run `36013388973`.
-- Post-merge `develop` CI: pass — web and API jobs on `33eba8f167aa3224110016c011ca18746849559c`, run `36013810128`.
-- Diff check: pass. No migration or live API spend. One audited MIT dependency added and justified above.
+- Feature CI: pass — web and API jobs on `77dcf4e8aeae5ebab35696e988b4ba43834be581`, run `36048608618`.
+- Post-merge `develop` CI: pass — web and API jobs on `b4eb56181c6a4431ddbc84a0b106c52f9b51e1d5`, run `36049248554`.
+- Diff check: pass. No migration, secret, dependency or live API spend.
 
 ## Merge status
-- Merged into `develop` at `33eba8f167aa3224110016c011ca18746849559c` after green feature CI; pushed to `origin/develop`; `main` is untouched.
+- Merged into `develop` at `b4eb56181c6a4431ddbc84a0b106c52f9b51e1d5` after green feature CI; pushed to `origin/develop`; `main` is untouched.
 
 ## Suggested next task
-- Run an authenticated desktop/mobile/touch visual QA pass on the four architecture labs, then refine only evidence-backed layout or interaction issues.
+- Run an authenticated desktop/mobile visual QA pass over representative chapters from all four courses and the four new architecture labs.
 
 ## Open questions for you
-- None. Please do not send Educative course material unless you hold explicit redistribution rights; the current course is complete without it.
+- None.

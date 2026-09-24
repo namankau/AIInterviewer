@@ -115,7 +115,13 @@ export type Block =
    * a chapter file stays readable and the engine's tests can import a scenario directly
    * without dragging a whole chapter in with it.
    */
-  | { kind: "agentlab"; scenarioId: string };
+  | { kind: "agentlab"; scenarioId: string }
+  /**
+   * A system-design composition challenge. The authored scenario lives in
+   * `lib/architecture-lab/scenarios.ts`; chapter content only names it so the same
+   * deterministic, accessible interaction can be reused in lessons and practice.
+   */
+  | { kind: "architecturelab"; scenarioId: string };
 
 /**
  * One visualisation and its frames. Every shape's frame is *state*, never coordinates —
@@ -243,5 +249,7 @@ export interface Course {
    * would be one more field for a chapter author to forget and mislabel.
    */
   codeLanguage?: "java" | "python";
+  /** Set to false for conceptual courses where forcing a code sample would be misleading. */
+  requiresCodeExamples?: boolean;
   modules: Module[];
 }

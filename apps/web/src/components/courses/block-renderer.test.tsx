@@ -66,6 +66,7 @@ const ALL_KINDS: Block[] = [
   // registry — a chapter naming a scenario that does not exist renders an honest error
   // instead, which the case below asserts separately.
   { kind: "agentlab", scenarioId: "refund-status" },
+  { kind: "architecturelab", scenarioId: "url-shortener" },
 ];
 
 // The Java/Python choice lives in `localStorage` (module-scoped, not React state — see
@@ -113,10 +114,17 @@ describe("BlockRenderer", () => {
     expect(screen.getByText("A pipeline")).toBeInTheDocument();
     expect(screen.getByText("First stage.")).toBeInTheDocument();
     expect(screen.getByText(/simulation — no model is called/i)).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Make a short-link service" })).toBeInTheDocument();
   });
 
   it("says so plainly when a chapter names an agent lab scenario that does not exist", () => {
     render(<BlockRenderer blocks={[{ kind: "agentlab", scenarioId: "no-such-scenario" }]} />);
+
+    expect(screen.getByText(/no-such-scenario.*is not installed/i)).toBeInTheDocument();
+  });
+
+  it("says so plainly when a chapter names an architecture scenario that does not exist", () => {
+    render(<BlockRenderer blocks={[{ kind: "architecturelab", scenarioId: "no-such-scenario" }]} />);
 
     expect(screen.getByText(/no-such-scenario.*is not installed/i)).toBeInTheDocument();
   });

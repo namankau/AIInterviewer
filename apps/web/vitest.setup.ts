@@ -15,4 +15,10 @@ class TestResizeObserver implements ResizeObserver {
 
 globalThis.ResizeObserver ??= TestResizeObserver;
 
+// CodeMirror measures text ranges after its lazy editor mounts. Browsers provide both
+// methods; jsdom intentionally has no layout engine, so return empty geometry rather
+// than letting an unrelated asynchronous measurement throw during full-suite runs.
+Range.prototype.getClientRects ??= () => [] as unknown as DOMRectList;
+Range.prototype.getBoundingClientRect ??= () => new DOMRect();
+
 afterEach(cleanup);

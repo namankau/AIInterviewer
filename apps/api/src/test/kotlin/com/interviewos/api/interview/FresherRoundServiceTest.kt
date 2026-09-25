@@ -57,7 +57,8 @@ class FresherRoundServiceTest {
 
         val brief = harness.briefs.last()
         assertTrue(!brief.levelCalibration.contains("campus and new-graduate hiring"))
-        assertEquals(RoundType.PROJECT_DEEP_DIVE.covers.joinToString("\n") { "- $it" }, brief.roundCovers)
+        assertTrue(RoundType.PROJECT_DEEP_DIVE.covers.all(brief.roundCovers::contains))
+        assertTrue(brief.roundCovers.contains("This is the dedicated project round"))
     }
 
     /**
@@ -85,7 +86,7 @@ class FresherRoundServiceTest {
             }
 
         assertEquals("round_not_run_at_this_level", failure.code)
-        assertTrue(failure.message!!.contains("campus or new-graduate candidate"))
+        assertTrue(failure.message.contains("campus or new-graduate candidate"))
     }
 
     /** The engine, not the model, decides. A drafted design round for a fresher becomes one they can sit. */

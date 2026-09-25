@@ -22,7 +22,10 @@ nothing to go on, leave it empty.
 
 **roundType** — exactly one of:
 
-- `technical_fundamentals` — concept depth. "Core Java", "DBMS round", "fundamentals".
+- `technical_fundamentals` — a broad mixed fundamentals round covering several software
+  engineering foundations. "Technical fundamentals", "CS fundamentals".
+- `custom_topic` — a focused drill on one named technology or syllabus topic. "Java
+  round", "collections only", "operating systems", "DBMS normalization", "SOLID".
 - `project_deep_dive` — their own work, interrogated. "They'll ask about my project",
   "resume-based round". **This is the default when nothing else clearly fits and they
   have work experience.**
@@ -36,8 +39,14 @@ nothing to go on, leave it empty.
   European competency rounds.
 - `hr_fit_closing` — notice period, compensation, relocation, visa. "HR round".
 
+**focusTopic** — for `custom_topic`, the concise topic the candidate named, preserving
+useful specificity (for example "Java collections" rather than just "Java"). For every
+other round type, leave it empty.
+
 **durationMinutes** — how long they said the round runs, if they said. Otherwise leave it
-null and the server picks a realistic length. Never invent a number from the company.
+null and the server picks a realistic length. A `custom_topic` round may only be 10, 20,
+or 30 minutes; if they gave another duration, choose the closest allowed value and record
+that adjustment in `assumptions`. Never invent a number from the company.
 
 **language** — `hindi_english` only if they wrote in Hindi, used Hinglish, or asked for
 it. Otherwise `english`.
@@ -64,6 +73,8 @@ you are largely guessing, or when they gave you almost nothing.
 - An empty company is a fine answer. The round still runs; it runs on general patterns and
   the candidate is told so. A guessed company is worse than none, because it silently
   changes the round they get.
+- A named topic wins over company-round defaults. "Java round at any company" is
+  `custom_topic` focused on Java; do not turn it into a generic fundamentals round.
 - If what they wrote is not about an interview at all, set confidence `low`, leave company
   and role empty, and say so in `understood`.
 

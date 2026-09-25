@@ -307,6 +307,7 @@ class PromptLibrary(
             .replace("{{minutesElapsed}}", round.minutesElapsed.toString())
             .replace("{{minutesRemaining}}", round.minutesRemaining.toString())
             .replace("{{durationMinutes}}", round.durationMinutes.toString())
+            .replace("{{followUpLimit}}", round.followUpLimit.toString())
             .replace("{{pacing}}", pacingFor(round))
 
     private fun pacingFor(round: RoundContext): String =
@@ -314,6 +315,12 @@ class PromptLibrary(
             round.mustConclude -> {
                 "The time is up. Close the interview off on this turn: thank them, tell them what happens " +
                     "next, and set `suggestedNextAction` to `conclude`. Do not open a new line of questioning."
+            }
+
+            round.mustMoveOn -> {
+                "This thread has already used the ${round.followUpLimit}-question follow-up budget. " +
+                    "Do not ask another follow-up, probe, challenge, or variation on it. Set " +
+                    "`suggestedNextAction` to `move_on` and ask a fresh question from untouched round scope."
             }
 
             round.briefTheCandidate -> {
@@ -342,7 +349,8 @@ class PromptLibrary(
 
             else -> {
                 "You are in the main round with ${timeLeft(round.minutesRemaining)} left. Pace yourself so " +
-                    "the round finishes properly rather than being cut off mid-answer."
+                    "the round finishes properly rather than being cut off mid-answer. Never spend more " +
+                    "than ${round.followUpLimit} consecutive follow-up questions on one answer or thread."
             }
         }
 

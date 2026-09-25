@@ -8,6 +8,7 @@
       "type": "STRING",
       "enum": [
         "technical_fundamentals",
+        "custom_topic",
         "project_deep_dive",
         "coding_practical",
         "system_design",
@@ -17,6 +18,7 @@
         "hr_fit_closing"
       ]
     },
+    "focusTopic": { "type": "STRING", "nullable": true },
     "durationMinutes": { "type": "INTEGER", "nullable": true },
     "language": { "type": "STRING", "enum": ["english", "hindi_english"] },
     "understood": { "type": "STRING" },
@@ -28,6 +30,7 @@
     "role",
     "level",
     "roundType",
+    "focusTopic",
     "language",
     "understood",
     "assumptions",

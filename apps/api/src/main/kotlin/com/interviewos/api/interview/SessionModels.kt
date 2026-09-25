@@ -63,6 +63,8 @@ data class StartSessionRequest(
      * ([CandidateStage.of]). An unrecognised value is a `400`, not a silent ignore.
      */
     val candidateStage: String? = null,
+    @field:Size(max = 160)
+    val focusTopic: String? = null,
 )
 
 /** One exchange as the client needs to render it. */
@@ -128,6 +130,8 @@ data class SessionView(
     val workspace: JsonNode? = null,
     /** What the candidate has drawn or written so far, so a reload does not lose it. */
     val board: JsonNode? = null,
+    /** Candidate-selected syllabus for a custom topic round. */
+    val focusTopic: String? = null,
 )
 
 /**
@@ -178,6 +182,7 @@ data class RoundDraft(
     val archetypeLabel: String,
     val archetypeConfidence: String,
     val groundingNote: String,
+    val focusTopic: String? = null,
 )
 
 /**

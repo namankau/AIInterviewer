@@ -26,10 +26,11 @@ enum class RoundType(
         "Probe depth of domain concepts, calibrated to the candidate's level. Reward precision over vocabulary.",
         covers =
             listOf(
-                "a core concept from their stack, taken to the point where memorised definitions run out",
-                "why the obvious approach is wrong, or what it costs",
-                "an edge case or failure mode they would have to handle",
-                "something adjacent they claim to know, to test the edges of the claim",
+                "OOP (object-oriented design) and SOLID principles, with a concrete trade-off rather than definitions alone",
+                "Java language fundamentals and the collections framework, including equality, hashing and concurrency",
+                "operating system fundamentals: processes, threads, memory, scheduling and deadlocks",
+                "database fundamentals: modelling, indexes, transactions, isolation and query trade-offs",
+                "foundational system design judgement: component boundaries, basic scale and explicit trade-offs",
             ),
         resumeUse = ResumeUse.CONTEXT,
     ),
@@ -169,7 +170,31 @@ enum class RoundType(
             ),
         resumeUse = ResumeUse.SITUATIONS,
     ),
+    CUSTOM_TOPIC(
+        "custom_topic",
+        "Custom topic",
+        "Stay entirely within the candidate's chosen topic. Test breadth first, then deepen only the concepts " +
+            "their answers make relevant.",
+        covers =
+            listOf(
+                "the core concepts inside the candidate's chosen topic",
+                "how those concepts behave in a concrete example",
+                "common failure modes and misconceptions within that topic",
+                "trade-offs and boundaries inside that topic",
+            ),
+        resumeUse = ResumeUse.CONTEXT,
+    ),
     ;
+
+    fun warmupTurns(durationMinutes: Int): Int =
+        when (this) {
+            CUSTOM_TOPIC -> 0
+            PROJECT_DEEP_DIVE -> InterviewPlan.warmupTurnsFor(durationMinutes)
+            else -> 1
+        }
+
+    val followUpLimit: Int
+        get() = if (this == PROJECT_DEEP_DIVE || this == CUSTOM_TOPIC) 3 else 2
 
     companion object {
         fun fromDbValue(value: String): RoundType =

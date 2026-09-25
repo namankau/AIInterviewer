@@ -258,4 +258,28 @@ class InterviewPlanTest {
             "four minutes left in a forty-minute round is the wrap-up, as before",
         )
     }
+
+    @Test
+    fun `an explicit one-turn warm-up moves into the round after the introduction`() {
+        val plan =
+            InterviewPlan.forTurn(
+                turnIndex = 1,
+                answeredTurns = 1,
+                startedAt = startedAt,
+                durationMinutes = 40,
+                now = startedAt.plus(Duration.ofMinutes(3)),
+                warmupTurns = 1,
+            )
+
+        assertEquals(TurnPhase.MAIN, plan.phase)
+        assertTrue(plan.briefTheCandidate)
+    }
+
+    @Test
+    fun `a zero-turn warm-up opens directly on the chosen topic`() {
+        val opening = InterviewPlan.opening(durationMinutes = 20, warmupTurns = 0)
+
+        assertEquals(TurnPhase.MAIN, opening.phase)
+        assertNull(opening.warmupFocus)
+    }
 }

@@ -41,12 +41,15 @@ const EXAMPLES = [
  * Company and role are still named per session and nothing is stored as a target
  * (PRD 05). The composer changes how they are typed, not what is kept.
  */
-export function NewInterviewForm() {
+export function NewInterviewForm({ initialTopic = "" }: { initialTopic?: string }) {
   const router = useRouter();
   const accessToken = useAccessToken();
+  const topic = initialTopic.trim();
 
   const [query, setQuery] = useState("");
-  const [draft, setDraft] = useState<RoundDraft | null>(null);
+  const [draft, setDraft] = useState<RoundDraft | null>(() =>
+    topic === "" ? null : blankDraft(topic),
+  );
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Past the "how they interview" step, either because the candidate chose a round from
@@ -84,7 +87,7 @@ export function NewInterviewForm() {
       setChosenRoundType(null);
     };
 
-    if (hasCompany && !pastBrief) {
+    if (hasCompany && draft.roundType !== "custom_topic" && !pastBrief) {
       return (
         <LoopBriefStep
           companyName={draft.companyName}
@@ -110,7 +113,7 @@ export function NewInterviewForm() {
         // path into this screen with `hasCompany` true, so it's also the only case
         // "back to the brief" makes sense.
         onBackToBrief={
-          hasCompany
+          hasCompany && draft.roundType !== "custom_topic"
             ? () => {
                 setChosenRoundType(null);
                 setPastBrief(false);
@@ -219,6 +222,7 @@ function RoundSetup({
   const [companyName, setCompanyName] = useState(draft.companyName);
   const [roleTitle, setRoleTitle] = useState(draft.roleTitle);
   const [roundType, setRoundType] = useState<RoundType>(draft.roundType);
+  const [focusTopic, setFocusTopic] = useState(draft.focusTopic ?? "");
   const [durationMinutes, setDurationMinutes] = useState(draft.durationMinutes);
   const [language, setLanguage] = useState(draft.language);
   const [consentAudio, setConsentAudio] = useState(false);
@@ -246,7 +250,20 @@ function RoundSetup({
   const [error, setError] = useState<string | null>(null);
 
   const ready =
-    companyName.trim() !== "" && roleTitle.trim() !== "" && consentAudio && !!accessToken;
+    companyName.trim() !== "" &&
+    roleTitle.trim() !== "" &&
+    (roundType !== "custom_topic" || focusTopic.trim() !== "") &&
+    consentAudio &&
+    !!accessToken;
+
+  function selectRound(value: RoundType) {
+    setRoundType(value);
+    if (value === "custom_topic" && ![10, 20, 30].includes(durationMinutes)) {
+      setDurationMinutes(20);
+    } else if (value !== "custom_topic" && durationMinutes === 10) {
+      setDurationMinutes(40);
+    }
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -268,6 +285,7 @@ function RoundSetup({
         consentVideo: cameraOn,
         durationMinutes,
         candidateStage: candidateStage === "" ? undefined : candidateStage,
+        focusTopic: roundType === "custom_topic" ? focusTopic.trim() : undefined,
       });
       onStart(session.id);
     } catch (cause) {
@@ -403,7 +421,7 @@ function RoundSetup({
                     name="roundType"
                     value={round.value}
                     checked={selected}
-                    onChange={() => setRoundType(round.value)}
+                    onChange={() => selectRound(round.value)}
                     className="size-4 accent-accent"
                   />
                   <span className="text-body font-medium text-ink">{round.label}</span>
@@ -415,6 +433,23 @@ function RoundSetup({
         </div>
       </fieldset>
 
+      {roundType === "custom_topic" ? (
+        <Field
+          label="Topic to practise"
+          hint="The interviewer stays within this scope. Try Java collections, operating systems, SQL joins, or SOLID principles."
+        >
+          <input
+            value={focusTopic}
+            onChange={(event) => setFocusTopic(event.target.value)}
+            placeholder="Java collections"
+            required
+            maxLength={160}
+            autoFocus
+            className={CONTROL_CLASS}
+          />
+        </Field>
+      ) : null}
+
       <div className="grid gap-6 sm:grid-cols-2">
         <Field label="Length" hint="Real rounds are time-boxed. The clock ends this one.">
           <select
@@ -422,11 +457,21 @@ function RoundSetup({
             onChange={(event) => setDurationMinutes(Number(event.target.value))}
             className={CONTROL_CLASS}
           >
-            <option value={5}>5 minutes — just testing the room</option>
-            <option value={20}>20 minutes — a short round</option>
-            <option value={30}>30 minutes</option>
-            <option value={40}>40 minutes — a typical round</option>
-            <option value={60}>60 minutes — a full panel</option>
+            {roundType === "custom_topic" ? (
+              <>
+                <option value={10}>10 minutes — a quick topic check</option>
+                <option value={20}>20 minutes — focused practice</option>
+                <option value={30}>30 minutes — a thorough topic round</option>
+              </>
+            ) : (
+              <>
+                <option value={5}>5 minutes — just testing the room</option>
+                <option value={20}>20 minutes — a short round</option>
+                <option value={30}>30 minutes</option>
+                <option value={40}>40 minutes — a typical round</option>
+                <option value={60}>60 minutes — a full panel</option>
+              </>
+            )}
           </select>
         </Field>
         <Field label="Language" hint="The register the interviewer uses.">
@@ -483,21 +528,24 @@ function RoundSetup({
 }
 
 /** The manual path: the same setup with nothing filled in and nothing assumed. */
-function blankDraft(): RoundDraft {
+function blankDraft(focusTopic = ""): RoundDraft {
+  const customTopic = focusTopic.trim();
   return {
     companyName: "",
     roleTitle: "",
     level: "",
-    roundType: "project_deep_dive",
-    roundLabel: "Project deep-dive",
-    durationMinutes: 40,
+    roundType: customTopic === "" ? "project_deep_dive" : "custom_topic",
+    roundLabel: customTopic === "" ? "Project deep-dive" : "Custom topic",
+    durationMinutes: customTopic === "" ? 40 : 20,
     language: "english",
-    understood: "Who are you interviewing with?",
+    understood:
+      customTopic === "" ? "Who are you interviewing with?" : `Practise ${customTopic} in a focused interview.`,
     assumptions: [],
     confidence: "low",
     archetypeLabel: "",
     archetypeConfidence: "inferred",
     groundingNote: "",
+    focusTopic: customTopic === "" ? null : customTopic,
   };
 }
 

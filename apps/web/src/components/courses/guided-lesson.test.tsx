@@ -42,6 +42,8 @@ describe("GuidedLesson", () => {
     render(<GuidedLesson blocks={FOUR_COURSE_BLOCKS} />);
 
     expect(screen.getByText("Beat 1 of 5")).toBeInTheDocument();
+    expect(screen.getByText("2 lesson items")).toBeInTheDocument();
+    expect(screen.queryByText(/learning cards/i)).not.toBeInTheDocument();
     expect(screen.getByTestId("lesson-beat-see")).toHaveAttribute("open");
 
     await user.click(screen.getByRole("button", { name: "Take a first guess" }));

@@ -1,42 +1,46 @@
-# Handoff — 2026-09-24
+# Handoff — 2026-09-25
 
 ## Task
-Add a fourth System Design course with AI/agent architecture, case studies, Arena practice, and an interactive architecture-composition USP (`tasks/task-063-system-design-course.md`).
+Keep interview rounds within their stated scope, add dedicated topic interviews and custom rounds, and decide the product direction for public proof of learning (direct owner request; no task file).
 
 ## What I built
-- Added a 38-chapter System Design path in `apps/web/src/content/courses/system-design/index.ts`: foundations, distributed-system building blocks, AI/agent system design, and reusable case-study patterns.
-- Added original daily Arena material through every chapter's quizzes; the registry-driven scheduler now serves a deterministic, topic-labelled System Design set alongside Java, DSA, and AI.
-- Added four interactive architecture labs (URL shortener, ticket booking, RAG assistant, and tool-using agent) with deterministic validation, multiple valid placements, per-component feedback, reset, and open-source references.
-- Added accessible drag-and-drop via MIT-licensed `@dnd-kit/react@0.5.0`, while preserving equivalent keyboard and always-visible select controls, ARIA announcements, visible focus, and reduced-motion behaviour.
-- Added a distinct System Design catalogue motif and updated the Courses and Arena surfaces for four paths without introducing a separate navigation experience.
-- Added pinned source/licence notes in `apps/web/src/content/courses/system-design/THIRD_PARTY_NOTICES.md`. Lesson and exercise prose is original; no Educative, ByteByteGo, LeetCode company-tag, or other paywalled/non-redistributable content was copied.
-- Added architecture definition/validator/component tests, all-course payload checks, course integrity checks for 38 chapters and four scenarios, four-course daily scheduling tests, and a jsdom geometry shim required by CodeMirror under full-suite load.
+- Enforced round-specific interviewing in `apps/api`: project deep dive is the only round that may deeply examine projects; other applicable rounds get at most one brief recent-work opener before moving to their own subject matter.
+- Expanded technical fundamentals coverage to include OOP and SOLID, Java/runtime/collections/equality/hashing/concurrency, operating systems, databases, and foundational system design.
+- Added explicit consecutive-follow-up budgets: ordinary rounds may use up to two follow-ups, while project deep dive and focused custom topics may use up to three; the backend then instructs the interviewer to move on.
+- Added the `custom_topic` round and persisted `focusTopic` across shared contracts, session drafts, database sessions, AI requests, prompts, schemas, and turn decisions.
+- Added Custom topic setup to the web interview form. Natural entries such as “Java round” resolve to the custom round, and custom sessions offer only 10, 20, or 30 minutes.
+- Added a separate “Practise this topic in an interview” action to every course chapter, distinct from its Arena and self-check experiences.
+- Added regression tests for round scope, warm-ups, follow-up limits, custom-topic validation, duration choices, course entry points, and setup behavior.
+- Recorded the product decision in `docs/proof-of-progress-product-decision.md`: start with an opt-in, private-by-default public proof page; consider a GitHub App export only after demand is demonstrated; later add deterministic assessed labs using the existing runner instead of cloning Trailhead wholesale.
+- Applied linked migration `supabase/migrations/20260925000000_custom_topic_round.sql`; local and remote migration histories both show `20260925000000`.
 
 ## Assumptions I made
-- “TinyURL, Google Docs, BookMyShow” means generic product-shaped exercises (URL shortening, collaborative editing, ticket booking), not claims about those companies' private production architectures.
-- System Design is conceptual, so `Course.requiresCodeExamples` is explicitly false; chapters use code only when honest rather than adding fake snippets to satisfy a generic test.
-- The first architecture-lab release belongs inside guided lessons. Arena still derives substantial multiple-choice/trade-off practice from the same course, but its current one-answer schema should not be distorted into fake drag-and-drop scoring.
-- Open-source repositories are pinned teaching references and coverage checks. They are not scraped, fetched at runtime, or copied wholesale.
-- The 1,282-line product diff exceeds the usual review target because the reusable interaction engine and full curriculum were checkpointed as separate commits (`42bfcdd`, `5acae8c`, `c50ca3f`) and independently passed CI before one gated merge.
+- Non-project rounds that benefit from candidate context receive at most one recent-work opener. Custom-topic rounds receive none. Project deep dive retains the longer project-oriented opening.
+- “2–3 follow-ups are okay” means no more than two consecutive follow-ups in ordinary rounds and no more than three in project deep dive or a deliberately focused custom-topic round.
+- A dedicated questionnaire for each course topic is a generated, topic-locked interview session launched separately from Arena/quiz, rather than another static quiz bank.
+- Public progress and GitHub synchronization stop at a product decision in this run because publishing identity-linked learning data and requesting GitHub permissions cross the repository's auth, privacy, and human-review boundaries.
 
 ## What I could NOT verify
-- Final visual judgement and touch-device feel need the owner. I did not start a localhost server, enter a real account, or perform authenticated browser writes.
-- I did not run a live interview, Gemini call, model-backed content generation, scraper, or any paid third-party request.
+- Interviewer realism, spoken pacing, latency, and live provider compliance; no live interview or Gemini call was made under the no-live-spend rule.
+- Final authenticated visual/touch-device polish for the new course and interview setup controls.
+- The public-profile identity/privacy UX and any GitHub permission flow; these require owner approval before implementation.
 
 ## Verification status
-- Frontend typecheck / lint: pass.
-- Frontend tests: pass — 56 files, 2,517 tests.
-- Frontend production build: pass — 156 pages generated, including System Design course and Arena routes.
+- Frontend typecheck / lint / full tests / production build: pass — 56 test files and 2,757 tests passed; 174 static pages generated.
+- Focused frontend regressions: pass — 15 tests.
 - Backend `ktlintCheck test build`: pass.
-- Feature CI: pass — web and API jobs on `c50ca3fb3f55b3b05fc8791cd49620ec9d2931d7`, run `36013388973`.
-- Post-merge `develop` CI: pass — web and API jobs on `33eba8f167aa3224110016c011ca18746849559c`, run `36013810128`.
-- Diff check: pass. No migration or live API spend. One audited MIT dependency added and justified above.
+- Focused backend regressions: pass — 35 tests.
+- Diff check: pass.
+- Database migration: applied and verified linked; local and remote both show `20260925000000`.
+- Feature CI: pass — API and web jobs on `ccb04b3`, run `36096478092`.
+- Post-merge `develop` CI: pass — API and web jobs on `62b206f9da20d3a35a5af2585445af0b12209c2a`, run `36096606399`.
+- No dependency, secret, scraper, recording, or live AI spend was added.
 
 ## Merge status
-- Merged into `develop` at `33eba8f167aa3224110016c011ca18746849559c` after green feature CI; pushed to `origin/develop`; `main` is untouched.
+- Merged into `develop` at `62b206f9da20d3a35a5af2585445af0b12209c2a` after green feature CI; pushed to `origin/develop`; `main` is untouched.
 
 ## Suggested next task
-- Run an authenticated desktop/mobile/touch visual QA pass on the four architecture labs, then refine only evidence-backed layout or interaction issues.
+- After owner approval of the privacy model, build Phase 1 of the opt-in public proof page with opaque revocable links and privacy-safe aggregates; do not request GitHub permissions yet.
 
 ## Open questions for you
-- None. Please do not send Educative course material unless you hold explicit redistribution rights; the current course is complete without it.
+- For the proposed public proof page, should the visible identity default to a user-chosen display name, a username, or the account's real name?

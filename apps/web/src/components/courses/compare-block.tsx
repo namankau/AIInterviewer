@@ -41,7 +41,7 @@ export function CompareBlock({ block }: { block: CompareBlockData }) {
             <p className="text-heading font-semibold text-ink">
               <InlineText text={column.label} />
             </p>
-            <ul className="mt-2 list-disc space-y-1.5 pl-5 text-caption leading-relaxed text-ink-muted">
+            <ul className="mt-2 list-disc space-y-2 pl-5 text-body leading-relaxed text-ink marker:text-accent-strong">
               {column.items.map((item, j) => (
                 <li key={j}>
                   <InlineText text={item} />

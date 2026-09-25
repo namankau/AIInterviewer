@@ -26,6 +26,18 @@ export interface CatalogueRound {
 
 export const ROUND_CATALOGUE: CatalogueRound[] = [
   {
+    value: "custom_topic",
+    eyebrow: "Topic practice",
+    label: "Custom topic",
+    blurb:
+      "Name one topic — Java collections, OS scheduling, SQL indexing or SOLID — and keep " +
+      "the whole round focused there.",
+    listeningFor:
+      "understanding you can explain and apply, with a few useful follow-ups instead of a " +
+      "project interrogation.",
+    whoRunsIt: "your focused practice plan",
+  },
+  {
     value: "aptitude",
     eyebrow: "Campus placement",
     label: "Aptitude and reasoning, spoken",

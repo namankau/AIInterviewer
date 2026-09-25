@@ -203,6 +203,7 @@ data class ComposedRound(
     /** Everything filled in that they did not say, so they can correct it at a glance. */
     val assumptions: List<String>,
     val confidence: String,
+    val focusTopic: String? = null,
 )
 
 /**
@@ -334,6 +335,10 @@ data class RoundContext(
     val briefTheCandidate: Boolean,
     /** The clock has run out. Close the interview off warmly on this turn. */
     val mustConclude: Boolean,
+    /** Maximum consecutive probes allowed before the engine requires a new question. */
+    val followUpLimit: Int = 2,
+    /** The previous thread exhausted its follow-up budget; the next question must change topic. */
+    val mustMoveOn: Boolean = false,
 )
 
 /** One completed exchange, as the model needs to see the history. */
@@ -358,6 +363,7 @@ data class TurnTranscript(
      * pool question itself is not (`PlannedQuestion.reported`).
      */
     val referencePoints: List<String> = emptyList(),
+    val nextAction: String? = null,
 )
 
 /**

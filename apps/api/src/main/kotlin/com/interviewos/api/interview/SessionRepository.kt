@@ -93,6 +93,7 @@ class SessionRepository(
          * both change after the fact while this must not. Null when they said nothing.
          */
         declaredStage: DeclaredStage? = null,
+        focusTopic: String? = null,
     ): UUID =
         jdbcClient
             .sql(
@@ -100,14 +101,14 @@ class SessionRepository(
                 insert into public.sessions (
                     user_id, company_name, company_archetype, role_title, round_type, language,
                     status, started_at, consent_audio_at, consent_video_at, archetype_confidence,
-                    duration_minutes, stated_level
+                    duration_minutes, stated_level, focus_topic
                 ) values (
                     :u, :company, cast(:archetype as public.employer_archetype), :role,
                     cast(:round as public.round_type), cast(:language as public.interview_language),
                     'in_progress', now(),
                     case when :consentAudio then now() end,
                     case when :consentVideo then now() end,
-                    :confidence, :durationMinutes, :statedLevel
+                    :confidence, :durationMinutes, :statedLevel, :focusTopic
                 )
                 returning id
                 """.trimIndent(),
@@ -122,6 +123,7 @@ class SessionRepository(
             .param("durationMinutes", durationMinutes)
             .param("confidence", confidence.dbValue)
             .param("statedLevel", declaredStage?.wireValue)
+            .param("focusTopic", focusTopic)
             .query(UUID::class.java)
             .single()
 
@@ -137,7 +139,7 @@ class SessionRepository(
                        status::text as status, started_at, ended_at, report_expired_at,
                        (consent_video_at is not null) as consent_video, duration_minutes,
                        coalesce(archetype_confidence, 'inferred') as archetype_confidence,
-                       workspace::text as workspace, board::text as board, stated_level
+                       workspace::text as workspace, board::text as board, stated_level, focus_topic
                   from public.sessions
                  where id = :id and user_id = :u
                 """.trimIndent(),
@@ -634,7 +636,7 @@ class SessionRepository(
                        answer_transcript, answered_at,
                        intervention::text as intervention, intervention_note,
                        phase::text as phase, delivery_note, provenance::text as provenance,
-                       hint_requested_at, hint_text, hint_level::text as hint_level
+                       hint_requested_at, hint_text, hint_level::text as hint_level, next_action
                   from public.session_turns
                  where session_id = :s and user_id = :u and turn_index = :i
                 """.trimIndent(),
@@ -657,7 +659,7 @@ class SessionRepository(
                        answer_transcript, answered_at,
                        intervention::text as intervention, intervention_note,
                        phase::text as phase, delivery_note, provenance::text as provenance,
-                       hint_requested_at, hint_text, hint_level::text as hint_level
+                       hint_requested_at, hint_text, hint_level::text as hint_level, next_action
                   from public.session_turns
                  where session_id = :s and user_id = :u
                  order by turn_index desc limit 1
@@ -938,6 +940,7 @@ class SessionRepository(
                        t.intervention::text as intervention, t.intervention_note,
                        t.phase::text as phase, t.delivery_note, t.provenance::text as provenance,
                        t.hint_requested_at, t.hint_text, t.hint_level::text as hint_level,
+                       t.next_action,
                        pq.strong_answer_covers
                   from public.session_turns t
                   left join public.pool_questions pq on pq.id = t.pool_question_id
@@ -1119,6 +1122,7 @@ class SessionRepository(
             workspace = rs.getString("workspace"),
             board = rs.getString("board"),
             declaredStage = DeclaredStage.parseOrNull(rs.getString("stated_level")),
+            focusTopic = rs.getString("focus_topic"),
         )
 
     private fun mapTurn(rs: ResultSet) =
@@ -1137,6 +1141,7 @@ class SessionRepository(
             hintText = rs.getString("hint_text"),
             hintLevel = rs.getString("hint_level"),
             provenanceJson = rs.getString("provenance"),
+            nextAction = rs.getString("next_action"),
         )
 }
 
@@ -1170,6 +1175,8 @@ data class SessionRow(
      * in [CandidateStage.of] exactly.
      */
     val declaredStage: DeclaredStage? = null,
+    /** Candidate-supplied subject for a custom topic round. Null for standard rounds. */
+    val focusTopic: String? = null,
 )
 
 /**
@@ -1240,6 +1247,8 @@ data class TurnRow(
     val hintLevel: String? = null,
     /** Why this question was asked, as raw JSON. Null on turns recorded before provenance existed. */
     val provenanceJson: String? = null,
+    /** The model's transition decision, retained so follow-up chains can be bounded. */
+    val nextAction: String? = null,
     /**
      * What a strong answer to this question covers, when it was asked from the AI question
      * pool (`pool_question_id`) and that row carries `strong_answer_covers`. Empty for a

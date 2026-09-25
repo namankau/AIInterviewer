@@ -31,11 +31,11 @@ const chapters = [
 ];
 
 const guidedBeats = [
-  { key: "see" as const, label: "See the idea", shortLabel: "See it", description: "See", cardCount: 1, content: <p>See</p> },
-  { key: "predict" as const, label: "Take a first guess", shortLabel: "Predict", description: "Predict", cardCount: 1, content: <p>Predict</p> },
-  { key: "interact" as const, label: "Try it yourself", shortLabel: "Try it", description: "Try", cardCount: 1, content: <p>Try</p> },
-  { key: "explain" as const, label: "Explain and remember", shortLabel: "Remember", description: "Remember", cardCount: 1, content: <p>Remember</p> },
-  { key: "check" as const, label: "Final checkpoint", shortLabel: "Check", description: "Check", cardCount: 1, content: <p>Check</p> },
+  { key: "see" as const, label: "See the idea", shortLabel: "See it", description: "See", itemCount: 1, content: <p>See</p> },
+  { key: "predict" as const, label: "Take a first guess", shortLabel: "Predict", description: "Predict", itemCount: 1, content: <p>Predict</p> },
+  { key: "interact" as const, label: "Try it yourself", shortLabel: "Try it", description: "Try", itemCount: 1, content: <p>Try</p> },
+  { key: "explain" as const, label: "Explain and remember", shortLabel: "Remember", description: "Remember", itemCount: 1, content: <p>Remember</p> },
+  { key: "check" as const, label: "Final checkpoint", shortLabel: "Check", description: "Check", itemCount: 1, content: <p>Check</p> },
 ];
 
 async function visitRemainingBeats(user: ReturnType<typeof userEvent.setup>) {

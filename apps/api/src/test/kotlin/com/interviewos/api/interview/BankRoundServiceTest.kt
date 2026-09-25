@@ -31,14 +31,14 @@ class BankRoundServiceTest {
     @Test
     fun `the first question of the round proper is the bank question, put back when the model drifted`() {
         harness.bankHolds(RoundType.BEHAVIOURAL_COMPETENCY, disagreed)
-        givenSpokenRoundAt(answeredBefore = 2)
+        givenSpokenRoundAt(answeredBefore = 0)
         harness.assessment =
             assessment(
                 next = "We have about twenty minutes, and I want to hear how you work with people. Describe a conflict with your boss?",
                 askedPlanned = false,
             )
 
-        submit(turnIndex = 2)
+        submit(turnIndex = 0)
 
         val planned = assertNotNull(harness.briefs.last().plannedQuestion)
         assertTrue(planned.askNow)
@@ -128,10 +128,10 @@ class BankRoundServiceTest {
     fun `bank empty and pool present - the round asks the pool question, labelled as model knowledge`() {
         given(harness.directory.resolve("Amazon")).willReturn(BankFixtures.amazon)
         harness.poolHolds(RoundType.BEHAVIOURAL_COMPETENCY, ownership)
-        givenSpokenRoundAt(answeredBefore = 2)
+        givenSpokenRoundAt(answeredBefore = 0)
         harness.assessment = assessment(next = "Let's move on. Describe a project you liked?", askedPlanned = false)
 
-        submit(turnIndex = 2)
+        submit(turnIndex = 0)
 
         val planned = assertNotNull(harness.briefs.last().plannedQuestion)
         assertEquals(ownership.text, planned.text)
@@ -198,15 +198,17 @@ class BankRoundServiceTest {
     }
 
     @Test
-    fun `the warm-up is never handed a bank question`() {
+    fun `the first answer ends the single-question warm-up and hands off to the bank`() {
         harness.bankHolds(RoundType.BEHAVIOURAL_COMPETENCY, disagreed)
         givenSpokenRoundAt(answeredBefore = 0)
         harness.assessment = assessment(next = "What are you working on at the moment?", askedPlanned = null)
 
         submit(turnIndex = 0)
 
-        assertNull(harness.briefs.last().plannedQuestion)
-        assertNull(harness.insertedTurns().single().bankQuestionId)
+        val planned = assertNotNull(harness.briefs.last().plannedQuestion)
+        assertTrue(planned.askNow)
+        assertEquals(disagreed.text, planned.text)
+        assertEquals(disagreed.id, harness.insertedTurns().single().bankQuestionId)
     }
 
     private fun givenSpokenRoundAt(answeredBefore: Int) {

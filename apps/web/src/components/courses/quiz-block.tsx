@@ -34,9 +34,9 @@ export function QuizBlock({ block }: { block: Quiz }) {
                 disabled={revealed}
                 onClick={() => setSelected(i)}
                 className={[
-                  "rounded-md border px-3.5 py-2.5 text-left text-caption transition-colors",
+                  "rounded-md border px-3.5 py-2.5 text-left text-body leading-relaxed transition-colors",
                   !revealed
-                    ? "border-line text-ink-muted hover:border-line-strong hover:bg-surface-sunken"
+                    ? "border-line text-ink hover:border-line-strong hover:bg-surface-sunken"
                     : isCorrect
                       ? "border-positive/50 bg-positive/10 text-ink"
                       : isChosen
@@ -51,7 +51,7 @@ export function QuizBlock({ block }: { block: Quiz }) {
         </div>
       </fieldset>
       {revealed ? (
-        <p role="status" className="mt-3 text-caption leading-relaxed text-ink-muted">
+        <p role="status" className="mt-3 text-body leading-relaxed text-ink">
           <span className={selected === block.answer ? "font-medium text-positive" : "font-medium text-danger"}>
             {selected === block.answer ? "Correct. " : "Not quite. "}
           </span>

@@ -76,6 +76,22 @@ class QuestionSpeechTest {
     }
 
     @Test
+    fun `marks a multi chunk turn unavailable when a parallel speech call fails`() {
+        val repository = mock(SessionRepository::class.java)
+        val longQuestion =
+            "First, explain how the Java virtual machine loads and verifies a class before execution. " +
+                "Next, compare heap allocation with stack allocation using a concrete example from an application. " +
+                "Finally, explain how garbage collection can affect latency in a service under sustained traffic."
+
+        speech(ai = FailingChunkAi(), storage = RecordingStorage(), repository = repository)
+            .render(SpeechRequest(userId, sessionId, turnIndex = 3, text = longQuestion, language = "english"))
+
+        // CompletableFuture.join wraps the provider failure. It must still become a
+        // terminal state instead of leaving the browser polling `pending` forever.
+        verify(repository).setQuestionSpeech(sessionId, userId, 3, null, SpeechStatus.UNAVAILABLE)
+    }
+
+    @Test
     fun `marks the turn unavailable when the audio cannot be stored`() {
         val repository = mock(SessionRepository::class.java)
 
@@ -237,4 +253,17 @@ private class SilentAi : StubAi() {
         text: String,
         language: String,
     ): AiResult<SpokenAudio> = throw AiUnavailableException("no speech today")
+}
+
+private class FailingChunkAi : StubAi() {
+    private var calls = 0
+
+    override fun synthesizeSpeech(
+        text: String,
+        language: String,
+    ): AiResult<SpokenAudio> {
+        calls += 1
+        if (calls == 2) throw AiUnavailableException("later chunk failed")
+        return AiResult(SpokenAudio(byteArrayOf(1, 2, 3), "audio/wav"), AiUsage("test-tts", 0, 0))
+    }
 }

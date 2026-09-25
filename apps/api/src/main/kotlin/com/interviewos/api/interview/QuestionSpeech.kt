@@ -1,13 +1,11 @@
 package com.interviewos.api.interview
 
 import com.interviewos.api.ai.AiSpendContext
-import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.InterviewAi
 import com.interviewos.api.ai.SpeechChunks
 import com.interviewos.api.ai.SpokenAudio
 import com.interviewos.api.ai.WavAudio
 import com.interviewos.api.storage.ObjectStorage
-import com.interviewos.api.storage.ObjectStorageException
 import com.interviewos.api.storage.StorageProperties
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -79,35 +77,71 @@ class QuestionSpeech(
     }
 
     private fun renderNow(request: SpeechRequest) {
+        val startedAt = System.nanoTime()
+        log.atInfo()
+            .addKeyValue("event", "question_speech_started")
+            .addKeyValue("session_id", request.sessionId)
+            .addKeyValue("turn_index", request.turnIndex)
+            .addKeyValue("provider", interviewAi.providerName)
+            .log("Question speech rendering started")
+
         val path =
             try {
                 val spoken = speak(request)
                 val objectPath = "${request.userId}/${request.sessionId}/turn-${request.turnIndex}-question.wav"
                 storage.upload(storageProperties.mediaBucket, objectPath, spoken.audio, spoken.mimeType)
                 objectPath
-            } catch (e: AiUnavailableException) {
-                log.warn("Speech unavailable for session {} turn {}; the turn runs as text", request.sessionId, request.turnIndex, e)
-                null
-            } catch (e: ObjectStorageException) {
-                log.warn("Could not store question audio for session {} turn {}", request.sessionId, request.turnIndex, e)
+            } catch (e: RuntimeException) {
+                val cause = rootCause(e)
+                log.atWarn()
+                    .setCause(cause)
+                    .addKeyValue("event", "question_speech_failed")
+                    .addKeyValue("session_id", request.sessionId)
+                    .addKeyValue("turn_index", request.turnIndex)
+                    .addKeyValue("provider", interviewAi.providerName)
+                    .addKeyValue("duration_ms", elapsedMillis(startedAt))
+                    .addKeyValue("error_type", cause.javaClass.simpleName)
+                    .log("Question speech failed; the turn will continue as text")
                 null
             }
 
+        val status = if (path != null) SpeechStatus.READY else SpeechStatus.UNAVAILABLE
         try {
             repository.setQuestionSpeech(
                 sessionId = request.sessionId,
                 userId = request.userId,
                 turnIndex = request.turnIndex,
                 audioPath = path,
-                status = if (path != null) SpeechStatus.READY else SpeechStatus.UNAVAILABLE,
+                status = status,
             )
+            log.atInfo()
+                .addKeyValue("event", "question_speech_finished")
+                .addKeyValue("session_id", request.sessionId)
+                .addKeyValue("turn_index", request.turnIndex)
+                .addKeyValue("provider", interviewAi.providerName)
+                .addKeyValue("duration_ms", elapsedMillis(startedAt))
+                .addKeyValue("status", status.dbValue)
+                .log("Question speech rendering finished")
         } catch (e: RuntimeException) {
             // The room polls while a turn is `pending`. Losing this write would leave it
             // polling forever, so it is worth a line in the log even though the round is
             // unaffected — the candidate still has the question in writing.
-            log.error("Could not record speech state for session {} turn {}", request.sessionId, request.turnIndex, e)
+            log.atError()
+                .setCause(e)
+                .addKeyValue("event", "question_speech_state_write_failed")
+                .addKeyValue("session_id", request.sessionId)
+                .addKeyValue("turn_index", request.turnIndex)
+                .addKeyValue("duration_ms", elapsedMillis(startedAt))
+                .addKeyValue("status", status.dbValue)
+                .addKeyValue("error_type", e.javaClass.simpleName)
+                .log("Could not record terminal question speech state")
         }
     }
+
+    private fun rootCause(error: RuntimeException): Throwable =
+        generateSequence<Throwable>(error) { it.cause }.last()
+
+    private fun elapsedMillis(startedAt: Long): Long = (System.nanoTime() - startedAt) / 1_000_000
 
     /**
      * The question, spoken.

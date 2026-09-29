@@ -190,6 +190,7 @@ object InterviewPlan {
         durationMinutes: Int,
         now: Instant,
         hasWarmup: Boolean = true,
+        warmupTurns: Int? = null,
     ): TurnPlan {
         // Seconds, not minutes. Whole minutes rounded the time left *up* by as much as 59
         // seconds, so the interviewer said "about two minutes left" while the clock on the
@@ -198,12 +199,12 @@ object InterviewPlan {
         val remainingSeconds = (durationMinutes * 60L - elapsedSeconds).coerceAtLeast(0)
         val elapsed = (elapsedSeconds / 60).toInt()
 
-        val warmupTurns = if (hasWarmup) warmupTurnsFor(durationMinutes) else 0
+        val effectiveWarmupTurns = warmupTurns ?: if (hasWarmup) warmupTurnsFor(durationMinutes) else 0
         val warmupCeiling = (durationMinutes * WARMUP_CEILING_SHARE).toInt().coerceAtLeast(2)
 
         // Turns are what end the warm-up. The clock only overrides a runaway one.
-        val warmingUp = answeredTurns < warmupTurns && elapsed < warmupCeiling
-        val justFinishedWarmup = hasWarmup && !warmingUp && answeredTurns <= warmupTurns
+        val warmingUp = answeredTurns < effectiveWarmupTurns && elapsed < warmupCeiling
+        val justFinishedWarmup = effectiveWarmupTurns > 0 && !warmingUp && answeredTurns <= effectiveWarmupTurns
 
         val phase =
             when {
@@ -240,17 +241,20 @@ object InterviewPlan {
     fun opening(
         durationMinutes: Int,
         hasWarmup: Boolean = true,
-    ): TurnPlan =
-        TurnPlan(
+        warmupTurns: Int? = null,
+    ): TurnPlan {
+        val effectiveWarmupTurns = warmupTurns ?: if (hasWarmup) warmupTurnsFor(durationMinutes) else 0
+        return TurnPlan(
             turnIndex = 0,
-            phase = if (hasWarmup) TurnPhase.WARMUP else TurnPhase.MAIN,
+            phase = if (effectiveWarmupTurns > 0) TurnPhase.WARMUP else TurnPhase.MAIN,
             minutesElapsed = 0,
             minutesRemaining = durationMinutes,
             durationMinutes = durationMinutes,
-            warmupFocus = if (hasWarmup) WarmupFocus.INTRODUCTION else null,
+            warmupFocus = if (effectiveWarmupTurns > 0) WarmupFocus.INTRODUCTION else null,
             briefTheCandidate = false,
             mustConclude = false,
         )
+    }
 
     fun warmupTurnsFor(durationMinutes: Int): Int = if (durationMinutes < SHORT_ROUND_MINUTES) SHORT_ROUND_WARMUP_TURNS else WARMUP_TURNS
 

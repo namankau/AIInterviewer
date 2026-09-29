@@ -92,7 +92,7 @@ function BlockView({
   switch (block.kind) {
     case "p":
       return (
-        <p className="text-body leading-relaxed text-ink-muted">
+        <p className="text-body leading-relaxed text-ink">
           <InlineText text={block.text} />
         </p>
       );
@@ -112,7 +112,7 @@ function BlockView({
         <aside className="rounded-md border border-line bg-accent-wash px-5 py-4">
           <p className="font-mono text-micro tracking-widest text-accent uppercase">The picture</p>
           <p className="mt-2 text-heading text-ink"><InlineText text={block.title} /></p>
-          <p className="mt-2 text-body leading-relaxed text-ink-muted">
+          <p className="mt-2 text-body leading-relaxed text-ink">
             <InlineText text={block.text} />
           </p>
         </aside>
@@ -123,7 +123,7 @@ function BlockView({
 
     case "list":
       return block.ordered ? (
-        <ol className="list-decimal space-y-1.5 pl-5 text-body leading-relaxed text-ink-muted">
+        <ol className="list-decimal space-y-2 pl-5 text-body leading-relaxed text-ink marker:text-accent-strong">
           {block.items.map((item, i) => (
             <li key={i}>
               <InlineText text={item} />
@@ -131,7 +131,7 @@ function BlockView({
           ))}
         </ol>
       ) : (
-        <ul className="list-disc space-y-1.5 pl-5 text-body leading-relaxed text-ink-muted">
+        <ul className="list-disc space-y-2 pl-5 text-body leading-relaxed text-ink marker:text-accent-strong">
           {block.items.map((item, i) => (
             <li key={i}>
               <InlineText text={item} />
@@ -157,7 +157,7 @@ function BlockView({
               {block.rows.map((row, i) => (
                 <tr key={i} className="border-b border-line last:border-b-0">
                   {row.map((cell, j) => (
-                    <td key={j} className="px-3 py-2 align-top text-ink-muted">
+                    <td key={j} className="px-3 py-2 align-top text-ink">
                       <InlineText text={cell} />
                     </td>
                   ))}
@@ -176,7 +176,7 @@ function BlockView({
           </p>
           <ol className="flex flex-col gap-2.5 px-4 py-4">
             {block.steps.map((step, i) => (
-              <li key={i} className="flex gap-3 text-caption leading-relaxed text-ink-muted">
+              <li key={i} className="flex gap-3 text-body leading-relaxed text-ink">
                 <span className="shrink-0 font-mono text-micro text-ink-subtle">{String(i + 1).padStart(2, "0")}</span>
                 <span>
                   <InlineText text={step} />
@@ -191,7 +191,7 @@ function BlockView({
       return (
         <div className="rounded-md border border-danger/30 bg-danger/5 px-5 py-4">
           <p className="font-mono text-micro tracking-widest text-danger uppercase">Common mistakes</p>
-          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-caption leading-relaxed text-ink-muted">
+          <ul className="mt-2 list-disc space-y-2 pl-5 text-body leading-relaxed text-ink">
             {block.items.map((item, i) => (
               <li key={i}>
                 <InlineText text={item} />
@@ -205,7 +205,7 @@ function BlockView({
       return (
         <div className="rounded-md border border-accent/30 bg-accent-wash px-5 py-4">
           <p className="font-mono text-micro tracking-widest text-accent uppercase">Never forget</p>
-          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-caption leading-relaxed text-ink">
+          <ul className="mt-2 list-disc space-y-2 pl-5 text-body leading-relaxed text-ink">
             {block.items.map((item, i) => (
               <li key={i}>
                 <InlineText text={item} />
@@ -217,18 +217,18 @@ function BlockView({
 
     case "interview":
       return (
-        <div className="rounded-md border border-line bg-surface-sunken px-5 py-4">
-          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+        <aside className="rounded-md border border-accent/30 bg-accent-wash px-5 py-4">
+          <p className="font-mono text-micro font-semibold tracking-widest text-accent-strong uppercase">
             How this comes up in interviews
           </p>
-          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-caption leading-relaxed text-ink-muted">
+          <ul className="mt-2 list-disc space-y-2 pl-5 text-body leading-relaxed text-ink marker:text-accent-strong">
             {block.items.map((item, i) => (
               <li key={i}>
                 <InlineText text={item} />
               </li>
             ))}
           </ul>
-        </div>
+        </aside>
       );
 
     case "quiz":

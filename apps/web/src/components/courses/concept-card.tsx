@@ -24,7 +24,7 @@ export function ConceptCard({ block }: { block: ConceptBlockData }) {
       <p className="mt-2 text-heading text-ink">
         <InlineText text={block.title} />
       </p>
-      <p className="mt-2 text-body leading-relaxed text-ink-muted">
+      <p className="mt-2 text-body leading-relaxed text-ink">
         <InlineText text={block.text} />
       </p>
     </aside>

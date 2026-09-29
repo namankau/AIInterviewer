@@ -35,6 +35,7 @@ const session: SessionView = {
   roleTitle: "Senior Backend Engineer",
   roundType: "project_deep_dive",
   roundLabel: "Project deep-dive",
+  focusTopic: null,
   language: "english",
   status: "in_progress",
   consentVideo: false,

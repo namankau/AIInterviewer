@@ -148,7 +148,7 @@ export function GuidedLesson({
         label: beat.label,
         shortLabel: beat.shortLabel,
         description: beat.description,
-        cardCount: beat.blocks.length,
+        itemCount: beat.blocks.length,
         content: beat.blocks.length > 0 ? (
           <BlockRenderer
             blocks={beat.blocks.map(({ block }) => block)}

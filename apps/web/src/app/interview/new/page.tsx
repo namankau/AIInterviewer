@@ -10,11 +10,17 @@ export const metadata: Metadata = { title: "Start an interview" };
  * target list, and no setup step that asks the candidate to declare targets in
  * advance (PRD 05).
  */
-export default function NewInterviewPage() {
+export default async function NewInterviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ topic?: string | string[] }>;
+}) {
+  const { topic: topicParam } = await searchParams;
+  const topic = Array.isArray(topicParam) ? topicParam[0] : topicParam;
   return (
     <AppShell breadcrumb="new interview">
       <div className="w-full max-w-2xl">
-        <NewInterviewForm />
+        <NewInterviewForm initialTopic={topic} />
       </div>
     </AppShell>
   );

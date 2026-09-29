@@ -1,5 +1,5 @@
 import type { LoopBrief, PrepPlan, RoundDraft } from "@acemyinterview/shared";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -54,6 +54,7 @@ const draft: RoundDraft = {
   roundType: "techno_managerial",
   roundLabel: "Techno-managerial",
   durationMinutes: 40,
+  focusTopic: null,
   language: "english",
   understood: "A techno-managerial round for a Senior Backend Engineer at Infosys.",
   assumptions: ["Read 'MR round' as techno-managerial", "Assumed a 40-minute round"],
@@ -72,6 +73,53 @@ describe("NewInterviewForm", () => {
       Promise.resolve(briefFor(query.company)),
     );
     fetchPrepPlan.mockReset().mockResolvedValue(emptyPlan);
+  });
+
+  it("turns a named Java round into a focused custom interview", async () => {
+    composeRound.mockResolvedValue({
+      ...draft,
+      roundType: "custom_topic",
+      roundLabel: "Custom topic",
+      durationMinutes: 20,
+      focusTopic: "Java collections",
+    });
+    startSession.mockResolvedValue({ id: "8b0d1e2f-3a4b-4c5d-9e6f-7a8b9c0d1e2f" });
+    render(<NewInterviewForm />);
+
+    await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys Java round");
+    await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+
+    await waitFor(() => expect(screen.getByDisplayValue("Java collections")).toBeInTheDocument());
+    expect(screen.queryByRole("heading", { name: /how infosys interviews/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /custom topic/i })).toBeChecked();
+    expect(
+      within(screen.getByRole("combobox", { name: /Length/i }))
+        .getAllByRole("option")
+        .map((option) => option.getAttribute("value")),
+    ).toEqual(["10", "20", "30"]);
+
+    await userEvent.click(screen.getByRole("checkbox", { name: /record my voice/i }));
+    await userEvent.click(screen.getByRole("button", { name: /begin interview/i }));
+
+    await waitFor(() =>
+      expect(startSession).toHaveBeenCalledWith(
+        "token",
+        expect.objectContaining({
+          roundType: "custom_topic",
+          focusTopic: "Java collections",
+          durationMinutes: 20,
+        }),
+      ),
+    );
+  });
+
+  it("opens a course topic as a prefilled custom interview", () => {
+    render(<NewInterviewForm initialTopic="Java: Collections" />);
+
+    expect(screen.getByRole("radio", { name: /custom topic/i })).toBeChecked();
+    expect(screen.getByDisplayValue("Java: Collections")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /Length/i })).toHaveValue("20");
+    expect(composeRound).not.toHaveBeenCalled();
   });
 
   it("turns one line into a round, and shows it back before anything starts", async () => {

@@ -126,7 +126,23 @@ class InterviewService(
                 "at this stage. Change it below if that is not what you meant."
 
         val resolution = archetypeResolver.resolve(company)
-        val duration = composed.durationMinutes?.coerceIn(MIN_ROUND_MINUTES, MAX_ROUND_MINUTES) ?: DEFAULT_ROUND_MINUTES
+        val draftedFocus =
+            composed.focusTopic
+                ?.trim()
+                ?.take(120)
+                ?.takeIf { it.isNotBlank() }
+        val focusTopic =
+            if (roundType == RoundType.CUSTOM_TOPIC) {
+                draftedFocus ?: request.query.trim().take(120)
+            } else {
+                null
+            }
+        val duration =
+            if (roundType == RoundType.CUSTOM_TOPIC) {
+                composed.durationMinutes?.takeIf { it in CUSTOM_ROUND_MINUTES } ?: DEFAULT_CUSTOM_ROUND_MINUTES
+            } else {
+                composed.durationMinutes?.coerceIn(MIN_ROUND_MINUTES, MAX_ROUND_MINUTES) ?: DEFAULT_ROUND_MINUTES
+            }
 
         return RoundDraft(
             companyName = company,
@@ -158,6 +174,7 @@ class InterviewService(
                         bankRounds.questionCount(company, roundType),
                     )
                 },
+            focusTopic = focusTopic,
         )
     }
 
@@ -198,6 +215,20 @@ class InterviewService(
         val roundType =
             RoundType.parseOrNull(request.roundType)
                 ?: throw ApiException.badRequest("That is not a round type we run.", code = "unknown_round_type")
+        val focusTopic = request.focusTopic?.trim()?.takeIf { it.isNotBlank() }
+        if (roundType == RoundType.CUSTOM_TOPIC && focusTopic == null) {
+            throw ApiException.badRequest(
+                "Name the topic you want this custom round to practise.",
+                code = "custom_topic_required",
+            )
+        }
+        if (roundType == RoundType.CUSTOM_TOPIC && request.durationMinutes !in CUSTOM_ROUND_MINUTES) {
+            throw ApiException.badRequest(
+                "Custom rounds can be 10, 20, or 30 minutes.",
+                code = "custom_duration_invalid",
+            )
+        }
+        val normalisedRequest = request.copy(focusTopic = focusTopic?.takeIf { roundType == RoundType.CUSTOM_TOPIC })
 
         // Optional, and rejected outright when it does not parse rather than silently
         // dropped — the same treatment an unrecognised round type gets above.
@@ -214,24 +245,24 @@ class InterviewService(
         // run at all — and read once, then carried, rather than fetched again inside
         // `composeAndOpen`.
         val background = resumeService.backgroundFor(userId)
-        val stage = CandidateStage.of(request.roleTitle, background?.tenure?.totalExperienceMonths, declaredStage = declaredStage)
+        val stage = CandidateStage.of(normalisedRequest.roleTitle, background?.tenure?.totalExperienceMonths, declaredStage = declaredStage)
         refuseRoundAboveStage(roundType, stage)
 
-        val resolution = archetypeResolver.resolve(request.companyName)
+        val resolution = archetypeResolver.resolve(normalisedRequest.companyName)
         val sessionId =
             inTransaction {
                 // Provisioning used to be a side effect of GET /me, so starting an interview
                 // before that endpoint had ever been called failed on the users foreign key.
                 // Any entry point that creates user-owned rows has to stand on its own.
                 userRepository.provision(identity)
-                admitAndInsert(userId, request, roundType, resolution, declaredStage)
+                admitAndInsert(userId, normalisedRequest, roundType, resolution, declaredStage)
             }
 
         // The session row has committed, so a failure from here on can no longer be rolled
         // back — it has to be recorded. Without this a round that died mid-setup would sit
         // `in_progress` with no question in it, and block the candidate's next start.
         return try {
-            composeAndOpen(userId, sessionId, request, roundType, resolution, background, stage, declaredStage)
+            composeAndOpen(userId, sessionId, normalisedRequest, roundType, resolution, background, stage, declaredStage)
         } catch (e: RuntimeException) {
             runCatching { repository.markSessionStatus(sessionId, userId, "failed") }
                 .onSuccess { changed ->
@@ -305,6 +336,7 @@ class InterviewService(
                 consentVideo = request.consentVideo,
                 durationMinutes = request.durationMinutes,
                 declaredStage = declaredStage,
+                focusTopic = request.focusTopic,
             )
         } catch (e: DuplicateKeyException) {
             throw ApiException.conflict(
@@ -337,6 +369,7 @@ class InterviewService(
                 language = request.language,
                 background = background,
                 declaredStage = declaredStage,
+                focusTopic = request.focusTopic,
             )
         // A DSA or design round is conducted around material — a problem, or a case — and
         // its opening is templated from that rather than asked of the model separately.
@@ -364,7 +397,8 @@ class InterviewService(
             fromPool ?: AiSpendContext.of(userId, sessionId) {
                 roundWorkspaceComposer.compose(brief, roundType, request.durationMinutes, seed)
             }
-        val plan = InterviewPlan.opening(request.durationMinutes, hasWarmup = workspace == null)
+        val warmupTurns = if (workspace == null) roundType.warmupTurns(request.durationMinutes) else 0
+        val plan = InterviewPlan.opening(request.durationMinutes, warmupTurns = warmupTurns)
 
         val opening =
             workspace?.let {
@@ -377,7 +411,10 @@ class InterviewService(
             } ?: try {
                 AiSpendContext
                     .of(userId, sessionId) {
-                        interviewAi.composeOpeningQuestion(brief, plan.toContext(stage))
+                        interviewAi.composeOpeningQuestion(
+                            brief,
+                            plan.toContext(stage, followUpLimit = roundType.followUpLimit),
+                        )
                     }.value
             } catch (e: AiUnavailableException) {
                 if (!repository.markSessionStatus(sessionId, userId, "failed")) {
@@ -506,6 +543,19 @@ class InterviewService(
                     backgroundExecutor,
                 )
 
+            val roundType = RoundType.fromDbValue(session.roundType)
+            val priorTurns =
+                repository
+                    .listTranscript(sessionId, userId)
+                    .filter { it.turnIndex < turnIndex && it.answerTranscript != null }
+                    .map { it.toTranscript() }
+            val consecutiveFollowUps =
+                priorTurns
+                    .asReversed()
+                    .takeWhile { it.nextAction in FOLLOW_UP_ACTIONS }
+                    .size
+            val mustMoveOn = consecutiveFollowUps >= roundType.followUpLimit
+
             // The plan for what happens next, decided here rather than by the model: this
             // answer is in the bag, so the count it is planned against includes it.
             val plan =
@@ -515,19 +565,23 @@ class InterviewService(
                     startedAt = session.startedAt,
                     durationMinutes = session.durationMinutes,
                     now = Instant.now(),
-                    hasWarmup = session.workspace == null,
+                    warmupTurns = if (session.workspace == null) roundType.warmupTurns(session.durationMinutes) else 0,
                 )
 
-            val roundType = RoundType.fromDbValue(session.roundType)
             val resolution =
                 ArchetypeResolution(Archetype.fromDbValue(session.archetype), confidenceOf(session.archetypeConfidence))
             // The question planned for the next turn, if the round has one to offer. Never in the
             // warm-up or once the round is closing, and never in a workspace round, whose material
             // already is the question. The first question of the round proper must be it.
-            val askNow = plan.briefTheCandidate
+            val askNow = plan.briefTheCandidate || mustMoveOn
             val background = resumeService.backgroundFor(userId)
             val planned =
-                if (session.workspace == null && !plan.mustConclude && (plan.phase == TurnPhase.MAIN || askNow)) {
+                if (
+                    session.workspace == null &&
+                    roundType != RoundType.CUSTOM_TOPIC &&
+                    !plan.mustConclude &&
+                    (plan.phase == TurnPhase.MAIN || askNow)
+                ) {
                     plannedQuestion(userId, session, roundType, resolution.archetype, background?.tenure?.totalExperienceMonths)
                 } else {
                     null
@@ -542,12 +596,8 @@ class InterviewService(
                     background = background,
                     planned = planned?.let { PlannedQuestion(it.text, session.companyName, askNow, reported = it is PlannedFrom.Bank) },
                     declaredStage = session.declaredStage,
+                    focusTopic = session.focusTopic,
                 )
-            val priorTurns =
-                repository
-                    .listTranscript(sessionId, userId)
-                    .filter { it.turnIndex < turnIndex && it.answerTranscript != null }
-                    .map { it.toTranscript() }
 
             val assessment =
                 try {
@@ -561,6 +611,8 @@ class InterviewService(
                                         background?.tenure?.totalExperienceMonths,
                                         declaredStage = session.declaredStage,
                                     ),
+                                    followUpLimit = roundType.followUpLimit,
+                                    mustMoveOn = mustMoveOn,
                                 ),
                             priorTurns = priorTurns,
                             currentQuestion = turn.questionText,
@@ -577,7 +629,7 @@ class InterviewService(
                     )
                 }
 
-            val nextAction = normaliseAction(assessment.value.suggestedNextAction)
+            val nextAction = if (mustMoveOn) "move_on" else normaliseAction(assessment.value.suggestedNextAction)
             val intervention = Intervention.parse(assessment.value.intervention)
             // The upload has almost always finished under the assessment by now. Joining it
             // cannot fail the turn: storeOrWarn has already turned its own errors into nulls.
@@ -813,6 +865,7 @@ class InterviewService(
                     language = session.language,
                     background = background,
                     declaredStage = session.declaredStage,
+                    focusTopic = session.focusTopic,
                 )
             val plan =
                 InterviewPlan.forTurn(
@@ -821,7 +874,7 @@ class InterviewService(
                     startedAt = session.startedAt,
                     durationMinutes = session.durationMinutes,
                     now = Instant.now(),
-                    hasWarmup = session.workspace == null,
+                    warmupTurns = if (session.workspace == null) roundType.warmupTurns(session.durationMinutes) else 0,
                 )
             val priorTurns =
                 repository
@@ -832,7 +885,12 @@ class InterviewService(
             val offered =
                 try {
                     AiSpendContext.of(userId, sessionId) {
-                        interviewAi.offerHint(brief, plan.toContext(stage), priorTurns, turn.questionText)
+                        interviewAi.offerHint(
+                            brief,
+                            plan.toContext(stage, followUpLimit = roundType.followUpLimit),
+                            priorTurns,
+                            turn.questionText,
+                        )
                     }
                 } catch (e: AiUnavailableException) {
                     log.warn("Hint unavailable for session {} turn {}", sessionId, turnIndex, e)
@@ -1054,6 +1112,7 @@ class InterviewService(
                 latest
                     ?.takeIf { it.answeredAt == null }
                     ?.let { turnViewOf(it) },
+            focusTopic = session.focusTopic,
         )
     }
 
@@ -1228,8 +1287,31 @@ class InterviewService(
         background: CandidateBackground? = null,
         planned: PlannedQuestion? = null,
         declaredStage: DeclaredStage? = null,
+        focusTopic: String? = null,
     ): InterviewBrief {
         val stage = CandidateStage.of(role, background?.tenure?.totalExperienceMonths, declaredStage = declaredStage)
+        val roundScope =
+            when (roundType) {
+                RoundType.CUSTOM_TOPIC -> {
+                    listOf(
+                        "Stay strictly within the requested topic: ${focusTopic.orEmpty()}.",
+                        "Test concepts, trade-offs, and practical application within that topic.",
+                    )
+                }
+
+                RoundType.PROJECT_DEEP_DIVE -> {
+                    stage.covers(roundType) +
+                        "This is the dedicated project round. Follow the candidate's project answers where useful."
+                }
+
+                else -> {
+                    stage.covers(roundType) +
+                        listOf(
+                            "You may ask at most one short opening question about recent work, then move into this round's scope.",
+                            "Do not repeatedly mine the resume or projects; test the named round competencies instead.",
+                        )
+                }
+            }
         return InterviewBrief(
             company = company,
             archetype = resolution.archetype.label,
@@ -1238,7 +1320,7 @@ class InterviewService(
             // The ground a *fresher* has to be taken across is not the ground somebody
             // with a job is: four of the professional entries ask a student about work
             // they have not done, and an interviewer with nowhere else to go asks them.
-            roundCovers = stage.covers(roundType).joinToString("\n") { "- $it" },
+            roundCovers = roundScope.joinToString("\n") { "- $it" },
             language = language,
             // Null on every round until the resume existed, which is precisely why the
             // project deep-dive had nothing of the candidate's own to dig into.
@@ -1263,21 +1345,26 @@ class InterviewService(
      *   answer. Null where the caller has not derived it, which reads as the professional
      *   wording — the behaviour before task 048.
      */
-    private fun TurnPlan.toContext(stage: CandidateStage? = null) =
-        RoundContext(
-            phase =
-                when (phase) {
-                    TurnPhase.WARMUP -> "warm-up"
-                    TurnPhase.MAIN -> "main round"
-                    TurnPhase.CLOSING -> "closing"
-                },
-            minutesElapsed = minutesElapsed,
-            minutesRemaining = minutesRemaining,
-            durationMinutes = durationMinutes,
-            warmupInstruction = warmupFocus?.instructionFor(stage?.campusFresher == true),
-            briefTheCandidate = briefTheCandidate,
-            mustConclude = mustConclude,
-        )
+    private fun TurnPlan.toContext(
+        stage: CandidateStage? = null,
+        followUpLimit: Int = 2,
+        mustMoveOn: Boolean = false,
+    ) = RoundContext(
+        phase =
+            when (phase) {
+                TurnPhase.WARMUP -> "warm-up"
+                TurnPhase.MAIN -> "main round"
+                TurnPhase.CLOSING -> "closing"
+            },
+        minutesElapsed = minutesElapsed,
+        minutesRemaining = minutesRemaining,
+        durationMinutes = durationMinutes,
+        warmupInstruction = warmupFocus?.instructionFor(stage?.campusFresher == true),
+        briefTheCandidate = briefTheCandidate,
+        mustConclude = mustConclude,
+        followUpLimit = followUpLimit,
+        mustMoveOn = mustMoveOn,
+    )
 
     private fun TurnRow.toTranscript() =
         TurnTranscript(
@@ -1287,6 +1374,7 @@ class InterviewService(
             interventionNote = interventionNote,
             warmUp = TurnPhase.fromDbValue(phase) == TurnPhase.WARMUP,
             deliveryNote = deliveryNote,
+            nextAction = nextAction,
         )
 
     /** Media is evidence, not a precondition. A failure is logged and the round goes on. */
@@ -1347,8 +1435,11 @@ class InterviewService(
         const val DEFAULT_ROUND_MINUTES = 40
         const val MIN_ROUND_MINUTES = 10
         const val MAX_ROUND_MINUTES = 120
+        const val DEFAULT_CUSTOM_ROUND_MINUTES = 20
         const val REQUEST_LEASE_SECONDS = 10 * 60L
         val DRAFT_CONFIDENCES = setOf("high", "medium", "low")
+        val CUSTOM_ROUND_MINUTES = setOf(10, 20, 30)
+        val FOLLOW_UP_ACTIONS = setOf("follow_up", "probe", "challenge")
 
         /**
          * What a drafted round becomes when the one the model chose is not run at campus

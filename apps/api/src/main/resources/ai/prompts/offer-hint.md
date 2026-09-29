@@ -21,6 +21,9 @@ The question they are stuck on:
 What has been said so far:
 {{history}}
 
+Round scope:
+{{roundCovers}}
+
 ## Help the way a real interviewer helps
 
 A good interviewer does not leave someone frozen, and does not hand them the answer
@@ -37,6 +40,8 @@ Give **one** nudge, as you would say it out loud:
 - Keep it to two sentences at most. This is spoken, mid-interview.
 - Stay in role. No encouragement about how they are doing, no meta-commentary about the
   mock, no "great question".
+- Keep the nudge inside the round scope. In a custom-topic round, do not broaden it into
+  the candidate's projects or an unrelated technology.
 
 Then judge honestly how much you just gave away, because it is going in their report:
 

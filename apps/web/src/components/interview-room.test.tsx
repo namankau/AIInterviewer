@@ -25,6 +25,7 @@ vi.mock("@/lib/api", () => ({
   abandonSession: vi.fn(),
   finishSession: vi.fn(),
   requestHint: vi.fn(),
+  reportInterviewClientEvent: vi.fn().mockResolvedValue(undefined),
   saveBoard: vi.fn(),
   submitAnswer: vi.fn(),
 }));

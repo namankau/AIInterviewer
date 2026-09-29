@@ -39,7 +39,7 @@ export function StepsBlock({ block }: { block: StepsBlockData }) {
                   <InlineText text={step.label} />
                 </span>
               </div>
-              <p className="text-caption leading-relaxed text-ink-muted">
+              <p className="text-body leading-relaxed text-ink">
                 <InlineText text={step.text} />
               </p>
             </div>

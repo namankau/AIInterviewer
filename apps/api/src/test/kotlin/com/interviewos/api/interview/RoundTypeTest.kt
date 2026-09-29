@@ -56,4 +56,28 @@ class RoundTypeTest {
             assertTrue(!ground.contains("their project"), "${round.dbValue} points at their projects: $ground")
         }
     }
+
+    @Test
+    fun `technical fundamentals cover the expected software engineering foundations`() {
+        val ground =
+            RoundType.TECHNICAL_FUNDAMENTALS.covers
+                .joinToString(" ")
+                .lowercase()
+
+        for (topic in listOf("operating system", "database", "java", "collections", "oop", "solid", "system design")) {
+            assertTrue(ground.contains(topic), "technical fundamentals is missing $topic: $ground")
+        }
+    }
+
+    @Test
+    fun `rounds cap follow ups and keep project context brief outside the project deep dive`() {
+        assertEquals(3, RoundType.PROJECT_DEEP_DIVE.followUpLimit)
+        assertEquals(3, RoundType.CUSTOM_TOPIC.followUpLimit)
+        assertEquals(0, RoundType.CUSTOM_TOPIC.warmupTurns(20))
+
+        for (round in RoundType.entries - setOf(RoundType.PROJECT_DEEP_DIVE, RoundType.CUSTOM_TOPIC)) {
+            assertEquals(2, round.followUpLimit, "${round.dbValue} should move on after two follow-ups")
+            assertEquals(1, round.warmupTurns(40), "${round.dbValue} should only ask one context-setting question")
+        }
+    }
 }

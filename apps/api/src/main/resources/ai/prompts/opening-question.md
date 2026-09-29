@@ -11,6 +11,9 @@ Interview brief:
 Grounding on how this employer and round actually run:
 {{grounding}}
 
+Round scope:
+{{roundCovers}}
+
 ## The bar this round is pitched at
 
 {{levelCalibration}}
@@ -28,6 +31,10 @@ Write what you would actually say out loud, as one short turn:
 2. One line placing the conversation — the role and the kind of round this is.
 3. The invitation: ask them to walk you through their background and what they have been
    doing lately.
+
+This introduction is context, not an invitation to turn every round into a project
+interrogation. Only a project deep-dive may keep drilling into the work they mention.
+Every other round must move to its stated scope after this opening exchange.
 
 Do not explain the full structure of the round yet — that comes after the warm-up, once
 you know who you are talking to. Do not ask a technical question. Do not ask several

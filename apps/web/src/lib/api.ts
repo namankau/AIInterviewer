@@ -215,6 +215,34 @@ export function fetchTurn(
   return apiGet<TurnView>(`/api/v1/sessions/${sessionId}/turns/${turnIndex}`, options);
 }
 
+export type InterviewClientEvent =
+  | "browser_speech_failed"
+  | "browser_speech_timed_out"
+  | "question_audio_poll_timed_out"
+  | "model_audio_play_rejected"
+  | "model_audio_error"
+  | "model_audio_stalled"
+  | "model_audio_timed_out";
+
+/**
+ * Records a privacy-safe failure marker for the live room. The server deliberately
+ * accepts only this small event vocabulary: question text, transcripts, audio and
+ * browser details do not belong in application logs.
+ */
+export function reportInterviewClientEvent(
+  accessToken: string,
+  sessionId: string,
+  event: InterviewClientEvent,
+  turnIndex: number,
+  durationMs?: number,
+): Promise<void> {
+  return apiSend<void>(`/api/v1/sessions/${sessionId}/client-events`, "POST", accessToken, {
+    event,
+    turnIndex,
+    ...(durationMs === undefined ? {} : { durationMs }),
+  });
+}
+
 export function fetchReport(id: string, options: ApiGetOptions): Promise<SessionReport> {
   return apiGet<SessionReport>(`/api/v1/sessions/${id}/report`, options);
 }

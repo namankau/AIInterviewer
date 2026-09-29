@@ -81,7 +81,8 @@ class SecurityConfig {
             CorsConfiguration().apply {
                 allowedOrigins = properties.allowedOrigins
                 allowedMethods = listOf("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
-                allowedHeaders = listOf("Authorization", "Content-Type")
+                allowedHeaders = listOf("Authorization", "Content-Type", "X-Request-ID")
+                exposedHeaders = listOf("X-Request-ID")
                 maxAge = 3600
             }
         return UrlBasedCorsConfigurationSource().apply {

@@ -51,6 +51,7 @@ export const ROUND_TYPES = [
   "techno_managerial",
   "behavioural_competency",
   "hr_fit_closing",
+  "custom_topic",
 ] as const;
 export type RoundType = (typeof ROUND_TYPES)[number];
 

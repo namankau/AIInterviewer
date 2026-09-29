@@ -28,9 +28,27 @@ licensed primary sources:
   <https://github.com/kubernetes/website/tree/2ad36cb0f1215e344d9108c0edaf3cbee081dce0>.
   Licence: <https://kubernetes.io/docs/contribute/advanced/#license>.
   Used to cross-check the distinction between readiness and liveness probes and general
-  horizontal-scaling terminology. No Kubernetes logos, diagrams or copied prose are used.
+  horizontal-scaling, rollout and health-check terminology. No Kubernetes logos, diagrams
+  or copied prose are used.
+- **QuickFIX/J**, Contributors to the QuickFIX/J project — QuickFIX Software License
+  Version 1.0. Reviewed revision `0ffe2f49cee24b1b55ce81283294d1b9ceaffb5b`
+  (2026-09-25):
+  <https://github.com/quickfix-j/quickfixj/tree/0ffe2f49cee24b1b55ce81283294d1b9ceaffb5b>.
+  Licence: <https://github.com/quickfix-j/quickfixj/blob/0ffe2f49cee24b1b55ce81283294d1b9ceaffb5b/LICENSE>.
+  Used only to cross-check public FIX gateway and order-message vocabulary for the generic
+  retail-brokerage exercise. No source code, protocol examples or repository prose are used.
+- **H3**, Uber Technologies, Inc. and contributors — Apache License 2.0:
+  Reviewed revision `cd62033b337b128ea7c4749f2302143b424187fc` (2026-09-25):
+  <https://github.com/uber/h3/tree/cd62033b337b128ea7c4749f2302143b424187fc>.
+  Licence: <https://github.com/uber/h3/blob/cd62033b337b128ea7c4749f2302143b424187fc/LICENSE>.
+  Used only to cross-check the public concept of hierarchical geospatial cells for the
+  generic ride-dispatch exercise. No H3 code, diagrams, indexes or prose are included.
 
 Product-shaped case studies deliberately use generic names such as “collaborative document
 editor” and “ticket booking platform”. They do not claim to describe any named company's
 private architecture. Educative, ByteByteGo, LeetCode company tags and other proprietary or
 non-redistributable course material were not used.
+
+The local `Course Materials/SysDesign` filenames were treated only as a coverage checklist.
+No PDF or video was transcribed, paraphrased, extracted, embedded or used as a factual source.
+All teaching expression and all quiz/scenario wording in this directory are original.

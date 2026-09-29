@@ -12,7 +12,7 @@ export type GuidedBeat = {
   label: string;
   shortLabel: string;
   description: string;
-  cardCount: number;
+  itemCount: number;
   content: ReactNode;
 };
 
@@ -86,7 +86,7 @@ export function GuidedLessonControls({
               <div className="border-t border-line px-4 py-5 sm:px-6 sm:py-7">
                 {beat.content ?? <p className="max-w-[65ch] rounded-md border border-dashed border-line-strong bg-surface-sunken px-4 py-3 text-caption leading-relaxed text-ink-muted">This chapter does not need a separate activity for this beat. Continue when you are ready.</p>}
                 <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-                  <p className="font-mono text-micro text-ink-subtle">{beat.cardCount} learning {beat.cardCount === 1 ? "card" : "cards"}</p>
+                  <p className="font-mono text-micro text-ink-subtle">{beat.itemCount} lesson {beat.itemCount === 1 ? "item" : "items"}</p>
                   {index < beats.length - 1 ? <button type="button" onClick={() => visitBeat(index + 1)} className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 py-2 text-caption font-medium text-accent-contrast transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Continue to {beats[index + 1]!.shortLabel}</button> : null}
                 </div>
               </div>

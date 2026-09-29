@@ -17,6 +17,14 @@ server:
     include-message: never
     include-stacktrace: never
 
+# Spring Boot's built-in Logstash JSON formatter keeps stdout machine-searchable
+# without adding another logging library. Set this to an empty value only for local
+# troubleshooting that explicitly needs the old plain-text console format.
+logging:
+  structured:
+    format:
+      console: ${LOGGING_STRUCTURED_FORMAT_CONSOLE:logstash}
+
 management:
   endpoints:
     web:

@@ -65,6 +65,8 @@ export interface SessionView {
   roleTitle: string;
   roundType: RoundType;
   roundLabel: string;
+  /** A candidate-chosen scope for a focused custom-topic round. */
+  focusTopic: string | null;
   language: InterviewLanguage;
   status: "created" | "in_progress" | "completed" | "abandoned" | "failed";
   /** Whether video was consented to. The only thing that may open the camera. */
@@ -217,6 +219,8 @@ export interface RoundDraft {
   level: string;
   roundType: RoundType;
   roundLabel: string;
+  /** The strict scope when the composer recognises a topic-focused request. */
+  focusTopic: string | null;
   durationMinutes: number;
   language: InterviewLanguage;
   /** One sentence back to the candidate, saying what was taken from what they wrote. */
@@ -239,6 +243,8 @@ export interface StartSessionRequest {
   companyName: string;
   roleTitle: string;
   roundType: RoundType;
+  /** Required by the API when `roundType` is `custom_topic`. */
+  focusTopic?: string;
   language: InterviewLanguage;
   consentAudio: boolean;
   consentVideo: boolean;

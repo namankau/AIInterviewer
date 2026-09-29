@@ -64,6 +64,8 @@ export default async function ChapterPage({
   const { prev, next } = getAdjacentChapters(course, chapterSlug);
   const arenaCount = challengesForChapter(course.slug, chapter.slug).length;
   const courseToc = toCourseTocData(course);
+  const interviewTopic = `${plainText(course.title)}: ${plainText(chapter.title)}`;
+  const topicInterviewHref = `/interview/new?topic=${encodeURIComponent(interviewTopic)}` as Route;
   // Shiki runs here, at build time (this page is statically generated via
   // generateStaticParams), so the highlighted HTML ships with the page and zero
   // highlighting JS reaches the browser (task 049).
@@ -85,15 +87,23 @@ export default async function ChapterPage({
             </p>
             <h1 className="mt-3 text-display text-balance text-ink"><InlineText text={chapter.title} /></h1>
             <p className="mt-3 text-body text-ink-muted">{chapter.summary}</p>
-            {arenaCount > 0 ? (
+            <div className="mt-4 flex flex-wrap gap-2">
               <Link
-                href={`/arena/${course.slug}?chapter=${chapter.slug}`}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-line-strong px-3.5 py-1.5 text-caption font-medium text-accent transition-colors hover:border-accent"
+                href={topicInterviewHref}
+                className="inline-flex items-center rounded-full bg-accent px-3.5 py-1.5 text-caption font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
               >
-                Practise this chapter in the Arena
-                <span className="text-ink-subtle">· {arenaCount}</span>
+                Practise this topic in an interview
               </Link>
-            ) : null}
+              {arenaCount > 0 ? (
+                <Link
+                  href={`/arena/${course.slug}?chapter=${chapter.slug}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line-strong px-3.5 py-1.5 text-caption font-medium text-accent transition-colors hover:border-accent"
+                >
+                  Practise this chapter in the Arena
+                  <span className="text-ink-subtle">· {arenaCount}</span>
+                </Link>
+              ) : null}
+            </div>
           </div>
 
           <div className="mt-10">

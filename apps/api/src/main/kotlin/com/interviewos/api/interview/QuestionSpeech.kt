@@ -78,7 +78,8 @@ class QuestionSpeech(
 
     private fun renderNow(request: SpeechRequest) {
         val startedAt = System.nanoTime()
-        log.atInfo()
+        log
+            .atInfo()
             .addKeyValue("event", "question_speech_started")
             .addKeyValue("session_id", request.sessionId)
             .addKeyValue("turn_index", request.turnIndex)
@@ -93,7 +94,8 @@ class QuestionSpeech(
                 objectPath
             } catch (e: RuntimeException) {
                 val cause = rootCause(e)
-                log.atWarn()
+                log
+                    .atWarn()
                     .setCause(cause)
                     .addKeyValue("event", "question_speech_failed")
                     .addKeyValue("session_id", request.sessionId)
@@ -114,7 +116,8 @@ class QuestionSpeech(
                 audioPath = path,
                 status = status,
             )
-            log.atInfo()
+            log
+                .atInfo()
                 .addKeyValue("event", "question_speech_finished")
                 .addKeyValue("session_id", request.sessionId)
                 .addKeyValue("turn_index", request.turnIndex)
@@ -126,7 +129,8 @@ class QuestionSpeech(
             // The room polls while a turn is `pending`. Losing this write would leave it
             // polling forever, so it is worth a line in the log even though the round is
             // unaffected — the candidate still has the question in writing.
-            log.atError()
+            log
+                .atError()
                 .setCause(e)
                 .addKeyValue("event", "question_speech_state_write_failed")
                 .addKeyValue("session_id", request.sessionId)
@@ -138,8 +142,7 @@ class QuestionSpeech(
         }
     }
 
-    private fun rootCause(error: RuntimeException): Throwable =
-        generateSequence<Throwable>(error) { it.cause }.last()
+    private fun rootCause(error: RuntimeException): Throwable = generateSequence<Throwable>(error) { it.cause }.last()
 
     private fun elapsedMillis(startedAt: Long): Long = (System.nanoTime() - startedAt) / 1_000_000
 

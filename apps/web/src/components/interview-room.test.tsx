@@ -139,4 +139,19 @@ describe("InterviewRoom session entry", () => {
     expect(screen.getByText("Device check")).toBeInTheDocument();
     expect(beginSession).toHaveBeenCalledTimes(1);
   });
+
+  it("does not announce a writing-mode fallback when question audio is unavailable", async () => {
+    fetchSession.mockResolvedValue(baseSession);
+    beginSession.mockResolvedValue({
+      startedAt: "2026-09-29T09:00:00Z",
+      scheduledEndAt: "2026-09-29T09:30:00Z",
+    });
+    render(<InterviewRoom sessionId={baseSession.id} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Enter the room" }));
+
+    expect(await screen.findByRole("button", { name: "Leave (forfeit)" })).toBeInTheDocument();
+    expect(screen.queryByText(/voice is unavailable/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/round is in writing/i)).not.toBeInTheDocument();
+  });
 });

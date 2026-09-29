@@ -1,7 +1,7 @@
 "use client";
 
 import type { SpeechStatus, TurnView } from "@acemyinterview/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { fetchTurn } from "@/lib/api";
 
@@ -39,16 +39,21 @@ export function useQuestionAudio({
   sessionId,
   turn,
   accessToken,
+  onPollTimeout,
 }: {
   sessionId: string;
   turn: TurnView | null;
   /** `undefined` while the session is still being read — see useAccessToken. */
   accessToken: string | null | undefined;
+  /** Privacy-safe telemetry hook; the room decides how to deliver it. */
+  onPollTimeout?: (turnIndex: number, durationMs: number) => void;
 }): QuestionAudio {
   // The turn a resolved voice belongs to is kept alongside it, so a new question falls
   // back to its own state during the same render. Clearing it in an effect instead would
   // hand the room turn 2's audio for one frame of turn 3, and play the wrong question.
   const [resolved, setResolved] = useState<{ turnIndex: number; audio: QuestionAudio } | null>(null);
+  const onPollTimeoutRef = useRef(onPollTimeout);
+  onPollTimeoutRef.current = onPollTimeout;
 
   const turnIndex = turn?.turnIndex ?? null;
   const initialStatus = turn?.questionAudioStatus ?? "unavailable";
@@ -62,7 +67,10 @@ export function useQuestionAudio({
     const timer = setInterval(async () => {
       if (Date.now() - startedAt > POLL_CEILING_MS) {
         clearInterval(timer);
-        if (active) setResolved({ turnIndex, audio: { url: null, status: "unavailable" } });
+        if (active) {
+          onPollTimeoutRef.current?.(turnIndex, Date.now() - startedAt);
+          setResolved({ turnIndex, audio: { url: null, status: "unavailable" } });
+        }
         return;
       }
 

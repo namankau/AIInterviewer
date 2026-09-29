@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { pickVoice, rank, speak } from "./browser-speech";
+import { pickVoice, rank, speak, speechCompletionTimeoutMs } from "./browser-speech";
 
 /**
  * Choosing the voice is the whole decision here: a modern neural voice is worth using
@@ -179,6 +179,18 @@ describe("speak", () => {
     vi.advanceTimersByTime(10_000);
 
     expect(onEnd).toHaveBeenCalledExactlyOnceWith("finished");
+  });
+
+  /** The production failure: start fires, speech stops, and end/error never arrive. */
+  it("releases the room when a started voice never finishes", () => {
+    const onEnd = vi.fn();
+    speak({ text: QUESTION, voice: null, onEnd });
+    spoken().onstart?.();
+
+    vi.advanceTimersByTime(speechCompletionTimeoutMs(QUESTION));
+
+    expect(onEnd).toHaveBeenCalledExactlyOnceWith("timed_out");
+    expect(window.speechSynthesis.cancel).toHaveBeenCalledTimes(2);
   });
 
   /** Leaving the room mid-question must not fire a watchdog at the next screen. */

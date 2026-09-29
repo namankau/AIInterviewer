@@ -112,6 +112,8 @@ export interface SpokenHandle {
   cancel: () => void;
 }
 
+export type SpeechEndReason = "finished" | "failed" | "timed_out";
+
 /**
  * How long to wait for the voice to actually begin before giving up on it.
  *
@@ -121,6 +123,15 @@ export interface SpokenHandle {
  * exactly what happened, for three minutes, with no timeout here at all.
  */
 const START_TIMEOUT_MS = 3_000;
+
+/**
+ * A browser voice can report that it started and then disappear without an end or error
+ * event. Allow deliberately slow speech, but never let that browser defect hold the
+ * interview room forever.
+ */
+export function speechCompletionTimeoutMs(text: string): number {
+  return Math.min(90_000, Math.max(15_000, text.length * 220));
+}
 
 /** How long a started voice may go without a `boundary` before the text is shown whole. */
 const BOUNDARY_GRACE_MS = 1_200;
@@ -144,7 +155,7 @@ export function speak({
   voice: SpeechSynthesisVoice | null;
   rate?: number;
   onProgress?: (charactersSpoken: number) => void;
-  onEnd?: (reason: "finished" | "failed") => void;
+  onEnd?: (reason: SpeechEndReason) => void;
 }): SpokenHandle {
   if (typeof window === "undefined" || !window.speechSynthesis) {
     onEnd?.("failed");
@@ -171,7 +182,7 @@ export function speak({
   };
 
   /** Exactly one end, whoever gets there first. */
-  const finish = (reason: "finished" | "failed") => {
+  const finish = (reason: SpeechEndReason) => {
     if (done) return;
     done = true;
     clearTimers();
@@ -180,6 +191,12 @@ export function speak({
 
   utterance.onstart = () => {
     started = true;
+    timers.push(
+      window.setTimeout(() => {
+        finish("timed_out");
+        synthesis.cancel();
+      }, speechCompletionTimeoutMs(text)),
+    );
     // Some voices — Chrome's network ones especially — speak the whole utterance without
     // ever firing `boundary`. The reveal is driven by those events, so the question would
     // stay invisible for as long as it is being read aloud. Show it whole instead: an

@@ -53,7 +53,10 @@ export function useQuestionAudio({
   // hand the room turn 2's audio for one frame of turn 3, and play the wrong question.
   const [resolved, setResolved] = useState<{ turnIndex: number; audio: QuestionAudio } | null>(null);
   const onPollTimeoutRef = useRef(onPollTimeout);
-  onPollTimeoutRef.current = onPollTimeout;
+
+  useEffect(() => {
+    onPollTimeoutRef.current = onPollTimeout;
+  }, [onPollTimeout]);
 
   const turnIndex = turn?.turnIndex ?? null;
   const initialStatus = turn?.questionAudioStatus ?? "unavailable";

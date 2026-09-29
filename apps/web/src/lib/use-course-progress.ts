@@ -41,6 +41,7 @@ let listeners: Array<() => void> = [];
 /** The token the current `state` was loaded for; a change means reload and discard. */
 let loadedFor: string | null = null;
 let inFlight: Promise<void> | null = null;
+let generation = 0;
 
 function setState(next: StoreState) {
   state = next;
@@ -68,6 +69,7 @@ function getServerSnapshot(): StoreState {
  * progress on screen. Exported for tests; called when the token changes.
  */
 export function resetCourseProgress() {
+  generation += 1;
   loadedFor = null;
   inFlight = null;
   setState(EMPTY);
@@ -75,21 +77,24 @@ export function resetCourseProgress() {
 
 function load(accessToken: string) {
   if (loadedFor === accessToken && inFlight === null) return;
-  if (inFlight) return;
+  if (loadedFor === accessToken && inFlight) return;
 
+  const requestGeneration = ++generation;
   loadedFor = accessToken;
-  inFlight = fetchCourseProgress({ accessToken })
+  setState(EMPTY);
+  const request = fetchCourseProgress({ accessToken })
     .then((view) => {
+      if (generation !== requestGeneration || loadedFor !== accessToken) return;
       setState({ status: "ready", completed: view.completed ?? {} });
     })
     .catch(() => {
-      // Keep whatever is on screen; the tick control reports its own failures. A failed
-      // read must not look like "you have completed nothing".
-      setState({ status: "error", completed: state.completed });
+      if (generation !== requestGeneration || loadedFor !== accessToken) return;
+      setState({ status: "error", completed: {} });
     })
     .finally(() => {
-      inFlight = null;
+      if (generation === requestGeneration && inFlight === request) inFlight = null;
     });
+  inFlight = request;
 }
 
 /** Applies a change locally at once, then persists it; reverts if the write fails. */
@@ -99,6 +104,8 @@ async function write(
   chapterSlug: string,
   done: boolean,
 ): Promise<boolean> {
+  if (loadedFor !== accessToken) return false;
+  const writeGeneration = generation;
   const before = state.completed;
   const beforeStatus = state.status;
   setState({ status: "ready", completed: withChapter(before, courseSlug, chapterSlug, done) });
@@ -106,9 +113,11 @@ async function write(
   try {
     if (done) await markChapterComplete(accessToken, courseSlug, chapterSlug);
     else await markChapterIncomplete(accessToken, courseSlug, chapterSlug);
-    return true;
+    return generation === writeGeneration && loadedFor === accessToken;
   } catch {
-    setState({ status: beforeStatus, completed: before });
+    if (generation === writeGeneration && loadedFor === accessToken) {
+      setState({ status: beforeStatus, completed: before });
+    }
     return false;
   }
 }
@@ -132,13 +141,15 @@ export function useCourseProgress(courseSlug: string): CourseProgressHandle {
       resetCourseProgress();
       return;
     }
-    if (loadedFor !== null && loadedFor !== accessToken) resetCourseProgress();
     load(accessToken);
   }, [accessToken]);
 
+  const visibleSnapshot =
+    typeof accessToken === "string" && loadedFor === accessToken ? snapshot : EMPTY;
+
   const completed = useMemo(
-    () => new Set(snapshot.completed[courseSlug] ?? []),
-    [snapshot, courseSlug],
+    () => new Set(visibleSnapshot.completed[courseSlug] ?? []),
+    [visibleSnapshot, courseSlug],
   );
 
   const setChapterDone = useCallback(
@@ -149,7 +160,12 @@ export function useCourseProgress(courseSlug: string): CourseProgressHandle {
     [accessToken, courseSlug],
   );
 
-  return { completed, status: snapshot.status, ready: snapshot.status === "ready", setChapterDone };
+  return {
+    completed,
+    status: visibleSnapshot.status,
+    ready: visibleSnapshot.status === "ready",
+    setChapterDone,
+  };
 }
 
 /** Every course's progress at once — for the dashboard's "continue learning" card. */
@@ -163,11 +179,12 @@ export function useAllCourseProgress(): { completed: CompletedByCourse; status: 
       resetCourseProgress();
       return;
     }
-    if (loadedFor !== null && loadedFor !== accessToken) resetCourseProgress();
     load(accessToken);
   }, [accessToken]);
 
-  return { completed: snapshot.completed, status: snapshot.status };
+  const visibleSnapshot =
+    typeof accessToken === "string" && loadedFor === accessToken ? snapshot : EMPTY;
+  return { completed: visibleSnapshot.completed, status: visibleSnapshot.status };
 }
 
 /** Folds imported progress into the store without a second round trip. */
@@ -175,8 +192,10 @@ export async function importLegacyProgress(
   accessToken: string,
   chapters: { courseSlug: string; chapterSlug: string }[],
 ): Promise<boolean> {
+  const importGeneration = generation;
   try {
     const view = await importCourseProgress(accessToken, { chapters });
+    if (generation !== importGeneration || loadedFor !== accessToken) return false;
     setState({ status: "ready", completed: view.completed ?? {} });
     return true;
   } catch {

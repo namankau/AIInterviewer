@@ -231,6 +231,24 @@ describe("CourseHeroProgress", () => {
     expect(screen.queryByRole("progressbar")).toBeNull();
   });
 
+  it("hides the previous account's progress as soon as the signed-in user changes", async () => {
+    fetchCourseProgress.mockResolvedValueOnce({ completed: { java: ["one"] } });
+    const view = render(<CourseHeroProgress courseSlug="java" chapters={chapters} />);
+
+    expect(await screen.findByRole("link", { name: /continue learning/i })).toHaveAttribute(
+      "href",
+      "/courses/java/two",
+    );
+
+    useAccessToken.mockReturnValue("token-other-user");
+    fetchCourseProgress.mockRejectedValueOnce(new Error("offline"));
+    view.rerender(<CourseHeroProgress courseSlug="java" chapters={chapters} />);
+
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.queryByRole("link", { name: /continue learning/i })).toBeNull();
+    expect(await screen.findByRole("link", { name: /start course/i })).toBeInTheDocument();
+  });
+
   it("does not read progress at all for a signed-out visitor", async () => {
     useAccessToken.mockReturnValue(null);
     render(<CourseHeroProgress courseSlug="java" chapters={chapters} />);

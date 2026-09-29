@@ -14,6 +14,8 @@ import {
   beginSession,
   fetchSession,
   finishSession,
+  type InterviewClientEvent,
+  reportInterviewClientEvent,
   requestHint,
   saveBoard,
   submitAnswer,
@@ -61,6 +63,12 @@ const ROUND_CLOCK_TICK_MS = 10_000;
  * opens. Long enough to read a couple of sentences without feeling rushed.
  */
 const READING_TIME_MS = 4_000;
+
+/** A stream that makes no progress is treated as broken, not as an infinitely long pause. */
+const MODEL_AUDIO_STALL_MS = 8_000;
+
+/** Final guard for browser/media failures that emit neither `ended` nor `error`. */
+const MODEL_AUDIO_TIMEOUT_MS = 90_000;
 
 /**
  * The longest one unbroken turn runs in a room with a workspace before the interviewer
@@ -130,7 +138,28 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   const browserVoice = useBrowserVoice({ language: session?.language ?? "english" });
   /* A mirror of what the candidate is saying. Never sent anywhere; see use-live-transcript.ts. */
   const liveTranscript = useLiveTranscript({ language: session?.language ?? "english" });
-  const questionAudio = useQuestionAudio({ sessionId, turn, accessToken });
+  const reportSpeechEvent = useCallback(
+    (event: InterviewClientEvent, eventTurnIndex: number, durationMs?: number) => {
+      if (!accessToken) return;
+      void reportInterviewClientEvent(
+        accessToken,
+        sessionId,
+        event,
+        eventTurnIndex,
+        durationMs,
+      ).catch(() => {
+        // Observability must never become another way to interrupt an interview.
+      });
+    },
+    [accessToken, sessionId],
+  );
+  const questionAudio = useQuestionAudio({
+    sessionId,
+    turn,
+    accessToken,
+    onPollTimeout: (eventTurnIndex, durationMs) =>
+      reportSpeechEvent("question_audio_poll_timed_out", eventTurnIndex, durationMs),
+  });
 
   /*
    * The question appears as it is spoken, not before it.
@@ -392,8 +421,18 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     if (phase !== "asking" || !speaksLocally || !questionText) return;
     // Already reading it, or already read it. Neither is a reason to start again.
     if (browserVoice.saying === questionText || browserVoice.said === questionText) return;
-    browserVoice.say(questionText, () => void handOver.current());
-  }, [browserVoice, phase, questionText, speaksLocally]);
+    const startedAt = Date.now();
+    browserVoice.say(questionText, (reason) => {
+      if (turnIndex !== null && reason !== "finished") {
+        reportSpeechEvent(
+          reason === "timed_out" ? "browser_speech_timed_out" : "browser_speech_failed",
+          turnIndex,
+          Date.now() - startedAt,
+        );
+      }
+      void handOver.current();
+    });
+  }, [browserVoice, phase, questionText, reportSpeechEvent, speaksLocally, turnIndex]);
 
   useEffect(() => {
     if (phase !== "asking" || speaksLocally) return;
@@ -401,9 +440,53 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     const element = audioRef.current;
     // A question with a voice hands over when the voice stops.
     if (questionAudio.status === "ready" && element) {
-      const start = () => void handOver.current();
-      element.addEventListener("ended", start, { once: true });
-      return () => element.removeEventListener("ended", start);
+      const startedAt = Date.now();
+      let finished = false;
+      let stallTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const clearStall = () => {
+        if (stallTimer) clearTimeout(stallTimer);
+        stallTimer = null;
+      };
+      const finish = (failure?: InterviewClientEvent) => {
+        if (finished) return;
+        finished = true;
+        clearStall();
+        clearTimeout(ceilingTimer);
+        if (failure && turnIndex !== null) {
+          element.pause();
+          reportSpeechEvent(failure, turnIndex, Date.now() - startedAt);
+        }
+        void handOver.current();
+      };
+      const armStall = () => {
+        clearStall();
+        stallTimer = setTimeout(() => finish("model_audio_stalled"), MODEL_AUDIO_STALL_MS);
+      };
+      const onEnded = () => finish();
+      const onError = () => finish("model_audio_error");
+      const ceilingTimer = setTimeout(
+        () => finish("model_audio_timed_out"),
+        MODEL_AUDIO_TIMEOUT_MS,
+      );
+
+      element.addEventListener("ended", onEnded);
+      element.addEventListener("error", onError);
+      element.addEventListener("stalled", armStall);
+      element.addEventListener("waiting", armStall);
+      element.addEventListener("playing", clearStall);
+      element.addEventListener("timeupdate", clearStall);
+      return () => {
+        finished = true;
+        clearStall();
+        clearTimeout(ceilingTimer);
+        element.removeEventListener("ended", onEnded);
+        element.removeEventListener("error", onError);
+        element.removeEventListener("stalled", armStall);
+        element.removeEventListener("waiting", armStall);
+        element.removeEventListener("playing", clearStall);
+        element.removeEventListener("timeupdate", clearStall);
+      };
     }
 
     // No voice is coming, so the candidate is reading. Give them time to, then listen.
@@ -414,7 +497,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
     // Still rendering. This effect re-runs when that resolves.
     return undefined;
-  }, [phase, questionAudio.status, questionAudio.url, speaksLocally]);
+  }, [phase, questionAudio.status, questionAudio.url, reportSpeechEvent, speaksLocally, turnIndex]);
 
   const askForHint = useCallback(async () => {
     if (!accessToken || !turn || hintPending) return;
@@ -445,8 +528,14 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     const element = audioRef.current;
     if (!element || !questionAudio.url) return;
     setAudioBlocked(false);
-    element.play().catch(() => setAudioBlocked(true));
-  }, [phase, questionAudio.url]);
+    const startedAt = Date.now();
+    element.play().catch(() => {
+      setAudioBlocked(true);
+      if (turnIndex !== null) {
+        reportSpeechEvent("model_audio_play_rejected", turnIndex, Date.now() - startedAt);
+      }
+    });
+  }, [phase, questionAudio.url, reportSpeechEvent, turnIndex]);
 
   /*
    * The question is revealed in step with the voice reading it, so `timeupdate` drives
@@ -483,8 +572,14 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     if (!element) return;
     element.currentTime = 0;
     setAudioBlocked(false);
-    element.play().catch(() => setAudioBlocked(true));
-  }, []);
+    const startedAt = Date.now();
+    element.play().catch(() => {
+      setAudioBlocked(true);
+      if (turnIndex !== null) {
+        reportSpeechEvent("model_audio_play_rejected", turnIndex, Date.now() - startedAt);
+      }
+    });
+  }, [reportSpeechEvent, turnIndex]);
 
   /*
    * The board, saved as they work.

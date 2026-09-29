@@ -80,14 +80,22 @@ describe("useQuestionAudio", () => {
    */
   it("gives up rather than polling forever", async () => {
     fetchTurn.mockResolvedValue(turn());
+    const onPollTimeout = vi.fn();
 
     const { result } = renderHook(() =>
-      useQuestionAudio({ sessionId: SESSION, turn: turn(), accessToken: "token" }),
+      useQuestionAudio({
+        sessionId: SESSION,
+        turn: turn(),
+        accessToken: "token",
+        onPollTimeout,
+      }),
     );
 
     await elapse(60_000);
 
     expect(result.current.status).toBe("unavailable");
+    expect(onPollTimeout).toHaveBeenCalledOnce();
+    expect(onPollTimeout).toHaveBeenCalledWith(1, expect.any(Number));
     const callsAtGiveUp = fetchTurn.mock.calls.length;
 
     await elapse(30_000);

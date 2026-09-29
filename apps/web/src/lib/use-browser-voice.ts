@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { loadVoices, pickVoice, speak, type SpokenHandle } from "@/lib/browser-speech";
+import {
+  loadVoices,
+  pickVoice,
+  speak,
+  type SpeechEndReason,
+  type SpokenHandle,
+} from "@/lib/browser-speech";
 
 /**
  * The interviewer's voice, when the browser can supply one worth using.
@@ -37,7 +43,7 @@ export interface BrowserVoice {
   saying: string | null;
   said: string | null;
   /** Speak [text]. Resolves through `onDone` rather than a promise so it can be cancelled. */
-  say: (text: string, onDone?: () => void) => void;
+  say: (text: string, onDone?: (reason: SpeechEndReason) => void) => void;
   cancel: () => void;
 }
 
@@ -70,7 +76,7 @@ export function useBrowserVoice({ language }: { language: string }): BrowserVoic
   }, []);
 
   const say = useCallback(
-    (text: string, onDone?: () => void) => {
+    (text: string, onDone?: (reason: SpeechEndReason) => void) => {
       handle.current?.cancel();
       setSpokenChars(0);
       setSpeaking(true);
@@ -80,14 +86,14 @@ export function useBrowserVoice({ language }: { language: string }): BrowserVoic
         text,
         voice,
         onProgress: setSpokenChars,
-        onEnd: () => {
+        onEnd: (reason) => {
           setSpeaking(false);
           setSaying(null);
           // Marked said even when the utterance failed: the question still has to appear,
           // and an unspoken question on screen beats a blank room.
           setSaid(text);
           handle.current = null;
-          onDone?.();
+          onDone?.(reason);
         },
       });
     },

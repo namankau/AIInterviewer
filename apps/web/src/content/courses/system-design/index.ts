@@ -42,13 +42,8 @@ const labIntroductions: Record<NonNullable<ChapterSpec["lab"]>, string> = {
 function makeChapter(spec: ChapterSpec, minutes = 13): Chapter {
   const blocks: Block[] = [
     {
-      kind: "analogy",
-      title: spec.analogy[0],
-      text: spec.analogy[1],
-    },
-    {
       kind: "h",
-      text: "First, say it without jargon",
+      text: "First, learn the words in plain language",
     },
     {
       kind: "p",
@@ -58,6 +53,11 @@ function makeChapter(spec: ChapterSpec, minutes = 13): Chapter {
       kind: "table",
       head: ["Term", "What it means here"],
       rows: spec.glossary,
+    },
+    {
+      kind: "analogy",
+      title: spec.analogy[0],
+      text: spec.analogy[1],
     },
     {
       kind: "steps",
@@ -100,7 +100,14 @@ function makeChapter(spec: ChapterSpec, minutes = 13): Chapter {
     },
     {
       kind: "remember",
-      items: [spec.best, spec.check, "Every box needs a job; every arrow needs data and a direction."],
+      items: [
+        `In plain language: ${spec.idea}`,
+        ...spec.glossary.slice(0, 3).map(([term, meaning]) => `${term} means ${meaning}`),
+        `The decision to remember: ${spec.best}`,
+        `Before you trust the design, check this: ${spec.check}`,
+        `Picture ${spec.analogy[0].toLowerCase()}: ${spec.analogy[1]}`,
+        "Every box needs a job; every arrow needs data and a direction.",
+      ],
     },
     {
       kind: "interview",

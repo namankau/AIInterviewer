@@ -19,16 +19,19 @@ type Beat = {
   blocks: IndexedBlock[];
 };
 
-const INTERACTIVE_KINDS: ReadonlySet<Block["kind"]> = new Set([
+const HANDS_ON_KINDS: ReadonlySet<Block["kind"]> = new Set([
   "code",
   "trace",
-  "table",
   "viz",
   "playground",
-  "compare",
-  "steps",
   "agentlab",
   "architecturelab",
+]);
+
+const RECAP_KINDS: ReadonlySet<Block["kind"]> = new Set([
+  "pitfall",
+  "remember",
+  "interview",
 ]);
 
 const BEAT_COPY = {
@@ -50,7 +53,7 @@ const BEAT_COPY = {
   explain: {
     label: "Explain and remember",
     shortLabel: "Remember",
-    description: "Connect the result to the rule, common mistakes, and interview use.",
+    description: "Turn the activity into a plain-language rule, a memory hook, common mistakes, and the exact interview use.",
   },
   check: {
     label: "Final checkpoint",
@@ -81,12 +84,15 @@ export function buildGuidedLessonBeats(blocks: Block[], highlightedCode: Highlig
   const firstQuizIndex = firstQuiz ? indexed.indexOf(firstQuiz) : -1;
   const secondQuizIndex = quizzes[1] ? indexed.indexOf(quizzes[1]!) : indexed.length;
   const beforeCheck = indexed.slice(0, secondQuizIndex);
-  const firstInteractiveIndex = beforeCheck.findIndex(({ block }) => INTERACTIVE_KINDS.has(block.kind));
-  const lastInteractiveIndex = beforeCheck.findLastIndex(({ block }) => INTERACTIVE_KINDS.has(block.kind));
+  const recapStart = beforeCheck.findIndex(({ block }) => RECAP_KINDS.has(block.kind));
+  const learningEnd = recapStart < 0 ? beforeCheck.length : recapStart;
+  const learningBlocks = beforeCheck.slice(0, learningEnd);
+  const firstInteractiveIndex = learningBlocks.findIndex(({ block }) => HANDS_ON_KINDS.has(block.kind));
+  const lastInteractiveIndex = learningBlocks.findLastIndex(({ block }) => HANDS_ON_KINDS.has(block.kind));
 
   let interactStart = firstInteractiveIndex;
   if (firstInteractiveIndex >= 0) {
-    const headingIndex = beforeCheck
+    const headingIndex = learningBlocks
       .slice(0, firstInteractiveIndex)
       .findLastIndex(({ block }) => block.kind === "h");
     if (headingIndex >= 0) interactStart = headingIndex;
@@ -94,18 +100,17 @@ export function buildGuidedLessonBeats(blocks: Block[], highlightedCode: Highlig
 
   const notFirstQuiz = (_entry: IndexedBlock, index: number) => index !== firstQuizIndex;
   const see = interactStart < 0
-    ? beforeCheck.filter(notFirstQuiz)
+    ? learningBlocks.filter(notFirstQuiz)
     : beforeCheck.slice(0, interactStart).filter(notFirstQuiz);
   const interact = interactStart < 0
     ? []
     : beforeCheck.slice(interactStart, lastInteractiveIndex + 1).filter((_, offset) =>
         interactStart + offset !== firstQuizIndex,
       );
-  const explain = lastInteractiveIndex < 0
-    ? []
-    : beforeCheck.slice(lastInteractiveIndex + 1).filter((_, offset) =>
-        lastInteractiveIndex + 1 + offset !== firstQuizIndex,
-      );
+  const explainStart = lastInteractiveIndex < 0 ? learningEnd : lastInteractiveIndex + 1;
+  const explain = beforeCheck.slice(explainStart).filter((_, offset) =>
+    explainStart + offset !== firstQuizIndex,
+  );
   const check = indexed.slice(secondQuizIndex);
 
   const groups = {
@@ -153,6 +158,7 @@ export function GuidedLesson({
           <BlockRenderer
             blocks={beat.blocks.map(({ block }) => block)}
             highlightedCode={beat.blocks.map(({ highlighted }) => highlighted)}
+            layout={beat.key === "explain" ? "expanded" : "default"}
           />
         ) : null,
       }))}

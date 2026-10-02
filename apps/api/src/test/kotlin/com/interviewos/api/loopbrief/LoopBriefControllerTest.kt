@@ -47,6 +47,39 @@ class LoopBriefControllerTest {
     }
 
     @Test
+    fun `an unsourced employer's public research reaches the client with its citations`() {
+        given(service.brief("Sagitec Solutions", null, null)).willReturn(
+            sampleBrief().copy(
+                hasSources = false,
+                sourcedStages = emptyList(),
+                publicSourcePattern =
+                    LoopBriefPublicPatternView(
+                        claims = listOf(LoopBriefPublicClaimView("Sagitec starts with an aptitude test.", listOf(0))),
+                        sources = listOf(LoopBriefPublicSourceView("example.org", "https://example.org/sagitec")),
+                    ),
+            ),
+        )
+
+        mockMvc
+            .perform(get("/api/v1/loop-brief").param("company", "Sagitec Solutions").with(candidateToken()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.hasSources").value(false))
+            .andExpect(jsonPath("$.publicSourcePattern.claims[0].text").value("Sagitec starts with an aptitude test."))
+            .andExpect(jsonPath("$.publicSourcePattern.claims[0].sourceIndexes[0]").value(0))
+            .andExpect(jsonPath("$.publicSourcePattern.sources[0].url").value("https://example.org/sagitec"))
+    }
+
+    @Test
+    fun `a brief with no public research says so explicitly`() {
+        given(service.brief("Amazon", null, null)).willReturn(sampleBrief())
+
+        mockMvc
+            .perform(get("/api/v1/loop-brief").param("company", "Amazon").with(candidateToken()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.publicSourcePattern").value(null as Any?))
+    }
+
+    @Test
     fun `rejects a request with no token`() {
         mockMvc
             .perform(get("/api/v1/loop-brief").param("company", "Amazon"))

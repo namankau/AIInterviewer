@@ -618,6 +618,42 @@ data class GeneralLoopPattern(
 )
 
 // ---------------------------------------------------------------------------
+// Public-source research for an employer we hold no sourced account of (task 065).
+//
+// This is the one model call that is told the company's name and allowed to describe
+// it, so it is held to a stricter rule than anything else the model writes: a claim
+// survives only if the search grounding ties it to at least one public page. Anything
+// the model said from memory, without a page behind it, is dropped before it leaves the
+// boundary (`GroundedAnswer`).
+// ---------------------------------------------------------------------------
+
+/** A public page the search grounding returned. */
+data class GroundedWebSource(
+    val title: String,
+    val url: String,
+)
+
+/** One sentence about the employer's process, and the [GroundedEmployerLoop.sources] behind it. */
+data class GroundedClaim(
+    val text: String,
+    /** Indexes into [GroundedEmployerLoop.sources]; never empty. */
+    val sourceIndexes: List<Int>,
+)
+
+/**
+ * What public sources say about one employer's interview loop.
+ *
+ * Empty [claims] is a real answer — "the search found nothing we can cite" — and is
+ * what the brief's archetype fallback is for.
+ */
+data class GroundedEmployerLoop(
+    val claims: List<GroundedClaim> = emptyList(),
+    val sources: List<GroundedWebSource> = emptyList(),
+) {
+    val isEmpty: Boolean get() = claims.isEmpty()
+}
+
+// ---------------------------------------------------------------------------
 // The hidden question pool (PRD 03, 04, 08) — task 039.
 //
 // Two calls, and the order between them is the whole provenance gate. The model is asked

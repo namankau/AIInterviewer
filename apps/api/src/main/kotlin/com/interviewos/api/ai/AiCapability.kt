@@ -48,4 +48,14 @@ enum class AiCapability {
      * account of it — which is the entire point.
      */
     CODE_EXECUTION,
+
+    /**
+     * Answering from a live web search, with each sentence tied to the pages it came from.
+     *
+     * Kept apart from [STRUCTURED_TEXT] because a model without it does not fail — it
+     * answers from memory, fluently, about a real employer, with nothing behind it. That
+     * is the failure this product most needs to avoid, so a provider that cannot search
+     * is never offered the call.
+     */
+    WEB_GROUNDING,
 }

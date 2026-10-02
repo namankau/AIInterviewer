@@ -35,6 +35,7 @@ function briefFor(companyName: string, confidence: "recognised" | "inferred" = "
     hasSources: false,
     sourcedStages: [],
     generalPattern: [],
+    publicSourcePattern: null,
     bankCoverage: { questionCount: 0, roundTypes: [], bankUrl: `/questions/${companyName.toLowerCase()}` },
   };
 }

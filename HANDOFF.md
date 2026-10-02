@@ -1,42 +1,107 @@
-# Handoff — 2026-09-29
+# Handoff — 2026-10-02
 
 ## Task
-Diagnose why the mock interviewer can stop speaking after 5–7 minutes and add production-ready, privacy-safe open-source observability (direct owner report; no task file).
+Learning depth, account isolation, and sourced loop discovery —
+`tasks/task-065-learning-depth-account-isolation-and-sourced-loops.md`. Started by Codex on
+29 Sep (first three commits), finished by Claude Code on 2 Oct.
 
 ## What I built
-- Fixed `apps/api/src/main/kotlin/com/interviewos/interview/QuestionSpeech.kt` so background question-speech failures, including failures wrapped by parallel `CompletableFuture.join()` calls, always move audio from `pending` to terminal `unavailable` instead of silently abandoning the worker.
-- Added browser-speech and generated-audio watchdogs in `apps/web/src/lib/browser-speech.ts`, `apps/web/src/hooks/use-browser-voice.ts`, and `apps/web/src/hooks/use-question-audio.ts`. Speech completion timeouts, model-audio errors, stalls, and absolute playback timeouts now recover the room to listening rather than leaving it stuck.
-- Added privacy-safe speech lifecycle reporting through `apps/api/src/main/kotlin/com/interviewos/interview/InterviewTelemetry.kt`: an authenticated, ownership-checked endpoint accepts only a fixed event vocabulary and bounded numeric fields. It rejects free-form content and does not log emails, questions, transcripts, resumes, or audio.
-- Added request correlation through `X-Request-ID`, MDC `request_id`, structured HTTP completion events, CORS support for the correlation header, and Spring Boot's built-in Logstash JSON console format.
-- Added focused backend and frontend regression coverage for failed parallel TTS chunks, telemetry validation and ownership, request correlation, browser-speech completion timeout, generated-audio polling timeout, and model-audio playback recovery.
-- Added `docs/observability.md`, covering the open-source production path Spring Boot JSON stdout → Grafana Alloy → Loki → Grafana, privacy boundaries, incident investigation by session and turn, useful LogQL queries, and launch alert candidates.
+Codex had already committed three of the four scope items:
+- `d4bb716` dashboard, profile and course-progress state is gated on the access token
+  that fetched it (PRD §05).
+- `0bc42a3` removed the writing-mode notice from the interview room (PRD §07).
+- `26320e6` deepened every course's Explain and Remember material (PRD §09).
+
+This run finished the fourth item, sourced employer-pattern discovery (PRD §04), and fixed
+CI:
+- **`ai/GroundedAnswer.kt`**: turns a search-grounded Gemini answer into claims, each
+  tied to the pages behind it, using Gemini's `groundingSupports` / `groundingChunks`.
+  **A sentence the grounding does not tie to a page is dropped**, which removes anything
+  the model wrote from memory. Non-http(s) links are rejected, duplicate pages are merged,
+  and there are at most 6 sources.
+- **`GeminiInterviewAi.researchEmployerLoop`**: plain-text call with the `googleSearch`
+  tool. New capability `AiCapability.WEB_GROUNDING`, so the fallback chain never sends
+  this call to a text-only model, which would answer from memory.
+- **`ai/prompts/public-employer-loop.md`**: write only what a found page says; check the
+  company is the right one; no interview questions; no named people; reply
+  `NO_PUBLIC_SOURCES` if nothing is found.
+- **`loopbrief/PublicLoopResearch.kt`**: an in-memory cache in front of the search, keyed
+  on (company, role family, level band), kept for 12h, max 500 entries. It also caches
+  "nothing found". It does not cache outages. It is switched by
+  `interviewos.loop-brief.public-research.enabled` (env `INTERVIEWOS_PUBLIC_LOOP_RESEARCH`,
+  default `true`).
+- **`LoopBriefService`**: runs the search **only when we hold no sourced stage** for the
+  company. It returns `publicSourcePattern` (claims plus numbered sources), or null.
+  The archetype `generalPattern` is always still returned.
+- **Web, `loop-brief-step.tsx`**: a separate amber section titled "Found in public
+  sources". Its text says it was "Summarised by AI from a web search, not checked by us".
+  Each claim has numbered `[n]` links, and a numbered source list follows. The caveat
+  changes to name the search. The section never uses the sourced stages' "own record"
+  styling, and it is not rendered if `hasSources` is true.
+- **CI fix**: all three Codex pushes had failed CI on 3 `react-hooks` lint errors in
+  `dashboard-panel.tsx` and `profile-panel.tsx`, which meant the web tests never ran on
+  CI. Fixes:
+  - Removed the redundant state resets inside the effects. The token-gated `visible`
+    already hides another account's data.
+  - Profile feedback (error, busy, saved) now resets during render when the token changes.
+  - The token ref is now synced in an effect.
+- Tests:
+  - `GroundedAnswerTest` (10 cases)
+  - `PublicLoopResearchTest` (8 cases)
+  - `LoopBriefServiceTest` (4 cases)
+  - a `FallbackInterviewAiTest` case: the employer search is never handed to a text-only
+    model
+  - 2 `LoopBriefControllerTest` cases
+  - 3 `loop-brief-step` UI cases
 
 ## Assumptions I made
-- There is no intentional five-minute interview or speech cutoff; the traced code contains no such timer. The observed timing is consistent with a later turn encountering one of the unhandled lifecycle failures.
-- The exact historical session for `naman.kaushik06@gmail.com` cannot be attributed conclusively because the old system did not record browser speech/playback lifecycle events. I fixed two deterministic paths that reproduce the same permanent-silence state.
-- Production runtime and log-discovery metadata are not specified in the repository, so I documented the supported collector and dashboard architecture without inventing a deployment-specific Alloy manifest.
-- An operator may resolve an email to an owned session through the application/database during an incident, but the email itself must never enter application logs.
+- "Unknown employer" means **no sourced stage**, including companies in our directory that
+  have no stage yet, not only companies missing from the directory. Our own sourced record
+  always outranks a web search.
+- The search runs on the brief request itself, not on a separate endpoint. A first-time
+  lookup adds the search's latency (likely a few seconds) to the brief. Later lookups hit
+  the cache.
+- Kept in memory, not in a table: Gemini's citation links are
+  `vertexaisearch.cloud.google.com/grounding-api-redirect/...` URLs that expire, so a
+  durable cache would turn into dead links. This also meant no migration.
+- Per-claim citations instead of Codex's draft shape (one `summary` plus a `sources` list),
+  so every employer-specific sentence carries its own provenance.
+- The prep plan (`PrepPlanService`) is not fed by the search. It still plans from sourced
+  stages plus the archetype pattern.
 
 ## What I could NOT verify
-- The exact failure in the historical Java interview, because the required client and turn-level telemetry did not exist when it occurred.
-- Live voice quality, end-to-end latency, or a ten-minute Gemini interview. Repository rules prohibit live interviews and model spend without owner approval.
-- Production Alloy/Loki/Grafana installation, retention, access control, and alert routing; these depend on the actual hosting environment and require deployment operations.
+- **No live Gemini call was made (rule 7).** Untested against the real API:
+  - the quality of the grounded answers
+  - whether the `googleSearch` tool behaves the same on every model in the chain
+  - whether `groundingSupports` lines up with whole sentences
+  - real latency
+
+  This is the kind of change only a live check catches. A handful of grounded calls, for
+  1–2 known and 1–2 obscure employers, would settle it.
+- **Google's terms for Grounding with Google Search** require showing the "Search
+  Suggestions" chip (`groundingMetadata.searchEntryPoint.renderedContent`, Google-supplied
+  HTML) wherever grounded results are displayed. I did not render it: it means injecting
+  third-party HTML, and whether it is required for this use is a legal call. **This needs
+  your decision before this ships to real users.**
+- Cost: grounded searches are billed per query, separately from tokens. `AiPrices` records
+  only tokens, so the spend ledger will under-count this call.
+- Visual design of the new section (amber card, superscript citations).
 
 ## Verification status
-- Frontend typecheck: pass.
-- Frontend lint: pass.
-- Frontend tests: pass — 56 files and 2,758 tests.
-- Frontend production build: pass — all 174 static pages generated.
-- Backend `ktlintCheck test build`: pass — `BUILD SUCCESSFUL`, 16 tasks.
-- GitHub CI on code head `a2eda63`: pass — API and web jobs green in runs `36543709154` and `36543779129`.
-- No dependency, secret, schema, or migration changes; no live AI calls were made.
+- Backend `ktlintCheck test build`: pass, `BUILD SUCCESSFUL`.
+- Frontend typecheck: pass. Lint: pass (was failing on CI before this run).
+- Frontend tests and build: see the PR. They were run locally before the push.
+- No dependency, secret, schema, or migration changes.
 
 ## Merge status
-- Branch `fix/interview-audio-observability` is pushed and PR #21 is open into `develop`: https://github.com/namankau/AIInterviewer/pull/21.
-- It is intentionally not merged because the change adds an authenticated endpoint, and repository rules require human review for auth-related changes. `main` was not touched.
+- Branch `feat/learning-data-integrity` is pushed with a PR into `develop`, left open for
+  human review as task 065 requires (it touches user-data isolation). Not merged; `main`
+  was not touched.
 
 ## Suggested next task
-- Configure Alloy, Loki, Grafana dashboards, and the documented alerts in the production runtime before launch, then run an owner-approved interview canary lasting longer than ten minutes.
+- Make a short, approved set of live grounded calls, and decide on the Search Suggestions
+  display before enabling `INTERVIEWOS_PUBLIC_LOOP_RESEARCH` in production.
 
 ## Open questions for you
-- Which production runtime/platform should the deployment-specific Grafana Alloy discovery configuration target?
+- Must we render Google's Search Suggestions chip? If not, should the feature stay off
+  (`INTERVIEWOS_PUBLIC_LOOP_RESEARCH=false`) until legal posture is settled?

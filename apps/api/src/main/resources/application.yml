@@ -203,6 +203,10 @@ interviewos:
     # An empty list denies everyone, which is the right default: a misconfigured
     # deployment should lock the operator out, not let the internet in.
     emails: ${ADMIN_EMAILS:}
+    # Optional: Supabase user ids, comma-separated. When set, an admin must match both the
+    # email and the id. When empty, the email must belong to a Google sign-in, because
+    # Google has verified it (see AdminProperties.allows).
+    user-ids: ${ADMIN_USER_IDS:}
 
   storage:
     # Service role bypasses RLS. Ownership is enforced by the API from the verified

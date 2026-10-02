@@ -12,6 +12,12 @@ data class SupabaseIdentity(
     val id: UUID,
     val email: String,
     val displayName: String?,
+    /**
+     * How the account signs in, from `app_metadata` — which only Supabase's server can
+     * write, unlike `user_metadata`, which the user can edit from the browser. So this, and
+     * never a `user_metadata.email_verified` flag, is what may vouch for the email.
+     */
+    val signInProviders: Set<String> = emptySet(),
 ) {
     companion object {
         /** Google fills `full_name`; other providers vary, so `name` is the fallback. */
@@ -30,7 +36,13 @@ data class SupabaseIdentity(
                     .firstNotNullOfOrNull { metadata[it] as? String }
                     ?.trim()
                     ?.takeIf { it.isNotEmpty() }
-            return SupabaseIdentity(id, email, displayName)
+            val appMetadata: Map<String, Any> = jwt.getClaimAsMap("app_metadata").orEmpty()
+            val providers =
+                buildSet {
+                    (appMetadata["provider"] as? String)?.let { add(it.lowercase()) }
+                    (appMetadata["providers"] as? Collection<*>)?.forEach { (it as? String)?.let { name -> add(name.lowercase()) } }
+                }
+            return SupabaseIdentity(id, email, displayName, providers)
         }
     }
 }

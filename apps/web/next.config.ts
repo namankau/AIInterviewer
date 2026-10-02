@@ -14,6 +14,27 @@ if (existsSync(rootEnvFile)) {
   process.loadEnvFile(rootEnvFile);
 }
 
+/*
+ * Browser hardening that cannot break a page, sent on every response.
+ *
+ * The interview room opens the microphone and camera, so it must never be framed by
+ * another site (clickjacking a consent click is the attack) and no third-party frame may
+ * ask for either device. A full script/style Content-Security-Policy is deliberately not
+ * here yet: Pyodide, Supabase, signed storage URLs and blob audio each need allowances
+ * that should be proven in a real browser before they are enforced.
+ */
+const SECURITY_HEADERS = [
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "microphone=(self), camera=(self), geolocation=(), payment=(), usb=(), interest-cohort=()",
+  },
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+];
+
 const nextConfig: NextConfig = {
   // Shared API types are consumed straight from TypeScript source in the workspace.
   transpilePackages: ["@acemyinterview/shared"],
@@ -27,6 +48,9 @@ const nextConfig: NextConfig = {
    * information is available in the terminal and the build output either way.
    */
   devIndicators: false,
+  async headers() {
+    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+  },
 };
 
 export default nextConfig;

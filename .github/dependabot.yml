@@ -1,0 +1,30 @@
+# Dependency updates (production-readiness review, 2 Oct 2026). A critical Next.js RCE
+# advisory sat unnoticed because nothing watched the dependency tree. Pull requests land
+# against develop, go through CI like any other branch, and are merged by a person.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    target-branch: develop
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: gradle
+    directory: "/apps/api"
+    target-branch: develop
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    target-branch: develop
+    schedule:
+      interval: monthly

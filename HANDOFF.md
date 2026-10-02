@@ -90,11 +90,12 @@ CI:
 ## Verification status
 - Backend `ktlintCheck test build`: pass, `BUILD SUCCESSFUL`.
 - Frontend typecheck: pass. Lint: pass (was failing on CI before this run).
-- Frontend tests and build: see the PR. They were run locally before the push.
+- Frontend tests: pass, 57 files / 2,921 tests. Production build: pass, 174 pages.
+- GitHub CI run `36964102931` on `b2a1757`: web and API jobs both green.
 - No dependency, secret, schema, or migration changes.
 
 ## Merge status
-- Branch `feat/learning-data-integrity` is pushed with a PR into `develop`, left open for
+- PR #22 (https://github.com/namankau/AIInterviewer/pull/22) into `develop`, left open for
   human review as task 065 requires (it touches user-data isolation). Not merged; `main`
   was not touched.
 

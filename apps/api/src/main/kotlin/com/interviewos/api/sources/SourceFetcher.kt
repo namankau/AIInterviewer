@@ -44,6 +44,7 @@ class SourceFetcher(
     private val storage: ObjectStorage,
     restClientBuilder: RestClient.Builder,
     @Qualifier("interviewBackgroundExecutor") private val executor: TaskExecutor,
+    private val linkAddresses: LinkAddressCheck,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val http = restClientBuilder.build()
@@ -113,6 +114,17 @@ class SourceFetcher(
 
     private fun loadLink(source: SourceRow): SourceDocument? {
         val url = source.url ?: return null
+
+        if (!linkAddresses.isPublic(url)) {
+            log.warn("Refusing to fetch source {}: {} does not resolve to a public address", source.id, url)
+            repository.markFetched(
+                source.id,
+                SourceStatus.FAILED,
+                null,
+                "That address is not on the public internet, so we did not read it.",
+            )
+            return null
+        }
 
         if (!robotsAllows(url)) {
             log.info("robots.txt disallows {}; not fetching it again", url)

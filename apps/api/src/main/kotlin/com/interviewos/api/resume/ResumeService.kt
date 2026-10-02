@@ -9,6 +9,7 @@ import com.interviewos.api.ai.ResumeFile
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.storage.ObjectStorage
 import com.interviewos.api.storage.ObjectStorageException
+import com.interviewos.api.storage.StorageKeys
 import com.interviewos.api.storage.StorageProperties
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -59,9 +60,15 @@ class ResumeService(
                 code = "unsupported_resume_type",
             )
         }
+        if (!ResumeSignature.matches(file.contentType, file.bytes)) {
+            throw ApiException.badRequest(
+                "That file's contents don't match its type. Try exporting the resume again as a PDF.",
+                code = "resume_type_mismatch",
+            )
+        }
 
         // Ownership is the first path segment, matching the storage RLS policies.
-        val path = "$userId/${UUID.randomUUID()}-${file.filename.takeLast(80)}"
+        val path = "$userId/${UUID.randomUUID()}-${StorageKeys.safeFileName(file.filename, "resume")}"
         try {
             storage.upload(storageProperties.resumeBucket, path, file.bytes, file.contentType)
         } catch (e: ObjectStorageException) {

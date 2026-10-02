@@ -3,6 +3,7 @@ package com.interviewos.api.sources
 import com.interviewos.api.bank.SourceOrigin
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.storage.ObjectStorage
+import com.interviewos.api.storage.StorageKeys
 import com.interviewos.api.storage.StorageProperties
 import com.interviewos.api.user.SupabaseIdentity
 import jakarta.validation.Valid
@@ -41,6 +42,7 @@ class SourceController(
     private val storage: ObjectStorage,
     private val storageProperties: StorageProperties,
     private val adminAccess: AdminAccess,
+    private val linkAddresses: LinkAddressCheck,
 ) {
     @GetMapping
     fun list(
@@ -70,6 +72,10 @@ class SourceController(
             }
         if (scheme != "http" && scheme != "https") {
             throw ApiException.badRequest("That needs to be an http or https link.", code = "unsupported_scheme")
+        }
+        // Checked again when the page is fetched; refusing here just tells the admin now.
+        if (!linkAddresses.isPublic(url)) {
+            throw ApiException.badRequest("That link does not point at a public website.", code = "non_public_address")
         }
 
         val id =
@@ -104,7 +110,7 @@ class SourceController(
             throw ApiException.badRequest("That file was empty.", code = "empty_document")
         }
 
-        val path = "library/${UUID.randomUUID()}-${file.originalFilename?.takeLast(80) ?: "document"}"
+        val path = "library/${UUID.randomUUID()}-${StorageKeys.safeFileName(file.originalFilename, "document")}"
         storage.upload(storageProperties.mediaBucket, path, file.bytes, file.contentType ?: "application/octet-stream")
 
         val id =

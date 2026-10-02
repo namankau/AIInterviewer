@@ -1,95 +1,112 @@
-# Handoff — 2026-10-02
+# Handoff — 2026-10-02 (production-readiness quick wins)
 
 ## Start here (for the next agent, Codex or Claude)
 Where the repository stands at the end of this run:
 
-- **`develop` is the source of truth.** Every feature branch is merged and has been
-  deleted, locally and on GitHub. No PR is open into `develop`.
-- **A release PR `develop` → `main` is open, waiting for the owner to merge it.** Once it
-  is merged, `main` and `develop` have the same content. Never push to `main` yourself
-  (CLAUDE.md / AGENTS.md rule 1).
-- **CI is green on `develop`.** Both jobs pass: web (typecheck, lint, test, build) and API
-  (ktlint, test, build).
-- **No migrations are pending.** Task 065 made no schema change.
-- **Untracked on purpose:** `.codex/` (Codex agent profiles) and `AGENTS.md`. They exist
-  only on the owner's machine.
+- **`main` and `develop` have the same content**, apart from this run's branch.
+  - The owner merged release PR #23 (`develop` → `main`) on 2 Oct.
+  - `origin/main` also carries that PR's merge commit (`7f1c659`), which `develop` does
+    not have. That is expected; nothing needs syncing.
+- **Open PR: `fix/prod-readiness-quick-wins` → `develop`.** It is left open for human
+  review because it changes admin permissions (`AdminAccess`). Do not merge it yourself.
+- **Production-readiness review:** a doc titled "AIInterviewer — Production Readiness
+  Red Flags" (owner's Claude artifacts). It lists 7 launch blockers (B1–B7) and a phased
+  remediation plan. This run fixed what needed no owner decision; the rest is listed
+  under "Suggested next task".
+- **No migrations are pending.** This run made no schema change.
+- **Untracked on purpose:** `.codex/` and `AGENTS.md`. They exist only on the owner's
+  machine.
 - **Start any new work from `origin/develop`:**
   `git fetch origin && git checkout -b <branch> origin/develop`.
-- **The latest task file is `tasks/task-065-…`, and it is complete.** The next task is 066.
+- **The latest task file is task 065, and it is complete.** This run had no task file.
+  The next task is 066.
 
 ## Task
-Task 065: learning depth, account isolation, and sourced loop discovery
-(`tasks/task-065-learning-depth-account-isolation-and-sourced-loops.md`). Codex started it
-on 29 Sep. Claude Code finished it on 2 Oct, and the owner merged it as PR #22.
+Fix the production-readiness red flags that can be fixed straight away (owner request,
+2 Oct). No task file.
 
-## What was built (all now on `develop`)
-- **Account isolation (PRD §05), `d4bb716`:**
-  - Dashboard, profile and course-progress state each record which access token fetched
-    them, and are shown only while that token is the active one.
-  - A previous account's data cannot show or change after sign-out or an account switch.
-  - Late responses from an old request are discarded, and failed refreshes clear the
-    data instead of leaving stale data on screen.
-  - Tests: `dashboard-panel.identity.test.tsx`, `profile-panel.test.tsx`,
-    `course-progress.test.tsx`.
-- **Interview room (PRD §07), `0bc42a3`:** removed the notice offering to switch to
-  writing when the interviewer's audio was unavailable.
-- **Courses (PRD §09), `26320e6`:**
-  - Every concept now gets beginner-first definitions, examples and a multi-point
-    Remember recap.
-  - Content-integrity tests enforce this for every chapter.
-- **CI and bug fixes, `ec51286`:**
-  - Fixed 3 `react-hooks` lint errors that had failed CI on every Codex push.
-  - Fixed `importLegacyProgress` reporting a successful server import as a failure.
-- **Sourced employer research (PRD §04), `bfd8b3f`:**
-  - **When it runs:** for a company with no sourced stage, the loop brief runs a Gemini
-    call with the `googleSearch` tool.
-  - **What is kept (`ai/GroundedAnswer.kt`):** only sentences that Gemini's grounding ties
-    to a page. Each claim keeps numbered citations, and unsupported sentences are dropped.
-  - **Which models can serve it:** only providers with `AiCapability.WEB_GROUNDING`
-    (Gemini), never a text-only model.
-  - **Cache (`loopbrief/PublicLoopResearch.kt`):** in memory, 12h, 500 entries. It caches
-    "nothing found" but not failed calls.
-  - **Switch:** `INTERVIEWOS_PUBLIC_LOOP_RESEARCH`, on by default.
-  - **API:** `LoopBriefView.publicSourcePattern` (`claims[]` plus `sources[]`), mirrored in
-    `packages/shared/src/loop-brief.ts`.
-  - **UI (`loop-brief-step.tsx`):** a separate "Found in public sources" section labelled
-    as an AI summary. The archetype pattern is still shown below it.
+## What I built
+- **B1, critical Next.js RCE:** `next` and `eslint-config-next` 16.3.2 → 16.3.8, plus
+  `npm audit fix`. `npm audit --omit=dev` went from 12 issues (1 critical, 3 high) to 9
+  (2 high, 7 moderate). The remaining two are listed under "Assumptions I made".
+- **Security headers** (`apps/web/next.config.ts`), sent on every response:
+  - `frame-ancestors 'none'` and `X-Frame-Options: DENY`
+  - `Permissions-Policy: microphone=(self), camera=(self)`, with other device access off
+  - HSTS, `nosniff`, and `strict-origin-when-cross-origin`
+- **Admin access** (`sources/AdminAccess.kt`, `user/SupabaseIdentity.kt`):
+  - An email on the allow-list is no longer enough on its own.
+  - The account must also have signed in through Google (read from `app_metadata`, which
+    users cannot write; `user_metadata.email_verified` is not trusted).
+  - Alternatively, admins can be pinned by Supabase user ID with the new
+    `ADMIN_USER_IDS` (added to `.env.example`).
+- **SSRF block** (`sources/PublicAddress.kt`):
+  - Source links must resolve only to public addresses. Loopback, private, link-local,
+    cloud-metadata (`169.254.169.254`), carrier-grade NAT, IPv6 private and IPv4-mapped
+    addresses are refused.
+  - It is checked when a link is added (400 `non_public_address`) and again before every
+    fetch.
+- **Uploads:**
+  - A resume's declared type must match its first bytes (`resume/ResumeSignature.kt`,
+    400 `resume_type_mismatch`).
+  - User-supplied file names are reduced to safe characters before going into a storage
+    key (`storage/StorageKeys.kt`). Before this, a name containing `../` reached the key
+    under the user's prefix.
+- **Arena API:** `/api/arena/challenges/[course]` now returns 401 without a verified
+  session, in line with the owner's sign-in decision of 21 Sep.
+- **Error pages:** added `app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx` and
+  `app/interview/[id]/error.tsx`, built on `components/errors/error-panel.tsx`. A render
+  failure no longer drops a candidate on Next's bare page.
+- **Dependabot** (`.github/dependabot.yml`): weekly npm and Gradle update PRs and
+  monthly Actions update PRs, all against `develop`.
+- **Tests:** `AdminAccessTest`, `PublicAddressTest`, `ResumeSignatureTest`,
+  `StorageKeysTest`, a new SSRF case in `SourceControllerAddLinkTest`, the arena
+  `route.test.ts`, and `error-panel.test.tsx`.
 
-## Assumptions made
-- "Unknown employer" means no sourced stage. Our own sourced record always outranks the
-  search.
-- The cache is in memory, not a table, because Gemini's citation links are expiring
-  redirect URLs.
-- The prep plan does not use the search results yet.
+## Assumptions I made
+- **Admins sign in with Google.** CLAUDE.md names Google OAuth as the sign-in method. If
+  the owner signs in another way, they need to set `ADMIN_USER_IDS`, or admin pages will
+  return 404.
+- **No full script CSP.** Pyodide, Supabase, signed storage URLs and blob audio each need
+  allowances that should be proven in a browser first. Only directives that cannot break a
+  page were added.
+- **Two high advisories are left.**
+  - `lodash-es` (via Mermaid in Excalidraw) and `nanoid` 4.x (via
+    `mermaid-to-excalidraw`) have no fix inside their pinned majors.
+  - npm overrides for them corrupted the install: `lodash-es` vanished from the tree, so
+    they were reverted.
+  - Both are reachable only through first-party course content.
+- **Empty `design-preview/` and `dev-course-preview/` folders were deleted locally.** Git
+  never tracked them, so there is no diff.
 
-## What could NOT be verified
-- **No live Gemini call has been made** for the grounded search (rule 7). Untested: answer
-  quality, latency, and search-tool behaviour on each model in the chain.
-- **Google's Search Suggestions requirement:** grounded results may have to show
-  `searchEntryPoint.renderedContent`. This is not implemented, and it needs the owner's
-  legal decision.
-- **Cost tracking:** grounded searches are billed per query, and `AiPrices` records tokens
-  only.
-- Visual design of the new section.
+## What I could NOT verify
+- **Headers in a real browser:** whether HSTS, Permissions-Policy or frame-ancestors
+  affect the Supabase OAuth redirect, the camera or microphone prompt, or Pyodide. A
+  manual pass through sign-in → interview room → report is needed before production.
+- **The SSRF check is open to DNS rebinding.** DNS can change between the check and the
+  connection; closing that needs a resolver pinned into the HTTP client. Redirects are not
+  followed, so they are not a bypass.
+- **How the error pages look.**
 
 ## Verification status
-- Backend `ktlintCheck test build`: pass.
-- Web typecheck, lint, tests (57 files / 2,921 tests), build (174 pages): pass.
-- GitHub CI on the task 065 head: web and API green (run `36964102931`).
+- Backend `ktlintCheck test build`: pass. New tests: AdminAccess 7, PublicAddress 5,
+  ResumeSignature 3, StorageKeys 4, SourceControllerAddLink 5.
+- Web typecheck, lint, tests (59 files / 2,925 tests) and build (174 pages): pass.
+- CI on the pushed branch: see the PR.
 
 ## Merge status
-- Task 065 was merged into `develop` through PR #22 (merge commit `fd0d2d9`).
-- A release PR `develop` → `main` is open for the owner.
-- Deleted branches, all fully merged:
-  - `feat/learning-data-integrity` (local and remote)
-  - `fix/interview-audio-observability` (remote)
-  - `fix/web-workspace-build` (local)
+- Branch `fix/prod-readiness-quick-wins` is pushed, with a PR into `develop` left open for
+  review, because it changes admin permissions.
 
 ## Suggested next task
-- Task 066: once the owner approves, make a few live grounded calls (1–2 well-known and
-  1–2 obscure employers). Then implement the Search Suggestions display if the owner
-  requires it, and add the per-query search charge to `AiPrices`.
+The readiness blockers still open need the owner, or several days of work:
+- B2: account deletion
+- B3: per-user rate and spend limits
+- B4: privacy policy and terms
+- B5: deploy pipeline and monitoring
+- B6: database tests in CI
+- B7: the grounding terms
 
-## Open questions for the owner
-- Must grounded results render Google's Search Suggestions chip? If so, keep
-  `INTERVIEWOS_PUBLIC_LOOP_RESEARCH=false` in production until it is built.
+Account deletion (B2) is the most self-contained, because the schema already cascades.
+
+## Open questions for you
+- Do you sign in as admin with Google? If not, set `ADMIN_USER_IDS` before merging.

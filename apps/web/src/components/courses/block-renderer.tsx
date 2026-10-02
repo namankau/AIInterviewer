@@ -51,14 +51,30 @@ const FULL_BLEED_KINDS: ReadonlySet<Block["kind"]> = new Set([
 export function BlockRenderer({
   blocks,
   highlightedCode,
+  layout = "default",
 }: {
   blocks: Block[];
   highlightedCode?: Array<string | CodeBlockHighlight | null>;
+  layout?: "default" | "expanded";
 }) {
   return (
-    <div className="flex flex-col gap-8">
+    <div
+      data-layout={layout}
+      className={layout === "expanded" ? "grid gap-6 lg:grid-cols-2" : "flex flex-col gap-8"}
+    >
       {blocks.map((block, index) => (
-        <div key={index} className={FULL_BLEED_KINDS.has(block.kind) ? "w-full max-w-full" : "max-w-[70ch]"}>
+        <div
+          key={index}
+          className={
+            layout === "expanded"
+              ? block.kind === "pitfall" || block.kind === "interview"
+                ? "w-full max-w-full"
+                : "w-full max-w-full lg:col-span-2"
+              : FULL_BLEED_KINDS.has(block.kind)
+                ? "w-full max-w-full"
+                : "max-w-[70ch]"
+          }
+        >
           <BlockView block={block} highlighted={highlightedCode?.[index] ?? null} />
         </div>
       ))}

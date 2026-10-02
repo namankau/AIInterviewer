@@ -41,6 +41,28 @@ export interface GeneralLoopStage {
   roundType: RoundType | null;
 }
 
+export interface PublicLoopSource {
+  title: string;
+  url: string;
+}
+
+/** One sentence about the employer's process, tied to the public pages that support it. */
+export interface PublicLoopClaim {
+  text: string;
+  /** Zero-based indexes into `PublicLoopPattern.sources`; never empty. */
+  sourceIndexes: number[];
+}
+
+/**
+ * What a search-grounded lookup found in public pages about an employer we hold no
+ * sourced account of. Every claim cites at least one source; claims the search could
+ * not support were dropped on the server.
+ */
+export interface PublicLoopPattern {
+  claims: PublicLoopClaim[];
+  sources: PublicLoopSource[];
+}
+
 export interface LoopBriefCoverage {
   questionCount: number;
   roundTypes: BankRoundTypeCount[];
@@ -55,6 +77,11 @@ export interface LoopBrief {
   hasSources: boolean;
   sourcedStages: LoopBriefStage[];
   generalPattern: GeneralLoopStage[];
+  /**
+   * Public-source research, present only when we hold no sourced stage for this company
+   * and the search found something it could cite. Null whenever `hasSources` is true.
+   */
+  publicSourcePattern: PublicLoopPattern | null;
   bankCoverage: LoopBriefCoverage;
 }
 

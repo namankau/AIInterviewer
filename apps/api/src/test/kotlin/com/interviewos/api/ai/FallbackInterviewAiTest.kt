@@ -92,6 +92,25 @@ class FallbackInterviewAiTest {
     }
 
     /**
+     * A model that cannot search does not refuse a question about a named employer — it
+     * answers from memory, fluently, with nothing behind it. So when the one provider that
+     * can search is down, the call fails rather than falling through to one that cannot.
+     */
+    @Test
+    fun `an employer search is never answered by a model that cannot search`() {
+        val gemini =
+            FakeAi("gemini", MULTIMODAL + AiCapability.WEB_GROUNDING, fails = AiUnavailableException("over the spend cap"))
+        val textOnly = FakeAi("kimi", setOf(AiCapability.STRUCTURED_TEXT))
+
+        assertFailsWith<AiUnavailableException> {
+            FallbackInterviewAi(listOf(gemini, textOnly)).researchEmployerLoop("Sagitec Solutions", "general", "mid-level")
+        }
+
+        assertEquals(1, gemini.calls)
+        assertEquals(0, textOnly.calls, "a model that cannot search must never be asked to describe an employer")
+    }
+
+    /**
      * A malformed request fails identically everywhere. Retrying it down the chain turns
      * one fast error into several slow ones and bills for each.
      */
@@ -347,6 +366,12 @@ class FallbackInterviewAiTest {
             roleFamily: String,
             level: String,
         ) = answer(GeneralLoopPattern())
+
+        override fun researchEmployerLoop(
+            companyName: String,
+            roleFamily: String,
+            level: String,
+        ) = answer(GroundedEmployerLoop())
 
         override fun composeReport(
             brief: InterviewBrief,

@@ -1,5 +1,5 @@
 import type { LoopBrief, PrepPlan } from "@acemyinterview/shared";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -47,7 +47,34 @@ const sourcedBrief: LoopBrief = {
   generalPattern: [
     { order: 1, stageName: "Recruiter screen", format: "Phone", assesses: "Motivation and fit", roundType: null },
   ],
+  publicSourcePattern: null,
   bankCoverage: { questionCount: 23, roundTypes: [], bankUrl: "/questions/amazon" },
+};
+
+const publicSourcePattern: LoopBrief["publicSourcePattern"] = {
+  claims: [
+    { text: "Sagitec starts with an online aptitude test.", sourceIndexes: [0] },
+    { text: "A technical panel and an HR round follow.", sourceIndexes: [0, 1] },
+  ],
+  sources: [
+    { title: "example.org", url: "https://example.org/sagitec-hiring" },
+    { title: "news.example", url: "https://news.example/sagitec" },
+  ],
+};
+
+const unsourcedBrief: LoopBrief = {
+  ...sourcedBrief,
+  company: {
+    ...sourcedBrief.company,
+    slug: null,
+    name: "Sagitec Solutions",
+    archetype: "service_based_it",
+    archetypeInProse: "a service-based IT loop",
+    archetypeConfidence: "inferred",
+  },
+  hasSources: false,
+  sourcedStages: [],
+  publicSourcePattern,
 };
 
 const plan: PrepPlan = {
@@ -255,6 +282,87 @@ describe("LoopBriefStep", () => {
     await userEvent.click(screen.getByRole("button", { name: /system or solution design/i }));
 
     expect(onChooseRound).toHaveBeenCalledWith("system_design");
+  });
+
+  it("shows public-source research as its own AI-labelled section, every line linked to its pages", async () => {
+    fetchLoopBrief.mockResolvedValue(unsourcedBrief);
+    fetchPrepPlan.mockResolvedValue(plan);
+
+    render(
+      <LoopBriefStep
+        companyName="Sagitec Solutions"
+        roleTitle="Backend Engineer"
+        accessToken="token"
+        onChooseRound={vi.fn()}
+        onSkip={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    const section = await screen.findByRole("region", { name: /what public pages say about sagitec solutions/i });
+    const scoped = within(section);
+    expect(scoped.getByText("Found in public sources")).toBeInTheDocument();
+    expect(scoped.getByText(/summarised by ai from a web search, not checked by us/i)).toBeInTheDocument();
+    expect(scoped.getByText(/sagitec starts with an online aptitude test/i)).toBeInTheDocument();
+
+    // Each claim carries its own numbered citations...
+    expect(scoped.getAllByRole("link", { name: "Source 1: example.org" })).toHaveLength(2);
+    expect(scoped.getByRole("link", { name: "Source 2: news.example" })).toHaveAttribute(
+      "href",
+      "https://news.example/sagitec",
+    );
+    // ...and the source list says what each number is, opening outside the app.
+    const listed = scoped.getByRole("link", { name: "example.org" });
+    expect(listed).toHaveAttribute("href", "https://example.org/sagitec-hiring");
+    expect(listed).toHaveAttribute("target", "_blank");
+
+    // Never styled as our own record, and the archetype pattern still follows, labelled.
+    expect(screen.queryByText(/own record/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/general pattern for a service-based it loop/i)).toBeInTheDocument();
+    // One caveat, and it is the one that names the search.
+    expect(screen.getByText(/what a search of public pages found/i)).toBeInTheDocument();
+    expect(screen.queryByText(/we don't know sagitec solutions specifically/i)).not.toBeInTheDocument();
+  });
+
+  it("does not show public research beside a sourced record, even if it arrives", async () => {
+    fetchLoopBrief.mockResolvedValue({ ...sourcedBrief, publicSourcePattern });
+    fetchPrepPlan.mockResolvedValue(plan);
+
+    render(
+      <LoopBriefStep
+        companyName="Amazon"
+        roleTitle="Backend Engineer"
+        accessToken="token"
+        onChooseRound={vi.fn()}
+        onSkip={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Online assessment")).toBeInTheDocument());
+    expect(screen.queryByText("Found in public sources")).not.toBeInTheDocument();
+    expect(screen.queryByText(/sagitec starts with/i)).not.toBeInTheDocument();
+  });
+
+  it("falls back to the archetype caveat when the search found nothing citable", async () => {
+    fetchLoopBrief.mockResolvedValue({ ...unsourcedBrief, publicSourcePattern: null });
+    fetchPrepPlan.mockResolvedValue(plan);
+
+    render(
+      <LoopBriefStep
+        companyName="Sagitec Solutions"
+        roleTitle="Backend Engineer"
+        accessToken="token"
+        onChooseRound={vi.fn()}
+        onSkip={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/we don't know sagitec solutions specifically/i)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("Found in public sources")).not.toBeInTheDocument();
   });
 
   it("states plainly when we hold no source for this company", async () => {

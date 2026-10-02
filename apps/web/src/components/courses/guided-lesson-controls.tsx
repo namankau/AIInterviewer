@@ -60,7 +60,7 @@ export function GuidedLessonControls({
             <div>
               <p className="font-mono text-micro tracking-widest text-accent uppercase">Guided lesson</p>
               <h2 id={`${lessonId}-title`} className="mt-1 text-title text-ink">Learn it in five short beats</h2>
-              <p className="mt-1 max-w-[65ch] text-caption leading-relaxed text-ink-muted">Read a little, make a choice, then use the interactive examples to test the idea.</p>
+              <p className="mt-1 max-w-[65ch] text-caption leading-relaxed text-ink-muted">Build the idea from plain-language definitions, test it yourself, then finish with a detailed explanation you can recall in an interview.</p>
             </div>
             <p className="rounded-full border border-accent/25 bg-surface-raised px-3 py-1 font-mono text-micro text-accent" aria-live="polite">Beat {activeBeat + 1} of {beats.length}</p>
           </div>
@@ -83,7 +83,7 @@ export function GuidedLessonControls({
                 <span className="min-w-0 flex-1"><span className="block text-heading text-ink">{beat.label}</span><span className="mt-0.5 block text-caption leading-relaxed text-ink-muted">{beat.description}</span></span>
                 <span aria-hidden="true" className="mt-1 text-ink-subtle transition-transform group-open:rotate-180">⌄</span>
               </summary>
-              <div className="border-t border-line px-4 py-5 sm:px-6 sm:py-7">
+              <div className={`border-t border-line px-4 py-5 sm:px-6 sm:py-7 ${beat.key === "explain" ? "bg-surface-sunken" : ""}`}>
                 {beat.content ?? <p className="max-w-[65ch] rounded-md border border-dashed border-line-strong bg-surface-sunken px-4 py-3 text-caption leading-relaxed text-ink-muted">This chapter does not need a separate activity for this beat. Continue when you are ready.</p>}
                 <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
                   <p className="font-mono text-micro text-ink-subtle">{beat.itemCount} lesson {beat.itemCount === 1 ? "item" : "items"}</p>

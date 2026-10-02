@@ -38,8 +38,12 @@ import { useAllCourseProgress } from "@/lib/use-course-progress";
  */
 export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) {
   const accessToken = useAccessToken();
+  // Read by async work after it awaits, to drop a result that belongs to a token that is
+  // no longer signed in. Synced in an effect: a ref must not be written during render.
   const accessTokenRef = useRef(accessToken);
-  accessTokenRef.current = accessToken;
+  useEffect(() => {
+    accessTokenRef.current = accessToken;
+  }, [accessToken]);
   const courseProgress = useAllCourseProgress();
   const [profile, setProfile] = useState<ProfileState>(() => emptyProfile(null));
   const visible =
@@ -56,19 +60,23 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
    */
   const [saved, setSaved] = useState<string | null>(null);
 
-  const resumeInput = useRef<HTMLInputElement | null>(null);
-  const avatarInput = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
+  // A message, spinner or "Saved" belongs to the account that caused it. Reset while
+  // rendering, not in an effect, so the next account never sees one for even a frame.
+  const [feedbackOwner, setFeedbackOwner] = useState(accessToken);
+  if (feedbackOwner !== accessToken) {
+    setFeedbackOwner(accessToken);
     setError(null);
     setBusy(null);
     setSaved(null);
-    if (!accessToken) {
-      setProfile(emptyProfile(null));
-      return;
-    }
+  }
+
+  const resumeInput = useRef<HTMLInputElement | null>(null);
+  const avatarInput = useRef<HTMLInputElement | null>(null);
+
+  // As on the dashboard, `visible` hides another token's data, so nothing is cleared here.
+  useEffect(() => {
+    if (!accessToken) return;
     let active = true;
-    setProfile(emptyProfile(accessToken));
     Promise.allSettled([
       fetchProfile({ accessToken }),
       fetchMe({ accessToken }),

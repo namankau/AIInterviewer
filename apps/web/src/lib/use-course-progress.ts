@@ -187,7 +187,15 @@ export function useAllCourseProgress(): { completed: CompletedByCourse; status: 
   return { completed: visibleSnapshot.completed, status: visibleSnapshot.status };
 }
 
-/** Folds imported progress into the store without a second round trip. */
+/**
+ * Imports progress into the account, and folds the result into the store without a second
+ * round trip — but only when the store still belongs to that account.
+ *
+ * The answer is whether the server saved it, not whether the store was updated: a store
+ * nobody has loaded yet, or one that now belongs to another account, is simply left alone
+ * (it reads the imported chapters from the server when it next loads). Reporting a saved
+ * import as a failure would keep offering it.
+ */
 export async function importLegacyProgress(
   accessToken: string,
   chapters: { courseSlug: string; chapterSlug: string }[],
@@ -195,8 +203,9 @@ export async function importLegacyProgress(
   const importGeneration = generation;
   try {
     const view = await importCourseProgress(accessToken, { chapters });
-    if (generation !== importGeneration || loadedFor !== accessToken) return false;
-    setState({ status: "ready", completed: view.completed ?? {} });
+    if (generation === importGeneration && loadedFor === accessToken) {
+      setState({ status: "ready", completed: view.completed ?? {} });
+    }
     return true;
   } catch {
     return false;

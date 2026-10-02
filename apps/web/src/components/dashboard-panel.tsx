@@ -32,14 +32,11 @@ export function DashboardPanel() {
       ? dashboard
       : emptyDashboard(accessToken ?? null);
 
+  // No reset here: `visible` already hides anything another token fetched, so clearing
+  // state on a token change would only add a render.
   useEffect(() => {
-    if (!accessToken) {
-      setDashboard(emptyDashboard(null));
-      return;
-    }
+    if (!accessToken) return;
     let active = true;
-
-    setDashboard(emptyDashboard(accessToken));
 
     Promise.allSettled([
       fetchEntitlement({ accessToken }),

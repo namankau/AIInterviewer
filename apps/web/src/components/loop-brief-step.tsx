@@ -16,6 +16,11 @@ import { ROUND_CATALOGUE } from "@/lib/rounds";
  * is that a candidate can tell which is which (`CLAUDE.md`: never let a general pattern
  * be presented as a specific report).
  *
+ * An employer we hold no sourced stage for may also get a third, separately labelled
+ * section: what a search of public pages turned up, one sentence at a time, each linked
+ * to the pages behind it. It is AI-written, so it is said to be, and it never borrows the
+ * sourced stages' "own record" styling.
+ *
  * The honesty caveat — this is an archetype guess, not a claim about the named employer
  * — is said exactly once, wherever it is most true for this company, rather than once
  * per section. Repeating it is how the one that matters gets skipped.
@@ -71,12 +76,18 @@ export function LoopBriefStep({
   // recognise the archetype, that is the caveat. Otherwise, if we recognise the
   // archetype but hold no sourced account, that is. If we hold sources, the sourced
   // stages speak for themselves and the general-pattern section labels itself.
+  // Public research changes what the caveat must say: there *is* something specific
+  // below, but it is a search result, not our record — and the pattern after it is still
+  // only the archetype's.
+  const publicPattern = brief && !brief.hasSources ? brief.publicSourcePattern : null;
   const caveat = brief
-    ? brief.company.archetypeConfidence === "inferred"
-      ? `We don't know ${brief.company.name} specifically, so this runs on ${brief.company.archetypeInProse} — the closest pattern, not a claim about this employer.`
-      : !brief.hasSources
-        ? `We don't hold a sourced account of ${brief.company.name}'s process yet — what follows is the usual pattern for ${brief.company.archetypeInProse}, not a claim about this employer specifically.`
-        : null
+    ? publicPattern
+      ? `We don't hold a verified account of ${brief.company.name}'s process. Below is what a search of public pages found, linked to each page, then the usual pattern for ${brief.company.archetypeInProse}.`
+      : brief.company.archetypeConfidence === "inferred"
+        ? `We don't know ${brief.company.name} specifically, so this runs on ${brief.company.archetypeInProse} — the closest pattern, not a claim about this employer.`
+        : !brief.hasSources
+          ? `We don't hold a sourced account of ${brief.company.name}'s process yet — what follows is the usual pattern for ${brief.company.archetypeInProse}, not a claim about this employer specifically.`
+          : null
     : null;
 
   // A sourced stage with nothing to say (no `assesses`) doesn't earn its own block —
@@ -185,6 +196,56 @@ export function LoopBriefStep({
             </span>
           ))}
         </p>
+      ) : null}
+
+      {publicPattern && publicPattern.claims.length > 0 ? (
+        <section
+          aria-labelledby="public-sources-heading"
+          className="flex flex-col gap-4 rounded-2xl border border-highlight/30 bg-warning-wash p-6"
+        >
+          <div className="flex flex-col gap-2">
+            <p className="pill pill-highlight w-fit">Found in public sources</p>
+            <h2 id="public-sources-heading" className="text-body font-semibold text-ink">
+              What public pages say about {brief.company.name}
+            </h2>
+            <p className="max-w-prose text-caption text-ink-muted">
+              Summarised by AI from a web search, not checked by us. Each line links to the pages it
+              came from — open them before relying on a detail.
+            </p>
+          </div>
+          <ol className="flex flex-col gap-2">
+            {publicPattern.claims.map((claim, index) => (
+              <li key={`${index}-${claim.text}`} className="text-body text-ink">
+                {claim.text}{" "}
+                {claim.sourceIndexes.map((sourceIndex) => {
+                  const source = publicPattern.sources[sourceIndex];
+                  return source ? (
+                    <a
+                      key={sourceIndex}
+                      href={source.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      aria-label={`Source ${sourceIndex + 1}: ${source.title}`}
+                      className="align-super text-micro text-accent underline-offset-4 hover:underline"
+                    >
+                      [{sourceIndex + 1}]
+                    </a>
+                  ) : null;
+                })}
+              </li>
+            ))}
+          </ol>
+          <ol className="flex flex-col gap-1 border-t border-line pt-3 text-caption text-ink-subtle">
+            {publicPattern.sources.map((source, index) => (
+              <li key={source.url}>
+                {index + 1}.{" "}
+                <a href={source.url} target="_blank" rel="noreferrer noopener" className="underline-offset-4 hover:underline">
+                  {source.title}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </section>
       ) : null}
 
       {brief.generalPattern.length > 0 ? (

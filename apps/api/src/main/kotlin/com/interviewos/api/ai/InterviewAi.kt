@@ -117,6 +117,28 @@ interface InterviewAi {
         level: String,
     ): AiResult<GeneralLoopPattern>
 
+    /**
+     * What public pages say about one named employer's loop — the counterpart to
+     * [composeLoopPattern], used only when we hold no sourced account of the company.
+     *
+     * This call *is* told the company's name, so it carries the opposite guarantee: every
+     * claim it returns is tied by search grounding to at least one page a candidate can
+     * open, and a claim with no page behind it is dropped rather than returned. An empty
+     * result means nothing citable was found, which callers must show as exactly that.
+     *
+     * Only a provider with [AiCapability.WEB_GROUNDING] implements it; the default
+     * refuses, so a text-only model is never asked to answer this from memory.
+     */
+    fun researchEmployerLoop(
+        companyName: String,
+        roleFamily: String,
+        level: String,
+    ): AiResult<GroundedEmployerLoop> =
+        throw AiUnavailableException(
+            "$providerName cannot research public sources.",
+            worthRetryingElsewhere = true,
+        )
+
     fun composeReport(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,

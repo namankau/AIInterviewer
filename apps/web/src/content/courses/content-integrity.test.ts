@@ -109,10 +109,13 @@ describe("course: system-design, as a whole", () => {
       const glossaries = tables.filter((block) => block.head[0] === "Term");
       const workedExamples = concepts.filter((block) => block.title === "Worked example");
 
-      expect(headings, chapter.slug).toContain("First, say it without jargon");
+      expect(headings, chapter.slug).toContain("First, learn the words in plain language");
       expect(glossaries, chapter.slug).toHaveLength(1);
       expect(glossaries[0]?.rows.length, chapter.slug).toBeGreaterThanOrEqual(3);
       expect(glossaries[0]?.rows.every((row) => row.length === 2 && row.every((cell) => cell.trim().length > 0)), chapter.slug).toBe(true);
+      expect(chapter.blocks.indexOf(glossaries[0]!), chapter.slug).toBeLessThan(
+        chapter.blocks.findIndex((block) => block.kind === "analogy"),
+      );
       expect(workedExamples, chapter.slug).toHaveLength(1);
       expect(workedExamples[0]?.text.trim().length, chapter.slug).toBeGreaterThanOrEqual(80);
       expect(comparisons.some((block) => block.title?.includes("trade-off")), chapter.slug).toBe(true);
@@ -214,6 +217,12 @@ describe.each(courses)("course: $slug", (course: Course) => {
 
     it("has exactly one remember box", () => {
       expect(blocksOf("remember", chapter).length).toBe(1);
+    });
+
+    it("has a detailed remember box, not a one-line slogan", () => {
+      const remember = blocksOf("remember", chapter)[0] as Extract<Block, { kind: "remember" }>;
+      expect(remember.items.length, chapter.slug).toBeGreaterThanOrEqual(3);
+      expect(remember.items.join(" ").trim().length, chapter.slug).toBeGreaterThanOrEqual(120);
     });
 
     it("has at least one interview-angle box", () => {

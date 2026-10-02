@@ -107,6 +107,15 @@ class FallbackInterviewAi(
     ): AiResult<GeneralLoopPattern> =
         attempt(AiCapability.STRUCTURED_TEXT, "composeLoopPattern") { it.composeLoopPattern(archetype, roleFamily, level) }
 
+    override fun researchEmployerLoop(
+        companyName: String,
+        roleFamily: String,
+        level: String,
+    ): AiResult<GroundedEmployerLoop> =
+        attempt(AiCapability.WEB_GROUNDING, "researchEmployerLoop") {
+            it.researchEmployerLoop(companyName, roleFamily, level)
+        }
+
     override fun composeReport(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,

@@ -143,6 +143,17 @@ interviewos:
     # INTERVIEWOS_RETENTION_REPORTSKEPTFOR, which outranks this file.
     reports-kept-for: 28d
 
+  loop-brief:
+    public-research:
+      # Whether the loop brief for an employer we hold no sourced account of runs a
+      # search-grounded lookup of public pages (task 065). Each search is billed per query,
+      # so answers are reused for `kept-for`; the links Gemini cites are redirects that
+      # expire, which is why that is hours rather than weeks. Off, those briefs show the
+      # archetype pattern alone.
+      enabled: ${INTERVIEWOS_PUBLIC_LOOP_RESEARCH:true}
+      kept-for: 12h
+      max-entries: 500
+
   question-bank:
     # Whether candidates can browse the sourced bank at /questions (task 042). Off, the two
     # list endpoints answer 404 and the web app hides the pages, the nav entry and the loop

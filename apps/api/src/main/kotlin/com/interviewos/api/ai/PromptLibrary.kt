@@ -165,6 +165,21 @@ class PromptLibrary(
             .replace("{{roleFamily}}", roleFamily)
             .replace("{{level}}", level)
 
+    /**
+     * The one prompt that asks about a named employer *and* lets the model describe it —
+     * which is safe only because it is sent with search grounding on, and only the
+     * sentences the grounding ties to a page survive (`GroundedAnswer`).
+     */
+    fun publicEmployerLoop(
+        companyName: String,
+        roleFamily: String,
+        level: String,
+    ): String =
+        loadPrompt("public-employer-loop")
+            .replace("{{company}}", companyName)
+            .replace("{{roleFamily}}", roleFamily)
+            .replace("{{level}}", level)
+
     fun report(
         brief: InterviewBrief,
         transcript: List<TurnTranscript>,

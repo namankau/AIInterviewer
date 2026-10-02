@@ -55,6 +55,7 @@ class GeminiInterviewAi(
             AiCapability.SPEECH_SYNTHESIS,
             AiCapability.CODE_EXECUTION,
             AiCapability.TEXT_EMBEDDING,
+            AiCapability.WEB_GROUNDING,
         )
 
     override fun parseResume(file: ResumeFile): AiResult<ParsedResume> {
@@ -242,6 +243,36 @@ class GeminiInterviewAi(
         val prompt = prompts.loopPattern(archetype, roleFamily, level)
         val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("general-loop-pattern"))
         return AiResult(objectMapper.treeToValue(node, GeneralLoopPattern::class.java), usage)
+    }
+
+    /**
+     * Search-grounded, and so the one call that is plain text rather than JSON: Gemini
+     * does not combine a response schema with the search tool on every model in the
+     * chain. Structure comes from the grounding metadata instead, which is better
+     * evidence than any schema — see [GroundedAnswer].
+     */
+    override fun researchEmployerLoop(
+        companyName: String,
+        roleFamily: String,
+        level: String,
+    ): AiResult<GroundedEmployerLoop> {
+        requireConfigured()
+        val body =
+            mapOf(
+                "contents" to
+                    listOf(
+                        mapOf(
+                            "role" to "user",
+                            "parts" to listOf(textPart(prompts.publicEmployerLoop(companyName, roleFamily, level))),
+                        ),
+                    ),
+                "tools" to listOf(mapOf("googleSearch" to emptyMap<String, Any>())),
+                "generationConfig" to mapOf("temperature" to 0.2),
+            )
+        val response = call(reasoningModel, body)
+        val candidate = response.path("candidates").path(0)
+        if (candidate.isMissingNode) throw AiUnavailableException("Gemini returned no answer to the employer search on $reasoningModel.")
+        return AiResult(GroundedAnswer.read(candidate), usageOf(response, reasoningModel))
     }
 
     override fun composeReport(

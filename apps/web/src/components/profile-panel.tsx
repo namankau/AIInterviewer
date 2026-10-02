@@ -38,12 +38,18 @@ import { useAllCourseProgress } from "@/lib/use-course-progress";
  */
 export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) {
   const accessToken = useAccessToken();
+  // Read by async work after it awaits, to drop a result that belongs to a token that is
+  // no longer signed in. Synced in an effect: a ref must not be written during render.
+  const accessTokenRef = useRef(accessToken);
+  useEffect(() => {
+    accessTokenRef.current = accessToken;
+  }, [accessToken]);
   const courseProgress = useAllCourseProgress();
-  const [details, setDetails] = useState<ProfileDetails | null>(null);
-  const [me, setMe] = useState<MeResponse | null>(null);
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [arena, setArena] = useState<ArenaProgressView | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [profile, setProfile] = useState<ProfileState>(() => emptyProfile(null));
+  const visible =
+    typeof accessToken === "string" && profile.ownerToken === accessToken
+      ? profile
+      : emptyProfile(accessToken ?? null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<null | "resume" | "avatar" | "profile" | "skill">(null);
   /**
@@ -54,9 +60,20 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
    */
   const [saved, setSaved] = useState<string | null>(null);
 
+  // A message, spinner or "Saved" belongs to the account that caused it. Reset while
+  // rendering, not in an effect, so the next account never sees one for even a frame.
+  const [feedbackOwner, setFeedbackOwner] = useState(accessToken);
+  if (feedbackOwner !== accessToken) {
+    setFeedbackOwner(accessToken);
+    setError(null);
+    setBusy(null);
+    setSaved(null);
+  }
+
   const resumeInput = useRef<HTMLInputElement | null>(null);
   const avatarInput = useRef<HTMLInputElement | null>(null);
 
+  // As on the dashboard, `visible` hides another token's data, so nothing is cleared here.
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
@@ -67,11 +84,14 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
       fetchArenaProgress({ accessToken }),
     ]).then(([profile, candidate, history, arenaProgress]) => {
       if (!active) return;
-      if (profile.status === "fulfilled") setDetails(profile.value);
-      if (candidate.status === "fulfilled") setMe(candidate.value);
-      if (history.status === "fulfilled") setSessions(history.value);
-      if (arenaProgress.status === "fulfilled") setArena(arenaProgress.value);
-      setLoaded(true);
+      setProfile({
+        ownerToken: accessToken,
+        details: profile.status === "fulfilled" ? profile.value : null,
+        me: candidate.status === "fulfilled" ? candidate.value : null,
+        sessions: history.status === "fulfilled" ? history.value : [],
+        arena: arenaProgress.status === "fulfilled" ? arenaProgress.value : null,
+        loaded: true,
+      });
     });
     return () => {
       active = false;
@@ -79,20 +99,23 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
   }, [accessToken]);
 
   const run = useCallback(
-    async (kind: NonNullable<typeof busy>, work: () => Promise<void>) => {
+    async (kind: NonNullable<typeof busy>, work: (operationToken: string) => Promise<void>) => {
       if (!accessToken) return;
+      const operationToken = accessToken;
       setBusy(kind);
       setError(null);
       setSaved(null);
       try {
-        await work();
-        setSaved(DONE[kind]);
+        await work(operationToken);
+        if (accessTokenRef.current === operationToken) setSaved(DONE[kind]);
       } catch (cause) {
-        setError(
-          cause instanceof ApiRequestError ? cause.message : "That did not work. Please try again.",
-        );
+        if (accessTokenRef.current === operationToken) {
+          setError(
+            cause instanceof ApiRequestError ? cause.message : "That did not work. Please try again.",
+          );
+        }
       } finally {
-        setBusy(null);
+        if (accessTokenRef.current === operationToken) setBusy(null);
       }
     },
     [accessToken],
@@ -107,18 +130,16 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
   }, [saved]);
 
   const onResume = (file: File) =>
-    run("resume", async () => {
-      const resume = await uploadResume(accessToken!, file);
-      setDetails((current) =>
-        current
-          ? { ...current, resume }
-          : { resume, skills: [], avatarUrl: null, currentLevel: null, targetLevel: null, linkedinUrl: null },
-      );
+    run("resume", async (operationToken) => {
+      await uploadResume(operationToken, file);
       // Detected skills land server-side, so the list is re-read rather than guessed at.
-      setDetails(await fetchProfile({ accessToken: accessToken! }));
+      const details = await fetchProfile({ accessToken: operationToken });
+      setProfile((current) =>
+        current.ownerToken === operationToken ? { ...current, details } : current,
+      );
     });
 
-  if (!loaded) {
+  if (!visible.loaded) {
     return (
       <p role="status" className="text-body text-ink-muted">
         Loading your profile…
@@ -126,15 +147,15 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
     );
   }
 
-  const resume = details?.resume ?? null;
+  const resume = visible.details?.resume ?? null;
 
   return (
     <div className="flex flex-col gap-6">
       <ProfileOverview
-        details={details}
-        me={me}
-        sessions={sessions}
-        arena={arena}
+        details={visible.details}
+        me={visible.me}
+        sessions={visible.sessions}
+        arena={visible.arena}
         outlines={outlines}
         completed={courseProgress.completed}
         progressReady={courseProgress.status === "ready"}
@@ -142,7 +163,12 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
         avatarBusy={busy === "avatar"}
         disabled={busy !== null}
         onAvatar={(file) =>
-          run("avatar", async () => setDetails(await uploadAvatar(accessToken!, file)))
+          run("avatar", async (operationToken) => {
+            const details = await uploadAvatar(operationToken, file);
+            setProfile((current) =>
+              current.ownerToken === operationToken ? { ...current, details } : current,
+            );
+          })
         }
       />
 
@@ -190,11 +216,15 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
       </section>
 
       <ProfileForm
-        details={details}
+        key={visible.ownerToken ?? "signed-out"}
+        details={visible.details}
         disabled={busy !== null}
         onSave={(body) =>
-          run("profile", async () => {
-            setDetails(await updateProfile(accessToken!, body));
+          run("profile", async (operationToken) => {
+            const details = await updateProfile(operationToken, body);
+            setProfile((current) =>
+              current.ownerToken === operationToken ? { ...current, details } : current,
+            );
           })
         }
       />
@@ -214,22 +244,29 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
         </div>
 
         <SkillList
-          skills={details?.skills ?? []}
+          skills={visible.details?.skills ?? []}
           disabled={busy !== null}
           onToggleWeak={(skill) =>
-            run("skill", async () => {
-              const skills = await upsertSkill(accessToken!, {
+            run("skill", async (operationToken) => {
+              const skills = await upsertSkill(operationToken, {
                 name: skill.name,
                 selfRatedConfidence: skill.selfRatedConfidence ?? undefined,
                 flaggedAsWeak: !skill.flaggedAsWeak,
               });
-              setDetails((current) => (current ? { ...current, skills } : current));
+              setProfile((current) =>
+                current.ownerToken === operationToken && current.details
+                  ? { ...current, details: { ...current.details, skills } }
+                  : current,
+              );
             })
           }
           onRemove={(name) =>
-            run("skill", async () => {
-              await deleteSkill(accessToken!, name);
-              setDetails(await fetchProfile({ accessToken: accessToken! }));
+            run("skill", async (operationToken) => {
+              await deleteSkill(operationToken, name);
+              const details = await fetchProfile({ accessToken: operationToken });
+              setProfile((current) =>
+                current.ownerToken === operationToken ? { ...current, details } : current,
+              );
             })
           }
         />
@@ -252,6 +289,19 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
       ) : null}
     </div>
   );
+}
+
+interface ProfileState {
+  ownerToken: string | null;
+  details: ProfileDetails | null;
+  me: MeResponse | null;
+  sessions: SessionSummary[];
+  arena: ArenaProgressView | null;
+  loaded: boolean;
+}
+
+function emptyProfile(ownerToken: string | null): ProfileState {
+  return { ownerToken, details: null, me: null, sessions: [], arena: null, loaded: false };
 }
 
 /**

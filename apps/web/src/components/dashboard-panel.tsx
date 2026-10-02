@@ -23,11 +23,17 @@ import { useAccessToken } from "@/lib/use-access-token";
  */
 export function DashboardPanel() {
   const accessToken = useAccessToken();
-  const [entitlement, setEntitlement] = useState<EntitlementView | null>(null);
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [readiness, setReadiness] = useState<ReadinessGroup[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [dashboard, setDashboard] = useState<DashboardState>(() => emptyDashboard(null));
 
+  // Identity changes are visible during render, before effects run. Never render data
+  // whose owner is the token from a previous render, even for a single frame.
+  const visible =
+    typeof accessToken === "string" && dashboard.ownerToken === accessToken
+      ? dashboard
+      : emptyDashboard(accessToken ?? null);
+
+  // No reset here: `visible` already hides anything another token fetched, so clearing
+  // state on a token change would only add a render.
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
@@ -38,10 +44,13 @@ export function DashboardPanel() {
       fetchReadiness({ accessToken }),
     ]).then(([ent, list, ready]) => {
       if (!active) return;
-      if (ent.status === "fulfilled") setEntitlement(ent.value);
-      if (list.status === "fulfilled") setSessions(list.value);
-      if (ready.status === "fulfilled") setReadiness(ready.value);
-      setLoaded(true);
+      setDashboard({
+        ownerToken: accessToken,
+        entitlement: ent.status === "fulfilled" ? ent.value : null,
+        sessions: list.status === "fulfilled" ? list.value : [],
+        readiness: ready.status === "fulfilled" ? ready.value : [],
+        loaded: true,
+      });
     });
 
     return () => {
@@ -59,10 +68,20 @@ export function DashboardPanel() {
   const handleDelete = useCallback(
     async (id: string) => {
       if (!accessToken) return;
-      await deleteSession(accessToken, id);
-      setSessions((current) => current.filter((session) => session.id !== id));
+      const operationToken = accessToken;
+      await deleteSession(operationToken, id);
+      setDashboard((current) =>
+        current.ownerToken === operationToken
+          ? { ...current, sessions: current.sessions.filter((session) => session.id !== id) }
+          : current,
+      );
       try {
-        setReadiness(await fetchReadiness({ accessToken }));
+        const nextReadiness = await fetchReadiness({ accessToken: operationToken });
+        setDashboard((current) =>
+          current.ownerToken === operationToken
+            ? { ...current, readiness: nextReadiness }
+            : current,
+        );
       } catch {
         // The deletion itself succeeded. Leaving the previous readiness on screen makes
         // it briefly stale, which is a far smaller lie than reporting a failed delete.
@@ -73,13 +92,25 @@ export function DashboardPanel() {
 
   return (
     <DashboardView
-      entitlement={entitlement}
-      sessions={sessions}
-      readiness={readiness}
-      loaded={loaded}
+      entitlement={visible.entitlement}
+      sessions={visible.sessions}
+      readiness={visible.readiness}
+      loaded={visible.loaded}
       onDelete={handleDelete}
     />
   );
+}
+
+interface DashboardState {
+  ownerToken: string | null;
+  entitlement: EntitlementView | null;
+  sessions: SessionSummary[];
+  readiness: ReadinessGroup[];
+  loaded: boolean;
+}
+
+function emptyDashboard(ownerToken: string | null): DashboardState {
+  return { ownerToken, entitlement: null, sessions: [], readiness: [], loaded: false };
 }
 
 /**

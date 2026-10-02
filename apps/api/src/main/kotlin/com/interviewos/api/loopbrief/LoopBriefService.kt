@@ -1,6 +1,7 @@
 package com.interviewos.api.loopbrief
 
 import com.interviewos.api.ai.GeneralLoopStage
+import com.interviewos.api.ai.GroundedEmployerLoop
 import com.interviewos.api.bank.Company
 import com.interviewos.api.bank.CompanyCoverage
 import com.interviewos.api.bank.CompanyDirectory
@@ -21,6 +22,11 @@ import org.springframework.stereotype.Service
  * open. What the model contributes is [GeneralLoopPattern] — archetype-level, and
  * composed without ever being told the company's name, so it cannot invent a detail
  * about a company it never saw.
+ *
+ * Between the two sits [PublicLoopResearch], for a company with no sourced stage at
+ * all: what public pages say, sentence by sentence, each sentence linked to the pages
+ * behind it. It is asked only when the library has nothing, and it is shown as its own
+ * labelled section — never merged into either of the others.
  */
 @Service
 class LoopBriefService(
@@ -30,6 +36,7 @@ class LoopBriefService(
     private val patterns: GeneralLoopPatternCache,
     private val bank: QuestionBankRepository,
     private val bankBrowsing: QuestionBankProperties,
+    private val publicResearch: PublicLoopResearch,
 ) {
     fun brief(
         companyName: String,
@@ -38,6 +45,14 @@ class LoopBriefService(
     ): LoopBriefView {
         val resolved = resolveLoop(companyName, role, level)
         val coverage = resolved.company?.let { bank.coverage(it) }
+        // Our own sourced record outranks a web search, so the search is not paid for
+        // when we have one.
+        val publicPattern =
+            if (resolved.sourcedStages.isEmpty()) {
+                publicResearch.patternFor(resolved.company?.name ?: resolved.typedName, role, level)
+            } else {
+                null
+            }
 
         return LoopBriefView(
             company =
@@ -45,6 +60,7 @@ class LoopBriefService(
             hasSources = resolved.sourcedStages.isNotEmpty(),
             sourcedStages = resolved.sourcedStages.map { it.toView() },
             generalPattern = resolved.generalPattern.sortedBy { it.order }.map { it.toView() },
+            publicSourcePattern = publicPattern?.toView(),
             bankCoverage = coverageView(resolved.company, coverage),
         )
     }
@@ -129,6 +145,12 @@ class LoopBriefService(
                 },
         )
 
+    private fun GroundedEmployerLoop.toView() =
+        LoopBriefPublicPatternView(
+            claims = claims.map { LoopBriefPublicClaimView(text = it.text, sourceIndexes = it.sourceIndexes) },
+            sources = sources.map { LoopBriefPublicSourceView(title = it.title, url = it.url) },
+        )
+
     private fun GeneralLoopStage.toView() =
         LoopBriefGeneralStageView(
             order = order,
@@ -156,6 +178,11 @@ data class LoopBriefView(
     val hasSources: Boolean,
     val sourcedStages: List<LoopBriefSourcedStageView>,
     val generalPattern: List<LoopBriefGeneralStageView>,
+    /**
+     * What public pages say about this employer, when we hold no sourced stage for it and
+     * a search found something citable. Null otherwise — including whenever [hasSources].
+     */
+    val publicSourcePattern: LoopBriefPublicPatternView? = null,
     val bankCoverage: LoopBriefCoverageView,
 )
 
@@ -187,6 +214,22 @@ data class LoopBriefGeneralStageView(
     val format: String?,
     val assesses: String?,
     val roundType: String?,
+)
+
+data class LoopBriefPublicPatternView(
+    val claims: List<LoopBriefPublicClaimView>,
+    val sources: List<LoopBriefPublicSourceView>,
+)
+
+data class LoopBriefPublicClaimView(
+    val text: String,
+    /** Zero-based indexes into [LoopBriefPublicPatternView.sources]; never empty. */
+    val sourceIndexes: List<Int>,
+)
+
+data class LoopBriefPublicSourceView(
+    val title: String,
+    val url: String,
 )
 
 data class LoopBriefCitationView(

@@ -76,6 +76,43 @@ describe("GuidedLesson", () => {
     expect(screen.getByText(/AI agents need observations/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Make a short-link service" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /See the idea|Take a first guess|Try it yourself|Explain and remember|Final checkpoint/ })).toHaveLength(5);
+    expect(within(screen.getByTestId("lesson-beat-explain")).getByText(/AI agents need observations/).closest("[data-layout]")).toHaveAttribute("data-layout", "expanded");
+  });
+
+  it("teaches definitions and examples before reserving Explain for the recap", () => {
+    const blocks: Block[] = [
+      { kind: "h", text: "Start with the words" },
+      { kind: "p", text: "Latency is how long one request takes to finish." },
+      { kind: "table", head: ["Term", "Plain-language meaning"], rows: [["Latency", "Waiting time"]] },
+      { kind: "analogy", title: "A food-delivery timer", text: "The timer measures one order from tap to arrival." },
+      { kind: "quiz", question: "What does latency measure?", options: ["One wait", "All users"], answer: 0, why: "It follows one request." },
+      { kind: "steps", title: "Follow one request", steps: [{ label: "Send", text: "Start the timer." }, { label: "Receive", text: "Stop it when the response arrives." }] },
+      { kind: "concept", title: "Worked example", text: "A request sent at 10:00:00 and answered at 10:00:00.250 has 250 ms latency." },
+      { kind: "compare", columns: [{ label: "Low", items: ["Short wait"] }, { label: "High", items: ["Long wait"] }] },
+      { kind: "pitfall", items: ["Do not confuse one request's latency with total throughput."] },
+      { kind: "remember", items: ["Latency is waiting time for one request."] },
+      { kind: "interview", items: ["Name the percentile you care about, not only an average."] },
+      { kind: "quiz", question: "Which metric follows one request?", options: ["Latency", "Throughput"], answer: 0, why: "Latency is elapsed time." },
+    ];
+
+    const beats = buildGuidedLessonBeats(blocks, []);
+
+    expect(beats.find((beat) => beat.key === "see")?.blocks.map(({ block }) => block.kind)).toEqual([
+      "h",
+      "p",
+      "table",
+      "analogy",
+      "steps",
+      "concept",
+      "compare",
+    ]);
+    expect(beats.find((beat) => beat.key === "predict")?.blocks[0]?.block.kind).toBe("quiz");
+    expect(beats.find((beat) => beat.key === "interact")?.blocks).toHaveLength(0);
+    expect(beats.find((beat) => beat.key === "explain")?.blocks.map(({ block }) => block.kind)).toEqual([
+      "pitfall",
+      "remember",
+      "interview",
+    ]);
   });
 
   it("does not pull the course-content barrel into the client bundle", () => {

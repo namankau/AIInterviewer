@@ -12,6 +12,7 @@ const fetchMe = vi.hoisted(() => vi.fn());
 const fetchSessions = vi.hoisted(() => vi.fn());
 const fetchArenaProgress = vi.hoisted(() => vi.fn());
 const fetchCourseProgress = vi.hoisted(() => vi.fn());
+const auth = vi.hoisted(() => ({ token: "token" as string | null | undefined }));
 
 vi.mock("@/lib/api", () => ({
   fetchProfile,
@@ -23,11 +24,11 @@ vi.mock("@/lib/api", () => ({
   uploadResume: vi.fn(),
   deleteResume: vi.fn(),
   uploadAvatar: vi.fn(),
-  saveSkill: vi.fn(),
-  removeSkill: vi.fn(),
+  upsertSkill: vi.fn(),
+  deleteSkill: vi.fn(),
   ApiRequestError: class ApiRequestError extends Error {},
 }));
-vi.mock("@/lib/use-access-token", () => ({ useAccessToken: () => "token" }));
+vi.mock("@/lib/use-access-token", () => ({ useAccessToken: () => auth.token }));
 
 const profile = (over: Partial<ProfileDetails> = {}): ProfileDetails => ({
   resume: null,
@@ -46,6 +47,7 @@ const profile = (over: Partial<ProfileDetails> = {}): ProfileDetails => ({
  */
 describe("ProfilePanel", () => {
   beforeEach(() => {
+    auth.token = "token";
     resetCourseProgress();
     fetchProfile.mockReset();
     updateProfile.mockReset();
@@ -70,6 +72,34 @@ describe("ProfilePanel", () => {
       masteredChallengeIds: [],
     });
     fetchCourseProgress.mockResolvedValue({ completed: {} });
+  });
+
+  it("does not show the previous account while a replacement profile request fails", async () => {
+    fetchProfile.mockResolvedValueOnce(profile({ targetLevel: "Private target A" }));
+    fetchMe.mockResolvedValueOnce({
+      id: "candidate-a",
+      email: "private-a@example.com",
+      displayName: "Private Candidate A",
+      preferredLanguage: "english",
+      createdAt: "2026-09-01T00:00:00Z",
+      profile: {},
+    });
+    fetchSessions.mockResolvedValueOnce([]);
+
+    const view = render(<ProfilePanel />);
+    expect(await screen.findByRole("heading", { name: "Private Candidate A" })).toBeInTheDocument();
+
+    fetchProfile.mockRejectedValueOnce(new Error("account B failed"));
+    fetchMe.mockRejectedValueOnce(new Error("account B failed"));
+    fetchSessions.mockRejectedValueOnce(new Error("account B failed"));
+    fetchArenaProgress.mockRejectedValueOnce(new Error("account B failed"));
+    auth.token = "account-b";
+    view.rerender(<ProfilePanel />);
+
+    expect(screen.queryByText("Private Candidate A")).not.toBeInTheDocument();
+    expect(screen.queryByText("Private target A")).not.toBeInTheDocument();
+    await waitFor(() => expect(fetchProfile).toHaveBeenCalledWith({ accessToken: "account-b" }));
+    expect(screen.queryByText("Private Candidate A")).not.toBeInTheDocument();
   });
 
   it("puts identity, learning progress, interview history and Arena activity in one overview", async () => {

@@ -129,7 +129,7 @@ object PrepPlanBuilder {
     private fun unsimulatedNote(stageName: String): String {
         val lower = stageName.lowercase()
         return when {
-            "assessment" in lower || "oa" == lower -> {
+            "assessment" in lower || "test" in lower || "oa" == lower -> {
                 "We don't run this as a spoken round. Practise it on a coding platform beforehand."
             }
 

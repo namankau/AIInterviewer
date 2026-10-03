@@ -355,6 +355,57 @@ describe("NewInterviewForm", () => {
       expect(screen.queryByDisplayValue("Infosys")).not.toBeInTheDocument();
     });
 
+    it("offers a campus-placement option at the start, off by default and keyboard reachable", async () => {
+      render(<NewInterviewForm />);
+
+      const box = screen.getByRole("checkbox", { name: /fresher preparing for campus placement/i });
+      expect(box).not.toBeChecked();
+      expect(screen.queryByRole("combobox", { name: /where are you right now/i })).not.toBeInTheDocument();
+
+      await userEvent.tab();
+      await userEvent.tab();
+      expect(box).toHaveFocus();
+      await userEvent.keyboard(" ");
+      expect(box).toBeChecked();
+      expect(screen.getByRole("combobox", { name: /where are you right now/i })).toHaveValue("student");
+    });
+
+    it("carries the campus stage into the brief and plan fetches, and prefills the setup stage", async () => {
+      composeRound.mockResolvedValue(draft);
+      render(<NewInterviewForm />);
+
+      await userEvent.click(screen.getByRole("checkbox", { name: /fresher preparing for campus placement/i }));
+      await userEvent.selectOptions(
+        screen.getByRole("combobox", { name: /where are you right now/i }),
+        "recent_graduate",
+      );
+      await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys campus round");
+      await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+      await skipBrief();
+
+      const expected = { company: "Infosys", role: "Senior Backend Engineer", level: "recent_graduate" };
+      expect(fetchLoopBrief).toHaveBeenCalledWith(expected, { accessToken: "token" });
+      expect(fetchPrepPlan).toHaveBeenCalledWith(expected, { accessToken: "token" });
+      expect(screen.getByRole("combobox", { name: /where are you in your career/i })).toHaveValue(
+        "recent_graduate",
+      );
+    });
+
+    it("leaves the level unset and the stage blank when the option is not used", async () => {
+      composeRound.mockResolvedValue(draft);
+      render(<NewInterviewForm />);
+
+      await userEvent.type(screen.getByLabelText(/describe the interview/i), "Infosys MR round");
+      await userEvent.click(screen.getByRole("button", { name: /set up the round/i }));
+      await skipBrief();
+
+      expect(fetchLoopBrief).toHaveBeenCalledWith(
+        { company: "Infosys", role: "Senior Backend Engineer" },
+        { accessToken: "token" },
+      );
+      expect(screen.getByRole("combobox", { name: /where are you in your career/i })).toHaveValue("");
+    });
+
     it("has no Back button when the candidate never saw a brief", async () => {
       render(<NewInterviewForm />);
       await userEvent.click(screen.getByRole("button", { name: /fill it in yourself/i }));

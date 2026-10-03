@@ -126,6 +126,21 @@ class LoopBriefServiceTest {
     }
 
     @Test
+    fun `a stated student stage marks the brief as the campus pattern, and an unset or professional stage does not`() {
+        val archetype = archetypes.resolve("Tiny Local Firm").archetype
+        given(patterns.patternFor(archetype, null, "student")).willReturn(general)
+        given(patterns.patternFor(archetype, null, "recent_graduate")).willReturn(general)
+        given(patterns.patternFor(archetype, null, "professional")).willReturn(general)
+        given(patterns.patternFor(archetype, null, null)).willReturn(general)
+        given(research.patternFor(anyString(), nullable(String::class.java), nullable(String::class.java))).willReturn(null)
+
+        assertTrue(service.brief("Tiny Local Firm", null, "student").campusPattern)
+        assertTrue(service.brief("Tiny Local Firm", null, "recent_graduate").campusPattern)
+        assertFalse(service.brief("Tiny Local Firm", null, "professional").campusPattern)
+        assertFalse(service.brief("Tiny Local Firm", null, null).campusPattern)
+    }
+
+    @Test
     fun `an employer with a sourced record is not searched for`() {
         val company = company("Infosys", Archetype.SERVICE_BASED_IT)
         given(directory.resolve("Infosys")).willReturn(company)

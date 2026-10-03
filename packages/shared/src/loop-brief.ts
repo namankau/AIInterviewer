@@ -85,6 +85,8 @@ export interface LoopBrief {
   hasSources: boolean;
   sourcedStages: LoopBriefStage[];
   generalPattern: GeneralLoopStage[];
+  /** True when `generalPattern` is the campus-hiring pattern, because the request stated a student or graduate stage. */
+  campusPattern?: boolean;
   /**
    * Public-source research, present only when we hold no sourced stage for this company
    * and the search found something it could cite. Null whenever `hasSources` is true.

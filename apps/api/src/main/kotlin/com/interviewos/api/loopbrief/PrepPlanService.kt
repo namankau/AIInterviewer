@@ -38,7 +38,7 @@ class PrepPlanService(
     ): PrepPlanView {
         val resolved = loopBrief.resolveLoop(companyName, role, level)
         val inputs = stageInputsFor(resolved)
-        val build = PrepPlanBuilder.build(rounds.offeredTypes, inputs)
+        val build = PrepPlanBuilder.build(offeredFor(resolved), inputs)
 
         val background = safeBackground(userId)
         val history = role?.let { safeHistory(userId, resolved.company?.name ?: resolved.typedName, it) }
@@ -75,8 +75,17 @@ class PrepPlanService(
             named.mapIndexed { index, name ->
                 PlanStageInput(index + 1, name, null, StageRoundMatcher.match(name), fromModelKnowledge = true)
             }
-        return stages.takeIf { list -> list.any { it.roundType != null && it.roundType in rounds.offeredTypes } }
+        val allowed = offeredFor(resolved)
+        return stages.takeIf { list -> list.any { it.roundType != null && it.roundType in allowed } }
     }
+
+    /** The rounds this plan may contain: for a stated student or graduate, minus what no campus loop has. */
+    private fun offeredFor(resolved: ResolvedLoop): Set<RoundType> =
+        if (resolved.campus) {
+            rounds.offeredTypes - CampusLoopPattern.EXCLUDED_FROM_PLAN - rounds.campusExcludedTypes
+        } else {
+            rounds.offeredTypes
+        }
 
     private fun safeBackground(userId: UUID): CandidateBackground? =
         try {
@@ -112,7 +121,11 @@ class PrepPlanService(
                     } else if (fromModelKnowledge) {
                         "$companyLabel's \"$stageName\" stage, as the AI knows it from its training — not from a page we can link."
                     } else {
-                        "Typical of ${resolved.archetype.inProse}: a \"$stageName\" stage."
+                        if (resolved.campus) {
+                            "Typical of campus hiring for ${resolved.archetype.inProse}: a \"$stageName\" stage."
+                        } else {
+                            "Typical of ${resolved.archetype.inProse}: a \"$stageName\" stage."
+                        }
                     },
                 )
                 personalNote(roundType, background, history)?.let {

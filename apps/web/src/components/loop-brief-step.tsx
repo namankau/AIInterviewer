@@ -1,6 +1,6 @@
 "use client";
 
-import type { LoopBrief, PrepPlan, RoundType } from "@acemyinterview/shared";
+import type { CandidateStage, LoopBrief, PrepPlan, RoundType } from "@acemyinterview/shared";
 import { useEffect, useState } from "react";
 
 import { ApiRequestError, fetchLoopBrief, fetchPrepPlan } from "@/lib/api";
@@ -34,6 +34,7 @@ import { ROUND_CATALOGUE } from "@/lib/rounds";
 export function LoopBriefStep({
   companyName,
   roleTitle,
+  stage,
   accessToken,
   onChooseRound,
   onSkip,
@@ -41,6 +42,9 @@ export function LoopBriefStep({
 }: {
   companyName: string;
   roleTitle: string;
+  /** The stage stated at the start, sent as `level` so a student gets the campus loop. Unset changes nothing. */
+  stage?: CandidateStage | "";
+
   accessToken: string | null | undefined;
   onChooseRound: (roundType: RoundType) => void;
   onSkip: () => void;
@@ -53,7 +57,7 @@ export function LoopBriefStep({
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
-    const query = { company: companyName, role: roleTitle };
+    const query = { company: companyName, role: roleTitle, ...(stage ? { level: stage } : {}) };
 
     fetchLoopBrief(query, { accessToken })
       .then((result) => active && setBrief(result))
@@ -74,7 +78,7 @@ export function LoopBriefStep({
     return () => {
       active = false;
     };
-  }, [accessToken, companyName, roleTitle]);
+  }, [accessToken, companyName, roleTitle, stage]);
 
   const firstPlanItem = plan?.items[0] ?? null;
 
@@ -284,7 +288,9 @@ export function LoopBriefStep({
       {brief.generalPattern.length > 0 ? (
         <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)]">
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-            General pattern for {brief.company.archetypeInProse}
+            {brief.campusPattern
+              ? `Campus hiring pattern for ${brief.company.archetypeInProse}`
+              : `General pattern for ${brief.company.archetypeInProse}`}
           </p>
           <ol className="grid gap-3 sm:grid-cols-2">
             {brief.generalPattern.map((stage) => (

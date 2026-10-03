@@ -21,9 +21,14 @@ import { ROUND_CATALOGUE } from "@/lib/rounds";
  * to the pages behind it. It is AI-written, so it is said to be, and it never borrows the
  * sourced stages' "own record" styling.
  *
- * The honesty caveat — this is an archetype guess, not a claim about the named employer
- * — is said exactly once, wherever it is most true for this company, rather than once
- * per section. Repeating it is how the one that matters gets skipped.
+ * When the search has nothing citable either, what the model itself can name about the
+ * employer comes next, labelled as the model's knowledge with no page behind it.
+ *
+ * There is no "we don't hold a sourced account of this employer" banner: the owner ruled
+ * it out (3 October 2026), because a brief for Infosys that opens by saying it knows
+ * nothing reads as a product that knows nothing. Honesty lives in each section's own
+ * label instead — our record, public pages, the AI's knowledge, or the general pattern
+ * for this kind of employer — so nothing is ever presented as more than it is.
  */
 export function LoopBriefStep({
   companyName,
@@ -72,23 +77,8 @@ export function LoopBriefStep({
 
   const firstPlanItem = plan?.items[0] ?? null;
 
-  // One honesty caveat, wherever it is truest for this company. If we don't even
-  // recognise the archetype, that is the caveat. Otherwise, if we recognise the
-  // archetype but hold no sourced account, that is. If we hold sources, the sourced
-  // stages speak for themselves and the general-pattern section labels itself.
-  // Public research changes what the caveat must say: there *is* something specific
-  // below, but it is a search result, not our record — and the pattern after it is still
-  // only the archetype's.
   const publicPattern = brief && !brief.hasSources ? brief.publicSourcePattern : null;
-  const caveat = brief
-    ? publicPattern
-      ? `We don't hold a verified account of ${brief.company.name}'s process. Below is what a search of public pages found, linked to each page, then the usual pattern for ${brief.company.archetypeInProse}.`
-      : brief.company.archetypeConfidence === "inferred"
-        ? `We don't know ${brief.company.name} specifically, so this runs on ${brief.company.archetypeInProse} — the closest pattern, not a claim about this employer.`
-        : !brief.hasSources
-          ? `We don't hold a sourced account of ${brief.company.name}'s process yet — what follows is the usual pattern for ${brief.company.archetypeInProse}, not a claim about this employer specifically.`
-          : null
-    : null;
+  const modelKnowledge = brief && !brief.hasSources && !publicPattern ? brief.modelKnowledge : null;
 
   // A sourced stage with nothing to say (no `assesses`) doesn't earn its own block —
   // but the source it cites is still real, so it isn't discarded either. It's folded
@@ -132,7 +122,6 @@ export function LoopBriefStep({
         <h1 className="text-title text-balance text-on-navy">
           How {brief.company.name} interviews for {roleTitle}
         </h1>
-        {caveat ? <p className="max-w-prose text-body text-on-navy-muted">{caveat}</p> : null}
         <button
           type="button"
           onClick={onEdit}
@@ -245,6 +234,49 @@ export function LoopBriefStep({
               </li>
             ))}
           </ol>
+        </section>
+      ) : null}
+
+      {modelKnowledge ? (
+        <section
+          aria-labelledby="model-knowledge-heading"
+          className="flex flex-col gap-4 rounded-2xl border border-highlight/30 bg-warning-wash p-6"
+        >
+          <div className="flex flex-col gap-2">
+            <p className="pill pill-highlight w-fit">From AI knowledge</p>
+            <h2 id="model-knowledge-heading" className="text-body font-semibold text-ink">
+              What the AI knows about {brief.company.name}&apos;s process
+            </h2>
+            <p className="max-w-prose text-caption text-ink-muted">
+              From the AI model&apos;s training, not a page we can link, and it may be out of date. Check{" "}
+              {brief.company.name}&apos;s careers site before relying on a detail.
+            </p>
+          </div>
+          {modelKnowledge.basis ? <p className="max-w-prose text-body text-ink">{modelKnowledge.basis}</p> : null}
+          <dl className="flex flex-col gap-3">
+            {(
+              [
+                ["Rounds", modelKnowledge.namedRounds],
+                ["How they run", modelKnowledge.namedFormats],
+                ["What they look for", modelKnowledge.namedValues],
+              ] as const
+            )
+              .filter(([, items]) => items.length > 0)
+              .map(([label, items]) => (
+                <div key={label} className="flex flex-col gap-1">
+                  <dt className="text-caption font-medium text-ink">{label}</dt>
+                  <dd>
+                    <ul className="flex flex-wrap gap-2">
+                      {items.map((item) => (
+                        <li key={item} className="rounded-lg bg-surface-raised px-3 py-1 text-caption text-ink-muted">
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </dd>
+                </div>
+              ))}
+          </dl>
         </section>
       ) : null}
 

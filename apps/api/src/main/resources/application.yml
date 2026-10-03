@@ -153,6 +153,14 @@ interviewos:
       enabled: ${INTERVIEWOS_PUBLIC_LOOP_RESEARCH:true}
       kept-for: 12h
       max-entries: 500
+    model-knowledge:
+      # When neither our record nor the search has anything, whether the brief asks the
+      # model what it can name about the employer's process (the pool's knowledge check),
+      # shown labelled as the model's knowledge. Off, those briefs show the archetype
+      # pattern alone.
+      enabled: ${INTERVIEWOS_MODEL_LOOP_KNOWLEDGE:true}
+      kept-for: 7d
+      max-entries: 500
 
   question-bank:
     # Whether candidates can browse the sourced bank at /questions (task 042). Off, the two

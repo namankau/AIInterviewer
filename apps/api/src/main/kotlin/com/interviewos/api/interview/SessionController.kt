@@ -99,6 +99,9 @@ class SessionController(
         @RequestParam(required = false, defaultValue = "false") speaksLocally: Boolean,
         // Submit pressed mid-answer: assess this one as the last and end the round.
         @RequestParam(required = false, defaultValue = "false") endRound: Boolean,
+        // How the answer was timed, measured in the browser from the microphone level (see
+        // AnswerTiming). Optional: an older client sends none, and the report says so.
+        @RequestParam(required = false) timing: String?,
     ): SubmitAnswerResponse {
         if (audio.isEmpty) {
             throw ApiException.badRequest("We did not receive any audio for that answer.", code = "empty_answer")
@@ -117,6 +120,7 @@ class SessionController(
             speaksLocally = speaksLocally,
             endRound = endRound,
             requestId = requestId,
+            timing = timing,
         )
     }
 

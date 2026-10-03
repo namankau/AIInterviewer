@@ -80,6 +80,25 @@ class SessionControllerVideoPrivacyTest {
     }
 
     @Test
+    fun `forwards the browser's speech timing to the interview service`() {
+        val audio = MockMultipartFile("audio", "answer.webm", "audio/webm", byteArrayOf(1, 2, 3))
+        val timing = """{"recordedMs":20000,"firstSoundMs":900,"speakingMs":15000,"pauseCount":0,"longestPauseMs":0,"totalPauseMs":0}"""
+
+        mockMvc
+            .perform(
+                multipart("/api/v1/sessions/$sessionId/turns")
+                    .file(audio)
+                    .param("turnIndex", "0")
+                    .param("requestId", "176bd50a-e9a4-4df4-ad50-1c2f47a0c283")
+                    .param("timing", timing)
+                    .with(tokenFor(candidate)),
+            ).andExpect(status().isOk)
+
+        val call = mockingDetails(interviewService).invocations.single { it.method.name == "submitAnswer" }
+        assertEquals(timing, call.arguments[7])
+    }
+
+    @Test
     fun `requires an answer request ID`() {
         val audio = MockMultipartFile("audio", "answer.webm", "audio/webm", byteArrayOf(1, 2, 3))
 

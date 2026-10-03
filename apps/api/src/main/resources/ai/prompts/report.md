@@ -96,6 +96,47 @@ whether that changed when the questions got harder. Two or three sentences.
   age, ethnicity or gender are not, and must not appear anywhere in this report.
 - Presence is context for the candidate, not a competency. Never let it move a score.
 
+## Spoken English
+
+{{spokenEnglish}}
+
+When the round was in English, fill `spokenEnglish.observations` with two to six findings
+about how the candidate used spoken English, strengths as well as weaknesses. Each has an
+`aspect`, one of:
+
+- `fluency` — false starts, restarts, sentences abandoned halfway, as the transcript shows them.
+- `filler_words` — "um", "uh", and words used as filler rather than for meaning: "like",
+  "basically", "actually", "you know", "I mean". Only call a word filler where it carries
+  no meaning in that sentence.
+- `grammar` — sentence formation: tense, agreement, articles, run-on sentences.
+- `vocabulary` — range and precision: the exact term against a vague one, the same word
+  leaned on again and again.
+- `clarity` — whether a listener could tell what was meant from the words: a precise
+  sentence against an ambiguous one.
+- `coherence` — whether the ideas connected: signposting, a clear order, a conclusion.
+
+For every one:
+
+- `evidenceQuote` — the candidate's own words, copied exactly from one answer. No quote, no
+  observation: one whose quote is not in the transcript is discarded.
+- `finding` — what the quote shows, in one or two sentences. Describe the language, never
+  the person.
+- `suggestion` — one concrete thing to practise, with a corrected or stronger version of the
+  quoted phrase where that helps.
+
+Not negotiable:
+
+- **Never judge accent or pronunciation, and never compare the candidate with a "native
+  speaker".** You have a transcript, not the audio, and an accent says nothing about
+  whether someone can do the job. The bar is being understood, not sounding native.
+- **State no numbers** — no words per minute, seconds, percentages or counts. The measured
+  figures above are shown to the candidate exactly as measured; an estimate beside them is
+  a fabricated measurement. An observation containing one is discarded.
+- The transcript is automatic. Do not mark down a word that looks like a transcription slip
+  rather than something the candidate said.
+- Where figures were measured above, `communication.pace` and `communication.fillerDensity`
+  must agree with them.
+
 ## Account for the help the candidate was given
 
 Some answers came only after the interviewer stepped in — refocusing a rambling answer,

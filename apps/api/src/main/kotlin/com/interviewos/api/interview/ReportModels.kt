@@ -25,6 +25,11 @@ data class SessionReportView(
     val practicePlan: List<ReportPracticeItemView>,
     val recommendedNextSession: String,
     val outcomeSimulation: ReportOutcomeView,
+    /**
+     * How the candidate spoke: measured pace and pauses, and quoted observations on their
+     * English. Null on a report written before this section existed.
+     */
+    val spokenEnglish: ReportSpokenEnglishView? = null,
 )
 
 data class ReportAssistanceView(
@@ -115,4 +120,59 @@ data class ReportProvenanceSourceView(
     val publisher: String?,
     val url: String?,
     val year: Int?,
+)
+
+/**
+ * The spoken-English section (PRD §09). Every number in it is measured — the timings by
+ * the browser from the microphone level, the word and hesitation counts from the
+ * transcript — and computed by the engine (`SpokenEnglish`). The model contributes only
+ * [observations], each of which quotes the candidate.
+ *
+ * A figure that could not be measured is null, and [timingNote] or [paceNote] says why.
+ */
+data class ReportSpokenEnglishView(
+    /** False in a Hindi-English round: English is not assessed and code-switching is not counted against anyone. */
+    val languageAssessed: Boolean,
+    /** What the section covers, in plain words. */
+    val scope: String,
+    val answersTotal: Int,
+    /** Answers with a usable timing measurement. */
+    val answersTimed: Int,
+    /** Why timing is missing or partial; null when every answer was timed. */
+    val timingNote: String?,
+    val wordCount: Int,
+    val wordsPerMinute: Int?,
+    /** Where [wordsPerMinute] sits against the stated range: `below`, `within`, `above`; null when not compared. */
+    val paceBand: String?,
+    /** The basis for the pace figure and its range, or why there is none. */
+    val paceNote: String,
+    val pauseCount: Int?,
+    val longestPauseSeconds: Double?,
+    val pauseSharePercent: Int?,
+    val medianFirstWordSeconds: Double?,
+    /** um, uh, er, hmm — counted in the transcript. Null when English is not assessed. */
+    val hesitationCount: Int?,
+    val hesitationsPer100Words: Double?,
+    val answers: List<ReportSpokenAnswerView>,
+    val observations: List<ReportSpokenObservationView>,
+)
+
+/** One answer's measurements, numbered like the rest of the report (position among answered turns). */
+data class ReportSpokenAnswerView(
+    val turnIndex: Int,
+    val words: Int,
+    val wordsPerMinute: Int?,
+    val pauseCount: Int?,
+    val longestPauseSeconds: Double?,
+    val firstWordSeconds: Double?,
+)
+
+data class ReportSpokenObservationView(
+    val aspect: String,
+    val aspectLabel: String,
+    val finding: String,
+    val evidenceQuote: String,
+    /** Where the quote was found — located by the engine, not taken from the model. */
+    val turnIndex: Int?,
+    val suggestion: String,
 )

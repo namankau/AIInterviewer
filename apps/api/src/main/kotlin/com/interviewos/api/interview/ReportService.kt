@@ -78,6 +78,15 @@ class ReportService(
 
         val archetype = Archetype.fromDbValue(session.archetype)
         val roundType = RoundType.fromDbValue(session.roundType)
+        // Measured before the model is asked anything, from the browser's timings and the
+        // transcript, so the model writes against the real figures rather than its own
+        // impression of the candidate's pace.
+        val spoken =
+            SpokenEnglish.measure(
+                turns.map { SpokenEnglish.Answer(it.answerTranscript.orEmpty(), AnswerTiming.parse(it.answerTimingJson, objectMapper)) },
+                language = session.language,
+                hasWorkspace = session.workspace != null,
+            )
         // Derived the same way the round itself derived it, from the same two inputs, so
         // the report scores against the bar the interview was actually conducted at
         // (task 048). Until this existed the level reached the report as "unspecified",
@@ -107,6 +116,7 @@ class ReportService(
                 targetLevel = stage.targetDescription,
                 levelCalibration = stage.reportCalibration(),
                 grounding = archetype.roundEmphasis,
+                spokenEnglish = SpokenEnglish.promptContext(spoken),
             )
 
         // Counted from the turns, not asked of the model: this is what the candidate is
@@ -166,7 +176,16 @@ class ReportService(
                     // Every answered question gets a note, whether or not the model wrote one
                     // for it (see AnswerAnnotations).
                     .let { it.copy(annotations = AnswerAnnotations.of(turns, it.annotations)) }
-            val payload = payloadOf(verified, session, roundType, archetype, turns, assistance)
+            val spokenEnglish =
+                spoken.copy(
+                    observations =
+                        SpokenEnglish.verifiedObservations(
+                            composed.value.spokenEnglish,
+                            turns.map { it.answerTranscript.orEmpty() },
+                            languageAssessed = spoken.languageAssessed,
+                        ),
+                )
+            val payload = payloadOf(verified, session, roundType, archetype, turns, assistance, spokenEnglish)
 
             if (!repository.saveReport(
                     sessionId = sessionId,
@@ -288,6 +307,7 @@ class ReportService(
         archetype: Archetype,
         turns: List<TurnRow>,
         assistance: AssistanceSummary,
+        spokenEnglish: ReportSpokenEnglishView,
     ): SessionReportView =
         SessionReportView(
             sessionId = session.id,
@@ -367,6 +387,7 @@ class ReportService(
                     likelihood = content.outcomeSimulation.likelihood,
                     reasoning = content.outcomeSimulation.reasoning,
                 ),
+            spokenEnglish = spokenEnglish,
         )
 
     private fun areaOf(area: com.interviewos.api.ai.AssessedArea): ReportAssessedAreaView =
@@ -503,14 +524,19 @@ class ReportService(
                         "disclosure" to "",
                     ),
             )
-
-        val WHITESPACE = Regex("\\s+")
-
-        fun String.normaliseForMatch(): String =
-            lowercase()
-                .replace("’", "'")
-                .replace(Regex("[^a-z0-9' ]"), " ")
-                .replace(WHITESPACE, " ")
-                .trim()
     }
 }
+
+private val WHITESPACE = Regex("\\s+")
+
+/**
+ * How a quote is compared with the transcript: loose on whitespace, case and punctuation,
+ * because the model reflows quotes, but not loose on content. Shared by every check that
+ * a quote is really the candidate's (competencies, strengths, spoken English).
+ */
+internal fun String.normaliseForMatch(): String =
+    lowercase()
+        .replace("’", "'")
+        .replace(Regex("[^a-z0-9' ]"), " ")
+        .replace(WHITESPACE, " ")
+        .trim()

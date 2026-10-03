@@ -847,6 +847,8 @@ class SessionRepository(
         interventionNote: String?,
         deliveryNote: String?,
         requestId: UUID,
+        /** Validated [AnswerTiming] as JSON, or null when the browser measured none. */
+        timingJson: String? = null,
     ): Boolean =
         jdbcClient
             .sql(
@@ -860,7 +862,8 @@ class SessionRepository(
                        next_action = cast(:action as public.turn_next_action),
                        intervention = cast(:intervention as public.intervention_type),
                        intervention_note = :note,
-                       delivery_note = :delivery
+                       delivery_note = :delivery,
+                       answer_timing = cast(:timing as jsonb)
                  where session_id = :s and user_id = :u and turn_index = :i
                    and answered_at is null
                    and answer_request_id = :request
@@ -878,6 +881,7 @@ class SessionRepository(
             .param("intervention", intervention)
             .param("note", interventionNote)
             .param("delivery", deliveryNote)
+            .param("timing", timingJson)
             .param("request", requestId)
             .param("s", sessionId)
             .param("u", userId)
@@ -940,7 +944,7 @@ class SessionRepository(
                        t.intervention::text as intervention, t.intervention_note,
                        t.phase::text as phase, t.delivery_note, t.provenance::text as provenance,
                        t.hint_requested_at, t.hint_text, t.hint_level::text as hint_level,
-                       t.next_action,
+                       t.next_action, t.answer_timing::text as answer_timing,
                        pq.strong_answer_covers
                   from public.session_turns t
                   left join public.pool_questions pq on pq.id = t.pool_question_id
@@ -951,7 +955,10 @@ class SessionRepository(
             .param("u", userId)
             .query { rs, _ ->
                 val covers = rs.getArray("strong_answer_covers")?.array as? Array<*>
-                mapTurn(rs).copy(poolStrongAnswerCovers = covers?.filterIsInstance<String>() ?: emptyList())
+                mapTurn(rs).copy(
+                    poolStrongAnswerCovers = covers?.filterIsInstance<String>() ?: emptyList(),
+                    answerTimingJson = rs.getString("answer_timing"),
+                )
             }.list()
 
     // -- reports --------------------------------------------------------------
@@ -1256,6 +1263,12 @@ data class TurnRow(
      * only by [listTranscript], not by [findTurn].
      */
     val poolStrongAnswerCovers: List<String> = emptyList(),
+    /**
+     * How the answer was timed, as the browser measured it ([AnswerTiming], raw JSON). Null
+     * for a turn answered before timing existed or by a client that sent none. Populated
+     * only by [listTranscript], like [poolStrongAnswerCovers].
+     */
+    val answerTimingJson: String? = null,
 )
 
 enum class TurnRequestClaimStatus {

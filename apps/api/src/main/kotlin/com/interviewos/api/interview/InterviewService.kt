@@ -498,6 +498,8 @@ class InterviewService(
          */
         endRound: Boolean = false,
         requestId: UUID = UUID.randomUUID(),
+        /** The browser's measurement of this answer's speech timing, as JSON. See [AnswerTiming]. */
+        timing: String? = null,
     ): SubmitAnswerResponse {
         val claim = repository.claimAnswerRequest(sessionId, userId, turnIndex, requestId, REQUEST_LEASE_SECONDS)
         when (claim.status) {
@@ -657,6 +659,9 @@ class InterviewService(
                             // report assistance that did not happen.
                             interventionNote = assessment.value.interventionNote?.takeIf { intervention.isAssisted },
                             deliveryNote = assessment.value.deliveryObservation?.takeIf { it.isNotBlank() },
+                            // Re-serialised from the validated value, so what is stored is only
+                            // ever a consistent measurement, never whatever the request carried.
+                            timingJson = AnswerTiming.parse(timing, objectMapper)?.let { objectMapper.writeValueAsString(it) },
                             requestId = requestId,
                         )
                     if (!recorded) throw sessionStateChanged()

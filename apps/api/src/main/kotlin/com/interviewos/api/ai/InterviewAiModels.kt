@@ -157,6 +157,13 @@ data class InterviewBrief(
      * case a workspace round is set on. Null when there is none, which is the common case.
      */
     val plannedQuestion: PlannedQuestion? = null,
+    /**
+     * What the report model is told about spoken English for this round: the measured
+     * timing figures it must stay consistent with, or the instruction to leave the
+     * section out (a Hindi-English round). Written by the engine
+     * ([com.interviewos.api.interview.SpokenEnglish]); empty for every other prompt.
+     */
+    val spokenEnglish: String = "",
 )
 
 /**
@@ -521,6 +528,29 @@ data class ReportContent(
     val practicePlan: List<PracticePlanItem>,
     val recommendedNextSession: String,
     val outcomeSimulation: OutcomeSimulation,
+    /**
+     * Judgements about the candidate's spoken English, each tied to a quote. Optional:
+     * a Hindi-English round has none, and the engine verifies every quote and discards
+     * anything that is not about the words (see `SpokenEnglish.verifiedObservations`).
+     */
+    val spokenEnglish: SpokenEnglishContent? = null,
+)
+
+data class SpokenEnglishContent(
+    val observations: List<SpokenEnglishObservation> = emptyList(),
+)
+
+/**
+ * One finding about how the candidate used spoken English — fluency, filler words,
+ * grammar, vocabulary, clarity, coherence — with the words that show it. Never about
+ * accent or pronunciation: the report model reads a transcript and has heard nothing.
+ */
+data class SpokenEnglishObservation(
+    val aspect: String,
+    val finding: String,
+    val evidenceQuote: String,
+    val turnIndex: Int? = null,
+    val suggestion: String,
 )
 
 /** One thing the candidate did well or badly, with the words that show it. */

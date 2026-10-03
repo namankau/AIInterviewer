@@ -29,9 +29,10 @@ import org.springframework.stereotype.Service
  * behind it. It is asked only when the library has nothing, and it is shown as its own
  * labelled section — never merged into either of the others.
  *
- * When the search has nothing citable either, [ModelEmployerKnowledge] says what the
- * model itself can name about the employer, shown as the model's knowledge. Only when
- * that is empty too does the brief stand on the archetype pattern alone.
+ * Beside the search, [ModelEmployerKnowledge] says what the model itself can name about
+ * the employer, shown as the model's knowledge. The prep plan is built from its named
+ * rounds, so it is shown whenever it exists. Only when both are empty does the brief
+ * stand on the archetype pattern alone.
  */
 @Service
 class LoopBriefService(
@@ -60,14 +61,6 @@ class LoopBriefService(
             } else {
                 null
             }
-        // A page outranks the model's memory, so the model is asked only when neither our
-        // record nor the search has anything to say.
-        val knowledge =
-            if (resolved.sourcedStages.isEmpty() && publicPattern == null) {
-                modelKnowledge.knowledgeOf(companyName, resolved.archetype.label)
-            } else {
-                null
-            }
 
         return LoopBriefView(
             company =
@@ -76,7 +69,7 @@ class LoopBriefService(
             sourcedStages = resolved.sourcedStages.map { it.toView() },
             generalPattern = resolved.generalPattern.sortedBy { it.order }.map { it.toView() },
             publicSourcePattern = publicPattern?.toView(),
-            modelKnowledge = knowledge?.toView(),
+            modelKnowledge = resolved.modelKnowledge?.toView(),
             bankCoverage = coverageView(resolved.company, coverage),
         )
     }
@@ -99,6 +92,10 @@ class LoopBriefService(
 
         val sourcedStages = company?.let { SourcedStageMerger.merge(stages.stagesFor(it.id)) }.orEmpty()
         val generalPattern = patterns.patternFor(archetype, role, level).stages
+        // Asked whenever we hold no sourced stage, beside any web search, because the plan
+        // is built from it: the brief has to show what the plan stands on.
+        val knowledge =
+            if (sourcedStages.isEmpty()) modelKnowledge.knowledgeOf(company?.name ?: cleanedCompany, archetype.label) else null
 
         return ResolvedLoop(
             company = company,
@@ -107,6 +104,7 @@ class LoopBriefService(
             confidence = resolution.confidence,
             sourcedStages = sourcedStages,
             generalPattern = generalPattern,
+            modelKnowledge = knowledge,
         )
     }
 
@@ -194,6 +192,8 @@ data class ResolvedLoop(
     val confidence: Confidence,
     val sourcedStages: List<SourcedStage>,
     val generalPattern: List<GeneralLoopStage>,
+    /** What the model can name about this employer; null whenever [sourcedStages] is not empty. */
+    val modelKnowledge: EmployerKnowledge? = null,
 )
 
 data class LoopBriefView(
@@ -208,8 +208,8 @@ data class LoopBriefView(
      */
     val publicSourcePattern: LoopBriefPublicPatternView? = null,
     /**
-     * What the model itself can name about this employer's process, when neither our
-     * record nor a search had anything. Null otherwise. The `model_knowledge` tier: no
+     * What the model itself can name about this employer's process, when we hold no
+     * sourced stage. Null otherwise. The `model_knowledge` tier: no
      * page stands behind it, and the client must say so.
      */
     val modelKnowledge: LoopBriefModelKnowledgeView? = null,

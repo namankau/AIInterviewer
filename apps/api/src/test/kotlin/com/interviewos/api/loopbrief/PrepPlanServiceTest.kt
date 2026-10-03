@@ -57,14 +57,64 @@ class PrepPlanServiceTest {
         assertTrue(plan.items.all { it.why.startsWith("Typical of") })
     }
 
-    private fun loop(knowledge: EmployerKnowledge?) =
-        ResolvedLoop(
-            company = null,
-            typedName = "Infosys",
-            archetype = Archetype.SERVICE_BASED_IT,
-            confidence = Confidence.RECOGNISED,
-            sourcedStages = emptyList(),
-            generalPattern = general,
-            modelKnowledge = knowledge,
+    @Test
+    fun `a campus plan drops system design, techno-managerial and client rounds even when the model named them`() {
+        given(loopBrief.resolveLoop("Infosys", null, "student")).willReturn(
+            loop(
+                EmployerKnowledge(
+                    knowsProcess = true,
+                    namedRounds =
+                        listOf("Technical interview", "Managerial round", "System design round", "Client scenario round", "HR interview"),
+                ),
+                campus = true,
+            ),
         )
+
+        val plan = service.plan(user, "Infosys", null, "student")
+
+        assertEquals(listOf("technical_fundamentals", "hr_fit_closing"), plan.items.map { it.roundType })
+    }
+
+    @Test
+    fun `the same loop unset keeps the experienced rounds`() {
+        given(loopBrief.resolveLoop("Infosys", null, null)).willReturn(
+            loop(
+                EmployerKnowledge(
+                    knowsProcess = true,
+                    namedRounds = listOf("Technical interview", "Managerial round", "HR interview"),
+                ),
+            ),
+        )
+
+        val plan = service.plan(user, "Infosys", null, null)
+
+        assertEquals(listOf("technical_fundamentals", "techno_managerial", "hr_fit_closing"), plan.items.map { it.roundType })
+    }
+
+    @Test
+    fun `a campus plan built from the campus pattern is labelled as campus hiring and keeps the written test as a pointer`() {
+        val campusStages = CampusLoopPattern.forArchetype(Archetype.SERVICE_BASED_IT).stages
+        given(loopBrief.resolveLoop("Infosys", null, "student")).willReturn(loop(null, campus = true).copy(generalPattern = campusStages))
+
+        val plan = service.plan(user, "Infosys", null, "student")
+
+        assertEquals(listOf("aptitude", "technical_fundamentals", "hr_fit_closing"), plan.items.map { it.roundType })
+        assertTrue(plan.items.all { it.why.startsWith("Typical of campus hiring") }, plan.items.map { it.why }.toString())
+        assertEquals(listOf("Online coding test", "Communication assessment (some employers)"), plan.unsimulatedStages.map { it.stageName })
+        assertTrue("coding platform" in plan.unsimulatedStages.first().note)
+    }
+
+    private fun loop(
+        knowledge: EmployerKnowledge?,
+        campus: Boolean = false,
+    ) = ResolvedLoop(
+        company = null,
+        typedName = "Infosys",
+        archetype = Archetype.SERVICE_BASED_IT,
+        confidence = Confidence.RECOGNISED,
+        sourcedStages = emptyList(),
+        generalPattern = general,
+        modelKnowledge = knowledge,
+        campus = campus,
+    )
 }

@@ -401,4 +401,51 @@ describe("LoopBriefStep", () => {
     );
     expect(screen.queryByText(/we don't hold a sourced account/i)).not.toBeInTheDocument();
   });
+
+  it("fetches the brief and plan with the stated stage as level, and labels the campus pattern", async () => {
+    fetchLoopBrief.mockResolvedValue({ ...sourcedBrief, hasSources: false, sourcedStages: [], campusPattern: true });
+    fetchPrepPlan.mockResolvedValue({ items: [], unsimulatedStages: [] });
+
+    render(
+      <LoopBriefStep
+        companyName="Amazon"
+        roleTitle="Backend Engineer"
+        stage="student"
+        accessToken="token"
+        onChooseRound={vi.fn()}
+        onSkip={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/campus hiring pattern for a global product company loop/i)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/general pattern for/i)).not.toBeInTheDocument();
+    const expected = { company: "Amazon", role: "Backend Engineer", level: "student" };
+    expect(fetchLoopBrief).toHaveBeenCalledWith(expected, { accessToken: "token" });
+    expect(fetchPrepPlan).toHaveBeenCalledWith(expected, { accessToken: "token" });
+  });
+
+  it("sends no level when no stage was chosen", async () => {
+    fetchLoopBrief.mockResolvedValue(sourcedBrief);
+    fetchPrepPlan.mockResolvedValue(plan);
+
+    render(
+      <LoopBriefStep
+        companyName="Amazon"
+        roleTitle="Backend Engineer"
+        accessToken="token"
+        onChooseRound={vi.fn()}
+        onSkip={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Online assessment")).toBeInTheDocument());
+    expect(fetchLoopBrief).toHaveBeenCalledWith(
+      { company: "Amazon", role: "Backend Engineer" },
+      { accessToken: "token" },
+    );
+  });
 });

@@ -68,6 +68,7 @@ class LoopBriefService(
             hasSources = resolved.sourcedStages.isNotEmpty(),
             sourcedStages = resolved.sourcedStages.map { it.toView() },
             generalPattern = resolved.generalPattern.sortedBy { it.order }.map { it.toView() },
+            campusPattern = resolved.campus,
             publicSourcePattern = publicPattern?.toView(),
             modelKnowledge = resolved.modelKnowledge?.toView(),
             bankCoverage = coverageView(resolved.company, coverage),
@@ -105,6 +106,7 @@ class LoopBriefService(
             sourcedStages = sourcedStages,
             generalPattern = generalPattern,
             modelKnowledge = knowledge,
+            campus = CampusLoopPattern.isCampus(level),
         )
     }
 
@@ -194,6 +196,8 @@ data class ResolvedLoop(
     val generalPattern: List<GeneralLoopStage>,
     /** What the model can name about this employer; null whenever [sourcedStages] is not empty. */
     val modelKnowledge: EmployerKnowledge? = null,
+    /** True when the candidate stated they are a student or recent graduate, so [generalPattern] is the campus loop. */
+    val campus: Boolean = false,
 )
 
 data class LoopBriefView(
@@ -202,6 +206,8 @@ data class LoopBriefView(
     val hasSources: Boolean,
     val sourcedStages: List<LoopBriefSourcedStageView>,
     val generalPattern: List<LoopBriefGeneralStageView>,
+    /** True when [generalPattern] is the campus-hiring pattern, asked for by a stated student or graduate stage. */
+    val campusPattern: Boolean = false,
     /**
      * What public pages say about this employer, when we hold no sourced stage for it and
      * a search found something citable. Null otherwise — including whenever [hasSources].

@@ -1,13 +1,16 @@
 import type { SessionView } from "@acemyinterview/shared";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { InterviewRoom } from "./interview-room";
 import { ApiRequestError } from "@/lib/api";
 
 const fetchSession = vi.hoisted(() => vi.fn());
 const beginSession = vi.hoisted(() => vi.fn());
+const captureStart = vi.hoisted(() => vi.fn());
+const auth = vi.hoisted(() => ({ token: "token-abc" }));
+const questionAudio = vi.hoisted(() => ({ current: { url: null as string | null, status: "unavailable" } }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/lib/api", () => ({
@@ -29,7 +32,7 @@ vi.mock("@/lib/api", () => ({
   saveBoard: vi.fn(),
   submitAnswer: vi.fn(),
 }));
-vi.mock("@/lib/use-access-token", () => ({ useAccessToken: () => "token-abc" }));
+vi.mock("@/lib/use-access-token", () => ({ useAccessToken: () => auth.token }));
 vi.mock("@/components/device-check", () => ({
   DeviceCheck: ({
     onEnter,
@@ -63,7 +66,7 @@ vi.mock("@/lib/use-interview-capture", () => ({
     level: 0,
     stream: null,
     requestDevices: vi.fn(),
-    start: vi.fn(),
+    start: captureStart,
     stop: vi.fn(),
     release: vi.fn(),
     isRecording: false,
@@ -85,7 +88,7 @@ vi.mock("@/lib/use-live-transcript", () => ({
   useLiveTranscript: () => ({ supported: false, text: "", start: vi.fn(), stop: vi.fn() }),
 }));
 vi.mock("@/lib/use-question-audio", () => ({
-  useQuestionAudio: () => ({ url: null, status: "unavailable" }),
+  useQuestionAudio: () => questionAudio.current,
 }));
 
 const baseSession = {
@@ -109,6 +112,8 @@ const baseSession = {
 describe("InterviewRoom session entry", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    auth.token = "token-abc";
+    questionAudio.current = { url: null, status: "unavailable" };
   });
 
   it.each([
@@ -153,5 +158,85 @@ describe("InterviewRoom session entry", () => {
     expect(await screen.findByRole("button", { name: "Leave (forfeit)" })).toBeInTheDocument();
     expect(screen.queryByText(/voice is unavailable/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/round is in writing/i)).not.toBeInTheDocument();
+  });
+});
+
+/*
+ * The mid-round stall (3 Oct 2026). A long round outlives the hourly access token, and the
+ * room used to reload itself into the device check when the new token arrived.
+ */
+describe("InterviewRoom across an access-token rotation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    auth.token = "token-abc";
+    questionAudio.current = { url: null, status: "unavailable" };
+  });
+
+  it("stays in the room, without re-reading the session, when the token rotates", async () => {
+    fetchSession.mockResolvedValue(baseSession);
+    beginSession.mockResolvedValue({
+      startedAt: "2026-09-29T09:00:00Z",
+      scheduledEndAt: "2026-09-29T09:45:00Z",
+    });
+    const { rerender } = render(<InterviewRoom sessionId={baseSession.id} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Enter the room" }));
+    expect(await screen.findByRole("button", { name: "Leave (forfeit)" })).toBeInTheDocument();
+
+    auth.token = "token-rotated";
+    rerender(<InterviewRoom sessionId={baseSession.id} />);
+    // Give a re-read every chance to land before checking it did not.
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByText("Device check")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Leave (forfeit)" })).toBeInTheDocument();
+    expect(fetchSession).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("InterviewRoom when the interviewer's recorded voice is slow", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    auth.token = "token-abc";
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("opens the microphone once the grace period is spent, not when the poll gives up", async () => {
+    questionAudio.current = { url: null, status: "pending" };
+    fetchSession.mockResolvedValue({
+      ...baseSession,
+      currentTurn: { ...baseSession.currentTurn, questionAudioStatus: "pending" },
+    });
+    beginSession.mockResolvedValue({
+      startedAt: "2026-09-29T09:00:00Z",
+      scheduledEndAt: "2026-09-29T09:45:00Z",
+    });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<InterviewRoom sessionId={baseSession.id} />);
+    await user.click(await screen.findByRole("button", { name: "Enter the room" }));
+    expect(await screen.findByRole("button", { name: "Leave (forfeit)" })).toBeInTheDocument();
+
+    // Inside the grace period the room is still waiting for the voice.
+    await act(async () => {
+      vi.advanceTimersByTime(20_000);
+    });
+    expect(captureStart).not.toHaveBeenCalled();
+
+    // The grace period (25s) runs out: the question goes up in writing, and the candidate
+    // gets the usual time to read it (4s) before the floor passes to them — well before
+    // the 45-second poll ceiling the room used to wait for.
+    await act(async () => {
+      vi.advanceTimersByTime(6_000);
+    });
+    expect(captureStart).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(4_000);
+    });
+    expect(captureStart).toHaveBeenCalledTimes(1);
   });
 });

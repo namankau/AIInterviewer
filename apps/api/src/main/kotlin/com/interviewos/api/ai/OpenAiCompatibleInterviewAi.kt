@@ -6,6 +6,7 @@ import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
+import java.time.Duration
 
 /**
  * A fallback provider speaking the `/chat/completions` wire format.
@@ -211,6 +212,14 @@ data class ProviderConfig(
     val baseUrl: String = "",
     val model: String = "",
     val apiKey: String = "",
+    /**
+     * A shorter read timeout for the calls a candidate waits on mid-round, so a stuck
+     * model hands over to the one behind it rather than holding the room for the shared
+     * three minutes. Honoured by `kind: gemini`; a text-only provider sits at the end of
+     * the chain, where cutting a call short fails it instead of falling back. Set it only
+     * on a provider that has a capable one behind it. See [InRoomDeadline].
+     */
+    val inRoomTimeout: Duration? = null,
 ) {
     val configured: Boolean
         get() = apiKey.isNotBlank() && model.isNotBlank()

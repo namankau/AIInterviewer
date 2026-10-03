@@ -92,7 +92,7 @@ export interface LoopBrief {
   publicSourcePattern: PublicLoopPattern | null;
   /**
    * What the model itself can name about this employer's process, present only when we
-   * hold no sourced stage and the search found nothing citable. No page stands behind
+   * hold no sourced stage. The plan is built from its named rounds. No page stands behind
    * it, so it must be shown as the model's own knowledge.
    */
   modelKnowledge: ModelEmployerKnowledge | null;

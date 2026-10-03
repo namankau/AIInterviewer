@@ -21,8 +21,9 @@ import { ROUND_CATALOGUE } from "@/lib/rounds";
  * to the pages behind it. It is AI-written, so it is said to be, and it never borrows the
  * sourced stages' "own record" styling.
  *
- * When the search has nothing citable either, what the model itself can name about the
- * employer comes next, labelled as the model's knowledge with no page behind it.
+ * Beside it, what the model itself can name about the employer, labelled as the model's
+ * knowledge with no page behind it. The plan is built from those named rounds, so the
+ * brief shows them whenever they exist.
  *
  * There is no "we don't hold a sourced account of this employer" banner: the owner ruled
  * it out (3 October 2026), because a brief for Infosys that opens by saying it knows
@@ -78,7 +79,7 @@ export function LoopBriefStep({
   const firstPlanItem = plan?.items[0] ?? null;
 
   const publicPattern = brief && !brief.hasSources ? brief.publicSourcePattern : null;
-  const modelKnowledge = brief && !brief.hasSources && !publicPattern ? brief.modelKnowledge : null;
+  const modelKnowledge = brief && !brief.hasSources ? brief.modelKnowledge : null;
 
   // A sourced stage with nothing to say (no `assesses`) doesn't earn its own block —
   // but the source it cites is still real, so it isn't discarded either. It's folded

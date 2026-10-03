@@ -111,15 +111,18 @@ class LoopBriefServiceTest {
     }
 
     @Test
-    fun `a citable search result outranks the model's memory`() {
+    fun `the model's knowledge sits beside a citable search result, because the plan is built from it`() {
         val archetype = archetypes.resolve("Sagitec Solutions").archetype
         given(patterns.patternFor(archetype, null, null)).willReturn(general)
         given(research.patternFor("Sagitec Solutions", null, null)).willReturn(found)
+        given(knowledge.knowledgeOf("Sagitec Solutions", archetype.label)).willReturn(
+            EmployerKnowledge(knowsProcess = true, namedRounds = listOf("Technical interview")),
+        )
 
         val brief = service.brief("Sagitec Solutions", null, null)
 
-        assertNull(brief.modelKnowledge)
-        verify(knowledge, never()).knowledgeOf(anyString(), anyString())
+        assertEquals(2, brief.publicSourcePattern?.claims?.size)
+        assertEquals(listOf("Technical interview"), brief.modelKnowledge?.namedRounds)
     }
 
     @Test

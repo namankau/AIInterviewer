@@ -63,6 +63,7 @@ class AiProviderConfig {
                             objectMapper = objectMapper,
                             restClientBuilder = restClientBuilder,
                             reasoningModel = provider.model.ifBlank { gemini.reasoningModel },
+                            inRoomTimeout = provider.inRoomTimeout,
                         )
                     }
 

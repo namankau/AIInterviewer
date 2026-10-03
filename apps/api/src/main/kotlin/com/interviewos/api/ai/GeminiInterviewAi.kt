@@ -6,10 +6,13 @@ import org.springframework.core.io.ClassPathResource
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.client.HttpClientErrorException
+import org.springframework.web.client.ResourceAccessException
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
+import java.net.http.HttpTimeoutException
+import java.time.Duration
 import java.util.Base64
 
 /**
@@ -36,9 +39,21 @@ class GeminiInterviewAi(
      * hear a recording, which no text-only fallback can.
      */
     private val reasoningModel: String,
+    /**
+     * How long a call the candidate is waiting on mid-round may take here before the chain
+     * moves on, or null for the shared timeout. See [InRoomDeadline].
+     */
+    private val inRoomTimeout: Duration? = null,
 ) : InterviewAi {
     private val log = LoggerFactory.getLogger(javaClass)
     private val restClient = restClientBuilder.build()
+
+    /**
+     * For the calls a candidate sits in silence through: the question, the assessment of
+     * their answer, a hint, and the interviewer's voice. Everything else — the report above
+     * all — keeps the long timeout.
+     */
+    private val inRoomClient: RestClient = inRoomTimeout?.let { InRoomDeadline.client(restClientBuilder, it) } ?: restClient
 
     override val providerName: String = "gemini ($reasoningModel)"
 
@@ -89,7 +104,7 @@ class GeminiInterviewAi(
                             ),
                     ),
             )
-        val response = call(properties.speechModel, body)
+        val response = call(properties.speechModel, body, client = inRoomClient)
         val inline =
             response
                 .path("candidates")
@@ -200,6 +215,7 @@ class GeminiInterviewAi(
                 listOf(textPart(prompt)),
                 prompts.schema("opening-question"),
                 Thinking.IN_THE_ROOM,
+                inRoomClient,
             )
         return AiResult(objectMapper.treeToValue(node, AskedQuestion::class.java), usage)
     }
@@ -214,7 +230,7 @@ class GeminiInterviewAi(
         val prompt = prompts.assessAnswer(brief, round, priorTurns, currentQuestion)
 
         val parts = listOf(textPart(prompt), inlineDataPart(answer.contentType, answer.bytes))
-        val (node, usage) = generateJson(reasoningModel, parts, prompts.schema("assess-answer"), Thinking.IN_THE_ROOM)
+        val (node, usage) = generateJson(reasoningModel, parts, prompts.schema("assess-answer"), Thinking.IN_THE_ROOM, inRoomClient)
         return AiResult(objectMapper.treeToValue(node, AnswerAssessment::class.java), usage)
     }
 
@@ -225,7 +241,8 @@ class GeminiInterviewAi(
         currentQuestion: String,
     ): AiResult<OfferedHint> {
         val prompt = prompts.offerHint(brief, round, priorTurns, currentQuestion)
-        val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("offer-hint"), Thinking.IN_THE_ROOM)
+        val (node, usage) =
+            generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("offer-hint"), Thinking.IN_THE_ROOM, inRoomClient)
         return AiResult(objectMapper.treeToValue(node, OfferedHint::class.java), usage)
     }
 
@@ -372,6 +389,7 @@ class GeminiInterviewAi(
         parts: List<Map<String, Any>>,
         responseSchema: JsonNode,
         thinkingBudget: Int? = null,
+        client: RestClient = restClient,
     ): Pair<JsonNode, AiUsage> {
         requireConfigured()
         val body =
@@ -385,7 +403,7 @@ class GeminiInterviewAi(
                         thinkingBudget?.let { put("thinkingConfig", mapOf("thinkingBudget" to it)) }
                     },
             )
-        val response = call(model, body)
+        val response = call(model, body, client = client)
         val text =
             response
                 .path("candidates")
@@ -411,9 +429,10 @@ class GeminiInterviewAi(
         model: String,
         body: Map<String, Any>,
         method: String = "generateContent",
+        client: RestClient = restClient,
     ): JsonNode =
         try {
-            restClient
+            client
                 .post()
                 .uri("${properties.baseUrl}/models/$model:$method")
                 .header("x-goog-api-key", properties.apiKey)
@@ -451,6 +470,14 @@ class GeminiInterviewAi(
                 ex,
             )
             throw AiUnavailableException("Gemini model $model is not available.", ex)
+        } catch (ex: ResourceAccessException) {
+            // Told apart so the log says "slow", not "broken": a deadline that fires is the
+            // chain doing its job, and the next provider is already being asked.
+            val timedOut = generateSequence<Throwable>(ex) { it.cause }.any { it is HttpTimeoutException }
+            throw AiUnavailableException(
+                if (timedOut) "Gemini did not answer on $model in time." else "Gemini request to $model failed.",
+                ex,
+            )
         } catch (ex: RestClientException) {
             throw AiUnavailableException("Gemini request to $model failed.", ex)
         }

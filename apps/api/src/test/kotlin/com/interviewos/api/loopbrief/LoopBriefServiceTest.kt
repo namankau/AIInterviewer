@@ -1,5 +1,6 @@
 package com.interviewos.api.loopbrief
 
+import com.interviewos.api.ai.EmployerKnowledge
 import com.interviewos.api.ai.GeneralLoopPattern
 import com.interviewos.api.ai.GeneralLoopStage
 import com.interviewos.api.ai.GroundedClaim
@@ -39,10 +40,11 @@ class LoopBriefServiceTest {
     private val patterns = mock(GeneralLoopPatternCache::class.java)
     private val bank = mock(QuestionBankRepository::class.java)
     private val research = mock(PublicLoopResearch::class.java)
+    private val knowledge = mock(ModelEmployerKnowledge::class.java)
     private val archetypes = ArchetypeResolver()
 
     private val service =
-        LoopBriefService(directory, archetypes, stages, patterns, bank, QuestionBankProperties(), research)
+        LoopBriefService(directory, archetypes, stages, patterns, bank, QuestionBankProperties(), research, knowledge)
 
     private val general = GeneralLoopPattern(listOf(GeneralLoopStage(order = 1, stageName = "Aptitude test")))
 
@@ -85,7 +87,39 @@ class LoopBriefServiceTest {
         val brief = service.brief("Tiny Local Firm", null, null)
 
         assertNull(brief.publicSourcePattern)
+        assertNull(brief.modelKnowledge)
         assertEquals(listOf("Aptitude test"), brief.generalPattern.map { it.stageName })
+    }
+
+    @Test
+    fun `when the search finds nothing citable the model's own knowledge of the employer is shown`() {
+        val company = company("Infosys", Archetype.SERVICE_BASED_IT)
+        given(directory.resolve("Infosys")).willReturn(company)
+        given(stages.stagesFor(company.id)).willReturn(emptyList())
+        given(patterns.patternFor(Archetype.SERVICE_BASED_IT, null, null)).willReturn(general)
+        given(bank.coverage(company)).willReturn(CompanyCoverage(company, emptyMap()))
+        given(research.patternFor("Infosys", null, null)).willReturn(null)
+        given(knowledge.knowledgeOf("Infosys", Archetype.SERVICE_BASED_IT.label)).willReturn(
+            EmployerKnowledge(knowsProcess = true, basis = "Campus process.", namedRounds = listOf("Online assessment")),
+        )
+
+        val brief = service.brief("Infosys", null, null)
+
+        assertNull(brief.publicSourcePattern)
+        assertEquals(listOf("Online assessment"), brief.modelKnowledge?.namedRounds)
+        assertEquals("Campus process.", brief.modelKnowledge?.basis)
+    }
+
+    @Test
+    fun `a citable search result outranks the model's memory`() {
+        val archetype = archetypes.resolve("Sagitec Solutions").archetype
+        given(patterns.patternFor(archetype, null, null)).willReturn(general)
+        given(research.patternFor("Sagitec Solutions", null, null)).willReturn(found)
+
+        val brief = service.brief("Sagitec Solutions", null, null)
+
+        assertNull(brief.modelKnowledge)
+        verify(knowledge, never()).knowledgeOf(anyString(), anyString())
     }
 
     @Test
@@ -100,6 +134,8 @@ class LoopBriefServiceTest {
 
         assertTrue(brief.hasSources)
         assertNull(brief.publicSourcePattern)
+        assertNull(brief.modelKnowledge)
+        verify(knowledge, never()).knowledgeOf(anyString(), anyString())
         verify(research, never()).patternFor(anyString(), nullable(String::class.java), nullable(String::class.java))
     }
 

@@ -48,6 +48,7 @@ const sourcedBrief: LoopBrief = {
     { order: 1, stageName: "Recruiter screen", format: "Phone", assesses: "Motivation and fit", roundType: null },
   ],
   publicSourcePattern: null,
+  modelKnowledge: null,
   bankCoverage: { questionCount: 23, roundTypes: [], bankUrl: "/questions/amazon" },
 };
 
@@ -122,7 +123,7 @@ describe("LoopBriefStep", () => {
     expect(screen.getByText("Recruiter screen.")).toBeInTheDocument();
   });
 
-  it("says the honesty caveat once for a company we only infer the archetype for", async () => {
+  it("never opens with a 'we don't know this employer' disclaimer for an inferred archetype", async () => {
     fetchLoopBrief.mockResolvedValue({
       ...sourcedBrief,
       company: { ...sourcedBrief.company, slug: null, name: "Salesforce", archetypeConfidence: "inferred" },
@@ -142,13 +143,12 @@ describe("LoopBriefStep", () => {
       />,
     );
 
+    // The general pattern still says what it is, as its own section label.
     await waitFor(() =>
-      expect(screen.getByText(/we don't know salesforce specifically/i)).toBeInTheDocument(),
+      expect(screen.getByText(/general pattern for a global product company loop/i)).toBeInTheDocument(),
     );
-    // Said exactly once — not again as a "no sourced account" paragraph, and the
-    // general-pattern label stays a short section header, not a repeat of the sentence.
-    expect(screen.getAllByText(/not a claim about this employer/i)).toHaveLength(1);
-    expect(screen.queryByText(/we don't hold a sourced account/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/we don't know salesforce/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/not a claim about this employer/i)).not.toBeInTheDocument();
   });
 
   it("has no Question bank section", async () => {
@@ -319,9 +319,9 @@ describe("LoopBriefStep", () => {
     // Never styled as our own record, and the archetype pattern still follows, labelled.
     expect(screen.queryByText(/own record/i)).not.toBeInTheDocument();
     expect(screen.getByText(/general pattern for a service-based it loop/i)).toBeInTheDocument();
-    // One caveat, and it is the one that names the search.
-    expect(screen.getByText(/what a search of public pages found/i)).toBeInTheDocument();
-    expect(screen.queryByText(/we don't know sagitec solutions specifically/i)).not.toBeInTheDocument();
+    // The section's own label carries the honesty; there is no banner disclaimer.
+    expect(screen.queryByText(/we don't (know|hold)/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("From AI knowledge")).not.toBeInTheDocument();
   });
 
   it("does not show public research beside a sourced record, even if it arrives", async () => {
@@ -344,14 +344,24 @@ describe("LoopBriefStep", () => {
     expect(screen.queryByText(/sagitec starts with/i)).not.toBeInTheDocument();
   });
 
-  it("falls back to the archetype caveat when the search found nothing citable", async () => {
-    fetchLoopBrief.mockResolvedValue({ ...unsourcedBrief, publicSourcePattern: null });
+  it("falls back to the AI's own knowledge of the employer, labelled as such, when the search found nothing citable", async () => {
+    fetchLoopBrief.mockResolvedValue({
+      ...unsourcedBrief,
+      company: { ...unsourcedBrief.company, name: "Infosys", archetypeConfidence: "recognised" },
+      publicSourcePattern: null,
+      modelKnowledge: {
+        basis: "Widely described campus process; may be dated.",
+        namedRounds: ["Online assessment", "Technical interview"],
+        namedValues: [],
+        namedFormats: ["HR interview"],
+      },
+    });
     fetchPrepPlan.mockResolvedValue(plan);
 
     render(
       <LoopBriefStep
-        companyName="Sagitec Solutions"
-        roleTitle="Backend Engineer"
+        companyName="Infosys"
+        roleTitle="Systems Engineer"
         accessToken="token"
         onChooseRound={vi.fn()}
         onSkip={vi.fn()}
@@ -359,13 +369,19 @@ describe("LoopBriefStep", () => {
       />,
     );
 
-    await waitFor(() =>
-      expect(screen.getByText(/we don't know sagitec solutions specifically/i)).toBeInTheDocument(),
-    );
+    const section = await screen.findByRole("region", { name: /what the ai knows about infosys's process/i });
+    const scoped = within(section);
+    expect(scoped.getByText("From AI knowledge")).toBeInTheDocument();
+    expect(scoped.getByText(/not a page we can link/i)).toBeInTheDocument();
+    expect(scoped.getByText("Online assessment")).toBeInTheDocument();
+    expect(scoped.getByText("HR interview")).toBeInTheDocument();
+    // An empty list gets no heading.
+    expect(scoped.queryByText("What they look for")).not.toBeInTheDocument();
+    expect(screen.queryByText(/we don't (know|hold)/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Found in public sources")).not.toBeInTheDocument();
   });
 
-  it("states plainly when we hold no source for this company", async () => {
+  it("with nothing specific at all, shows the labelled general pattern and no disclaimer", async () => {
     fetchLoopBrief.mockResolvedValue({ ...sourcedBrief, hasSources: false, sourcedStages: [] });
     fetchPrepPlan.mockResolvedValue({ items: [], unsimulatedStages: [] });
 
@@ -381,7 +397,8 @@ describe("LoopBriefStep", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText(/we don't hold a sourced account of amazon's process yet/i)).toBeInTheDocument(),
+      expect(screen.getByText(/general pattern for a global product company loop/i)).toBeInTheDocument(),
     );
+    expect(screen.queryByText(/we don't hold a sourced account/i)).not.toBeInTheDocument();
   });
 });

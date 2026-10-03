@@ -63,6 +63,14 @@ export interface PublicLoopPattern {
   sources: PublicLoopSource[];
 }
 
+/** The `model_knowledge` tier: specifics the model can name, with its own note on how dated they are. */
+export interface ModelEmployerKnowledge {
+  basis: string | null;
+  namedRounds: string[];
+  namedValues: string[];
+  namedFormats: string[];
+}
+
 export interface LoopBriefCoverage {
   questionCount: number;
   roundTypes: BankRoundTypeCount[];
@@ -82,6 +90,12 @@ export interface LoopBrief {
    * and the search found something it could cite. Null whenever `hasSources` is true.
    */
   publicSourcePattern: PublicLoopPattern | null;
+  /**
+   * What the model itself can name about this employer's process, present only when we
+   * hold no sourced stage and the search found nothing citable. No page stands behind
+   * it, so it must be shown as the model's own knowledge.
+   */
+  modelKnowledge: ModelEmployerKnowledge | null;
   bankCoverage: LoopBriefCoverage;
 }
 

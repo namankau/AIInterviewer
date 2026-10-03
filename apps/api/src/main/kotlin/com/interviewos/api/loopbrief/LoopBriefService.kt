@@ -1,5 +1,6 @@
 package com.interviewos.api.loopbrief
 
+import com.interviewos.api.ai.EmployerKnowledge
 import com.interviewos.api.ai.GeneralLoopStage
 import com.interviewos.api.ai.GroundedEmployerLoop
 import com.interviewos.api.bank.Company
@@ -27,6 +28,10 @@ import org.springframework.stereotype.Service
  * all: what public pages say, sentence by sentence, each sentence linked to the pages
  * behind it. It is asked only when the library has nothing, and it is shown as its own
  * labelled section — never merged into either of the others.
+ *
+ * When the search has nothing citable either, [ModelEmployerKnowledge] says what the
+ * model itself can name about the employer, shown as the model's knowledge. Only when
+ * that is empty too does the brief stand on the archetype pattern alone.
  */
 @Service
 class LoopBriefService(
@@ -37,6 +42,7 @@ class LoopBriefService(
     private val bank: QuestionBankRepository,
     private val bankBrowsing: QuestionBankProperties,
     private val publicResearch: PublicLoopResearch,
+    private val modelKnowledge: ModelEmployerKnowledge,
 ) {
     fun brief(
         companyName: String,
@@ -47,9 +53,18 @@ class LoopBriefService(
         val coverage = resolved.company?.let { bank.coverage(it) }
         // Our own sourced record outranks a web search, so the search is not paid for
         // when we have one.
+        val companyName = resolved.company?.name ?: resolved.typedName
         val publicPattern =
             if (resolved.sourcedStages.isEmpty()) {
-                publicResearch.patternFor(resolved.company?.name ?: resolved.typedName, role, level)
+                publicResearch.patternFor(companyName, role, level)
+            } else {
+                null
+            }
+        // A page outranks the model's memory, so the model is asked only when neither our
+        // record nor the search has anything to say.
+        val knowledge =
+            if (resolved.sourcedStages.isEmpty() && publicPattern == null) {
+                modelKnowledge.knowledgeOf(companyName, resolved.archetype.label)
             } else {
                 null
             }
@@ -61,6 +76,7 @@ class LoopBriefService(
             sourcedStages = resolved.sourcedStages.map { it.toView() },
             generalPattern = resolved.generalPattern.sortedBy { it.order }.map { it.toView() },
             publicSourcePattern = publicPattern?.toView(),
+            modelKnowledge = knowledge?.toView(),
             bankCoverage = coverageView(resolved.company, coverage),
         )
     }
@@ -151,6 +167,14 @@ class LoopBriefService(
             sources = sources.map { LoopBriefPublicSourceView(title = it.title, url = it.url) },
         )
 
+    private fun EmployerKnowledge.toView() =
+        LoopBriefModelKnowledgeView(
+            basis = basis,
+            namedRounds = namedRounds,
+            namedValues = namedValues,
+            namedFormats = namedFormats,
+        )
+
     private fun GeneralLoopStage.toView() =
         LoopBriefGeneralStageView(
             order = order,
@@ -183,6 +207,12 @@ data class LoopBriefView(
      * a search found something citable. Null otherwise — including whenever [hasSources].
      */
     val publicSourcePattern: LoopBriefPublicPatternView? = null,
+    /**
+     * What the model itself can name about this employer's process, when neither our
+     * record nor a search had anything. Null otherwise. The `model_knowledge` tier: no
+     * page stands behind it, and the client must say so.
+     */
+    val modelKnowledge: LoopBriefModelKnowledgeView? = null,
     val bankCoverage: LoopBriefCoverageView,
 )
 
@@ -219,6 +249,14 @@ data class LoopBriefGeneralStageView(
 data class LoopBriefPublicPatternView(
     val claims: List<LoopBriefPublicClaimView>,
     val sources: List<LoopBriefPublicSourceView>,
+)
+
+data class LoopBriefModelKnowledgeView(
+    /** The model's own account of what it knows and how dated it may be. */
+    val basis: String?,
+    val namedRounds: List<String>,
+    val namedValues: List<String>,
+    val namedFormats: List<String>,
 )
 
 data class LoopBriefPublicClaimView(

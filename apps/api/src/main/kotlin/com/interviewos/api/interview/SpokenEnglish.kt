@@ -68,7 +68,7 @@ object SpokenEnglish {
 
     /** Accent and nativeness are never assessed; a transcript cannot show pronunciation. */
     private val OFF_LIMITS =
-        Regex("(?i)\\b(?:accent\\w*|pronunciation|pronounc\\w*|native|nativeness|non-native|mother[\\s-]tongue)\\b")
+        Regex("(?i)\\b(?:accent\\w*|(?:mis)?pronunciation|(?:mis)?pronounc\\w*|native|nativeness|non-native|mother[\\s-]tongue)\\b")
 
     /** One answered turn, as this section needs it. */
     data class Answer(
@@ -164,7 +164,7 @@ object SpokenEnglish {
                 append("- Speaking pace: ${measured.wordsPerMinute} words per minute ")
                 append("(a range commonly cited for conversational English is $PACE_RANGE_LOW–$PACE_RANGE_HIGH).\n")
             } else {
-                append("- Speaking pace: not measured. ${measured.paceNote}\n")
+                append("- Speaking pace: not measured.\n")
             }
             if (measured.pauseCount != null) {
                 append("- Pauses of a second or longer: ${measured.pauseCount}")
@@ -172,7 +172,7 @@ object SpokenEnglish {
                 measured.pauseSharePercent?.let { append("; $it% of speaking time") }
                 append(".\n")
             } else {
-                append("- Pauses: not measured. ${measured.timingNote.orEmpty()}\n")
+                append("- Pauses: not measured.\n")
             }
             measured.medianFirstWordSeconds?.let { append("- Typical wait before the first word: $it seconds.\n") }
             append("- Hesitation sounds (um, uh, er, hmm) in the transcript: ${measured.hesitationCount ?: 0}.")

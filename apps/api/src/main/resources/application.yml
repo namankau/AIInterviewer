@@ -83,6 +83,13 @@ interviewos:
       - name: gemini-lite
         kind: gemini
         model: ${GEMINI_PRIMARY_MODEL:gemini-3.1-flash-lite}
+        # The longest the candidate waits on this model mid-round (the assessment, a hint,
+        # the opening question, the voice) before the model behind it is asked instead.
+        # Without it a stuck call held the room for the shared three-minute timeout. An
+        # assessment normally returns in 3.5-7s and a question's voice in under 10s, so 20s
+        # cuts off only a tail. Only the first model gets one: the last one able to hear an
+        # answer has nobody behind it, and a deadline there ends the round. See InRoomDeadline.
+        in-room-timeout: ${GEMINI_PRIMARY_IN_ROOM_TIMEOUT:20s}
       - name: gemini-flash
         kind: gemini
         model: ${GEMINI_FALLBACK_MODEL:gemini-3.5-flash}

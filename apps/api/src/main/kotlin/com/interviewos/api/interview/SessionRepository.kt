@@ -623,6 +623,31 @@ class SessionRepository(
             .update()
     }
 
+    /**
+     * Links a recording that finished uploading after its answer was recorded. Only fills
+     * an empty path, so it can never replace one the answer was recorded with.
+     */
+    fun attachAnswerAudio(
+        sessionId: UUID,
+        userId: UUID,
+        turnIndex: Int,
+        audioPath: String,
+    ) {
+        jdbcClient
+            .sql(
+                """
+                update public.session_turns
+                   set answer_audio_path = :audio
+                 where session_id = :s and user_id = :u and turn_index = :i
+                   and answer_audio_path is null
+                """.trimIndent(),
+            ).param("audio", audioPath)
+            .param("s", sessionId)
+            .param("u", userId)
+            .param("i", turnIndex)
+            .update()
+    }
+
     fun findTurn(
         sessionId: UUID,
         userId: UUID,

@@ -34,6 +34,9 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /**
  * Conducts an interview.
@@ -631,9 +634,24 @@ class InterviewService(
 
             val nextAction = if (mustMoveOn) "move_on" else normaliseAction(assessment.value.suggestedNextAction)
             val intervention = Intervention.parse(assessment.value.intervention)
-            // The upload has almost always finished under the assessment by now. Joining it
+            // The upload has almost always finished under the assessment by now. Waiting for it
             // cannot fail the turn: storeOrWarn has already turned its own errors into nulls.
-            val audioPath = storedAudio.join()
+            //
+            // It must not hold the turn either. A storage request that hangs has the same
+            // three-minute timeout as everything else, and an unbounded join made the next
+            // question wait for the recording of the last answer — which it has no use for.
+            // So the turn waits a short grace for it, and a recording still uploading after
+            // that is attached to its answer when it lands (see the end of this method).
+            var uploadStillRunning = false
+            val audioPath =
+                try {
+                    storedAudio.get(ANSWER_UPLOAD_GRACE.toMillis(), TimeUnit.MILLISECONDS)
+                } catch (e: TimeoutException) {
+                    uploadStillRunning = true
+                    null
+                } catch (e: ExecutionException) {
+                    throw e.cause ?: e
+                }
 
             // Everything from here down writes to the database, and has to land together: the
             // answer record, then whichever of "mark the session completed" or "insert the
@@ -773,6 +791,17 @@ class InterviewService(
                     )
                 }
             durable = true
+            // Registered only now that the answer has committed: `recordAnswer` writes the
+            // audio path too, and attaching before it would be overwritten with the null above.
+            if (uploadStillRunning) {
+                log.warn("Answer audio for session {} turn {} was still uploading; attaching it when it lands", sessionId, turnIndex)
+                storedAudio.thenAccept { late ->
+                    if (late != null) {
+                        runCatching { repository.attachAnswerAudio(sessionId, userId, turnIndex, late) }
+                            .onFailure { log.warn("Could not attach late answer audio for session {} turn {}", sessionId, turnIndex, it) }
+                    }
+                }
+            }
             return response
         } finally {
             if (!durable && claim.status == TurnRequestClaimStatus.ACQUIRED) {
@@ -1437,6 +1466,13 @@ class InterviewService(
         const val MAX_ROUND_MINUTES = 120
         const val DEFAULT_CUSTOM_ROUND_MINUTES = 20
         const val REQUEST_LEASE_SECONDS = 10 * 60L
+
+        /**
+         * How long a turn waits, once the answer has been assessed, for its recording to
+         * finish uploading. The upload starts with the assessment and normally ends well
+         * inside it; this is only the allowance for the one that has not.
+         */
+        val ANSWER_UPLOAD_GRACE: Duration = Duration.ofSeconds(2)
         val DRAFT_CONFIDENCES = setOf("high", "medium", "low")
         val CUSTOM_ROUND_MINUTES = setOf(10, 20, 30)
         val FOLLOW_UP_ACTIONS = setOf("follow_up", "probe", "challenge")

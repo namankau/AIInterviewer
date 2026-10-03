@@ -220,6 +220,50 @@
           "whatToDo"
         ]
       }
+    },
+    "spokenEnglish": {
+      "type": "OBJECT",
+      "nullable": true,
+      "description": "How the candidate used spoken English. Null in a Hindi-English round.",
+      "properties": {
+        "observations": {
+          "type": "ARRAY",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "aspect": {
+                "type": "STRING",
+                "enum": ["fluency", "filler_words", "grammar", "vocabulary", "clarity", "coherence"]
+              },
+              "finding": {
+                "type": "STRING",
+                "description": "What the quote shows about the language, in one or two sentences. No numbers; never about accent or pronunciation."
+              },
+              "evidenceQuote": {
+                "type": "STRING",
+                "description": "Verbatim from one of the candidate's answers. Never paraphrased."
+              },
+              "turnIndex": {
+                "type": "INTEGER",
+                "nullable": true
+              },
+              "suggestion": {
+                "type": "STRING",
+                "description": "One concrete thing to practise, with a corrected or stronger version of the phrase where that helps."
+              }
+            },
+            "required": [
+              "aspect",
+              "finding",
+              "evidenceQuote",
+              "suggestion"
+            ]
+          }
+        }
+      },
+      "required": [
+        "observations"
+      ]
     }
   },
   "required": [

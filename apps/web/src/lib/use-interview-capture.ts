@@ -2,11 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { type AnswerTiming, type TimingState, finishTiming, foldLevel, startTiming } from "@/lib/speech-timing";
+
 export type CaptureState = "idle" | "requesting" | "ready" | "recording" | "denied" | "unsupported";
 
 export interface CapturedAnswer {
   audio: Blob;
   durationMs: number;
+  /**
+   * When speech was heard, measured from the meter while recording (`speech-timing.ts`).
+   * Null when the meter could not sample steadily; the report then says it was not measured.
+   */
+  timing: AnswerTiming | null;
 }
 
 interface UseInterviewCaptureOptions {
@@ -40,6 +47,8 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number | null>(null);
+  // Only while an answer is being recorded; the device check before the round is not timed.
+  const timingRef = useRef<TimingState | null>(null);
 
   const stopMeter = useCallback(() => {
     if (rafRef.current !== null) {
@@ -48,7 +57,10 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
     }
   }, []);
 
-  /** Drives the speaking indicator. Purely cosmetic — never gates recording. */
+  /**
+   * Drives the speaking indicator, and times the answer while one is being recorded.
+   * Never gates recording.
+   */
   const runMeter = useCallback(() => {
     const analyser = analyserRef.current;
     if (!analyser) return;
@@ -60,7 +72,9 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
       for (const sample of data) {
         peak = Math.max(peak, Math.abs(sample - 128));
       }
-      setLevel(Math.min(1, peak / 64));
+      const level = Math.min(1, peak / 64);
+      setLevel(level);
+      if (timingRef.current) timingRef.current = foldLevel(timingRef.current, level, performance.now());
       rafRef.current = requestAnimationFrame(tick);
     };
     tick();
@@ -122,6 +136,7 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
     audioRecorderRef.current = audioRecorder;
 
     startedAtRef.current = Date.now();
+    timingRef.current = startTiming(performance.now());
     setState("recording");
     runMeter();
     return true;
@@ -132,6 +147,8 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
     if (!audioRecorder) return null;
 
     const durationMs = Date.now() - startedAtRef.current;
+    const timing = timingRef.current ? finishTiming(timingRef.current, performance.now()) : null;
+    timingRef.current = null;
     stopMeter();
     setLevel(0);
 
@@ -140,12 +157,13 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
     audioRecorderRef.current = null;
     setState("ready");
 
-    return { audio, durationMs };
+    return { audio, durationMs, timing };
   }, [stopMeter]);
 
   /** Releases the camera light and the microphone. Called on unmount and on exit. */
   const release = useCallback(() => {
     stopMeter();
+    timingRef.current = null;
     audioRecorderRef.current?.stop();
     streamRef.current?.getTracks().forEach((track) => track.stop());
     void audioContextRef.current?.close().catch(() => undefined);

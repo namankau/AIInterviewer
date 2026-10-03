@@ -187,6 +187,7 @@ class PromptLibrary(
         fillBrief(loadPrompt("report"), brief)
             .replace("{{transcript}}", transcriptOf(transcript))
             .replace("{{assistance}}", assistanceContext(transcript))
+            .replace("{{spokenEnglish}}", brief.spokenEnglish.ifBlank { "(no spoken-English figures for this round)" })
 
     fun resumeParse(): String = loadPrompt("resume-parse")
 

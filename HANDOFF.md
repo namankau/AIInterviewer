@@ -1,95 +1,113 @@
-# Handoff — 2026-10-02
+# Handoff — 2026-10-03 (loop brief, plan, stalls, spoken English, fresher option)
 
 ## Start here (for the next agent, Codex or Claude)
-Where the repository stands at the end of this run:
-
-- **`develop` is the source of truth.** Every feature branch is merged and has been
-  deleted, locally and on GitHub. No PR is open into `develop`.
-- **A release PR `develop` → `main` is open, waiting for the owner to merge it.** Once it
-  is merged, `main` and `develop` have the same content. Never push to `main` yourself
-  (CLAUDE.md / AGENTS.md rule 1).
-- **CI is green on `develop`.** Both jobs pass: web (typecheck, lint, test, build) and API
-  (ktlint, test, build).
-- **No migrations are pending.** Task 065 made no schema change.
-- **Untracked on purpose:** `.codex/` (Codex agent profiles) and `AGENTS.md`. They exist
-  only on the owner's machine.
-- **Start any new work from `origin/develop`:**
-  `git fetch origin && git checkout -b <branch> origin/develop`.
-- **The latest task file is `tasks/task-065-…`, and it is complete.** The next task is 066.
+- Everything from this run is merged into `develop`. No branch is left open.
+- **Migrations:** `20261003000000_answer_timing.sql` was applied at merge. The remote
+  database matches local. Nothing is pending.
+- **Untracked on purpose:** `.codex/` and `AGENTS.md`, which exist only on the owner's
+  machine.
+- Start new work from `origin/develop`. The next task file is 066.
 
 ## Task
-Task 065: learning depth, account isolation, and sourced loop discovery
-(`tasks/task-065-learning-depth-account-isolation-and-sourced-loops.md`). Codex started it
-on 29 Sep. Claude Code finished it on 2 Oct, and the owner merged it as PR #22.
+Owner requests on 3 Oct, with no task file:
+1. Never show the "we don't hold a sourced account" banner; fetch from the web or the AI
+   instead.
+2. The plan cards ignored what had been fetched about the employer.
+3. Interviews of 20 minutes or more pause partway through.
+4. A fresher / campus-placement option.
+5. A spoken-English section in the report.
 
-## What was built (all now on `develop`)
-- **Account isolation (PRD §05), `d4bb716`:**
-  - Dashboard, profile and course-progress state each record which access token fetched
-    them, and are shown only while that token is the active one.
-  - A previous account's data cannot show or change after sign-out or an account switch.
-  - Late responses from an old request are discarded, and failed refreshes clear the
-    data instead of leaving stale data on screen.
-  - Tests: `dashboard-panel.identity.test.tsx`, `profile-panel.test.tsx`,
-    `course-progress.test.tsx`.
-- **Interview room (PRD §07), `0bc42a3`:** removed the notice offering to switch to
-  writing when the interviewer's audio was unavailable.
-- **Courses (PRD §09), `26320e6`:**
-  - Every concept now gets beginner-first definitions, examples and a multi-point
-    Remember recap.
-  - Content-integrity tests enforce this for every chapter.
-- **CI and bug fixes, `ec51286`:**
-  - Fixed 3 `react-hooks` lint errors that had failed CI on every Codex push.
-  - Fixed `importLegacyProgress` reporting a successful server import as a failure.
-- **Sourced employer research (PRD §04), `bfd8b3f`:**
-  - **When it runs:** for a company with no sourced stage, the loop brief runs a Gemini
-    call with the `googleSearch` tool.
-  - **What is kept (`ai/GroundedAnswer.kt`):** only sentences that Gemini's grounding ties
-    to a page. Each claim keeps numbered citations, and unsupported sentences are dropped.
-  - **Which models can serve it:** only providers with `AiCapability.WEB_GROUNDING`
-    (Gemini), never a text-only model.
-  - **Cache (`loopbrief/PublicLoopResearch.kt`):** in memory, 12h, 500 entries. It caches
-    "nothing found" but not failed calls.
-  - **Switch:** `INTERVIEWOS_PUBLIC_LOOP_RESEARCH`, on by default.
-  - **API:** `LoopBriefView.publicSourcePattern` (`claims[]` plus `sources[]`), mirrored in
-    `packages/shared/src/loop-brief.ts`.
-  - **UI (`loop-brief-step.tsx`):** a separate "Found in public sources" section labelled
-    as an AI summary. The archetype pattern is still shown below it.
+## What I built
+1. **No unsourced-employer banner** (`fix/loop-brief-model-knowledge`, `9b0951a`), PRD §04.
+   - Source order for the brief: our sourced record → web search → the model's own
+     knowledge (`ModelEmployerKnowledge`, which reuses the pool's knowledge check) →
+     archetype pattern.
+   - Each section carries its own label instead of a banner.
+2. **Plan from the employer's own rounds** (`fix/plan-from-employer-knowledge`, `cf4362c`).
+   - The rounds the model names for an employer are mapped to round types by
+     `StageRoundMatcher`.
+   - The plan uses them in place of the archetype pattern and does not top them up with
+     generic rounds.
+   - Each card is labelled "as the AI knows it".
+3. **Mid-round stalls** (`fix/interview-mid-round-stalls`, `3786bb5`).
+   - Root cause: the hourly Supabase token refresh re-ran the room's load effect, which
+     sent a live round back to the device check with the mic shut. The room now loads
+     once per sign-in.
+   - The primary model gets a 20s in-room deadline before the chain falls back
+     (`InRoomDeadline`, `in-room-timeout`). Before, it could wait 3 minutes.
+   - The next question waits at most 2s for the previous answer's audio upload
+     (`attachAnswerAudio` links a late recording to its answer afterwards).
+   - With the server-rendered voice, the floor now passes to the candidate 4s after the
+     voice wait times out.
+4. **Spoken English in the report** (`feat/spoken-english-report`, `9e14bcd`, with a
+   migration).
+   - The browser measures speech timing from the mic level (`speech-timing.ts`). The
+     server checks it and computes the figures (`AnswerTiming.kt`, `SpokenEnglish.kt`):
+     - words per minute against a stated rough range of 120–160;
+     - pauses of 1s or more;
+     - time to first word;
+     - um/uh counts.
+   - Model observations must quote the transcript. Any that state numbers or mention
+     accent or pronunciation are dropped.
+   - In Hindi-English rounds, English is not assessed.
+   - UI: `spoken-english-panel.tsx`.
+5. **Fresher / campus option** (`feat/fresher-campus-loop`).
+   - A checkbox on the composer, "I am a fresher preparing for campus placement", sends
+     `level=student|recent_graduate` to the brief and plan, and prefills the setup form.
+   - A hand-written, archetype-level campus pattern (`CampusLoopPattern.kt`). It names no
+     employer.
+   - The plan drops system design, techno-managerial and client-scenario rounds for
+     freshers.
+   - `CampusRounds` covers gained SQL, shifts, higher studies and the spoken
+     introduction.
+   - Research: an open-source and official-page survey, kept in the run scratchpad and
+     not committed. Most official campus pages could not be read, so no employer-specific
+     campus detail was added.
 
-## Assumptions made
-- "Unknown employer" means no sourced stage. Our own sourced record always outranks the
-  search.
-- The cache is in memory, not a table, because Gemini's citation links are expiring
-  redirect URLs.
-- The prep plan does not use the search results yet.
+## Assumptions I made
+- "Never show this message" means the banner. Provenance stays as per-section labels
+  (CLAUDE.md requires a tier on every piece of employer knowledge).
+- Stall fixes: the 20s deadline applies only to the first provider; the 2s upload wait is
+  a judgement call.
+- Spoken English: a pause is silence of 1s or more between sounds; pace is measured from
+  the first word to the last.
+  - Pace and pauses are not measured in rounds with a code or drawing workspace.
+  - Pronunciation and accent are never assessed.
+- The fresher option is opt-in only, from the stated level. It does not change anyone who
+  leaves it unchecked.
 
-## What could NOT be verified
-- **No live Gemini call has been made** for the grounded search (rule 7). Untested: answer
-  quality, latency, and search-tool behaviour on each model in the chain.
-- **Google's Search Suggestions requirement:** grounded results may have to show
-  `searchEntryPoint.renderedContent`. This is not implemented, and it needs the owner's
-  legal decision.
-- **Cost tracking:** grounded searches are billed per query, and `AiPrices` records tokens
-  only.
-- Visual design of the new section.
+## What I could NOT verify (no live rounds, per rule 7)
+- What the model actually says about Infosys, and why its web search came back empty.
+- Whether the token-refresh fix is what removed the owner's pauses. One 20+ minute round
+  on `develop` will tell. Also how often Gemini calls hang (search the logs for "did not
+  answer … in time").
+- Whether the speech threshold suits real microphones (noise suppression, quiet
+  speakers), and whether Gemini follows the quote-only rule for observations.
+- How the new UI looks: the composer checkbox, the spoken-English panel, and the "From AI
+  knowledge" section.
+- Known gaps:
+  - The brief's AI-knowledge section is not level-aware, so it may still name a
+    managerial round for a student. The plan is filtered.
+  - An answer submitted after a laptop sleeps with an expired token is lost.
 
 ## Verification status
-- Backend `ktlintCheck test build`: pass.
-- Web typecheck, lint, tests (57 files / 2,921 tests), build (174 pages): pass.
-- GitHub CI on the task 065 head: web and API green (run `36964102931`).
+- Every branch passed typecheck, lint, test and build (web) and ktlintCheck, test and
+  build (api), on CI and locally.
+  - The spoken-English and fresher branches were re-run on CI after `develop` was merged
+    into them.
+- Flaky: `device-check.test.tsx` and one other web test failed once each under local
+  load (while Gradle ran in parallel), then passed on rerun. CI never failed. Worth
+  hardening.
+- Size: the spoken-English change is about 2,000 lines, half of them tests. That is over
+  the roughly 800-line guideline; capture and report could have been split.
 
 ## Merge status
-- Task 065 was merged into `develop` through PR #22 (merge commit `fd0d2d9`).
-- A release PR `develop` → `main` is open for the owner.
-- Deleted branches, all fully merged:
-  - `feat/learning-data-integrity` (local and remote)
-  - `fix/interview-audio-observability` (remote)
-  - `fix/web-workspace-build` (local)
+- All five branches are merged into `develop`. The final merge is the fresher branch;
+  see `git log`.
 
 ## Suggested next task
-- Task 066: once the owner approves, make a few live grounded calls (1–2 well-known and
-  1–2 obscure employers). Then implement the Search Suggestions display if the owner
-  requires it, and add the per-query search charge to `AiPrices`.
+- A live 25-minute round on `develop` to confirm the stall fixes and the spoken-English
+  figures. It spends money, so it is the owner's call.
 
-## Open questions for the owner
-- Must grounded results render Google's Search Suggestions chip? If so, keep
-  `INTERVIEWOS_PUBLIC_LOOP_RESEARCH=false` in production until it is built.
+## Open questions for you
+- None.

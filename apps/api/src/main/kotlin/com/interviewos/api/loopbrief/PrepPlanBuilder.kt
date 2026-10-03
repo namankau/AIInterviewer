@@ -15,6 +15,8 @@ data class PlanStageInput(
     val assesses: String?,
     val roundType: RoundType?,
     val citations: List<BankCitation> = emptyList(),
+    /** True for a stage the model named for this employer — no page behind it, but not generic either. */
+    val fromModelKnowledge: Boolean = false,
 )
 
 data class PlanItem(
@@ -24,6 +26,7 @@ data class PlanItem(
     val suggestedMinutes: Int,
     /** Empty unless this item is tied to a stage a fetched source actually reports. */
     val citations: List<BankCitation>,
+    val fromModelKnowledge: Boolean = false,
 ) {
     val isSourced: Boolean get() = citations.isNotEmpty()
 }
@@ -104,6 +107,7 @@ object PrepPlanBuilder {
                     focusAreas = focusAreasFor(stage, roundType),
                     suggestedMinutes = SUGGESTED_MINUTES[roundType] ?: DEFAULT_MINUTES,
                     citations = stage.citations,
+                    fromModelKnowledge = stage.fromModelKnowledge,
                 )
         }
         return PrepPlanBuild(items, unsimulated)
@@ -125,7 +129,7 @@ object PrepPlanBuilder {
     private fun unsimulatedNote(stageName: String): String {
         val lower = stageName.lowercase()
         return when {
-            "assessment" in lower || "oa" == lower -> {
+            "assessment" in lower || "test" in lower || "oa" == lower -> {
                 "We don't run this as a spoken round. Practise it on a coding platform beforehand."
             }
 

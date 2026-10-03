@@ -1,5 +1,6 @@
 package com.interviewos.api.loopbrief
 
+import com.interviewos.api.ai.EmployerKnowledge
 import com.interviewos.api.ai.GeneralLoopStage
 import com.interviewos.api.ai.GroundedEmployerLoop
 import com.interviewos.api.bank.Company
@@ -27,6 +28,11 @@ import org.springframework.stereotype.Service
  * all: what public pages say, sentence by sentence, each sentence linked to the pages
  * behind it. It is asked only when the library has nothing, and it is shown as its own
  * labelled section — never merged into either of the others.
+ *
+ * Beside the search, [ModelEmployerKnowledge] says what the model itself can name about
+ * the employer, shown as the model's knowledge. The prep plan is built from its named
+ * rounds, so it is shown whenever it exists. Only when both are empty does the brief
+ * stand on the archetype pattern alone.
  */
 @Service
 class LoopBriefService(
@@ -37,6 +43,7 @@ class LoopBriefService(
     private val bank: QuestionBankRepository,
     private val bankBrowsing: QuestionBankProperties,
     private val publicResearch: PublicLoopResearch,
+    private val modelKnowledge: ModelEmployerKnowledge,
 ) {
     fun brief(
         companyName: String,
@@ -47,9 +54,10 @@ class LoopBriefService(
         val coverage = resolved.company?.let { bank.coverage(it) }
         // Our own sourced record outranks a web search, so the search is not paid for
         // when we have one.
+        val companyName = resolved.company?.name ?: resolved.typedName
         val publicPattern =
             if (resolved.sourcedStages.isEmpty()) {
-                publicResearch.patternFor(resolved.company?.name ?: resolved.typedName, role, level)
+                publicResearch.patternFor(companyName, role, level)
             } else {
                 null
             }
@@ -60,7 +68,9 @@ class LoopBriefService(
             hasSources = resolved.sourcedStages.isNotEmpty(),
             sourcedStages = resolved.sourcedStages.map { it.toView() },
             generalPattern = resolved.generalPattern.sortedBy { it.order }.map { it.toView() },
+            campusPattern = resolved.campus,
             publicSourcePattern = publicPattern?.toView(),
+            modelKnowledge = resolved.modelKnowledge?.toView(),
             bankCoverage = coverageView(resolved.company, coverage),
         )
     }
@@ -83,6 +93,10 @@ class LoopBriefService(
 
         val sourcedStages = company?.let { SourcedStageMerger.merge(stages.stagesFor(it.id)) }.orEmpty()
         val generalPattern = patterns.patternFor(archetype, role, level).stages
+        // Asked whenever we hold no sourced stage, beside any web search, because the plan
+        // is built from it: the brief has to show what the plan stands on.
+        val knowledge =
+            if (sourcedStages.isEmpty()) modelKnowledge.knowledgeOf(company?.name ?: cleanedCompany, archetype.label) else null
 
         return ResolvedLoop(
             company = company,
@@ -91,6 +105,8 @@ class LoopBriefService(
             confidence = resolution.confidence,
             sourcedStages = sourcedStages,
             generalPattern = generalPattern,
+            modelKnowledge = knowledge,
+            campus = CampusLoopPattern.isCampus(level),
         )
     }
 
@@ -151,6 +167,14 @@ class LoopBriefService(
             sources = sources.map { LoopBriefPublicSourceView(title = it.title, url = it.url) },
         )
 
+    private fun EmployerKnowledge.toView() =
+        LoopBriefModelKnowledgeView(
+            basis = basis,
+            namedRounds = namedRounds,
+            namedValues = namedValues,
+            namedFormats = namedFormats,
+        )
+
     private fun GeneralLoopStage.toView() =
         LoopBriefGeneralStageView(
             order = order,
@@ -170,6 +194,10 @@ data class ResolvedLoop(
     val confidence: Confidence,
     val sourcedStages: List<SourcedStage>,
     val generalPattern: List<GeneralLoopStage>,
+    /** What the model can name about this employer; null whenever [sourcedStages] is not empty. */
+    val modelKnowledge: EmployerKnowledge? = null,
+    /** True when the candidate stated they are a student or recent graduate, so [generalPattern] is the campus loop. */
+    val campus: Boolean = false,
 )
 
 data class LoopBriefView(
@@ -178,11 +206,19 @@ data class LoopBriefView(
     val hasSources: Boolean,
     val sourcedStages: List<LoopBriefSourcedStageView>,
     val generalPattern: List<LoopBriefGeneralStageView>,
+    /** True when [generalPattern] is the campus-hiring pattern, asked for by a stated student or graduate stage. */
+    val campusPattern: Boolean = false,
     /**
      * What public pages say about this employer, when we hold no sourced stage for it and
      * a search found something citable. Null otherwise — including whenever [hasSources].
      */
     val publicSourcePattern: LoopBriefPublicPatternView? = null,
+    /**
+     * What the model itself can name about this employer's process, when we hold no
+     * sourced stage. Null otherwise. The `model_knowledge` tier: no
+     * page stands behind it, and the client must say so.
+     */
+    val modelKnowledge: LoopBriefModelKnowledgeView? = null,
     val bankCoverage: LoopBriefCoverageView,
 )
 
@@ -219,6 +255,14 @@ data class LoopBriefGeneralStageView(
 data class LoopBriefPublicPatternView(
     val claims: List<LoopBriefPublicClaimView>,
     val sources: List<LoopBriefPublicSourceView>,
+)
+
+data class LoopBriefModelKnowledgeView(
+    /** The model's own account of what it knows and how dated it may be. */
+    val basis: String?,
+    val namedRounds: List<String>,
+    val namedValues: List<String>,
+    val namedFormats: List<String>,
 )
 
 data class LoopBriefPublicClaimView(

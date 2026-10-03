@@ -21,12 +21,37 @@ import java.util.Locale
 @ConfigurationProperties(prefix = "interviewos.admin")
 data class AdminProperties(
     val emails: List<String> = emptyList(),
+    /**
+     * Supabase user ids that may administer, when set. An id cannot be claimed by signing
+     * up with somebody else's address, so pinning ids is the strongest form of this list.
+     */
+    val userIds: List<String> = emptyList(),
 ) {
     private val normalised: Set<String> = emails.map { it.trim().lowercase(Locale.ROOT) }.filter { it.isNotEmpty() }.toSet()
+    private val pinnedIds: Set<String> = userIds.map { it.trim().lowercase(Locale.ROOT) }.filter { it.isNotEmpty() }.toSet()
 
-    fun allows(email: String?): Boolean {
-        val candidate = email?.trim()?.lowercase(Locale.ROOT) ?: return false
-        return candidate.isNotEmpty() && candidate in normalised
+    /**
+     * The email must be on the list, and something other than the email must vouch for the
+     * caller: a pinned user id when ids are configured, otherwise a sign-in through a
+     * provider that verified the address itself.
+     *
+     * The email alone is not enough. With email sign-up enabled and confirmation off — one
+     * dashboard toggle — anybody could register an admin's address and receive a token
+     * carrying it.
+     */
+    fun allows(identity: SupabaseIdentity): Boolean {
+        val candidate = identity.email.trim().lowercase(Locale.ROOT)
+        if (candidate.isEmpty() || candidate !in normalised) return false
+        return if (pinnedIds.isNotEmpty()) {
+            identity.id.toString().lowercase(Locale.ROOT) in pinnedIds
+        } else {
+            identity.signInProviders.any { it in EMAIL_VERIFYING_PROVIDERS }
+        }
+    }
+
+    private companion object {
+        /** Providers that only hand over an address their user has proved they own. */
+        val EMAIL_VERIFYING_PROVIDERS = setOf("google")
     }
 }
 
@@ -41,7 +66,7 @@ class AdminAccess(
      * simply not on the list, which tells an unauthorised caller more than they need.
      */
     fun require(identity: SupabaseIdentity): SupabaseIdentity {
-        if (!properties.allows(identity.email)) {
+        if (!properties.allows(identity)) {
             throw ApiException.notFound()
         }
         return identity

@@ -262,6 +262,7 @@ object CampusRounds {
                     "the same concept as it shows up in something they actually built",
                     "a basic data structure or algorithm choice, and why it beats the obvious alternative",
                     "one language they claim on the resume, at the level of how it behaves rather than syntax",
+                    "a short SQL query against a table they are given — a join, a group-by or a filter — said aloud as they write it",
                 ),
             RoundType.BEHAVIOURAL_COMPETENCY to
                 listOf(
@@ -285,6 +286,8 @@ object CampusRounds {
                     "why this employer, asked properly — and whether the answer survives a second question",
                     "relocation, and what they would actually say to an offer in a city they did not choose",
                     "how they feel about a service agreement or bond, where an offer comes with one",
+                    "shift work and flexibility on where and what they are put on, and whether they plan higher studies soon",
+                    "a spoken introduction — who they are, what they studied and built, in about a minute — before the questions start",
                     "whether they are willing to be trained onto whatever technology they are put on, " +
                         "including one they have never touched",
                     "the gap between what they studied and what the role does day to day",

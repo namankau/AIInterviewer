@@ -38,7 +38,7 @@ class PrepPlanService(
     ): PrepPlanView {
         val resolved = loopBrief.resolveLoop(companyName, role, level)
         val inputs = stageInputsFor(resolved)
-        val build = PrepPlanBuilder.build(rounds.offeredTypes, inputs)
+        val build = PrepPlanBuilder.build(offeredFor(resolved), inputs)
 
         val background = safeBackground(userId)
         val history = role?.let { safeHistory(userId, resolved.company?.name ?: resolved.typedName, it) }
@@ -49,8 +49,9 @@ class PrepPlanService(
         )
     }
 
-    private fun stageInputsFor(resolved: ResolvedLoop): List<PlanStageInput> =
-        PrepPlanBuilder.combine(
+    private fun stageInputsFor(resolved: ResolvedLoop): List<PlanStageInput> {
+        knowledgeStages(resolved)?.let { return it }
+        return PrepPlanBuilder.combine(
             sourced =
                 resolved.sourcedStages.map {
                     PlanStageInput(it.order, it.stageName, it.assesses, it.roundType, it.citations)
@@ -60,6 +61,31 @@ class PrepPlanService(
                     PlanStageInput(it.order, it.stageName, it.assesses, it.roundType?.let(RoundType::parseOrNull))
                 },
         )
+    }
+
+    /**
+     * The rounds the model named for this employer, in the order it named them — used
+     * instead of the archetype pattern when at least one maps to a round we run. Not
+     * topped up from the archetype pattern: a plan for Infosys that adds a generic
+     * "client scenario" round the model never named is the wrong card the owner saw.
+     */
+    private fun knowledgeStages(resolved: ResolvedLoop): List<PlanStageInput>? {
+        val named = resolved.modelKnowledge?.namedRounds.orEmpty()
+        val stages =
+            named.mapIndexed { index, name ->
+                PlanStageInput(index + 1, name, null, StageRoundMatcher.match(name), fromModelKnowledge = true)
+            }
+        val allowed = offeredFor(resolved)
+        return stages.takeIf { list -> list.any { it.roundType != null && it.roundType in allowed } }
+    }
+
+    /** The rounds this plan may contain: for a stated student or graduate, minus what no campus loop has. */
+    private fun offeredFor(resolved: ResolvedLoop): Set<RoundType> =
+        if (resolved.campus) {
+            rounds.offeredTypes - CampusLoopPattern.EXCLUDED_FROM_PLAN - rounds.campusExcludedTypes
+        } else {
+            rounds.offeredTypes
+        }
 
     private fun safeBackground(userId: UUID): CandidateBackground? =
         try {
@@ -92,8 +118,14 @@ class PrepPlanService(
                 append(
                     if (isSourced) {
                         "This is how $companyLabel's own \"$stageName\" stage runs, from a source we've read."
+                    } else if (fromModelKnowledge) {
+                        "$companyLabel's \"$stageName\" stage, as the AI knows it from its training — not from a page we can link."
                     } else {
-                        "Typical of ${resolved.archetype.inProse}: a \"$stageName\" stage."
+                        if (resolved.campus) {
+                            "Typical of campus hiring for ${resolved.archetype.inProse}: a \"$stageName\" stage."
+                        } else {
+                            "Typical of ${resolved.archetype.inProse}: a \"$stageName\" stage."
+                        }
                     },
                 )
                 personalNote(roundType, background, history)?.let {

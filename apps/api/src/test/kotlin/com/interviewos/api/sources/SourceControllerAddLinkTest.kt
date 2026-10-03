@@ -8,7 +8,9 @@ import com.interviewos.api.config.SecurityConfig
 import com.interviewos.api.storage.ObjectStorage
 import com.interviewos.api.storage.StorageProperties
 import com.interviewos.api.user.SupabaseIdentity
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers.anyString
 import org.mockito.BDDMockito.given
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
@@ -51,8 +53,33 @@ class SourceControllerAddLinkTest {
     @MockitoBean
     private lateinit var adminAccess: AdminAccess
 
+    @MockitoBean
+    private lateinit var linkAddresses: LinkAddressCheck
+
     private val operator = SupabaseIdentity(UUID.fromString("6f1b7f4c-2b2a-4c3e-9a51-0a5f4f2f2a11"), "op@example.com", null)
     private val sourceId = UUID.fromString("10000000-0000-0000-0000-000000000001")
+
+    @BeforeEach
+    fun everyLinkIsPublicUnlessSaidOtherwise() {
+        given(linkAddresses.isPublic(anyString())).willReturn(true)
+    }
+
+    @Test
+    fun `refuses a link into our own network before storing it`() {
+        given(adminAccess.require(operator)).willReturn(operator)
+        given(linkAddresses.isPublic("http://169.254.169.254/latest/meta-data")).willReturn(false)
+
+        mockMvc
+            .perform(
+                post("/api/v1/admin/sources/links")
+                    .with(signedIn())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"url":"http://169.254.169.254/latest/meta-data"}"""),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("non_public_address"))
+
+        verifyNoInteractions(repository, fetcher)
+    }
 
     @Test
     fun `records the origin and publication date it is given`() {

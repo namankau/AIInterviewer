@@ -30,6 +30,10 @@ class GeneralLoopPatternCache(
         role: String?,
         level: String?,
     ): GeneralLoopPattern {
+        // A stated student or graduate gets the campus loop, which is fixed and archetype-level:
+        // no cache row and no model call (task 052).
+        if (CampusLoopPattern.isCampus(level)) return CampusLoopPattern.forArchetype(archetype)
+
         val roleFamily = LoopBucket.roleFamily(role)
         val levelBand = LoopBucket.levelBand(level)
 

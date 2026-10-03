@@ -238,8 +238,28 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           // question than an empty room.
           questionText;
 
+  /*
+   * The room is loaded once per sign-in, not once per access token.
+   *
+   * Supabase rotates the access token about an hour after it was issued, and
+   * `useAccessToken` hands the room the new string. This effect used to depend on that
+   * string, so a rotation mid-round re-read the session and put the room back in the device
+   * check — mid-answer, or mid-question. Re-entering then left a round whose question had
+   * already been spoken locally sitting in "asking" with the microphone shut, because the
+   * voice will not read out a question it has already said. A rotation lands inside a
+   * 20-minute round about one time in three and inside a 45-minute round most of the time,
+   * which is why only the long rounds stalled. Every later request reads the token from
+   * render, so it still picks up the new one.
+   */
+  const tokenForLoad = useRef(accessToken);
   useEffect(() => {
-    if (!accessToken) return;
+    tokenForLoad.current = accessToken;
+  });
+  const signedIn = !!accessToken;
+
+  useEffect(() => {
+    const accessToken = tokenForLoad.current;
+    if (!signedIn || !accessToken) return;
     let active = true;
 
     fetchSession(sessionId, { accessToken })
@@ -266,7 +286,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     return () => {
       active = false;
     };
-  }, [accessToken, sessionId]);
+  }, [signedIn, sessionId]);
 
   useEffect(() => {
     if (videoRef.current && capture.stream) {
@@ -316,6 +336,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         requestId,
         speaksLocally,
         endRound,
+        captured.timing,
       );
       answerRequestIds.current.delete(turn.turnIndex);
       if (result.sessionComplete || !result.nextTurn) {
@@ -490,14 +511,20 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     }
 
     // No voice is coming, so the candidate is reading. Give them time to, then listen.
-    if (questionAudio.status === "unavailable") {
+    //
+    // A voice still rendering once the grace period is spent counts as not coming. The
+    // question has been on screen since then, and the microphone used to stay shut until
+    // the poll gave up at 45 seconds — twenty more seconds of a silent room in front of a
+    // question the candidate had already read. A voice that lands after this is not
+    // played: the play effect only runs while the room is asking.
+    if (questionAudio.status === "unavailable" || (questionAudio.status === "pending" && !withinGrace)) {
       const timer = setTimeout(() => void handOver.current(), READING_TIME_MS);
       return () => clearTimeout(timer);
     }
 
-    // Still rendering. This effect re-runs when that resolves.
+    // Still rendering. This effect re-runs when that resolves or the grace runs out.
     return undefined;
-  }, [phase, questionAudio.status, questionAudio.url, reportSpeechEvent, speaksLocally, turnIndex]);
+  }, [phase, questionAudio.status, questionAudio.url, reportSpeechEvent, speaksLocally, turnIndex, withinGrace]);
 
   const askForHint = useCallback(async () => {
     if (!accessToken || !turn || hintPending) return;

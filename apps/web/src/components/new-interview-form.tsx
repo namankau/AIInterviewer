@@ -56,6 +56,11 @@ export function NewInterviewForm({ initialTopic = "" }: { initialTopic?: string 
   // it or asked to skip straight to setup.
   const [pastBrief, setPastBrief] = useState(false);
   const [chosenRoundType, setChosenRoundType] = useState<RoundType | null>(null);
+  // Chosen where company and role are named, optional, and empty means "as before". When it
+  // is a student or graduate the brief and plan follow the campus loop, and the setup form's
+  // stated stage starts from it.
+  const [stage, setStage] = useState<CandidateStage | "">("");
+  const campus = stage === "student" || stage === "recent_graduate";
 
   async function read(event: React.FormEvent) {
     event.preventDefault();
@@ -92,6 +97,7 @@ export function NewInterviewForm({ initialTopic = "" }: { initialTopic?: string 
         <LoopBriefStep
           companyName={draft.companyName}
           roleTitle={draft.roleTitle}
+          stage={stage}
           accessToken={accessToken}
           onChooseRound={(roundType) => {
             setChosenRoundType(roundType);
@@ -107,6 +113,7 @@ export function NewInterviewForm({ initialTopic = "" }: { initialTopic?: string 
       <RoundSetup
         draft={chosenRoundType ? { ...draft, roundType: chosenRoundType } : draft}
         query={query}
+        initialStage={stage}
         error={error}
         onEdit={onEdit}
         // The brief was shown first whenever a company was recognised — that's the only
@@ -154,6 +161,39 @@ export function NewInterviewForm({ initialTopic = "" }: { initialTopic?: string 
           placeholder="Infosys MR round next Tuesday. 5 years, Java backend."
           className="w-full resize-none rounded-xl border border-line bg-surface px-5 py-4 text-body text-ink shadow-[var(--shadow-sm)] placeholder:text-ink-subtle transition-colors focus:border-accent focus:outline-none"
         />
+
+        <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={campus}
+              onChange={(event) => setStage(event.target.checked ? "student" : "")}
+              className="mt-1 size-4 accent-[var(--color-accent)]"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="text-body font-medium text-ink">
+                I am a fresher preparing for campus placement
+              </span>
+              <span className="text-caption text-ink-muted">
+                Campus loops are different: a written test, then a technical and an HR interview
+                on your syllabus and projects. Leave this off and nothing changes.
+              </span>
+            </span>
+          </label>
+          {campus ? (
+            <label className="flex flex-col gap-1 pl-7">
+              <span className="text-caption text-ink-muted">Where are you right now?</span>
+              <select
+                value={stage}
+                onChange={(event) => setStage(event.target.value as CandidateStage)}
+                className={`${CONTROL_CLASS} sm:max-w-xs`}
+              >
+                <option value="student">Student, still studying</option>
+                <option value="recent_graduate">Recent graduate, no job yet</option>
+              </select>
+            </label>
+          ) : null}
+        </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" disabled={reading || query.trim() === "" || !accessToken} aria-busy={reading}>
@@ -204,6 +244,7 @@ export function NewInterviewForm({ initialTopic = "" }: { initialTopic?: string 
 function RoundSetup({
   draft,
   query,
+  initialStage,
   error: composeError,
   onEdit,
   onBackToBrief,
@@ -212,6 +253,8 @@ function RoundSetup({
 }: {
   draft: RoundDraft;
   query: string;
+  /** What was picked at the start; the stated-stage dropdown begins here and can still be changed. */
+  initialStage: CandidateStage | "";
   error: string | null;
   onEdit: () => void;
   /** Null when this session never went through the loop brief, so there's nowhere to go back to. */
@@ -229,7 +272,7 @@ function RoundSetup({
   const [cameraOn, setCameraOn] = useState(false);
   // Optional, and left blank by default: leaving it blank must behave exactly as it did
   // before this field existed, deriving the stage from the role title and resume alone.
-  const [candidateStage, setCandidateStage] = useState<CandidateStage | "">("");
+  const [candidateStage, setCandidateStage] = useState<CandidateStage | "">(initialStage);
   /*
    * Whether this browser can read the questions out itself. Decided here because the
    * session is created here, and the opening question is synthesised as part of creating

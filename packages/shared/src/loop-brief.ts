@@ -63,6 +63,14 @@ export interface PublicLoopPattern {
   sources: PublicLoopSource[];
 }
 
+/** The `model_knowledge` tier: specifics the model can name, with its own note on how dated they are. */
+export interface ModelEmployerKnowledge {
+  basis: string | null;
+  namedRounds: string[];
+  namedValues: string[];
+  namedFormats: string[];
+}
+
 export interface LoopBriefCoverage {
   questionCount: number;
   roundTypes: BankRoundTypeCount[];
@@ -77,11 +85,19 @@ export interface LoopBrief {
   hasSources: boolean;
   sourcedStages: LoopBriefStage[];
   generalPattern: GeneralLoopStage[];
+  /** True when `generalPattern` is the campus-hiring pattern, because the request stated a student or graduate stage. */
+  campusPattern?: boolean;
   /**
    * Public-source research, present only when we hold no sourced stage for this company
    * and the search found something it could cite. Null whenever `hasSources` is true.
    */
   publicSourcePattern: PublicLoopPattern | null;
+  /**
+   * What the model itself can name about this employer's process, present only when we
+   * hold no sourced stage. The plan is built from its named rounds. No page stands behind
+   * it, so it must be shown as the model's own knowledge.
+   */
+  modelKnowledge: ModelEmployerKnowledge | null;
   bankCoverage: LoopBriefCoverage;
 }
 

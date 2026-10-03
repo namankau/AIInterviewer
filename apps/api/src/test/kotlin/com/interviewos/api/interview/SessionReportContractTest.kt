@@ -66,6 +66,10 @@ class SessionReportContractTest {
                 .andExpect(jsonPath("$.assistance.breakdown[0].label").value("Light hint"))
                 .andExpect(jsonPath("$.questionSources.entries[0].tier").value("published_source"))
                 .andExpect(jsonPath("$.communication.presence").isEmpty)
+                .andExpect(jsonPath("$.spokenEnglish.wordsPerMinute").value(142))
+                .andExpect(jsonPath("$.spokenEnglish.paceBand").value("within"))
+                .andExpect(jsonPath("$.spokenEnglish.observations[0].evidenceQuote").value("I compared the risks"))
+                .andExpect(jsonPath("$.spokenEnglish.timingNote").isEmpty)
                 .andReturn()
                 .response
                 .contentAsString
@@ -93,6 +97,7 @@ class SessionReportContractTest {
                 "practicePlan",
                 "recommendedNextSession",
                 "outcomeSimulation",
+                "spokenEnglish",
             ),
             json.propertyNames().toSet(),
         )
@@ -160,6 +165,29 @@ class SessionReportContractTest {
             practicePlan = listOf(ReportPracticeItemView("Trade-offs", "Be concrete", "Practise one STAR answer")),
             recommendedNextSession = "System design",
             outcomeSimulation = ReportOutcomeView("Simulation", "Likely", "Grounded in the answer."),
+            spokenEnglish =
+                ReportSpokenEnglishView(
+                    languageAssessed = true,
+                    scope = "How you spoke.",
+                    answersTotal = 1,
+                    answersTimed = 1,
+                    timingNote = null,
+                    wordCount = 120,
+                    wordsPerMinute = 142,
+                    paceBand = "within",
+                    paceNote = "Words per minute from your first word to your last.",
+                    pauseCount = 2,
+                    longestPauseSeconds = 2.4,
+                    pauseSharePercent = 6,
+                    medianFirstWordSeconds = 1.2,
+                    hesitationCount = 3,
+                    hesitationsPer100Words = 2.5,
+                    answers = listOf(ReportSpokenAnswerView(0, 120, 142, 2, 2.4, 1.2)),
+                    observations =
+                        listOf(
+                            ReportSpokenObservationView("vocabulary", "Vocabulary", "Precise.", "I compared the risks", 0, "Keep it."),
+                        ),
+                ),
         )
 
     private fun tokenFor(userId: UUID) =

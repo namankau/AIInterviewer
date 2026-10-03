@@ -24,6 +24,7 @@ import org.mockito.Mockito.RETURNS_DEFAULTS
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockingDetails
 import org.springframework.core.task.SyncTaskExecutor
+import org.springframework.core.task.TaskExecutor
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.SimpleTransactionStatus
 import tools.jackson.databind.json.JsonMapper
@@ -50,6 +51,8 @@ class BankRoundHarness(
         mock(PlatformTransactionManager::class.java) { invocation ->
             if (invocation.method.name == "getTransaction") SimpleTransactionStatus() else null
         },
+    /** Synchronous by default, so a round runs in order; a test of work running alongside the turn passes a real one. */
+    backgroundExecutor: TaskExecutor = SyncTaskExecutor(),
 ) {
     val mapper: JsonMapper = JsonMapper.builder().addModule(KotlinModule.Builder().build()).build()
     val repository: SessionRepository =
@@ -124,7 +127,7 @@ class BankRoundHarness(
             roundWorkspaceComposer = RoundWorkspaceComposer(ai, mapper, ProblemVerifier(ai, mapper), poolMaterial),
             codeRunner = mock(CodeRunner::class.java),
             transactionManager = transactionManager,
-            backgroundExecutor = SyncTaskExecutor(),
+            backgroundExecutor = backgroundExecutor,
         )
 
     val reportService = ReportService(repository, ai, mapper, RetentionProperties(), resumeService)

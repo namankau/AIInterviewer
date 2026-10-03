@@ -57,12 +57,13 @@ fetch the information from the internet or from the AI instead. PRD §04.
   owner's go-ahead. One page load of an Infosys brief after deploy will show it.
 
 ## Verification status
-- See the merge note below. Local: API ktlintCheck/test/build and web typecheck, lint,
-  test and build were run before the push.
+- All pass. Locally and on CI run 37107054537: the API job (ktlint, test, build) and the
+  web job (typecheck, lint, test, build). A first local web run failed while the API
+  build ran beside it; a clean rerun passed all 2925 tests, so it looks like a timeout
+  under load.
 
 ## Merge status
-- Branch `fix/loop-brief-model-knowledge`. It is merged into `develop` only once CI is
-  green.
+- Merged into `develop` at `9b0951a` after green CI. No migration.
 
 ## Suggested next task
 - Check the grounded-search logs for Infosys and fix the search if it is failing

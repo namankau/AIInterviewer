@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { CompetencyBars, CompetencyHighlights, OverallScore, bandFor } from "@/components/report-charts";
+import { SpokenEnglishPanel } from "@/components/spoken-english-panel";
 import { ApiRequestError, fetchReport } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useAccessToken } from "@/lib/use-access-token";
@@ -279,6 +280,8 @@ export function ReportDocument({ report }: { report: SessionReport }) {
           <Note term="Not knowing an answer" detail={report.communication.handlingUncertainty} />
         </dl>
       </Section>
+
+      <SpokenEnglishPanel spoken={report.spokenEnglish} />
 
       <AssessedAreas strengths={strengths} developmentAreas={developmentAreas} />
 

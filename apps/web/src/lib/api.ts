@@ -34,6 +34,7 @@ import type {
 } from "@acemyinterview/shared";
 
 import { env } from "@/lib/env";
+import type { AnswerTiming } from "@/lib/speech-timing";
 
 /** A non-2xx response from the API, carrying the error envelope it returned. */
 export class ApiRequestError extends Error {
@@ -378,6 +379,8 @@ export function submitAnswer(
   speaksLocally = false,
   /** Submit pressed mid-answer: assess this answer as the last one and end the round. */
   endRound = false,
+  /** Speech timing measured from the microphone level; omitted when it could not be measured. */
+  timing: AnswerTiming | null = null,
 ): Promise<SubmitAnswerResponse> {
   const form = new FormData();
   form.append("turnIndex", String(turnIndex));
@@ -386,6 +389,7 @@ export function submitAnswer(
   // Told per turn rather than per session: it describes this browser, and the same
   // candidate may come back on a phone with no usable voice.
   form.append("speaksLocally", String(speaksLocally));
+  if (timing) form.append("timing", JSON.stringify(timing));
   form.append("audio", audio, "answer.webm");
   return apiSend<SubmitAnswerResponse>(`/api/v1/sessions/${sessionId}/turns`, "POST", accessToken, form);
 }

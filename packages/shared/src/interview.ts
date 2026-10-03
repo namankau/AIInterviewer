@@ -464,6 +464,54 @@ export interface SessionReport {
   practicePlan: ReportPracticeItem[];
   recommendedNextSession: string;
   outcomeSimulation: ReportOutcome;
+  /** Null or absent on a report written before spoken-English feedback existed. */
+  spokenEnglish?: ReportSpokenEnglish | null;
+}
+
+/**
+ * How the candidate spoke (PRD §09). Every number is measured — timings from the
+ * microphone level, counts from the transcript — and computed server-side; a figure that
+ * could not be measured is null, with a note saying why. Only `observations` come from
+ * the model, and each quotes the candidate.
+ */
+export interface ReportSpokenEnglish {
+  /** False in a Hindi-English round: English is not assessed there. */
+  languageAssessed: boolean;
+  scope: string;
+  answersTotal: number;
+  answersTimed: number;
+  timingNote: string | null;
+  wordCount: number;
+  wordsPerMinute: number | null;
+  /** Which side of the stated conversational range the pace fell on. */
+  paceBand: "below" | "within" | "above" | null;
+  paceNote: string;
+  pauseCount: number | null;
+  longestPauseSeconds: number | null;
+  pauseSharePercent: number | null;
+  medianFirstWordSeconds: number | null;
+  hesitationCount: number | null;
+  hesitationsPer100Words: number | null;
+  answers: ReportSpokenAnswer[];
+  observations: ReportSpokenObservation[];
+}
+
+export interface ReportSpokenAnswer {
+  turnIndex: number;
+  words: number;
+  wordsPerMinute: number | null;
+  pauseCount: number | null;
+  longestPauseSeconds: number | null;
+  firstWordSeconds: number | null;
+}
+
+export interface ReportSpokenObservation {
+  aspect: "fluency" | "filler_words" | "grammar" | "vocabulary" | "clarity" | "coherence";
+  aspectLabel: string;
+  finding: string;
+  evidenceQuote: string;
+  turnIndex: number | null;
+  suggestion: string;
 }
 
 /** Derived by grouping completed sessions — there is no stored target list. */

@@ -316,6 +316,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         requestId,
         speaksLocally,
         endRound,
+        captured.timing,
       );
       answerRequestIds.current.delete(turn.turnIndex);
       if (result.sessionComplete || !result.nextTurn) {

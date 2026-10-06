@@ -124,6 +124,14 @@ describe("NewInterviewForm", () => {
     expect(composeRound).not.toHaveBeenCalled();
   });
 
+  it("opens a catalogue round with that interview type already selected", () => {
+    render(<NewInterviewForm initialRoundType="system_design" />);
+
+    expect(screen.getByRole("radio", { name: /system or solution design/i })).toBeChecked();
+    expect(screen.getByRole("combobox", { name: /Length/i })).toHaveValue("40");
+    expect(composeRound).not.toHaveBeenCalled();
+  });
+
   it("turns one line into a round, and shows it back before anything starts", async () => {
     composeRound.mockResolvedValue(draft);
     render(<NewInterviewForm />);

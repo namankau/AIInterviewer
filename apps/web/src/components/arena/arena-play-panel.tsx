@@ -18,14 +18,16 @@ export function ArenaPlayPanel({
   selectionMode = "scheduled",
   startLabel,
   emptyLabel,
+  initiallyPlaying = false,
 }: {
   challenges: Challenge[];
   courseSlug?: string;
   selectionMode?: "scheduled" | "fixed";
   startLabel: string;
   emptyLabel?: string;
+  initiallyPlaying?: boolean;
 }) {
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(initiallyPlaying);
   const [sessionKey, setSessionKey] = useState(0);
   // The run picks its challenges from the review schedule at the moment it mounts, so it
   // must not start before the account's schedule has arrived — otherwise a returning
@@ -36,6 +38,24 @@ export function ArenaPlayPanel({
 
   if (challenges.length === 0) {
     return <p className="text-body text-ink-muted">{emptyLabel ?? "Nothing to practise here yet."}</p>;
+  }
+
+  if (playing && !ready) {
+    return (
+      <div className="flex min-h-48 items-center justify-center rounded-xl bg-surface-sunken px-6 py-10 text-center">
+        <div className="flex max-w-md flex-col items-center gap-2">
+          <p className="text-body font-medium text-ink">Loading your progress…</p>
+          <p className="text-caption text-ink-muted">
+            Your review schedule is being prepared before the set starts.
+          </p>
+          {status === "error" ? (
+            <p role="alert" className="text-caption text-danger">
+              We couldn&apos;t load your progress. Reload the page to try again.
+            </p>
+          ) : null}
+        </div>
+      </div>
+    );
   }
 
   if (!playing) {

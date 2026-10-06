@@ -41,14 +41,20 @@ const EXAMPLES = [
  * Company and role are still named per session and nothing is stored as a target
  * (PRD 05). The composer changes how they are typed, not what is kept.
  */
-export function NewInterviewForm({ initialTopic = "" }: { initialTopic?: string }) {
+export function NewInterviewForm({
+  initialRoundType,
+  initialTopic = "",
+}: {
+  initialRoundType?: RoundType;
+  initialTopic?: string;
+}) {
   const router = useRouter();
   const accessToken = useAccessToken();
   const topic = initialTopic.trim();
 
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<RoundDraft | null>(() =>
-    topic === "" ? null : blankDraft(topic),
+    topic === "" && !initialRoundType ? null : blankDraft(topic, initialRoundType),
   );
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -571,18 +577,25 @@ function RoundSetup({
 }
 
 /** The manual path: the same setup with nothing filled in and nothing assumed. */
-function blankDraft(focusTopic = ""): RoundDraft {
+function blankDraft(focusTopic = "", initialRoundType?: RoundType): RoundDraft {
   const customTopic = focusTopic.trim();
+  const catalogueRound = ROUND_CATALOGUE.find((round) => round.value === initialRoundType);
+  const roundType = customTopic === "" ? (catalogueRound?.value ?? "project_deep_dive") : "custom_topic";
+  const roundLabel = customTopic === "" ? (catalogueRound?.label ?? "Project deep-dive") : "Custom topic";
   return {
     companyName: "",
     roleTitle: "",
     level: "",
-    roundType: customTopic === "" ? "project_deep_dive" : "custom_topic",
-    roundLabel: customTopic === "" ? "Project deep-dive" : "Custom topic",
-    durationMinutes: customTopic === "" ? 40 : 20,
+    roundType,
+    roundLabel,
+    durationMinutes: roundType === "custom_topic" ? 20 : 40,
     language: "english",
     understood:
-      customTopic === "" ? "Who are you interviewing with?" : `Practise ${customTopic} in a focused interview.`,
+      customTopic !== ""
+        ? `Practise ${customTopic} in a focused interview.`
+        : catalogueRound
+          ? `Set up a ${catalogueRound.label.toLowerCase()} interview.`
+          : "Who are you interviewing with?",
     assumptions: [],
     confidence: "low",
     archetypeLabel: "",

@@ -34,25 +34,34 @@ export default function RoundsPage() {
           </p>
           <h1 className="max-w-3xl text-display text-balance text-ink">The rounds.</h1>
           <p className="max-w-2xl text-body leading-relaxed text-ink-muted">
-            Nine rounds, each with its own structure and its own rubric. An Infosys
+            Ten rounds, each with its own structure and its own rubric. An Infosys
             techno-managerial panel is not a Google system design round, and preparing for one
             does not prepare you for the other.
           </p>
         </header>
 
-        <ul className="grid gap-5 md:grid-cols-2">
+        <ul className="grid auto-rows-fr gap-5 md:grid-cols-2">
           {ROUND_CATALOGUE.map((round) => (
-            <li key={round.value} className="flex flex-col gap-3 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] transition-shadow hover:shadow-[var(--shadow-md)]">
-              <p className="w-fit rounded-full bg-surface-sunken px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase">
-                {round.eyebrow}
-              </p>
-              <h2 className="text-heading text-ink">{round.label}</h2>
-              <p className="text-body leading-relaxed text-ink-muted">{round.blurb}</p>
-              <p className="mt-auto rounded-xl border border-positive/20 bg-positive/10 p-4 text-caption leading-relaxed text-ink-muted">
-                <span className="text-ink">What the interviewer is listening for:</span>{" "}
-                {round.listeningFor}
-              </p>
-              <p className="pt-0.5 font-mono text-caption text-ink-subtle">{round.whoRunsIt}</p>
+            <li key={round.value} className="h-full">
+              <Link
+                href={`/interview/new?round=${encodeURIComponent(round.value)}`}
+                aria-label={`Practise the ${round.label} round`}
+                className="group flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-accent/35 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              >
+                <p className="w-fit rounded-full bg-surface-sunken px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase">
+                  {round.eyebrow}
+                </p>
+                <h2 className="text-heading text-ink">{round.label}</h2>
+                <p className="grow text-body leading-relaxed text-ink-muted">{round.blurb}</p>
+                <p className="rounded-xl border border-positive/20 bg-positive/10 p-4 text-caption leading-relaxed text-ink-muted">
+                  <span className="text-ink">What the interviewer is listening for:</span>{" "}
+                  {round.listeningFor}
+                </p>
+                <p className="font-mono text-caption text-ink-subtle md:min-h-10">{round.whoRunsIt}</p>
+                <span className="pt-1 text-body font-medium text-accent-strong transition-transform group-hover:translate-x-1">
+                  Practise this round →
+                </span>
+              </Link>
             </li>
           ))}
         </ul>

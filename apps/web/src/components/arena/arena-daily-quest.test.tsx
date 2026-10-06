@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ArenaDailyQuest } from "@/components/arena/arena-daily-quest";
@@ -9,7 +10,7 @@ const capturedPanels = vi.hoisted(() => [] as Array<Record<string, unknown>>);
 vi.mock("@/components/arena/arena-play-panel", () => ({
   ArenaPlayPanel: (props: Record<string, unknown>) => {
     capturedPanels.push(props);
-    return <button type="button">{String(props.startLabel)}</button>;
+    return <div data-testid="arena-play-panel">{String(props.startLabel)}</div>;
   },
 }));
 
@@ -28,7 +29,7 @@ function challenge(courseSlug: string, moduleTitle: string, id: string): Challen
 }
 
 describe("ArenaDailyQuest", () => {
-  it("labels each course and its topics, and starts fixed rather than personalized sets", () => {
+  it("shows aligned course choices, then opens one fixed set in a dedicated workspace", async () => {
     capturedPanels.length = 0;
     const today = localDateKey(new Date());
     const quests: DailyCourseQuest[] = [
@@ -61,8 +62,24 @@ describe("ArenaDailyQuest", () => {
     expect(screen.getByRole("heading", { name: "Data Structures & Algorithms" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "AI and Agentic AI" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "System Design" })).toBeInTheDocument();
-    expect(capturedPanels).toHaveLength(4);
-    expect(capturedPanels.every((props) => props.selectionMode === "fixed")).toBe(true);
-    expect(capturedPanels.map((props) => props.courseSlug)).toEqual(["java", "dsa", "ai-agents", "system-design"]);
+    expect(capturedPanels).toHaveLength(0);
+
+    await userEvent.click(screen.getByRole("button", { name: "Play Java Programming set" }));
+
+    expect(screen.getByRole("heading", { name: "Java Programming" })).toBeInTheDocument();
+    expect(screen.getByTestId("arena-play-panel")).toBeInTheDocument();
+    expect(capturedPanels).toHaveLength(1);
+    expect(capturedPanels[0]).toEqual(
+      expect.objectContaining({
+        courseSlug: "java",
+        initiallyPlaying: true,
+        selectionMode: "fixed",
+      }),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /choose another set/i }));
+
+    expect(screen.queryByTestId("arena-play-panel")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Play System Design set" })).toBeInTheDocument();
   });
 });

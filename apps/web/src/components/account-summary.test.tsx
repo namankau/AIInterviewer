@@ -1,5 +1,6 @@
 import type { MeResponse } from "@acemyinterview/shared";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AccountSummary } from "./account-summary";
@@ -48,21 +49,51 @@ describe("AccountSummary", () => {
   });
 
   /**
-   * This assertion was the other way round one commit ago, and the reversal is deliberate.
-   * Sign out was moved onto the profile page: it is rare, it cannot be undone without a
-   * password, and a control like that living permanently in the navigation is both clutter
-   * and something to catch by accident. What is left here is the way *in* to the account.
+   * Sign out moved off the rail once because a permanently visible control is clutter and
+   * easy to hit. It is back on the owner's request (7 Oct 2026), but behind the name: the
+   * menu is closed until asked for, so nothing destructive sits in the furniture.
    */
-  it("is a way in to the profile, and does not carry the way out", async () => {
+  it("keeps the account actions closed until the name is pressed", async () => {
     fetchMe.mockResolvedValue(me);
 
     render(<AccountSummary />);
 
-    expect(await screen.findByRole("link", { name: /test candidate/i })).toHaveAttribute(
-      "href",
-      "/profile",
-    );
+    const trigger = await screen.findByRole("button", { name: /account menu for test candidate/i });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("button", { name: /sign out/i })).not.toBeInTheDocument();
+
+    await userEvent.click(trigger);
+
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("link", { name: /profile and resume/i })).toHaveAttribute("href", "/profile");
+    expect(screen.getByRole("link", { name: /all your rounds/i })).toHaveAttribute("href", "/history");
+    expect(screen.getByRole("link", { name: /delete account/i })).toHaveAttribute(
+      "href",
+      "/profile#delete-account",
+    );
+    expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
+  });
+
+  it("signs out from the menu", async () => {
+    fetchMe.mockResolvedValue(me);
+    render(<AccountSummary />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /account menu/i }));
+    await userEvent.click(screen.getByRole("button", { name: /sign out/i }));
+
+    expect(signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes on Escape and gives focus back to the name", async () => {
+    fetchMe.mockResolvedValue(me);
+    render(<AccountSummary />);
+
+    const trigger = await screen.findByRole("button", { name: /account menu/i });
+    await userEvent.click(trigger);
+    await userEvent.keyboard("{Escape}");
+
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveFocus();
   });
 
   it("announces that it is loading before the profile arrives", () => {

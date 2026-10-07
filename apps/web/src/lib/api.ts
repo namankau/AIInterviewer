@@ -387,6 +387,11 @@ export async function deleteSession(accessToken: string, id: string): Promise<vo
   await apiSend<void>(`/api/v1/sessions/${id}`, "DELETE", accessToken);
 }
 
+/** Deletes the caller's whole account, its stored files and its sign-in. Cannot be undone. */
+export async function deleteAccount(accessToken: string): Promise<void> {
+  await apiSend<void>("/api/v1/me", "DELETE", accessToken);
+}
+
 /** Uploads one spoken answer. Camera preview frames never leave the browser. */
 export function submitAnswer(
   accessToken: string,

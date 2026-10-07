@@ -37,6 +37,11 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // A self-contained server for the container image (apps/web/Dockerfile sets this). Off
+  // otherwise, so `next dev`, `next start` and Vercel-style hosts are unchanged.
+  ...(process.env.NEXT_OUTPUT_STANDALONE === "true"
+    ? { output: "standalone" as const, outputFileTracingRoot: join(process.cwd(), "..", "..") }
+    : {}),
   // Shared API types are consumed straight from TypeScript source in the workspace.
   transpilePackages: ["@acemyinterview/shared"],
   typedRoutes: true,

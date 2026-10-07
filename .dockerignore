@@ -1,0 +1,13 @@
+**/node_modules
+**/.next
+**/build
+**/.gradle
+.git
+.env
+.env.*
+!.env.example
+runs
+docs
+tasks
+.claude
+.codex

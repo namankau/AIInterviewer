@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { AppShell } from "@/components/app-shell";
 import { NewInterviewForm } from "@/components/new-interview-form";
+import { ROUND_CATALOGUE } from "@/lib/rounds";
 
 export const metadata: Metadata = { title: "Start an interview" };
 
@@ -13,14 +14,25 @@ export const metadata: Metadata = { title: "Start an interview" };
 export default async function NewInterviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ topic?: string | string[] }>;
+  searchParams: Promise<{
+    round?: string | string[];
+    topic?: string | string[];
+    from?: string | string[];
+  }>;
 }) {
-  const { topic: topicParam } = await searchParams;
+  const { round: roundParam, topic: topicParam, from: fromParam } = await searchParams;
   const topic = Array.isArray(topicParam) ? topicParam[0] : topicParam;
+  const from = Array.isArray(fromParam) ? fromParam[0] : fromParam;
+  const requestedRound = Array.isArray(roundParam) ? roundParam[0] : roundParam;
+  const roundType = ROUND_CATALOGUE.find((round) => round.value === requestedRound)?.value;
   return (
     <AppShell breadcrumb="new interview">
       <div className="w-full max-w-2xl">
-        <NewInterviewForm initialTopic={topic} />
+        <NewInterviewForm
+          initialRoundType={roundType}
+          initialTopic={topic}
+          roundPreselected={from === "rounds" && roundType !== undefined}
+        />
       </div>
     </AppShell>
   );

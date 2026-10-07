@@ -89,7 +89,9 @@ export function ArenaCoursePractice({
           .
         </p>
       ) : null}
+      {/* Keyed by scope, so choosing another chapter mid-run starts that chapter's run. */}
       <ArenaPlayPanel
+        key={focusChallenges.length > 0 ? focusChapter?.slug : "all"}
         challenges={challenges}
         courseSlug={courseSlug}
         startLabel={focusChapter && focusChallenges.length > 0 ? `Practise ${focusChapter.title}` : "Start practice"}

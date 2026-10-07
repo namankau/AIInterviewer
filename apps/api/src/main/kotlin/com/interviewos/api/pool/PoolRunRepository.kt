@@ -296,7 +296,7 @@ class PoolRunRepository(
                 coordinate =
                     PoolCoordinate(
                         companyId = rs.getObject("company_id", UUID::class.java),
-                        archetype = Archetype.fromDbValue(rs.getString("archetype")) ?: Archetype.GLOBAL_PRODUCT,
+                        archetype = Archetype.fromDbValue(rs.getString("archetype")),
                         roundType = RoundType.parseOrNull(rs.getString("round_type")) ?: RoundType.HR_FIT_CLOSING,
                         roleFamily = RoleFamily.fromDbValue(rs.getString("role_family")) ?: RoleFamily.BACKEND,
                         level = Level.fromDbValue(rs.getString("level")) ?: Level.MID,

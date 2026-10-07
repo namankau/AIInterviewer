@@ -1,113 +1,60 @@
-# Handoff — 2026-10-03 (loop brief, plan, stalls, spoken English, fresher option)
-
-## Start here (for the next agent, Codex or Claude)
-- Everything from this run is merged into `develop`. No branch is left open.
-- **Migrations:** `20261003000000_answer_timing.sql` was applied at merge. The remote
-  database matches local. Nothing is pending.
-- **Untracked on purpose:** `.codex/` and `AGENTS.md`, which exist only on the owner's
-  machine.
-- Start new work from `origin/develop`. The next task file is 066.
+# Handoff — 2026-10-07
 
 ## Task
-Owner requests on 3 Oct, with no task file:
-1. Never show the "we don't hold a sourced account" banner; fetch from the web or the AI
-   instead.
-2. The plan cards ignored what had been fetched about the employer.
-3. Interviews of 20 minutes or more pause partway through.
-4. A fresher / campus-placement option.
-5. A spoken-English section in the report.
+Finish the 7 October UI run that Codex left partway through when it hit its usage limit (progress file `runs/2026-10-07-progress.md`; owner request, no task file): selected-round setup, Arena polish, dashboard history limit, sidebar account actions with a simpler profile, and account deletion end to end.
 
 ## What I built
-1. **No unsourced-employer banner** (`fix/loop-brief-model-knowledge`, `9b0951a`), PRD §04.
-   - Source order for the brief: our sourced record → web search → the model's own
-     knowledge (`ModelEmployerKnowledge`, which reuses the pool's knowledge check) →
-     archetype pattern.
-   - Each section carries its own label instead of a banner.
-2. **Plan from the employer's own rounds** (`fix/plan-from-employer-knowledge`, `cf4362c`).
-   - The rounds the model names for an employer are mapped to round types by
-     `StageRoundMatcher`.
-   - The plan uses them in place of the archetype pattern and does not top them up with
-     generic rounds.
-   - Each card is labelled "as the AI knows it".
-3. **Mid-round stalls** (`fix/interview-mid-round-stalls`, `3786bb5`).
-   - Root cause: the hourly Supabase token refresh re-ran the room's load effect, which
-     sent a live round back to the device check with the mic shut. The room now loads
-     once per sign-in.
-   - The primary model gets a 20s in-room deadline before the chain falls back
-     (`InRoomDeadline`, `in-room-timeout`). Before, it could wait 3 minutes.
-   - The next question waits at most 2s for the previous answer's audio upload
-     (`attachAnswerAudio` links a late recording to its answer afterwards).
-   - With the server-rendered voice, the floor now passes to the candidate 4s after the
-     voice wait times out.
-4. **Spoken English in the report** (`feat/spoken-english-report`, `9e14bcd`, with a
-   migration).
-   - The browser measures speech timing from the mic level (`speech-timing.ts`). The
-     server checks it and computes the figures (`AnswerTiming.kt`, `SpokenEnglish.kt`):
-     - words per minute against a stated rough range of 120–160;
-     - pauses of 1s or more;
-     - time to first word;
-     - um/uh counts.
-   - Model observations must quote the transcript. Any that state numbers or mention
-     accent or pronunciation are dropped.
-   - In Hindi-English rounds, English is not assessed.
-   - UI: `spoken-english-panel.tsx`.
-5. **Fresher / campus option** (`feat/fresher-campus-loop`).
-   - A checkbox on the composer, "I am a fresher preparing for campus placement", sends
-     `level=student|recent_graduate` to the brief and plan, and prefills the setup form.
-   - A hand-written, archetype-level campus pattern (`CampusLoopPattern.kt`). It names no
-     employer.
-   - The plan drops system design, techno-managerial and client-scenario rounds for
-     freshers.
-   - `CampusRounds` covers gained SQL, shifts, higher studies and the spoken
-     introduction.
-   - Research: an open-source and official-page survey, kept in the run scratchpad and
-     not committed. Most official campus pages could not be read, so no employer-specific
-     campus detail was added.
+- **Selected-round setup** (`new-interview-form.tsx`, `interview/new/page.tsx`, `rounds/page.tsx`): a card on `/rounds` opens setup with that round fixed. The round picker becomes a summary card with a "Change round" link. Company and role are still required. The topic field only appears for `custom_topic`.
+  - This replaces Codex's unfinished version, which sent a made-up company called "General practice" and required a topic for every round.
+  - That version was wrong for two reasons. The server throws the topic away for any round except `custom_topic` (`InterviewService.kt:234`). And a fake employer would have shown up in readiness and history.
+- **Arena** (`challenge-card.tsx`, `arena-session.tsx`, `arena-daily-quest.tsx`, `arena/page.tsx`, `arena/[course]/page.tsx`, `lib/arena/corpus.ts`):
+  - **Keyboard bug fixed.** Enter and the 1–4 keys no longer take over a focused link or a control outside the challenge card. Before this, pressing Enter on "Revisit this chapter" or "Choose another set" moved to the next question instead.
+  - **Revise list shows chapter titles,** not slugs like `dsa/two-pointers`. Challenges now carry an optional `chapterTitle`, added on the server in `corpus.ts`.
+  - **Copy and labels:** course names and counts in the hero come from the course list, and "Campaigns" is renamed to modules.
+  - **Chapter chips** that have questions now start a run for that chapter only, and the panel restarts when the chapter changes. Before, they linked to the reading page.
+  - **Focus rings** on every Arena control.
+- **Dashboard** (`dashboard-panel.tsx`, new `app/history/page.tsx`): shows the 3 newest rounds, with a "See all N rounds" link to `/history`. That page has the same report links and the same delete. `/history` is added to the sign-in-protected routes (`lib/supabase/session.ts`).
+- **Account deletion** (branch `feat/account-deletion`):
+  - **Endpoint:** `DELETE /api/v1/me` (`account/AccountDeletion.kt`, `AccountRepository.kt`, `AuthAdmin.kt`, `MeController.kt`).
+  - **Step 1, one transaction:** it queues deletion of everything stored under the user's folder in both buckets (recordings, resumes, profile photo), using the existing `storage_deletion_jobs` queue. It then deletes the `public.users` row, which removes every user table with it.
+  - **Step 2:** the Supabase auth user is deleted through the admin API.
+  - **Failure handling:** if the server has no admin key, it refuses before touching anything. If step 2 fails, the response says the data is already deleted, and a retry is safe.
+- **Migration** `20261007000000_account_deletion_outbox.sql`: deletion jobs can now be for a whole account. These have no session and the reason `account_deleted`. A job for a single round must still name its round.
+- **Storage fix** (`SupabaseObjectStorage.deleteByPrefix`): it now goes into subfolders and pages past 1,000 files. The old version listed only one folder level. So deleting by a user's folder would have removed nothing in the recordings bucket, because each session is its own subfolder.
+- **Profile and sidebar** (`profile/page.tsx`, `account-summary.tsx`, `delete-account-section.tsx`):
+  - **Profile page:** the navy banner becomes a plain header, and a single Account section holds sign-out and deletion.
+  - **Delete confirmation:** before the button works, the section lists everything that will be deleted and asks the user to type "delete".
+  - **Sidebar:** the account block at the foot is now a menu that starts closed, with Profile, All rounds, Sign out and Delete account.
+  - **Bug fixed:** the profile's "Open interview history" link went to `/rounds`, which is the round catalogue. It now goes to `/history`.
 
 ## Assumptions I made
-- "Never show this message" means the banner. Provenance stays as per-section labels
-  (CLAUDE.md requires a tier on every piece of employer knowledge).
-- Stall fixes: the 20s deadline applies only to the first provider; the 2s upload wait is
-  a judgement call.
-- Spoken English: a pause is silence of 1s or more between sounds; pace is measured from
-  the first word to the last.
-  - Pace and pauses are not measured in rounds with a code or drawing workspace.
-  - Pronunciation and accent are never assessed.
-- The fresher option is opt-in only, from the stated level. It does not change anyone who
-  leaves it unchecked.
+- **"Streamlined setup"** means skipping the round picker and the company brief. It does not mean dropping company and role: the server requires both, and every session is scoped to one employer.
+- **"Simplify the profile":** I kept the course progress and latest-interview panels. An existing test pins them in place on purpose (`profile-panel.test.tsx`), so removing them is your call, not mine. I simplified the header and the account area instead.
+- **Sign-out back in the sidebar:** a test said sign-out was deliberately moved out of the sidebar. I brought it back because the 7 October request asks for account actions there. It sits behind a menu that starts closed, so the original worry (clicking it by accident) still holds. I updated the test comment to say so.
+- **Deletion order:** data first, sign-in second. The other order risks a deleted sign-in with data behind it that nobody can reach any more, and so nobody can ask to delete.
 
-## What I could NOT verify (no live rounds, per rule 7)
-- What the model actually says about Infosys, and why its web search came back empty.
-- Whether the token-refresh fix is what removed the owner's pauses. One 20+ minute round
-  on `develop` will tell. Also how often Gemini calls hang (search the logs for "did not
-  answer … in time").
-- Whether the speech threshold suits real microphones (noise suppression, quiet
-  speakers), and whether Gemini follows the quote-only rule for observations.
-- How the new UI looks: the composer checkbox, the spoken-English panel, and the "From AI
-  knowledge" section.
-- Known gaps:
-  - The brief's AI-knowledge section is not level-aware, so it may still name a
-    managerial round for a student. The plan is filtered.
-  - An answer submitted after a laptop sleeps with an expired token is lost.
+## What I could NOT verify
+- **Live account deletion has not been run.** It needs a Supabase service-role key, it is destructive, and per rule 7 I did not test against the real project. Specifically unverified:
+  - the admin API `DELETE /auth/v1/admin/users/{id}` (the code treats a 404 as already deleted);
+  - that Supabase's storage list reports a folder with `id: null`. This is what the recursive delete relies on, and it is what Supabase's API documents.
+
+  Check both once on a throwaway account.
+- **Visual check:** the new setup summary card, the sidebar menu (desktop rail and mobile), the profile layout, and the Arena chips, in a signed-in browser.
+- **Existing data issue (not changed):** `interview_sources.added_by` cascades on delete. If an admin deletes their own account, every shared source they added is deleted with it. That needs your decision.
 
 ## Verification status
-- Every branch passed typecheck, lint, test and build (web) and ktlintCheck, test and
-  build (api), on CI and locally.
-  - The spoken-English and fresher branches were re-run on CI after `develop` was merged
-    into them.
-- Flaky: `device-check.test.tsx` and one other web test failed once each under local
-  load (while Gradle ran in parallel), then passed on rerun. CI never failed. Worth
-  hardening.
-- Size: the spoken-English change is about 2,000 lines, half of them tests. That is over
-  the roughly 800-line guideline; capture and report could have been split.
+- Web: typecheck, lint and build pass. All 63 test files pass (2,963 tests); the build generated 175 pages.
+  - Local typecheck first failed on stale generated route types for the new `/history` page. Running `next typegen` fixed it. CI does not use those generated files.
+- API: `./gradlew ktlintCheck test build` passes, including the new `AccountDeletionTest`, `MeControllerDeleteTest` and `SupabaseObjectStorageDeleteTest`.
+- GitHub CI: passed on every UI-branch commit, the last being `714ef85` (run 37580143804). CI for `feat/account-deletion` runs on PR #37.
 
 ## Merge status
-- All five branches are merged into `develop`. The final merge is the fresher branch;
-  see `git log`.
+- `fix/ui-flow-and-arena` (setup flow, Arena, dashboard and `/history`; no migration): CI green on `714ef85` (run 37580143804, both jobs), merged into `develop` at `28c4b3f`.
+- `feat/account-deletion` (`8fd98b2`, on top of the UI branch): **PR #37 opened, not merged**, because it touches data deletion and auth.
+  - Its migration `20261007000000` **is applied** to the linked project (moeronogmgtmbdnzfzgu) on 7 Oct at the owner's request, ahead of the merge. It is backward compatible: round deletion on `develop` keeps working.
 
 ## Suggested next task
-- A live 25-minute round on `develop` to confirm the stall fixes and the spoken-English
-  figures. It spends money, so it is the owner's call.
+- Run a live check of account deletion on a throwaway account, then merge the PR and apply the migration.
 
 ## Open questions for you
-- None.
+- Should an admin's account deletion keep the shared sources they added (`interview_sources.added_by` → set null instead of cascade)?

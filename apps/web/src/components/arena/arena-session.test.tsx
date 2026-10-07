@@ -220,7 +220,8 @@ describe("ArenaSession", () => {
     await user.keyboard("{Enter}");
 
     await screen.findByText("Run complete");
-    const link = screen.getByRole("link", { name: new RegExp(first.chapterSlug) });
+    // No chapter title on the fixture, so the slug is shown as words rather than as a URL.
+    const link = screen.getByRole("link", { name: new RegExp(first.chapterSlug.replace(/-/g, " "), "i") });
     expect(link).toHaveAttribute("href", `/courses/${first.courseSlug}/${first.chapterSlug}`);
   });
 });
@@ -271,5 +272,46 @@ describe("saving a run to the account", () => {
     await user.keyboard("{Enter}");
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/could not be saved/i);
+  });
+
+  it("names what to revise by chapter title, not by its URL slug", async () => {
+    const user = userEvent.setup();
+    render(<ArenaSession challenges={[{ ...challenges[0]!, chapterTitle: "Arrays in memory" }]} />);
+
+    await answerCurrent(user, false);
+    await user.keyboard("{Enter}");
+
+    const revise = await screen.findByRole("link", { name: "Arrays in memory" });
+    expect(revise).toHaveAttribute("href", "/courses/dsa/arrays-in-memory");
+    expect(screen.queryByText("dsa/arrays-in-memory")).not.toBeInTheDocument();
+  });
+
+  /** Enter on a focused link must follow it — the shortcut belongs to the card's own controls. */
+  it("leaves Enter on the chapter link alone instead of advancing the run", async () => {
+    const user = userEvent.setup();
+    render(<ArenaSession challenges={challenges} selectionMode="fixed" />);
+
+    await answerCurrent(user, true);
+    const revisit = screen.getByRole("link", { name: /revisit/i });
+    revisit.focus();
+    await user.keyboard("{Enter}");
+
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(challenges[0]!.prompt);
+    expect(screen.getByRole("status")).toHaveTextContent(/correct/i);
+  });
+
+  it("ignores the digit shortcuts while a control outside the card has focus", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Choose another set</button>
+        <ArenaSession challenges={challenges} selectionMode="fixed" />
+      </>,
+    );
+
+    screen.getByRole("button", { name: "Choose another set" }).focus();
+    await user.keyboard("2");
+
+    expect(screen.getByRole("button", { name: /^2Beta$/ })).toHaveAttribute("aria-pressed", "false");
   });
 });

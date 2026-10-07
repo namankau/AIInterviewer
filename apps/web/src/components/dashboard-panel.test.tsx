@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { DashboardView } from "./dashboard-panel";
+import { DashboardView, PastRoundsSection } from "./dashboard-panel";
 
 const DAY = 86_400_000;
 
@@ -159,5 +159,35 @@ describe("DashboardView deletion and retention", () => {
 
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledWith("s2");
+  });
+});
+
+describe("DashboardView history length", () => {
+  const many = ["a", "b", "c", "d", "e"].map((id, index) =>
+    round({ id, companyName: `Company ${index + 1}` }),
+  );
+
+  it("lists only the three newest rounds, and links to the rest", () => {
+    view(many);
+
+    const list = within(screen.getByRole("region", { name: /recent interviews/i }));
+    expect(list.getAllByRole("listitem")).toHaveLength(3);
+    expect(list.getByText(/Company 1/)).toBeInTheDocument();
+    expect(list.queryByText(/Company 4/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "See all 5 rounds" })).toHaveAttribute("href", "/history");
+  });
+
+  it("has nothing to link to when every round already fits", () => {
+    view(many.slice(0, 3));
+
+    expect(screen.queryByRole("link", { name: /see all/i })).not.toBeInTheDocument();
+  });
+
+  it("shows every round on the full history", () => {
+    render(<PastRoundsSection sessions={many} />);
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    expect(screen.getByRole("heading", { name: "All interviews" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /see all/i })).not.toBeInTheDocument();
   });
 });

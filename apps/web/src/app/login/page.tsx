@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 
 import { SignInWithGoogle } from "@/components/sign-in-with-google";
@@ -80,6 +80,18 @@ export default async function LoginPage({
           </div>
 
           <SignInWithGoogle next={safeNext(next)} />
+
+          <p className="text-caption text-ink-subtle">
+            By signing in you agree to our{" "}
+            <Link href={"/terms" as Route} className="font-medium text-accent hover:underline">
+              terms of use
+            </Link>{" "}
+            and{" "}
+            <Link href={"/privacy" as Route} className="font-medium text-accent hover:underline">
+              privacy policy
+            </Link>
+            .
+          </p>
 
           <p className="border-t border-line pt-5 text-caption text-ink-subtle">
             Courses, the Arena, mock interviews, and your reports are included while we build.

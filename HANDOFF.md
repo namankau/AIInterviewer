@@ -51,7 +51,7 @@ Finish the 7 October UI run that Codex left partway through when it hit its usag
 ## Merge status
 - `fix/ui-flow-and-arena` (setup flow, Arena, dashboard and `/history`; no migration): CI green on `714ef85` (run 37580143804, both jobs), merged into `develop` at `28c4b3f`.
 - `feat/account-deletion` (`8fd98b2`, on top of the UI branch): **PR #37 opened, not merged**, because it touches data deletion and auth.
-  - Its migration is **not applied**. Run `npm run db:push` when you merge it; the endpoint's job inserts fail without it.
+  - Its migration `20261007000000` **is applied** to the linked project (moeronogmgtmbdnzfzgu) on 7 Oct at the owner's request, ahead of the merge. It is backward compatible: round deletion on `develop` keeps working.
 
 ## Suggested next task
 - Run a live check of account deletion on a throwaway account, then merge the PR and apply the migration.

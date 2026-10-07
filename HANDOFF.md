@@ -1,60 +1,81 @@
-# Handoff — 2026-10-07
+# Handoff — 2026-10-08
 
 ## Task
-Finish the 7 October UI run that Codex left partway through when it hit its usage limit (progress file `runs/2026-10-07-progress.md`; owner request, no task file): selected-round setup, Arena polish, dashboard history limit, sidebar account actions with a simpler profile, and account deletion end to end.
+Go-live fixes requested by the owner after the readiness report:
+- a privacy policy;
+- a daily free limit of 2 rounds and 60 minutes, with an "upgrade to Pro" notice;
+- Sentry and logging;
+- "fix all things you can fix".
+
+No task file.
 
 ## What I built
-- **Selected-round setup** (`new-interview-form.tsx`, `interview/new/page.tsx`, `rounds/page.tsx`): a card on `/rounds` opens setup with that round fixed. The round picker becomes a summary card with a "Change round" link. Company and role are still required. The topic field only appears for `custom_topic`.
-  - This replaces Codex's unfinished version, which sent a made-up company called "General practice" and required a topic for every round.
-  - That version was wrong for two reasons. The server throws the topic away for any round except `custom_topic` (`InterviewService.kt:234`). And a fake employer would have shown up in readiness and history.
-- **Arena** (`challenge-card.tsx`, `arena-session.tsx`, `arena-daily-quest.tsx`, `arena/page.tsx`, `arena/[course]/page.tsx`, `lib/arena/corpus.ts`):
-  - **Keyboard bug fixed.** Enter and the 1–4 keys no longer take over a focused link or a control outside the challenge card. Before this, pressing Enter on "Revisit this chapter" or "Choose another set" moved to the next question instead.
-  - **Revise list shows chapter titles,** not slugs like `dsa/two-pointers`. Challenges now carry an optional `chapterTitle`, added on the server in `corpus.ts`.
-  - **Copy and labels:** course names and counts in the hero come from the course list, and "Campaigns" is renamed to modules.
-  - **Chapter chips** that have questions now start a run for that chapter only, and the panel restarts when the chapter changes. Before, they linked to the reading page.
-  - **Focus rings** on every Arena control.
-- **Dashboard** (`dashboard-panel.tsx`, new `app/history/page.tsx`): shows the 3 newest rounds, with a "See all N rounds" link to `/history`. That page has the same report links and the same delete. `/history` is added to the sign-in-protected routes (`lib/supabase/session.ts`).
-- **Account deletion** (branch `feat/account-deletion`):
-  - **Endpoint:** `DELETE /api/v1/me` (`account/AccountDeletion.kt`, `AccountRepository.kt`, `AuthAdmin.kt`, `MeController.kt`).
-  - **Step 1, one transaction:** it queues deletion of everything stored under the user's folder in both buckets (recordings, resumes, profile photo), using the existing `storage_deletion_jobs` queue. It then deletes the `public.users` row, which removes every user table with it.
-  - **Step 2:** the Supabase auth user is deleted through the admin API.
-  - **Failure handling:** if the server has no admin key, it refuses before touching anything. If step 2 fails, the response says the data is already deleted, and a retry is safe.
-- **Migration** `20261007000000_account_deletion_outbox.sql`: deletion jobs can now be for a whole account. These have no session and the reason `account_deleted`. A job for a single round must still name its round.
-- **Storage fix** (`SupabaseObjectStorage.deleteByPrefix`): it now goes into subfolders and pages past 1,000 files. The old version listed only one folder level. So deleting by a user's folder would have removed nothing in the recordings bucket, because each session is its own subfolder.
-- **Profile and sidebar** (`profile/page.tsx`, `account-summary.tsx`, `delete-account-section.tsx`):
-  - **Profile page:** the navy banner becomes a plain header, and a single Account section holds sign-out and deletion.
-  - **Delete confirmation:** before the button works, the section lists everything that will be deleted and asks the user to type "delete".
-  - **Sidebar:** the account block at the foot is now a menu that starts closed, with Profile, All rounds, Sign out and Delete account.
-  - **Bug fixed:** the profile's "Open interview history" link went to `/rounds`, which is the round catalogue. It now goes to `/history`.
+- **Daily free allowance**, merged and with its migration applied.
+  - **Rule:** 2 rounds and 60 planned minutes a day per account, reset at midnight India time (`interviewos.entitlement.daily-rounds`, `daily-minutes`, `day-zone`).
+  - **Counted from a new `practice_usage` table** (migration `20261008000000`). It is not a foreign key to `sessions`, so deleting a round does not refund it. It is removed with the account.
+  - **Past the limit:** the API answers 402 with a reason code (`daily_rounds_reached`, `daily_minutes_reached`, `daily_minutes_short`).
+  - **On screen:** the dashboard and setup page show "Today's free practice is used · Pro · coming soon" instead of a start button. Setup only offers round lengths that fit in the minutes left.
+  - Files: `Entitlement.kt`, `EntitlementProperties.kt`, `InterviewService.kt`, `SessionRepository.kt`, `daily-limit-notice.tsx`, `dashboard-panel.tsx`, `new-interview-form.tsx`.
+- **Sentry and logs**, merged.
+  - **Web:** `@sentry/nextjs` (`instrumentation*.ts`, `lib/sentry-options.ts`). The error pages report what they catch, and the API client reports 5xx responses.
+  - **API:** `sentry-spring-boot-4-starter` plus logback. Every ERROR log becomes an event.
+  - **Privacy:** no replay, no request bodies, no cookies or auth headers, no default PII. API events are tagged by account ID only.
+  - **Off by default:** nothing is sent until a DSN is set.
+  - **New log lines:** refused admin access, and what each loop brief stood on, including whether the billed lookup ran.
+- **Per-account hourly AI rate limits**, merged (`common/AiRateLimit.kt`). Over a limit the API answers 429 with `Retry-After`:
+  - round drafts: 30 an hour;
+  - loop brief and prep plan together: 40;
+  - resume uploads: 6;
+  - hints: 40.
+- **Deployment images**, merged.
+  - **API:** `apps/api/Dockerfile`, built with the JDK and run on a JRE, as a non-root user.
+  - **Web:** `apps/web/Dockerfile`, a standalone Next.js server run as a non-root user. Standalone output is only switched on inside the image.
+  - A new CI job, `images`, builds both and checks that the web image serves a page.
+- **Legal pages**, PR #39, not merged.
+  - Public `/privacy`, `/terms` and `/contact`, written from what the code does.
+  - Linked from the landing-page footer, the login page and the recording-consent box.
+- **Other fixes:**
+  - CLAUDE.md and AGENTS.md no longer mention `RECORD_CAMERA`, which no longer exists.
+  - Merged Dependabot PRs #26–#29 (GitHub Actions versions).
+  - Asked Dependabot to rebase #30.
 
 ## Assumptions I made
-- **"Streamlined setup"** means skipping the round picker and the company brief. It does not mean dropping company and role: the server requires both, and every session is scoped to one employer.
-- **"Simplify the profile":** I kept the course progress and latest-interview panels. An existing test pins them in place on purpose (`profile-panel.test.tsx`), so removing them is your call, not mine. I simplified the header and the account area instead.
-- **Sign-out back in the sidebar:** a test said sign-out was deliberately moved out of the sidebar. I brought it back because the 7 October request asks for account actions there. It sits behind a menu that starts closed, so the original worry (clicking it by accident) still holds. I updated the test comment to say so.
-- **Deletion order:** data first, sign-in second. The other order risks a deleted sign-in with data behind it that nobody can reach any more, and so nobody can ask to delete.
+- **"Consume only 60 mins"** means planned minutes: the length chosen at setup counts in full when the round starts. A round that ends early still uses its full length. That's the safer side for cost, and the clock is what ends a round.
+- **"Max 2 rounds"** counts rounds started, not finished. The model is paid for from the first question.
+- **"Upgrade to Pro":** no paid tier exists, so the notice says Pro is coming soon. A checkout that doesn't work would be a false claim.
+- **The day resets at midnight India time** for everyone, because the product is India-first.
+- **Rate limits are kept in memory** on each API instance. That's exact with one instance and still a bound with several.
+- **`npm audit fix` was tried and reverted.** It only fixed one issue and pulled native binaries into the drawing component's build chain. The remaining issues need the drawing component moved to an older major version, which can wait until after launch.
 
 ## What I could NOT verify
-- **Live account deletion has not been run.** It needs a Supabase service-role key, it is destructive, and per rule 7 I did not test against the real project. Specifically unverified:
-  - the admin API `DELETE /auth/v1/admin/users/{id}` (the code treats a 404 as already deleted);
-  - that Supabase's storage list reports a folder with `id: null`. This is what the recursive delete relies on, and it is what Supabase's API documents.
-
-  Check both once on a throwaway account.
-- **Visual check:** the new setup summary card, the sidebar menu (desktop rail and mobile), the profile layout, and the Arena chips, in a signed-in browser.
-- **Existing data issue (not changed):** `interview_sources.added_by` cascades on delete. If an admin deletes their own account, every shared source they added is deleted with it. That needs your decision.
+- **Live use:** no live round was run (rule 7), so there's no live test of the limits or of Sentry delivering events. Set the DSNs, then trigger an error to confirm.
+- **The legal text** needs your review, and ideally a lawyer's. In particular:
+  - the age clause (courses are written for class 12; under-18s need verifiable parental consent);
+  - the Gemini key must be on a billing-enabled project, or the "not used for training" line is false.
+- **Supabase's security checks:** the Supabase connector is signed in to an account without access to this project.
 
 ## Verification status
-- Web: typecheck, lint and build pass. All 63 test files pass (2,963 tests); the build generated 175 pages.
-  - Local typecheck first failed on stale generated route types for the new `/history` page. Running `next typegen` fixed it. CI does not use those generated files.
-- API: `./gradlew ktlintCheck test build` passes, including the new `AccountDeletionTest`, `MeControllerDeleteTest` and `SupabaseObjectStorageDeleteTest`.
-- GitHub CI: passed on every UI-branch commit, the last being `714ef85` (run 37580143804). CI for `feat/account-deletion` runs on PR #37.
+- Web: typecheck, lint and tests pass (62 files, 2,962 tests); the build passes.
+- API: `ktlintCheck test build` passes, including `DailyAllowanceTest`, `AiRateLimiterTest` and `RoundDraftRateLimitTest`.
+- CI on `develop` at `bdb41fc`: all three jobs pass (web, api, images). The PR branches pass against current `develop`: #37 at `c9c1fb0`, #39 at `f394bc0`.
 
 ## Merge status
-- `fix/ui-flow-and-arena` (setup flow, Arena, dashboard and `/history`; no migration): CI green on `714ef85` (run 37580143804, both jobs), merged into `develop` at `28c4b3f`.
-- `feat/account-deletion` (`8fd98b2`, on top of the UI branch): **PR #37 opened, not merged**, because it touches data deletion and auth.
-  - Its migration `20261007000000` **is applied** to the linked project (moeronogmgtmbdnzfzgu) on 7 Oct at the owner's request, ahead of the merge. It is backward compatible: round deletion on `develop` keeps working.
+- **Merged into `develop`:** the daily limit (`d7807a7`), Sentry (`5d8f699`), hardening (`bdb41fc`), and Dependabot #26–#29.
+- **Migration `20261008000000` is applied** to the linked project.
+- **PRs waiting for you:**
+  - #37 (account deletion; its migration is already applied);
+  - #39 (legal pages);
+  - #38 (`develop` → `main`).
+
+  Both #37 and #39 were updated with `develop` today and pass CI.
+- **Not merged:**
+  - #36: Kotlin 2.4 breaks the ktlint plugin. Leave it until after launch.
+  - #30: conflicts; asked Dependabot to rebase.
+  - #31–#35: major-version upgrades. After launch.
 
 ## Suggested next task
-- Run a live check of account deletion on a throwaway account, then merge the PR and apply the migration.
+- Choose hosting and a domain, set the production environment variables (`.env.example` lists them all), and deploy the two images.
 
 ## Open questions for you
-- Should an admin's account deletion keep the shared sources they added (`interview_sources.added_by` → set null instead of cascade)?
+- Your contact email, the operator name and a grievance officer for the legal pages (environment variables listed in PR #39).
+- Can under-18 students use the product? That decides whether parental consent has to be built.

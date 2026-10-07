@@ -21,6 +21,39 @@ class SessionRepository(
 ) {
     // -- entitlement inputs ---------------------------------------------------
 
+    /**
+     * Rounds started and planned minutes used since [since], from the practice ledger.
+     * The ledger survives round deletion, so deleting a round does not refund it.
+     */
+    fun practiceUsageSince(
+        userId: UUID,
+        since: Instant,
+    ): Pair<Int, Int> =
+        jdbcClient
+            .sql(
+                """
+                select count(*) as rounds, coalesce(sum(minutes), 0) as minutes
+                  from public.practice_usage
+                 where user_id = :u and started_at >= :since
+                """.trimIndent(),
+            ).param("u", userId)
+            .param("since", java.sql.Timestamp.from(since))
+            .query { rs, _ -> rs.getInt("rounds") to rs.getInt("minutes") }
+            .single()
+
+    fun recordPracticeUsage(
+        userId: UUID,
+        sessionId: UUID,
+        minutes: Int,
+    ) {
+        jdbcClient
+            .sql("insert into public.practice_usage (user_id, session_id, minutes) values (:u, :s, :m)")
+            .param("u", userId)
+            .param("s", sessionId)
+            .param("m", minutes)
+            .update()
+    }
+
     fun countCompletedSessions(userId: UUID): Int =
         jdbcClient
             .sql("select count(*) from public.sessions where user_id = :u and status = 'completed'")

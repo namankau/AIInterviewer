@@ -43,7 +43,10 @@ class ApiException(
             code: String = "gone",
         ) = ApiException(HttpStatus.GONE, code, message)
 
-        fun paymentRequired(message: String) = ApiException(HttpStatus.PAYMENT_REQUIRED, "payment_required", message)
+        fun paymentRequired(
+            message: String,
+            code: String = "payment_required",
+        ) = ApiException(HttpStatus.PAYMENT_REQUIRED, code, message)
 
         fun unprocessable(
             message: String,

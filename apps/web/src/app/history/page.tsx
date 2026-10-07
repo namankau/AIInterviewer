@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Your rounds" };
  */
 export default function HistoryPage() {
   return (
-    <AppShell breadcrumb="all rounds" parent={{ label: "home", href: "/dashboard" }}>
+    <AppShell breadcrumb="all rounds">
       <div className="flex w-full max-w-4xl flex-col gap-8">
         <header className="flex flex-col gap-2">
           <h1 className="text-display text-balance text-ink">Your rounds</h1>

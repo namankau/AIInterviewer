@@ -2,6 +2,7 @@ package com.interviewos.api.sources
 
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.user.SupabaseIdentity
+import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.stereotype.Component
 import java.util.Locale
@@ -59,6 +60,8 @@ data class AdminProperties(
 class AdminAccess(
     private val properties: AdminProperties,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     /**
      * Returns the caller if they may curate sources, and 404s if not.
      *
@@ -67,6 +70,11 @@ class AdminAccess(
      */
     fun require(identity: SupabaseIdentity): SupabaseIdentity {
         if (!properties.allows(identity)) {
+            // Logged so probing of the admin routes is visible; by account id, never email.
+            log
+                .atWarn()
+                .addKeyValue("user_id", identity.id)
+                .log("Refused admin access")
             throw ApiException.notFound()
         }
         return identity

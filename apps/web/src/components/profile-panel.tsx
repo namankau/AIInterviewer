@@ -460,7 +460,7 @@ function ProfileOverview({
               <p className="mt-1 text-caption text-on-navy-muted">{latestRound.roleTitle}</p>
               <p className="mt-3 text-micro text-on-navy-muted">{roundLabel(latestRound.roundType)}</p>
               <Link
-                href="/rounds"
+                href="/history"
                 className="mt-auto pt-6 text-caption font-semibold text-on-navy underline decoration-white/30 underline-offset-4 hover:decoration-white"
               >
                 Open interview history

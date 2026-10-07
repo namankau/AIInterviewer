@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 /*
@@ -36,6 +37,11 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // A self-contained server for the container image (apps/web/Dockerfile sets this). Off
+  // otherwise, so `next dev`, `next start` and Vercel-style hosts are unchanged.
+  ...(process.env.NEXT_OUTPUT_STANDALONE === "true"
+    ? { output: "standalone" as const, outputFileTracingRoot: join(process.cwd(), "..", "..") }
+    : {}),
   // Shared API types are consumed straight from TypeScript source in the workspace.
   transpilePackages: ["@acemyinterview/shared"],
   typedRoutes: true,
@@ -53,4 +59,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+/*
+ * Source maps are uploaded only when SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT are
+ * set (a production build); without them the build is unchanged and nothing is sent.
+ */
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+  telemetry: false,
+});

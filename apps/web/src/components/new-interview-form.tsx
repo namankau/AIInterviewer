@@ -1,14 +1,16 @@
 "use client";
 
-import type { CandidateStage, RoundDraft, RoundType } from "@acemyinterview/shared";
+import type { CandidateStage, EntitlementView, RoundDraft, RoundType } from "@acemyinterview/shared";
+import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { CONTROL_CLASS } from "@/components/ui/field";
+import { DailyLimitNotice, isDailyLimitReached } from "@/components/daily-limit-notice";
 import { LoopBriefStep } from "@/components/loop-brief-step";
-import { ApiRequestError, composeRound, startSession } from "@/lib/api";
+import { ApiRequestError, composeRound, fetchEntitlement, startSession } from "@/lib/api";
 import { loadVoices, pickVoice } from "@/lib/browser-speech";
 import { ROUND_CATALOGUE } from "@/lib/rounds";
 import { useAccessToken } from "@/lib/use-access-token";
@@ -70,6 +72,34 @@ export function NewInterviewForm({
   // stated stage starts from it.
   const [stage, setStage] = useState<CandidateStage | "">("");
   const campus = stage === "student" || stage === "recent_graduate";
+  // Today's allowance, read once so a candidate who has used it is told before filling
+  // anything in. The server enforces it either way; this only saves them the wasted form.
+  const [entitlement, setEntitlement] = useState<EntitlementView | null>(null);
+  useEffect(() => {
+    if (!accessToken) return;
+    let active = true;
+    fetchEntitlement({ accessToken })
+      .then((value) => {
+        if (active) setEntitlement(value);
+      })
+      .catch(() => {
+        // Not knowing the allowance is not a reason to block setup; the start call will say.
+      });
+    return () => {
+      active = false;
+    };
+  }, [accessToken]);
+
+  if (isDailyLimitReached(entitlement) && entitlement) {
+    return (
+      <div className="flex flex-col gap-6">
+        <DailyLimitNotice entitlement={entitlement} />
+        <a href="/dashboard" className="w-fit text-caption font-medium text-accent hover:underline">
+          Back to your dashboard
+        </a>
+      </div>
+    );
+  }
 
   async function read(event: React.FormEvent) {
     event.preventDefault();
@@ -139,6 +169,7 @@ export function NewInterviewForm({
         }
         onStart={(id) => router.push(`/interview/${id}`)}
         accessToken={accessToken}
+        minutesLeftToday={entitlement?.remainingMinutesToday ?? null}
       />
     );
   }
@@ -261,6 +292,7 @@ function RoundSetup({
   onStart,
   accessToken,
   roundPreselected,
+  minutesLeftToday = null,
 }: {
   draft: RoundDraft;
   query: string;
@@ -274,6 +306,8 @@ function RoundSetup({
   accessToken: string | null | undefined;
   /** True when the candidate deliberately chose this round from the rounds catalogue. */
   roundPreselected: boolean;
+  /** Free minutes left today, or null when there is no daily limit (or it is unknown). */
+  minutesLeftToday?: number | null;
 }) {
   const [companyName, setCompanyName] = useState(draft.companyName);
   const [roleTitle, setRoleTitle] = useState(draft.roleTitle);
@@ -304,6 +338,14 @@ function RoundSetup({
   }, [language]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lengthOptions = (roundType === "custom_topic" ? CUSTOM_LENGTHS : ROUND_LENGTHS).filter(
+    (option) => minutesLeftToday === null || option.minutes <= minutesLeftToday,
+  );
+  // The chosen length, kept inside what is left today: one that cannot start would only be
+  // refused by the server after the candidate had filled everything in.
+  const effectiveMinutes = lengthOptions.some((option) => option.minutes === durationMinutes)
+    ? durationMinutes
+    : (lengthOptions.at(-1)?.minutes ?? durationMinutes);
   const selectedRound = ROUND_CATALOGUE.find((item) => item.value === roundType);
   // The server keeps a focus topic only for a custom-topic round and drops it for every
   // other one, so asking for it anywhere else would collect words that go nowhere.
@@ -313,6 +355,7 @@ function RoundSetup({
     companyName.trim() !== "" &&
     roleTitle.trim() !== "" &&
     (!topicRequired || focusTopic.trim() !== "") &&
+    lengthOptions.length > 0 &&
     consentAudio &&
     !!accessToken;
 
@@ -343,7 +386,7 @@ function RoundSetup({
         // is recorded, uploaded or analysed — it is on so the candidate practises
         // being looked at, which is a benefit that never leaves their own screen.
         consentVideo: cameraOn,
-        durationMinutes,
+        durationMinutes: effectiveMinutes,
         candidateStage: candidateStage === "" ? undefined : candidateStage,
         focusTopic: topicRequired ? focusTopic.trim() : undefined,
       });
@@ -544,27 +587,26 @@ function RoundSetup({
       ) : null}
 
       <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="Length" hint="Real rounds are time-boxed. The clock ends this one.">
+        <Field
+          label="Length"
+          hint={
+            lengthOptions.length === 0
+              ? `Only ${minutesLeftToday} free minutes are left today, which is shorter than this round can run. Choose a different round, or come back tomorrow.`
+              : minutesLeftToday === null
+                ? "Real rounds are time-boxed. The clock ends this one."
+                : `Real rounds are time-boxed. ${minutesLeftToday} free minutes left today.`
+          }
+        >
           <select
-            value={durationMinutes}
+            value={effectiveMinutes}
             onChange={(event) => setDurationMinutes(Number(event.target.value))}
             className={CONTROL_CLASS}
           >
-            {topicRequired ? (
-              <>
-                <option value={10}>10 minutes — a quick topic check</option>
-                <option value={20}>20 minutes — focused practice</option>
-                <option value={30}>30 minutes — a thorough topic round</option>
-              </>
-            ) : (
-              <>
-                <option value={5}>5 minutes — just testing the room</option>
-                <option value={20}>20 minutes — a short round</option>
-                <option value={30}>30 minutes</option>
-                <option value={40}>40 minutes — a typical round</option>
-                <option value={60}>60 minutes — a full panel</option>
-              </>
-            )}
+            {lengthOptions.map((option) => (
+              <option key={option.minutes} value={option.minutes}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </Field>
         <Field label="Language" hint="The register the interviewer uses.">
@@ -586,7 +628,11 @@ function RoundSetup({
         <legend className="px-2 text-heading text-ink">Before we start</legend>
         <p className="text-caption text-ink-muted">
           This interview is spoken. Nothing is recorded until you agree, and everything
-          recorded is private to your account — you can delete it at any time.
+          recorded is private to your account — you can delete it at any time. Recordings,
+          transcripts and the report are deleted after 28 days.{" "}
+          <Link href={"/privacy" as Route} target="_blank" className="font-medium text-accent hover:underline">
+            How we handle your data
+          </Link>
         </p>
         <Consent
           checked={consentAudio}
@@ -619,6 +665,20 @@ function RoundSetup({
     </form>
   );
 }
+
+const CUSTOM_LENGTHS = [
+  { minutes: 10, label: "10 minutes — a quick topic check" },
+  { minutes: 20, label: "20 minutes — focused practice" },
+  { minutes: 30, label: "30 minutes — a thorough topic round" },
+];
+
+const ROUND_LENGTHS = [
+  { minutes: 5, label: "5 minutes — just testing the room" },
+  { minutes: 20, label: "20 minutes — a short round" },
+  { minutes: 30, label: "30 minutes" },
+  { minutes: 40, label: "40 minutes — a typical round" },
+  { minutes: 60, label: "60 minutes — a full panel" },
+];
 
 /** The manual path: the same setup with nothing filled in and nothing assumed. */
 function blankDraft(focusTopic = "", initialRoundType?: RoundType): RoundDraft {

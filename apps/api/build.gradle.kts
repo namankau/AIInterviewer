@@ -29,6 +29,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")
+    // Error reporting. Inert until SENTRY_DSN is set, so local runs and CI send nothing.
+    implementation("io.sentry:sentry-spring-boot-4-starter:8.59.0")
+    implementation("io.sentry:sentry-logback:8.59.0")
     runtimeOnly("org.postgresql:postgresql")
     testImplementation("org.springframework.boot:spring-boot-starter-actuator-test")
     testImplementation("org.springframework.boot:spring-boot-starter-jdbc-test")

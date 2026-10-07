@@ -2,13 +2,20 @@
 
 import "./globals.css";
 
+import * as Sentry from "@sentry/nextjs";
+import { useEffect } from "react";
+
 import { ErrorPanel } from "@/components/errors/error-panel";
 
 /**
  * The last resort, for a failure in the root layout itself. It replaces the whole
  * document, so it brings its own `<html>` and `<body>`.
  */
-export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
   return (
     <html lang="en">
       <body className="min-h-dvh bg-surface text-ink antialiased">

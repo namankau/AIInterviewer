@@ -25,6 +25,24 @@ logging:
     format:
       console: ${LOGGING_STRUCTURED_FORMAT_CONSOLE:logstash}
 
+# Error reporting (Sentry). Off until SENTRY_DSN is set. Errors logged at ERROR — including
+# every unhandled exception, which ApiExceptionHandler logs — become Sentry events; INFO and
+# above ride along as breadcrumbs. No request bodies and no default PII are ever sent: bodies
+# here are resumes and recordings of somebody's voice. The user is identified by account id
+# only (SentryUserConfig), never by email or name.
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:development}
+  release: ${SENTRY_RELEASE:}
+  send-default-pii: false
+  max-request-body-size: none
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0.1}
+  in-app-includes:
+    - com.interviewos
+  logging:
+    minimum-event-level: error
+    minimum-breadcrumb-level: info
+
 management:
   endpoints:
     web:

@@ -74,19 +74,47 @@ class InterviewService(
     private val transactions = TransactionTemplate(transactionManager)
 
     fun entitlement(userId: UUID): EntitlementView {
-        val decision =
-            Entitlement.evaluate(
-                completedSessions = repository.countCompletedSessions(userId),
-                paidSessionCredits = repository.countPaidSessionCredits(userId),
-                sessionInProgress = repository.findOpenSessionId(userId) != null,
-                freeRounds = entitlementProperties.freeRounds,
-            )
+        val decision = evaluateEntitlement(userId, requestedMinutes = null)
         return EntitlementView(
             allowed = decision.allowed,
             reason = decision.reason.name.lowercase(),
             message = decision.message,
             remainingFree = decision.remainingFree,
+            dailyRoundLimit = decision.daily.roundLimit,
+            dailyMinuteLimit = decision.daily.minuteLimit,
+            remainingRoundsToday = decision.daily.remainingRounds,
+            remainingMinutesToday = decision.daily.remainingMinutes,
         )
+    }
+
+    private fun evaluateEntitlement(
+        userId: UUID,
+        requestedMinutes: Int?,
+    ): EntitlementDecision {
+        val (roundsToday, minutesToday) = repository.practiceUsageSince(userId, startOfToday())
+        return Entitlement.evaluate(
+            completedSessions = repository.countCompletedSessions(userId),
+            paidSessionCredits = repository.countPaidSessionCredits(userId),
+            sessionInProgress = repository.findOpenSessionId(userId) != null,
+            freeRounds = entitlementProperties.freeRounds,
+            daily =
+                DailyUsage(
+                    roundsUsed = roundsToday,
+                    minutesUsed = minutesToday,
+                    roundLimit = entitlementProperties.dailyRounds,
+                    minuteLimit = entitlementProperties.dailyMinutes,
+                ),
+            requestedMinutes = requestedMinutes,
+        )
+    }
+
+    /** Midnight today in the allowance's time zone — when the daily allowance resets. */
+    private fun startOfToday(): Instant {
+        val zone = entitlementProperties.dayZone
+        return java.time.LocalDate
+            .now(zone)
+            .atStartOfDay(zone)
+            .toInstant()
     }
 
     /**
@@ -312,41 +340,56 @@ class InterviewService(
         resolution: ArchetypeResolution,
         declaredStage: DeclaredStage?,
     ): UUID {
-        val decision =
-            Entitlement.evaluate(
-                completedSessions = repository.countCompletedSessions(userId),
-                paidSessionCredits = repository.countPaidSessionCredits(userId),
-                sessionInProgress = repository.findOpenSessionId(userId) != null,
-                freeRounds = entitlementProperties.freeRounds,
-            )
+        val decision = evaluateEntitlement(userId, requestedMinutes = request.durationMinutes)
         if (!decision.allowed) {
+            log
+                .atInfo()
+                .addKeyValue("user_id", userId)
+                .addKeyValue("reason", decision.reason.name.lowercase())
+                .addKeyValue("requested_minutes", request.durationMinutes)
+                .log("Round refused by entitlement")
             throw when (decision.reason) {
-                Entitlement.Reason.FREE_TIER_EXHAUSTED -> ApiException.paymentRequired(decision.message)
-                else -> ApiException.conflict(decision.message, code = "session_in_progress")
+                Entitlement.Reason.SESSION_IN_PROGRESS -> {
+                    ApiException.conflict(decision.message, code = "session_in_progress")
+                }
+
+                Entitlement.Reason.FREE_TIER_EXHAUSTED -> {
+                    ApiException.paymentRequired(decision.message)
+                }
+
+                else -> {
+                    ApiException.paymentRequired(decision.message, code = decision.reason.name.lowercase())
+                }
             }
         }
 
-        return try {
-            repository.insertSession(
-                userId = userId,
-                companyName = request.companyName.trim(),
-                archetype = resolution.archetype,
-                confidence = resolution.confidence,
-                roleTitle = request.roleTitle.trim(),
-                roundType = roundType.dbValue,
-                language = request.language,
-                consentAudio = request.consentAudio,
-                consentVideo = request.consentVideo,
-                durationMinutes = request.durationMinutes,
-                declaredStage = declaredStage,
-                focusTopic = request.focusTopic,
-            )
-        } catch (e: DuplicateKeyException) {
-            throw ApiException.conflict(
-                "Finish or leave your current interview before starting another one.",
-                code = "session_in_progress",
-            )
-        }
+        val sessionId =
+            try {
+                repository.insertSession(
+                    userId = userId,
+                    companyName = request.companyName.trim(),
+                    archetype = resolution.archetype,
+                    confidence = resolution.confidence,
+                    roleTitle = request.roleTitle.trim(),
+                    roundType = roundType.dbValue,
+                    language = request.language,
+                    consentAudio = request.consentAudio,
+                    consentVideo = request.consentVideo,
+                    durationMinutes = request.durationMinutes,
+                    declaredStage = declaredStage,
+                    focusTopic = request.focusTopic,
+                )
+            } catch (e: DuplicateKeyException) {
+                throw ApiException.conflict(
+                    "Finish or leave your current interview before starting another one.",
+                    code = "session_in_progress",
+                )
+            }
+        // Same transaction as the check above, so two racing starts cannot both fit in
+        // the last minutes of the day. Planned minutes, because the clock is what ends a
+        // round and so the plan is what it can cost.
+        repository.recordPracticeUsage(userId, sessionId, request.durationMinutes)
+        return sessionId
     }
 
     /**

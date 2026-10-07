@@ -290,7 +290,7 @@ interviewbit.com: a bright, confident, polished learning-platform look.
 - **Interview modality is voice. The candidate's camera is shown, never recorded.**
   There is a drawn interviewer on screen (`interviewer-presence.tsx`), and the candidate
   may optionally turn their own camera on to face it. Nothing from their camera leaves the
-  browser: it is not uploaded (`RECORD_CAMERA` in `use-interview-capture.ts`), not sent to
+  browser: it is not uploaded (only the audio tracks are recorded, in `use-interview-capture.ts`), not sent to
   a model (`RoundMediaProperties` on the server), and the report may not describe how
   anybody looked (`RoundMediaProperties.presenceWasObserved`).
 
@@ -305,10 +305,10 @@ interviewbit.com: a bright, confident, polished learning-platform look.
   The camera stays on screen because it earns its place there without any of that: it is
   how a candidate practises sitting up and looking at a face, and that benefit never leaves
   their own machine. **The three switches move together or not at all.** Turning on
-  `RECORD_CAMERA` without body-language feedback in the report collects what nothing reads.
+  camera recording without body-language feedback in the report collects what nothing reads.
   Turning on `analyse-video-in-round` puts 3.7s back on every turn. And the consent copy in
   `new-interview-form.tsx` currently promises, in as many words, that nothing is uploaded —
-  so it changes in the same commit as `RECORD_CAMERA`, or the product is lying.
+  so it changes in the same commit as any camera recording, or the product is lying.
 
   The interviewer is **drawn, not photoreal, and has no name.** A synthetic photoreal face
   gets mistaken for a real person, and a candidate who believes there is a human here has

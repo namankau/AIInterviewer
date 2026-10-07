@@ -1,6 +1,7 @@
 "use client";
 
 import type { CandidateStage, EntitlementView, RoundDraft, RoundType } from "@acemyinterview/shared";
+import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -627,7 +628,11 @@ function RoundSetup({
         <legend className="px-2 text-heading text-ink">Before we start</legend>
         <p className="text-caption text-ink-muted">
           This interview is spoken. Nothing is recorded until you agree, and everything
-          recorded is private to your account — you can delete it at any time.
+          recorded is private to your account — you can delete it at any time. Recordings,
+          transcripts and the report are deleted after 28 days.{" "}
+          <Link href={"/privacy" as Route} target="_blank" className="font-medium text-accent hover:underline">
+            How we handle your data
+          </Link>
         </p>
         <Consent
           checked={consentAudio}

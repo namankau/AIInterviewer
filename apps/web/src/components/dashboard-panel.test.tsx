@@ -191,3 +191,54 @@ describe("DashboardView history length", () => {
     expect(screen.queryByRole("link", { name: /see all/i })).not.toBeInTheDocument();
   });
 });
+
+describe("DashboardView daily allowance", () => {
+  const base = {
+    remainingFree: null,
+    dailyRoundLimit: 2,
+    dailyMinuteLimit: 60,
+  };
+
+  it("says what is left today while practice remains", () => {
+    render(
+      <DashboardView
+        entitlement={{
+          ...base,
+          allowed: true,
+          reason: "allowed",
+          message: "Free practice today: 1 round and 20 minutes left.",
+          remainingRoundsToday: 1,
+          remainingMinutesToday: 20,
+        }}
+        sessions={[]}
+        readiness={[]}
+        loaded
+      />,
+    );
+
+    expect(screen.getByText(/1 round and 20 minutes left/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /start an interview/i })).not.toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("replaces the start with the upgrade notice once the day is used", () => {
+    render(
+      <DashboardView
+        entitlement={{
+          ...base,
+          allowed: false,
+          reason: "daily_minutes_reached",
+          message: "You have used today's free practice (2 rounds or 60 minutes a day).",
+          remainingRoundsToday: 1,
+          remainingMinutesToday: 0,
+        }}
+        sessions={[]}
+        readiness={[]}
+        loaded
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: /today.s free practice is used/i })).toBeInTheDocument();
+    expect(screen.getByText(/pro · coming soon/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /start an interview/i })).toHaveAttribute("aria-disabled", "true");
+  });
+});

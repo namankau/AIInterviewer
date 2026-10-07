@@ -4,6 +4,7 @@ import type { EntitlementView, ReadinessGroup, SessionSummary } from "@acemyinte
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { DailyLimitNotice, isDailyLimitReached } from "@/components/daily-limit-notice";
 import { deleteSession, fetchEntitlement, fetchReadiness, fetchSessions } from "@/lib/api";
 import { useAccessToken } from "@/lib/use-access-token";
 
@@ -211,7 +212,7 @@ export function DashboardView({
             </Link>
           )}
 
-          {loaded && entitlement ? (
+          {loaded && entitlement && !isDailyLimitReached(entitlement) ? (
             <p className="text-caption text-ink-subtle">
               {/*
                 * `remainingFree` is null while there is no limit, which is the case
@@ -219,15 +220,21 @@ export function DashboardView({
                 * a product that has no paywall.
                 */}
               {entitlement.allowed
-                ? entitlement.remainingFree === null
-                  ? "Every round is free while we are building this. Report included, no card."
-                  : entitlement.remainingFree > 0
-                    ? "Your first interview is free, report included."
-                    : null
+                ? entitlement.dailyRoundLimit !== null || entitlement.dailyMinuteLimit !== null
+                  ? `${entitlement.message} Report included, no card.`
+                  : entitlement.remainingFree === null
+                    ? "Every round is free while we are building this. Report included, no card."
+                    : entitlement.remainingFree > 0
+                      ? "Your first interview is free, report included."
+                      : null
                 : entitlement.message}
             </p>
           ) : null}
         </div>
+
+        {loaded && entitlement && isDailyLimitReached(entitlement) ? (
+          <DailyLimitNotice entitlement={entitlement} />
+        ) : null}
       </section>
 
       {sessions.length > 0 || readiness.length > 0 ? (

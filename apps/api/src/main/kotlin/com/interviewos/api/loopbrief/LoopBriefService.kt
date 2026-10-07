@@ -13,6 +13,7 @@ import com.interviewos.api.interview.Archetype
 import com.interviewos.api.interview.ArchetypeResolver
 import com.interviewos.api.interview.Confidence
 import com.interviewos.api.interview.RoundType
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 /**
@@ -45,6 +46,8 @@ class LoopBriefService(
     private val publicResearch: PublicLoopResearch,
     private val modelKnowledge: ModelEmployerKnowledge,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     fun brief(
         companyName: String,
         role: String?,
@@ -97,6 +100,16 @@ class LoopBriefService(
         // is built from it: the brief has to show what the plan stands on.
         val knowledge =
             if (sourcedStages.isEmpty()) modelKnowledge.knowledgeOf(company?.name ?: cleanedCompany, archetype.label) else null
+
+        // What the brief stood on. `model_knowledge_asked` is the billed path, so this is
+        // also how often an unknown employer costs a model call.
+        log
+            .atInfo()
+            .addKeyValue("company_recognised", company != null)
+            .addKeyValue("archetype", archetype.name.lowercase())
+            .addKeyValue("sourced_stages", sourcedStages.size)
+            .addKeyValue("model_knowledge_asked", sourcedStages.isEmpty())
+            .log("Loop resolved")
 
         return ResolvedLoop(
             company = company,

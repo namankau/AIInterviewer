@@ -29,12 +29,13 @@ Finish the remaining UI integration, reconcile feature branches, merge only CI-g
 - Web tests: pass, 65 files / 2,974 tests.
 - Web production build: pass, including 178 generated static pages.
 - API `ktlintCheck test build`: pass (`BUILD SUCCESSFUL`, 16 tasks).
-- Remote CI: pending for `fix/finish-ui-integration`; do not merge until it is green.
+- Remote CI: pass for `fix/finish-ui-integration` ([run 37644222912](https://github.com/namankau/AIInterviewer/actions/runs/37644222912)).
+- Post-merge `develop` CI: pass on `7eefc5b` ([run 37644734629](https://github.com/namankau/AIInterviewer/actions/runs/37644734629)); web, API, and image jobs are green.
 
 ## Merge status
 - PR #37 and PR #39 are merged into `develop`; linked Supabase migrations match through `20261008000000`.
-- Branch `fix/finish-ui-integration` contains the final unique prototype work and is ready to push for CI.
-- `develop` → `main` PR will be opened only after the integration branch and post-merge `develop` CI are green.
+- The final prototype integration is merged into `develop` at `7eefc5b`; its branch and every other proven-merged work branch were deleted locally and remotely without force.
+- Release PR #41 is open from `develop` to `main`: https://github.com/namankau/AIInterviewer/pull/41. It was not merged; advancing `main` remains the owner's decision.
 
 ## Suggested next task
 - Review the proof-of-progress information architecture and decide whether to authorize a production publishing design.

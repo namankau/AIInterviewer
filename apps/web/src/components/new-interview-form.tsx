@@ -1,6 +1,7 @@
 "use client";
 
 import type { CandidateStage, RoundDraft, RoundType } from "@acemyinterview/shared";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -44,9 +45,11 @@ const EXAMPLES = [
 export function NewInterviewForm({
   initialRoundType,
   initialTopic = "",
+  roundPreselected = false,
 }: {
   initialRoundType?: RoundType;
   initialTopic?: string;
+  roundPreselected?: boolean;
 }) {
   const router = useRouter();
   const accessToken = useAccessToken();
@@ -98,7 +101,7 @@ export function NewInterviewForm({
       setChosenRoundType(null);
     };
 
-    if (hasCompany && draft.roundType !== "custom_topic" && !pastBrief) {
+    if (!roundPreselected && hasCompany && draft.roundType !== "custom_topic" && !pastBrief) {
       return (
         <LoopBriefStep
           companyName={draft.companyName}
@@ -122,11 +125,12 @@ export function NewInterviewForm({
         initialStage={stage}
         error={error}
         onEdit={onEdit}
+        roundPreselected={roundPreselected}
         // The brief was shown first whenever a company was recognised — that's the only
         // path into this screen with `hasCompany` true, so it's also the only case
         // "back to the brief" makes sense.
         onBackToBrief={
-          hasCompany && draft.roundType !== "custom_topic"
+          !roundPreselected && hasCompany && draft.roundType !== "custom_topic"
             ? () => {
                 setChosenRoundType(null);
                 setPastBrief(false);
@@ -256,6 +260,7 @@ function RoundSetup({
   onBackToBrief,
   onStart,
   accessToken,
+  roundPreselected,
 }: {
   draft: RoundDraft;
   query: string;
@@ -267,6 +272,8 @@ function RoundSetup({
   onBackToBrief: (() => void) | null;
   onStart: (sessionId: string) => void;
   accessToken: string | null | undefined;
+  /** True when the candidate deliberately chose this round from the rounds catalogue. */
+  roundPreselected: boolean;
 }) {
   const [companyName, setCompanyName] = useState(draft.companyName);
   const [roleTitle, setRoleTitle] = useState(draft.roleTitle);
@@ -297,11 +304,15 @@ function RoundSetup({
   }, [language]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const selectedRound = ROUND_CATALOGUE.find((item) => item.value === roundType);
+  // The server keeps a focus topic only for a custom-topic round and drops it for every
+  // other one, so asking for it anywhere else would collect words that go nowhere.
+  const topicRequired = roundType === "custom_topic";
 
   const ready =
     companyName.trim() !== "" &&
     roleTitle.trim() !== "" &&
-    (roundType !== "custom_topic" || focusTopic.trim() !== "") &&
+    (!topicRequired || focusTopic.trim() !== "") &&
     consentAudio &&
     !!accessToken;
 
@@ -334,7 +345,7 @@ function RoundSetup({
         consentVideo: cameraOn,
         durationMinutes,
         candidateStage: candidateStage === "" ? undefined : candidateStage,
-        focusTopic: roundType === "custom_topic" ? focusTopic.trim() : undefined,
+        focusTopic: topicRequired ? focusTopic.trim() : undefined,
       });
       onStart(session.id);
     } catch (cause) {
@@ -352,7 +363,9 @@ function RoundSetup({
       <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] sm:p-9">
         <div aria-hidden="true" className="absolute -top-20 -right-14 size-56 rounded-full bg-accent/25 blur-3xl" />
         <div className="relative flex flex-col gap-3">
-        <p className="pill pill-navy w-fit">Confirm your round</p>
+        <p className="pill pill-navy w-fit">
+          {roundPreselected ? "Practise this round" : "Confirm your round"}
+        </p>
         {onBackToBrief ? (
           <button
             type="button"
@@ -363,9 +376,17 @@ function RoundSetup({
           </button>
         ) : null}
         <h1 className="text-title text-balance text-on-navy">
-          {draft.understood || "Set up your round"}
+          {roundPreselected
+            ? (selectedRound?.label ?? draft.roundLabel)
+            : draft.understood || "Set up your round"}
         </h1>
-        {query ? (
+        {roundPreselected ? (
+          <p className="max-w-2xl text-body text-on-navy-muted">
+            The round is chosen. Name the employer and role so the interviewer uses the right
+            rubric, then agree to recording and begin.
+          </p>
+        ) : null}
+        {!roundPreselected && query ? (
           <p className="text-caption text-on-navy-muted">
             From: &ldquo;{query}&rdquo;{" "}
             <button
@@ -386,7 +407,7 @@ function RoundSetup({
         </p>
       ) : null}
 
-      {draft.assumptions.length > 0 ? (
+      {!roundPreselected && draft.assumptions.length > 0 ? (
         <section aria-labelledby="assumed" className="rounded-2xl border border-highlight/35 bg-highlight/10 p-5 sm:p-6">
           <h2 id="assumed" className="pb-2 font-mono text-micro tracking-widest text-ink-subtle uppercase">
             What we filled in for you
@@ -450,6 +471,28 @@ function RoundSetup({
         </select>
       </Field>
 
+      {roundPreselected && selectedRound ? (
+        <section
+          aria-labelledby="chosen-round"
+          className="flex flex-col gap-3 rounded-2xl border border-accent/30 bg-accent-wash p-5 shadow-[var(--shadow-sm)] sm:flex-row sm:items-start sm:justify-between sm:p-6"
+        >
+          <div className="flex flex-col gap-1">
+            <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+              {selectedRound.eyebrow}
+            </p>
+            <h2 id="chosen-round" className="text-heading text-ink">
+              {selectedRound.label}
+            </h2>
+            <p className="max-w-prose text-caption text-ink-muted">{selectedRound.blurb}</p>
+          </div>
+          <Link
+            href="/rounds"
+            className="shrink-0 self-start rounded-full border border-line bg-surface-raised px-4 py-2 text-caption font-medium text-ink transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+          >
+            Change round
+          </Link>
+        </section>
+      ) : (
       <fieldset className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-6">
         <legend className="pb-1 text-heading text-ink">Which round?</legend>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -481,8 +524,9 @@ function RoundSetup({
           })}
         </div>
       </fieldset>
+      )}
 
-      {roundType === "custom_topic" ? (
+      {topicRequired ? (
         <Field
           label="Topic to practise"
           hint="The interviewer stays within this scope. Try Java collections, operating systems, SQL joins, or SOLID principles."
@@ -506,7 +550,7 @@ function RoundSetup({
             onChange={(event) => setDurationMinutes(Number(event.target.value))}
             className={CONTROL_CLASS}
           >
-            {roundType === "custom_topic" ? (
+            {topicRequired ? (
               <>
                 <option value={10}>10 minutes — a quick topic check</option>
                 <option value={20}>20 minutes — focused practice</option>

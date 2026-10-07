@@ -31,7 +31,7 @@
   "devDependencies": {
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "supabase": "^2.115.0"
+    "supabase": "^2.119.0"
   },
   "//overrides": [
     "One React, everywhere. Excalidraw depends on @radix-ui/* whose peer ranges still",

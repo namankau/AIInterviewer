@@ -219,6 +219,11 @@ data class EntitlementView(
     val message: String,
     /** How many free rounds are left, or null when there is no limit — which is the case today. */
     val remainingFree: Int?,
+    /** The daily allowance; each is null when that allowance is switched off. */
+    val dailyRoundLimit: Int? = null,
+    val dailyMinuteLimit: Int? = null,
+    val remainingRoundsToday: Int? = null,
+    val remainingMinutesToday: Int? = null,
 )
 
 /**

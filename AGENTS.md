@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-Project context for Claude Code. Read this before doing anything else.
+Project context for Codex. Read this before doing anything else.
 
 ---
 
@@ -119,7 +119,7 @@ agent stopped until it reset. Work must survive that without anyone re-explainin
 The orchestrating session picks the agent profile for each job — the owner does not.
 The goal is the most work per unit of the plan's usage: **use the cheapest profile that
 can do the job safely, and move up only when the job needs it.** Profiles live in
-`.claude/agents/`; each sets its model and effort.
+`.Codex/agents/`; each sets its model and effort.
 
 | Profile | Model · effort | Use for |
 |---|---|---|

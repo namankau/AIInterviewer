@@ -1,4 +1,4 @@
-import type { LoopBrief, PrepPlan, RoundDraft } from "@acemyinterview/shared";
+import type { EntitlementView, LoopBrief, PrepPlan, RoundDraft } from "@acemyinterview/shared";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,12 +10,14 @@ const startSession = vi.hoisted(() => vi.fn());
 const fetchLoopBrief = vi.hoisted(() => vi.fn());
 const fetchPrepPlan = vi.hoisted(() => vi.fn());
 const push = vi.hoisted(() => vi.fn());
+const fetchEntitlement = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api", () => ({
   composeRound,
   startSession,
   fetchLoopBrief,
   fetchPrepPlan,
+  fetchEntitlement,
   ApiRequestError: class ApiRequestError extends Error {},
 }));
 
@@ -68,6 +70,8 @@ const draft: RoundDraft = {
 
 describe("NewInterviewForm", () => {
   beforeEach(() => {
+    // Nothing used today unless a test says otherwise.
+    fetchEntitlement.mockReset().mockResolvedValue(allowance({}));
     composeRound.mockReset();
     startSession.mockReset();
     push.mockReset();
@@ -185,6 +189,33 @@ describe("NewInterviewForm", () => {
 
     expect(screen.getByLabelText(/topic to practise/i)).toBeRequired();
     expect(screen.getByRole("combobox", { name: /Length/i })).toHaveValue("20");
+  });
+
+  it("tells a candidate who has used today's allowance before they fill anything in", async () => {
+    fetchEntitlement.mockResolvedValue(
+      allowance({
+        allowed: false,
+        reason: "daily_rounds_reached",
+        message: "You have used today's free practice (2 rounds or 60 minutes a day).",
+        remainingRoundsToday: 0,
+      }),
+    );
+    render(<NewInterviewForm />);
+
+    expect(await screen.findByRole("heading", { name: /today.s free practice is used/i })).toBeInTheDocument();
+    expect(screen.getByText(/pro · coming soon/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/describe the interview/i)).not.toBeInTheDocument();
+  });
+
+  it("offers only round lengths that fit in the minutes left today", async () => {
+    fetchEntitlement.mockResolvedValue(allowance({ remainingRoundsToday: 1, remainingMinutesToday: 20 }));
+    render(<NewInterviewForm initialRoundType="system_design" roundPreselected />);
+
+    const length = screen.getByRole("combobox", { name: /Length/i });
+    await waitFor(() => expect(length).toHaveValue("20"));
+    const offered = within(length).getAllByRole("option").map((option) => option.getAttribute("value"));
+    expect(offered).toEqual(["5", "20"]);
+    expect(screen.getByText(/20 free minutes left today/i)).toBeInTheDocument();
   });
 
   it("turns one line into a round, and shows it back before anything starts", async () => {
@@ -492,3 +523,17 @@ describe("NewInterviewForm", () => {
     });
   });
 });
+
+function allowance(over: Partial<EntitlementView>): EntitlementView {
+  return {
+    allowed: true,
+    reason: "allowed",
+    message: "Free practice today: 2 rounds and 60 minutes left.",
+    remainingFree: null,
+    dailyRoundLimit: 2,
+    dailyMinuteLimit: 60,
+    remainingRoundsToday: 2,
+    remainingMinutesToday: 60,
+    ...over,
+  };
+}

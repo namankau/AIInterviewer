@@ -7,6 +7,9 @@ import type { Route } from "next";
 import { ArenaVizFrame } from "@/components/arena/arena-viz-frame";
 import type { Challenge } from "@/lib/arena/types";
 
+export const FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2";
+
 const KIND_LABEL: Record<Challenge["kind"], string> = {
   mcq: "Quiz",
   "predict-output": "Predict the output",
@@ -39,6 +42,7 @@ export function ChallengeCard({
   onNext: () => void;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // Move focus to the new challenge's heading whenever it changes, so a screen-reader
   // user and a keyboard user both land somewhere sensible instead of on a stale element.
@@ -48,6 +52,13 @@ export function ChallengeCard({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      // Shortcuts belong to this card. A focused link, a field, or a control elsewhere on
+      // the page keeps its own Enter — otherwise "Revisit this chapter" or "Choose another
+      // set" would advance the run instead of doing what they say.
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest("a, input, textarea, select, [contenteditable='true']")) return;
+      const control = target?.closest("button");
+      if (control && !cardRef.current?.contains(control)) return;
       if (event.key === "Enter") {
         event.preventDefault();
         if (submitted) onNext();
@@ -67,8 +78,8 @@ export function ChallengeCard({
   }, [submitted, selected, challenge.options.length, onSelect, onSubmit, onNext]);
 
   return (
-    <div className="flex flex-col gap-6 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-7">
-      <div className="flex items-center gap-2.5">
+    <div ref={cardRef} className="flex flex-col gap-6 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-7">
+      <div className="flex flex-wrap items-center gap-2.5">
         <span className="rounded-full bg-accent-wash px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase">
           {KIND_LABEL[challenge.kind]}
         </span>
@@ -97,14 +108,14 @@ export function ChallengeCard({
           const isCorrectOption = submitted && i === challenge.correctIndex;
           const isWrongPick = submitted && isSelected && i !== challenge.correctIndex;
           return (
-            <li key={option}>
+            <li key={`${i}-${option}`}>
               <button
                 type="button"
                 disabled={submitted}
                 aria-pressed={isSelected}
                 onClick={() => onSelect(i)}
                 className={[
-                  "flex w-full items-center gap-3 rounded-xl border bg-surface-raised px-4 py-3 text-left text-body shadow-[var(--shadow-sm)] transition-[border-color,background-color,transform]",
+                  `flex w-full items-center gap-3 rounded-xl border bg-surface-raised px-4 py-3 text-left text-body shadow-[var(--shadow-sm)] transition-[border-color,background-color,transform] ${FOCUS_RING}`,
                   isCorrectOption
                     ? "border-positive/50 bg-positive/10 text-ink"
                     : isWrongPick
@@ -131,7 +142,7 @@ export function ChallengeCard({
           type="button"
           onClick={onSubmit}
           disabled={selected === null}
-          className="self-start rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40"
+          className={`self-start rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40 ${FOCUS_RING}`}
         >
           Confirm (Enter)
         </button>
@@ -156,17 +167,17 @@ export function ChallengeCard({
               by {challenge.source.publisher} ({challenge.source.license}).
             </p>
           ) : null}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
               href={`/courses/${challenge.courseSlug}/${challenge.chapterSlug}` as Route}
-              className="text-caption font-medium text-accent hover:underline"
+              className={`rounded-sm text-caption font-medium text-accent hover:underline ${FOCUS_RING}`}
             >
-              Revisit this chapter
+              {challenge.chapterTitle ? `Revisit ${challenge.chapterTitle}` : "Revisit this chapter"}
             </Link>
             <button
               type="button"
               onClick={onNext}
-              className="ml-auto rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong"
+              className={`ml-auto rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong ${FOCUS_RING}`}
             >
               Next (Enter)
             </button>

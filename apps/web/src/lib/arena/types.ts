@@ -44,6 +44,12 @@ export interface Challenge {
   courseSlug: string;
   chapterSlug: string;
   moduleTitle: string;
+  /**
+   * The chapter's display title, attached by `corpus.ts` so the result screen can name what
+   * to revise without shipping the course content to the browser. Optional because the
+   * derivation and the open-source supplement are built without it.
+   */
+  chapterTitle?: string;
   /** The question or scenario shown above the options. */
   prompt: string;
   options: string[];

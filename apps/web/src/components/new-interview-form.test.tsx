@@ -132,6 +132,61 @@ describe("NewInterviewForm", () => {
     expect(composeRound).not.toHaveBeenCalled();
   });
 
+  /**
+   * Chosen from the rounds page: the round is settled, so the picker gives way to a summary
+   * with a way back, but company and role are still asked for — every session is scoped to
+   * one employer and one role, and the server refuses a round without them.
+   */
+  it("locks a round chosen from the catalogue, and still asks for employer and role", async () => {
+    startSession.mockResolvedValue({ id: "8b0d1e2f-3a4b-4c5d-9e6f-7a8b9c0d1e2f" });
+    render(<NewInterviewForm initialRoundType="system_design" roundPreselected />);
+
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: /system or solution design/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /change round/i })).toHaveAttribute("href", "/rounds");
+    // A topic only survives on the server for a custom-topic round, so it is not asked for here.
+    expect(screen.queryByLabelText(/topic to practise/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /Length/i })).toHaveValue("40");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: /record my voice/i }));
+    const begin = screen.getByRole("button", { name: /begin interview/i });
+    expect(begin).toBeDisabled();
+
+    await userEvent.type(screen.getByRole("textbox", { name: /company/i }), "Flipkart");
+    await userEvent.type(screen.getByRole("textbox", { name: /role/i }), "SDE 2");
+    await userEvent.click(begin);
+
+    await waitFor(() =>
+      expect(startSession).toHaveBeenCalledWith(
+        "token",
+        expect.objectContaining({
+          companyName: "Flipkart",
+          roleTitle: "SDE 2",
+          roundType: "system_design",
+          focusTopic: undefined,
+          consentAudio: true,
+        }),
+      ),
+    );
+  });
+
+  it("keeps the consent gate on a catalogue round", async () => {
+    render(<NewInterviewForm initialRoundType="behavioural_competency" roundPreselected />);
+
+    await userEvent.type(screen.getByRole("textbox", { name: /company/i }), "Infosys");
+    await userEvent.type(screen.getByRole("textbox", { name: /role/i }), "Engineer");
+
+    expect(screen.getByRole("button", { name: /begin interview/i })).toBeDisabled();
+    expect(screen.getByText(/voice recording is required to continue/i)).toBeInTheDocument();
+  });
+
+  it("asks for the topic when the catalogue round is a custom topic", () => {
+    render(<NewInterviewForm initialRoundType="custom_topic" roundPreselected />);
+
+    expect(screen.getByLabelText(/topic to practise/i)).toBeRequired();
+    expect(screen.getByRole("combobox", { name: /Length/i })).toHaveValue("20");
+  });
+
   it("turns one line into a round, and shows it back before anything starts", async () => {
     composeRound.mockResolvedValue(draft);
     render(<NewInterviewForm />);

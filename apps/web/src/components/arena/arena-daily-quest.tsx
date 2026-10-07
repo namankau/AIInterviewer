@@ -44,7 +44,7 @@ export function ArenaDailyQuest({ questsByDate }: { questsByDate: Record<string,
             </p>
           </div>
           <div className="grid auto-rows-fr gap-4 md:grid-cols-2 2xl:grid-cols-4">
-            {quests.map((quest, index) => {
+            {quests.map((quest) => {
               const topics = Array.from(
                 new Set(quest.challenges.map((challenge) => challenge.moduleTitle)),
               );
@@ -55,12 +55,10 @@ export function ArenaDailyQuest({ questsByDate }: { questsByDate: Record<string,
                 >
                   <div className="flex grow flex-col gap-2">
                     <p className="font-mono text-micro tracking-widest text-accent-strong uppercase">
-                      Daily set {String(index + 1).padStart(2, "0")}
+                      Today &middot; {quest.challenges.length} questions
                     </p>
                     <h3 className="text-heading text-ink">{quest.courseTitle}</h3>
-                    <p className="text-caption leading-relaxed text-ink-muted">
-                      {quest.challenges.length} questions · {topics.join(" · ")}
-                    </p>
+                    <p className="text-caption leading-relaxed text-ink-muted">{topics.join(" · ")}</p>
                   </div>
                   <button
                     type="button"

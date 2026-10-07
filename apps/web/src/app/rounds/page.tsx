@@ -34,7 +34,7 @@ export default function RoundsPage() {
           </p>
           <h1 className="max-w-3xl text-display text-balance text-ink">The rounds.</h1>
           <p className="max-w-2xl text-body leading-relaxed text-ink-muted">
-            Ten rounds, each with its own structure and its own rubric. An Infosys
+            {ROUND_CATALOGUE.length} rounds, each with its own structure and its own rubric. An Infosys
             techno-managerial panel is not a Google system design round, and preparing for one
             does not prepare you for the other.
           </p>
@@ -44,7 +44,7 @@ export default function RoundsPage() {
           {ROUND_CATALOGUE.map((round) => (
             <li key={round.value} className="h-full">
               <Link
-                href={`/interview/new?round=${encodeURIComponent(round.value)}`}
+                href={`/interview/new?round=${encodeURIComponent(round.value)}&from=rounds`}
                 aria-label={`Practise the ${round.label} round`}
                 className="group flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-accent/35 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
               >

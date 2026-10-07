@@ -64,6 +64,7 @@ describe("updateSession", () => {
     "/interview/3f2a",
     "/rounds",
     "/profile",
+    "/history",
     "/report/3f2a",
   ])("sends a signed-out visitor from %s to sign in, remembering where they were going", async (path) => {
     signedOut();

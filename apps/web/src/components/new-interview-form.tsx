@@ -340,13 +340,11 @@ function RoundSetup({
   const lengthOptions = (roundType === "custom_topic" ? CUSTOM_LENGTHS : ROUND_LENGTHS).filter(
     (option) => minutesLeftToday === null || option.minutes <= minutesLeftToday,
   );
-  // Keep the chosen length inside what is left today; picking one that cannot start would
-  // only be refused by the server after the candidate had filled everything in.
-  useEffect(() => {
-    if (minutesLeftToday === null || durationMinutes <= minutesLeftToday) return;
-    const longestThatFits = lengthOptions.at(-1);
-    if (longestThatFits) setDurationMinutes(longestThatFits.minutes);
-  }, [minutesLeftToday, durationMinutes, lengthOptions]);
+  // The chosen length, kept inside what is left today: one that cannot start would only be
+  // refused by the server after the candidate had filled everything in.
+  const effectiveMinutes = lengthOptions.some((option) => option.minutes === durationMinutes)
+    ? durationMinutes
+    : (lengthOptions.at(-1)?.minutes ?? durationMinutes);
   const selectedRound = ROUND_CATALOGUE.find((item) => item.value === roundType);
   // The server keeps a focus topic only for a custom-topic round and drops it for every
   // other one, so asking for it anywhere else would collect words that go nowhere.
@@ -387,7 +385,7 @@ function RoundSetup({
         // is recorded, uploaded or analysed — it is on so the candidate practises
         // being looked at, which is a benefit that never leaves their own screen.
         consentVideo: cameraOn,
-        durationMinutes,
+        durationMinutes: effectiveMinutes,
         candidateStage: candidateStage === "" ? undefined : candidateStage,
         focusTopic: topicRequired ? focusTopic.trim() : undefined,
       });
@@ -599,7 +597,7 @@ function RoundSetup({
           }
         >
           <select
-            value={durationMinutes}
+            value={effectiveMinutes}
             onChange={(event) => setDurationMinutes(Number(event.target.value))}
             className={CONTROL_CLASS}
           >

@@ -66,12 +66,18 @@ export default async function ArenaCoursePage({ params }: { params: Promise<{ co
         </div>
 
         <section className="flex flex-col gap-6">
-          <h2 className="text-title text-ink">Campaigns</h2>
+          <div className="flex flex-col gap-1.5">
+            <h2 className="text-title text-ink">Practise one chapter</h2>
+            <p className="max-w-2xl text-caption text-ink-muted">
+              Modules run in the order the course teaches them. Pick a chapter to practise only its
+              questions; a chapter without questions yet opens the chapter itself.
+            </p>
+          </div>
           {course.modules.map((module, moduleIndex) => (
             <div key={module.title} className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised px-6 py-5 shadow-[var(--shadow-sm)]">
-              <div className="flex items-baseline gap-3">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span className="font-mono text-micro tracking-widest text-accent uppercase">
-                  Campaign {moduleIndex + 1}
+                  Module {moduleIndex + 1}
                 </span>
                 <h3 className="text-heading text-ink">{module.title}</h3>
               </div>
@@ -81,8 +87,17 @@ export default async function ArenaCoursePage({ params }: { params: Promise<{ co
                   return (
                     <li key={chapter.slug}>
                       <Link
-                        href={`/courses/${course.slug}/${chapter.slug}`}
-                        className="rounded-full border border-line bg-surface-sunken px-3 py-1 text-caption text-ink-muted transition-colors hover:border-accent hover:bg-accent-wash hover:text-ink"
+                        href={
+                          count > 0
+                            ? `/arena/${course.slug}?chapter=${encodeURIComponent(chapter.slug)}`
+                            : `/courses/${course.slug}/${chapter.slug}`
+                        }
+                        aria-label={
+                          count > 0
+                            ? `Practise ${chapter.title}, ${count} question${count === 1 ? "" : "s"}`
+                            : `Read ${chapter.title}`
+                        }
+                        className="inline-flex rounded-full border border-line bg-surface-sunken px-3 py-1 text-caption text-ink-muted transition-colors hover:border-accent hover:bg-accent-wash hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                       >
                         {chapter.title}
                         {count > 0 ? <span className="ml-1.5 text-ink-subtle">· {count}</span> : null}

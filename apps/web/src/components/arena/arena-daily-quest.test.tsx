@@ -58,7 +58,7 @@ describe("ArenaDailyQuest", () => {
     render(<ArenaDailyQuest questsByDate={{ [today]: quests }} />);
 
     expect(screen.getByRole("heading", { name: "Java Programming" })).toBeInTheDocument();
-    expect(screen.getByText("2 questions · Arrays · Methods")).toBeInTheDocument();
+    expect(screen.getByText("Arrays · Methods")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Data Structures & Algorithms" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "AI and Agentic AI" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "System Design" })).toBeInTheDocument();

@@ -21,6 +21,9 @@ export const metadata: Metadata = {
  * corpus; account progress is the only part that needs the browser.
  */
 export default function ArenaPage() {
+  const courseNames = new Intl.ListFormat("en", { type: "disjunction" }).format(
+    courses.map((course) => course.title),
+  );
   // Computed here, against the full corpus, server-side — only the resulting handful of
   // challenges (at most 3 dates * number of courses * 3 questions) crosses into the client (task 056, L3).
   const questsByDate = Object.fromEntries(
@@ -40,15 +43,13 @@ export default function ArenaPage() {
         <header className="relative overflow-hidden rounded-[1.75rem] bg-navy px-7 py-10 text-on-navy shadow-[var(--shadow-md)] sm:px-10 sm:py-12">
           <div aria-hidden="true" className="absolute -top-32 right-0 size-80 rounded-full bg-accent/25 blur-3xl" />
           <div className="relative flex flex-col gap-5">
-            <p className="w-fit rounded-full border border-accent/20 bg-surface-raised px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase shadow-[var(--shadow-sm)]">
-              Daily practice · all four courses
-            </p>
+            <p className="pill pill-navy w-fit">Daily practice · {courses.length} courses</p>
             <h1 className="max-w-4xl text-display text-balance text-on-navy">
               A few sharp questions. A different set tomorrow.
             </h1>
             <p className="max-w-2xl text-body leading-relaxed text-on-navy-muted">
-              Choose Java, DSA, AI or System Design. Each course gets its own topic-labelled daily set, with
-              explanations and a direct route back to the chapter when something does not click.
+              Choose {courseNames}. Each course gets its own daily set, labelled by topic, with an
+              explanation after every answer and a link back to the chapter when something does not click.
             </p>
           </div>
         </header>
@@ -68,7 +69,7 @@ export default function ArenaPage() {
                   <li key={course.slug}>
                     <Link
                       href={`/arena/${course.slug}`}
-                      className="group flex h-full flex-col justify-between gap-7 rounded-2xl border border-line bg-surface-raised px-6 py-7 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-1 hover:border-accent/40 hover:shadow-[var(--shadow-md)]"
+                      className="group flex h-full flex-col justify-between gap-7 rounded-2xl border border-line bg-surface-raised px-6 py-7 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-1 hover:border-accent/40 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                     >
                       <div className="flex flex-col gap-2.5">
                         <p className="w-fit rounded-full bg-accent-wash px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase">{course.level}</p>
@@ -76,7 +77,7 @@ export default function ArenaPage() {
                         <p className="text-caption text-ink-muted">{course.tagline}</p>
                       </div>
                       <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-                        {count} challenges · {course.modules.length} campaigns
+                        {count} questions · {course.modules.length} modules
                       </p>
                     </Link>
                   </li>

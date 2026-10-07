@@ -1,5 +1,6 @@
 package com.interviewos.api.user
 
+import com.interviewos.api.account.AccountDeletion
 import com.interviewos.api.common.ApiErrorWriter
 import com.interviewos.api.config.ApiSecurityTestConfiguration
 import com.interviewos.api.config.SecurityConfig
@@ -28,6 +29,9 @@ class MeControllerTest {
 
     @MockitoBean
     private lateinit var userService: UserService
+
+    @MockitoBean
+    private lateinit var accountDeletion: AccountDeletion
 
     private val userId: UUID = UUID.fromString("6f1b7f4c-2b2a-4c3e-9a51-0a5f4f2f2a11")
 

@@ -8,14 +8,14 @@ export function OnThisPage({ blocks }: { blocks: Block[] }) {
   if (headings.length === 0) return null;
 
   return (
-    <nav aria-label="On this page" className="hidden xl:sticky xl:top-8 xl:block xl:self-start">
-      <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">On this page</p>
-      <ol className="mt-2 flex flex-col gap-1.5">
+    <nav aria-label="On this page">
+      <p className="font-mono text-micro font-semibold tracking-widest text-ink-subtle uppercase">On this page</p>
+      <ol className="mt-3 flex flex-col gap-1">
         {headings.map((h) => (
           <li key={h.text}>
             <a
               href={`#${anchorId(h.text)}`}
-              className="block text-caption text-ink-muted transition-colors hover:text-ink"
+              className="block border-l border-line-strong py-1 pl-3 text-caption leading-snug text-ink-muted transition-colors hover:border-accent hover:text-accent-strong"
             >
               <InlineText text={h.text} />
             </a>

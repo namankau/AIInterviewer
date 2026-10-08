@@ -1,33 +1,36 @@
 # Handoff — 2026-10-08
 
 ## Task
-Reconcile outstanding feature/fix branches, remove merged branch pointers, and open a `develop` to `main` release pull request. User request; no task file.
+Revamp the signed-in course reader using applicable UI patterns from Hello Interview; user request, no task file.
 
 ## What I built
-- Audited local and remote `feat/*` and `fix/*` branches against `origin/develop`; no unmerged work was found.
-- Confirmed `fix/custom-report-backfill` and `fix/custom-round-lifecycle` were ancestors of `develop`, then deleted both local and remote branch pointers.
-- Opened release PR [#44](https://github.com/namankau/AIInterviewer/pull/44) from `develop` to `main`; `main` was not pushed or modified directly.
+- Reworked the chapter route into a dedicated three-column learning workspace with the course syllabus, focused lesson canvas, and contextual progress/practice rail in `apps/web/src/app/courses/[course]/[chapter]/page.tsx`.
+- Upgraded the course syllabus with grouped modules, current/completed states, course progress, a constrained scroll region, and a mobile disclosure in `apps/web/src/components/courses/course-toc.tsx`.
+- Added an always-present reader progress summary, refined the in-page navigation, and made the signed-in course header compact across breakpoints.
+- Added behavior/accessibility coverage for the syllabus and reader progress, and kept the client payload limited to navigation metadata.
 
 ## Assumptions I made
-- “Outstanding feature branches” includes both `feat/*` and `fix/*` work branches, while permanent `develop` and `main` branches remain.
-- The 13 commits unique to `main` are prior `develop` release-PR merge commits, not independent feature changes; Git's merge analysis reported no content conflict.
+- The request is primarily about the course-reading experience shown in the supplied reference, rather than copying its colour palette or adding unrelated social/comment features.
+- The most useful transferable patterns are persistent syllabus navigation, a focused reading column, visible progress, in-page anchors, and a nearby practice action; InterviewOS keeps its existing blue/navy identity and five-beat teaching model.
+- The existing signed-in-only access decision remains unchanged.
 
 ## What I could NOT verify
-- PR #44 has not been merged; advancing `main` remains the owner's reviewed action.
-- Production deployment and live interview behaviour were not exercised.
+- GitHub CI could not be started because the configured `gh` token for `namankau` is invalid and `git push` could not authenticate.
+- Progress-backed states were visually reviewed only in their loading/signed-out local preview state; a real signed-in account was not used.
+- Final visual approval remains the owner's decision.
 
 ## Verification status
-- Deleted branch heads were verified as ancestors of `origin/develop` before deletion.
-- GitHub's branch API showed only `develop` and `main` after cleanup.
-- Latest pre-handoff `develop` CI: pass at `ffead60` ([run 37782544959](https://github.com/namankau/AIInterviewer/actions/runs/37782544959)); web, API, and Docker image jobs are green.
-- Documentation-only handoff branch CI: pass at `a8ec2c9` ([run 37811874628](https://github.com/namankau/AIInterviewer/actions/runs/37811874628)); web, API, and Docker image jobs are green.
+- Frontend typecheck: pass.
+- Frontend lint: pass.
+- Frontend tests: pass, 66 files / 2,980 tests; final focused course suite also passes, 19 tests.
+- Frontend production build: pass, including 178 static pages.
+- Local visual QA: desktop and compact viewport renders reviewed; temporary preview route removed afterward.
 
 ## Merge status
-- Merged `fix/release-pr-handoff` into `develop` in the merge commit containing this handoff after exact-head CI passed, then deleted the branch.
-- Release PR [#44](https://github.com/namankau/AIInterviewer/pull/44) is open from `develop` to `main` for owner review.
+- Local branch `feat/course-learning-workspace` committed at `dfbcebd` but not pushed because GitHub authentication is invalid. CI is unknown, so it was not merged into `develop`.
 
 ## Suggested next task
-- Review and merge PR #44 when ready to advance the release branch.
+- Re-authenticate GitHub, push `feat/course-learning-workspace`, wait for all CI jobs to pass, then merge it into `develop`.
 
 ## Open questions for you
-- None.
+- Please restore GitHub authentication for account `namankau` so the branch can be pushed and pass the required CI gate.

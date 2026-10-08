@@ -25,14 +25,21 @@ export function CourseSiteHeader() {
           </span>
           <span>AceMyInterview</span>
         </Link>
-        <nav aria-label="Main" className="order-3 w-full md:order-none md:w-auto">
-          <SiteNavLinks />
+        <nav aria-label="Main" className="order-3 flex min-w-0 w-full items-center gap-2 md:order-none md:w-auto">
+          <div className="min-w-0 flex-1 overflow-x-auto md:overflow-visible">
+            <SiteNavLinks />
+          </div>
+          <div className="shrink-0 md:hidden">
+            <SignOutButton />
+          </div>
         </nav>
         <div className="flex items-center gap-2">
           <ActionLink href="/interview/new" size="sm">
             New interview
           </ActionLink>
-          <SignOutButton />
+          <div className="hidden md:block">
+            <SignOutButton />
+          </div>
         </div>
       </div>
     </header>

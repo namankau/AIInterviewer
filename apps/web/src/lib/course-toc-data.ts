@@ -17,12 +17,14 @@ export interface CourseTocModule {
  */
 export interface CourseTocData {
   slug: string;
+  title: string;
   modules: CourseTocModule[];
 }
 
 export function toCourseTocData(course: Course): CourseTocData {
   return {
     slug: course.slug,
+    title: course.title,
     modules: course.modules.map((module) => ({
       title: module.title,
       chapters: module.chapters.map((chapter) => ({

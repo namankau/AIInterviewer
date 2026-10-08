@@ -31,7 +31,10 @@ vi.mock("@/components/courses/guided-lesson", () => ({
 vi.mock("@/components/courses/code-language-context", () => ({
   CodeLanguageProvider: ({ children }: { children: ReactNode }) => children,
 }));
-vi.mock("@/components/courses/course-progress", () => ({ MarkCompleteButton: () => null }));
+vi.mock("@/components/courses/course-progress", () => ({
+  CourseRailProgress: () => null,
+  MarkCompleteButton: () => null,
+}));
 vi.mock("@/components/courses/course-site-header", () => ({
   CourseSiteHeader: () => null,
   CourseSiteFooter: () => null,

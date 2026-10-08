@@ -20,6 +20,17 @@ repositories {
     mavenCentral()
 }
 
+// Ktlint embeds the Kotlin compiler version it was built against. Keep the
+// formatter's isolated configurations off the application's Kotlin version.
+configurations.matching { it.name.startsWith("ktlint") }.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jetbrains.kotlin") {
+            useVersion("2.2.21")
+            because("ktlint 1.8.0 embeds Kotlin 2.2.21")
+        }
+    }
+}
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")

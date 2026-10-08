@@ -1,4 +1,4 @@
-# Handoff — 2026-10-07
+# Handoff — 2026-10-08
 
 ## Task
 Finish the remaining UI integration, reconcile feature branches, merge only CI-green work into `develop`, clean safely merged branches, and open a fresh `develop` → `main` release PR. No task file.
@@ -31,11 +31,14 @@ Finish the remaining UI integration, reconcile feature branches, merge only CI-g
 - API `ktlintCheck test build`: pass (`BUILD SUCCESSFUL`, 16 tasks).
 - Remote CI: pass for `fix/finish-ui-integration` ([run 37644222912](https://github.com/namankau/AIInterviewer/actions/runs/37644222912)).
 - Post-merge `develop` CI: pass on `7eefc5b` ([run 37644734629](https://github.com/namankau/AIInterviewer/actions/runs/37644734629)); web, API, and image jobs are green.
+- Final handoff CI: pass on `d523826` ([run 37645572873](https://github.com/namankau/AIInterviewer/actions/runs/37645572873)); the matching release-PR checks also passed.
+- After the release, the owner's combined Dependabot merges passed `develop` CI on `66afe7d` ([run 37649680375](https://github.com/namankau/AIInterviewer/actions/runs/37649680375)).
 
 ## Merge status
 - PR #37 and PR #39 are merged into `develop`; linked Supabase migrations match through `20261008000000`.
 - The final prototype integration is merged into `develop` at `7eefc5b`; its branch and every other proven-merged work branch were deleted locally and remotely without force.
-- Release PR #41 is open from `develop` to `main`: https://github.com/namankau/AIInterviewer/pull/41. It was not merged; advancing `main` remains the owner's decision.
+- The owner (`namankau`) merged release PR #41 from `develop` to `main` at 21:37 IST on 7 October: https://github.com/namankau/AIInterviewer/pull/41. The release merge is `b80ca6a`; this agent did not merge or push `main`.
+- After the release, the owner merged Dependabot PR #40 and PR #35 into `develop`, advancing it to `66afe7d`. Those dependency changes are not in release commit `b80ca6a`.
 
 ## Suggested next task
 - Review the proof-of-progress information architecture and decide whether to authorize a production publishing design.

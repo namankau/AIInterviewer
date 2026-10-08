@@ -1,33 +1,39 @@
 # Handoff — 2026-10-08
 
 ## Task
-Reconcile outstanding feature/fix branches, remove merged branch pointers, and open a `develop` to `main` release pull request. User request; no task file.
+Revamp the signed-in course reader using applicable UI patterns from Hello Interview, merge the verified work into `develop`, and open a `develop` to `main` release PR. User request; no task file.
 
 ## What I built
-- Audited local and remote `feat/*` and `fix/*` branches against `origin/develop`; no unmerged work was found.
-- Confirmed `fix/custom-report-backfill` and `fix/custom-round-lifecycle` were ancestors of `develop`, then deleted both local and remote branch pointers.
-- Opened release PR [#44](https://github.com/namankau/AIInterviewer/pull/44) from `develop` to `main`; `main` was not pushed or modified directly.
+- Reworked the chapter route into a dedicated three-column learning workspace with the course syllabus, focused lesson canvas, and contextual progress/practice rail in `apps/web/src/app/courses/[course]/[chapter]/page.tsx`.
+- Upgraded the syllabus with grouped modules, current/completed states, course progress, a constrained scroll region, and a mobile disclosure in `apps/web/src/components/courses/course-toc.tsx`.
+- Added an always-present reader progress summary, refined in-page navigation, and made the signed-in course header compact across breakpoints.
+- Added behavior/accessibility coverage for the syllabus and reader progress while keeping full course bodies out of the client navigation payload.
+- Published the feature through GitHub's connected repository API after the local CLI credential proved invalid; every uploaded blob was checked against Git's local content hash before the branch moved.
 
 ## Assumptions I made
-- “Outstanding feature branches” includes both `feat/*` and `fix/*` work branches, while permanent `develop` and `main` branches remain.
-- The 13 commits unique to `main` are prior `develop` release-PR merge commits, not independent feature changes; Git's merge analysis reported no content conflict.
+- The supplied Hello Interview page is a structural reference rather than a visual clone; AceMyInterview keeps its blue/navy identity and existing five-beat teaching model.
+- The useful transferable patterns are persistent syllabus navigation, a focused reading column, visible progress, in-page anchors, and a nearby practice action.
+- The existing signed-in-only course access decision remains unchanged.
 
 ## What I could NOT verify
-- PR #44 has not been merged; advancing `main` remains the owner's reviewed action.
-- Production deployment and live interview behaviour were not exercised.
+- Final visual approval remains the owner's decision.
+- Progress-backed states were not exercised with a real signed-in production account.
+- No live interview or Gemini call was run because repository policy requires owner approval for live AI spend.
 
 ## Verification status
-- Deleted branch heads were verified as ancestors of `origin/develop` before deletion.
-- GitHub's branch API showed only `develop` and `main` after cleanup.
-- Latest pre-handoff `develop` CI: pass at `ffead60` ([run 37782544959](https://github.com/namankau/AIInterviewer/actions/runs/37782544959)); web, API, and Docker image jobs are green.
-- Documentation-only handoff branch CI: pass at `a8ec2c9` ([run 37811874628](https://github.com/namankau/AIInterviewer/actions/runs/37811874628)); web, API, and Docker image jobs are green.
+- Local frontend typecheck and lint: pass.
+- Local frontend tests: pass, 66 files / 2,980 tests; final focused course suite also passes, 19 tests.
+- Local frontend production build: pass, including 178 static pages.
+- Exact feature-head CI: pass at `c00b475` ([run 37817329718](https://github.com/namankau/AIInterviewer/actions/runs/37817329718)); web, API, and Docker image jobs are green.
+- Post-merge `develop` CI: pass on the same commit ([run 37817844167](https://github.com/namankau/AIInterviewer/actions/runs/37817844167)); web, API, and Docker image jobs are green.
 
 ## Merge status
-- Merged `fix/release-pr-handoff` into `develop` in the merge commit containing this handoff after exact-head CI passed, then deleted the branch.
-- Release PR [#44](https://github.com/namankau/AIInterviewer/pull/44) is open from `develop` to `main` for owner review.
+- `feat/course-learning-workspace` was fast-forwarded into `develop` at `c00b475` after exact-head CI passed.
+- Release PR [#45](https://github.com/namankau/AIInterviewer/pull/45) is open from `develop` to `main`; `main` was not pushed or modified directly.
+- This final documentation handoff is being CI-gated on `docs/course-learning-release-handoff` before it is fast-forwarded into `develop`.
 
 ## Suggested next task
-- Review and merge PR #44 when ready to advance the release branch.
+- Review and merge PR #45 when ready to advance the release branch.
 
 ## Open questions for you
 - None.

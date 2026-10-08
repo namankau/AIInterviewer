@@ -18,6 +18,7 @@ vi.mock("@/lib/use-access-token", () => ({ useAccessToken }));
 import {
   ChapterDoneMark,
   CourseHeroProgress,
+  CourseRailProgress,
   MarkCompleteButton,
   ModuleProgress,
 } from "@/components/courses/course-progress";
@@ -254,5 +255,18 @@ describe("CourseHeroProgress", () => {
     render(<CourseHeroProgress courseSlug="java" chapters={chapters} />);
 
     await waitFor(() => expect(fetchCourseProgress).not.toHaveBeenCalled());
+  });
+});
+
+describe("CourseRailProgress", () => {
+  it("keeps the chapter workspace honest about progress and the next lesson", async () => {
+    fetchCourseProgress.mockResolvedValue({ completed: { java: ["one"] } });
+    render(<CourseRailProgress courseSlug="java" chapters={chapters} />);
+
+    expect(await screen.findByRole("progressbar", { name: "Course progress" })).toHaveAttribute(
+      "aria-valuenow",
+      "1",
+    );
+    expect(screen.getByText(/up next:/i)).toHaveTextContent("Second steps");
   });
 });

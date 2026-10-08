@@ -30,6 +30,7 @@ describe("toCourseTocData", () => {
 
     expect(data).toEqual({
       slug: "example",
+      title: "Example",
       modules: [
         {
           title: "Module one",

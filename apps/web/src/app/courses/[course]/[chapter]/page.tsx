@@ -2,10 +2,12 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
 import { CodeLanguageProvider } from "@/components/courses/code-language-context";
+import { CourseRailProgress } from "@/components/courses/course-progress";
+import { CourseSiteFooter, CourseSiteHeader } from "@/components/courses/course-site-header";
 import { GuidedLesson } from "@/components/courses/guided-lesson";
 import { CourseToc } from "@/components/courses/course-toc";
+import { OnThisPage } from "@/components/courses/on-this-page";
 import {
   courses,
   flattenChapters,
@@ -39,6 +41,24 @@ export async function generateMetadata({
   };
 }
 
+function InterviewPracticeIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+      <path d="M8 10.5a4 4 0 1 1 8 0v2a4 4 0 1 1-8 0v-2Z" />
+      <path d="M5.5 12.5a6.5 6.5 0 0 0 13 0M12 19v3M9 22h6" />
+    </svg>
+  );
+}
+
+function ArenaPracticeIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+      <path d="m12 3 7 4v5c0 4.5-2.9 7.4-7 9-4.1-1.6-7-4.5-7-9V7l7-4Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
 /**
  * The chapter reader: course navigation on the left, a guided five-beat lesson in the
  * main track, and previous/next chapter navigation at the bottom (task 059).
@@ -66,86 +86,99 @@ export default async function ChapterPage({
   const courseToc = toCourseTocData(course);
   const interviewTopic = `${plainText(course.title)}: ${plainText(chapter.title)}`;
   const topicInterviewHref = `/interview/new?topic=${encodeURIComponent(interviewTopic)}` as Route;
+  const chapterRefs = flattenChapters(course).map((item) => ({ slug: item.slug, title: item.title }));
   // Shiki runs here, at build time (this page is statically generated via
   // generateStaticParams), so the highlighted HTML ships with the page and zero
   // highlighting JS reaches the browser (task 049).
   const highlightedCode = await highlightChapterBlocks(chapter.blocks, course.codeLanguage ?? "java");
 
   return (
-    <AppShell
-      wide
-      breadcrumb={chapter.slug}
-      parent={{ label: course.title.toLowerCase(), href: `/courses/${course.slug}` as Route }}
-    >
-      <div className="grid gap-10 xl:grid-cols-[240px_minmax(0,1fr)] xl:gap-12">
-        <CourseToc course={courseToc} currentSlug={chapter.slug} />
+    <div className="min-h-dvh bg-[linear-gradient(180deg,var(--surface-tint)_0,transparent_22rem)]">
+      <CourseSiteHeader />
+      <main className="mx-auto w-full max-w-[108rem] px-5 py-6 sm:px-7 lg:px-8 lg:py-8">
+        <div className="mb-5 flex flex-wrap items-center gap-2 font-mono text-micro tracking-widest text-ink-subtle uppercase">
+          <Link href="/courses" className="transition-colors hover:text-accent">Courses</Link>
+          <span aria-hidden="true">/</span>
+          <Link href={`/courses/${course.slug}`} className="transition-colors hover:text-accent">{course.title}</Link>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page" className="text-ink-muted">{chapterModule?.title ?? "Chapter"}</span>
+        </div>
 
-        <article className="min-w-0">
-          <div className="max-w-[70ch]">
-            <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-              {chapterModule ? chapterModule.title : course.title} · {chapter.minutes} min
-            </p>
-            <h1 className="mt-3 text-display text-balance text-ink"><InlineText text={chapter.title} /></h1>
-            <p className="mt-3 text-body text-ink-muted">{chapter.summary}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link
-                href={topicInterviewHref}
-                className="inline-flex items-center rounded-full bg-accent px-3.5 py-1.5 text-caption font-medium text-accent-contrast transition-colors hover:bg-accent-strong"
-              >
-                Practise this topic in an interview
-              </Link>
-              {arenaCount > 0 ? (
-                <Link
-                  href={`/arena/${course.slug}?chapter=${chapter.slug}`}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-line-strong px-3.5 py-1.5 text-caption font-medium text-accent transition-colors hover:border-accent"
-                >
-                  Practise this chapter in the Arena
-                  <span className="text-ink-subtle">· {arenaCount}</span>
-                </Link>
-              ) : null}
+        <div className="grid items-start gap-7 lg:grid-cols-[17rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)_15rem] xl:gap-8">
+          <CourseToc course={courseToc} currentSlug={chapter.slug} />
+
+          <article className="min-w-0">
+            <header className="relative overflow-hidden rounded-3xl border border-line bg-surface-raised px-6 py-7 shadow-[var(--shadow-sm)] sm:px-8 sm:py-9">
+              <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-accent via-accent to-positive" />
+              <div className="relative max-w-[72ch]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="pill pill-accent">{chapterModule?.title ?? course.title}</span>
+                  <span className="pill bg-surface-sunken text-ink-muted">{chapter.minutes} min lesson</span>
+                </div>
+                <h1 className="mt-5 text-display text-balance text-ink"><InlineText text={chapter.title} /></h1>
+                <p className="mt-4 max-w-[65ch] text-body leading-relaxed text-ink-muted">{chapter.summary}</p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link href={topicInterviewHref} className="action-primary">
+                    <InterviewPracticeIcon />
+                    Practise in an interview
+                  </Link>
+                  {arenaCount > 0 ? (
+                    <Link href={`/arena/${course.slug}?chapter=${chapter.slug}`} className="action-secondary">
+                      <ArenaPracticeIcon />
+                      Open Arena <span className="text-ink-subtle">· {arenaCount}</span>
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            </header>
+
+            <div className="mt-7">
+              <CodeLanguageProvider>
+                <GuidedLesson
+                  blocks={chapter.blocks}
+                  chapterSlug={chapter.slug}
+                  courseSlug={course.slug}
+                  highlightedCode={highlightedCode}
+                />
+              </CodeLanguageProvider>
             </div>
-          </div>
 
-          <div className="mt-10">
-            <CodeLanguageProvider>
-              <GuidedLesson
-                blocks={chapter.blocks}
-                chapterSlug={chapter.slug}
-                courseSlug={course.slug}
-                highlightedCode={highlightedCode}
-              />
-            </CodeLanguageProvider>
-          </div>
+            <nav aria-label="Chapter navigation" className="mt-8 grid gap-3 border-t border-line pt-8 sm:grid-cols-2">
+              {prev ? (
+                <Link href={`/courses/${course.slug}/${prev.slug}`} className="group flex min-h-24 flex-col justify-center rounded-2xl border border-line bg-surface-raised px-5 py-4 text-caption shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-accent/35 hover:shadow-[var(--shadow-md)]">
+                  <span className="font-mono text-micro text-ink-subtle uppercase">← Previous chapter</span>
+                  <span className="mt-1 font-semibold text-ink group-hover:text-accent"><InlineText text={prev.title} /></span>
+                </Link>
+              ) : <span />}
+              {next ? (
+                <Link href={`/courses/${course.slug}/${next.slug}`} className="group flex min-h-24 flex-col justify-center rounded-2xl border border-accent bg-accent px-5 py-4 text-caption text-accent-contrast shadow-[var(--shadow-md)] transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-accent-strong hover:shadow-[var(--shadow-lg)] sm:text-right">
+                  <span className="font-mono text-micro text-accent-contrast/75 uppercase">Next chapter →</span>
+                  <span className="mt-1 font-semibold"><InlineText text={next.title} /></span>
+                </Link>
+              ) : <span />}
+            </nav>
+          </article>
 
-          <nav aria-label="Chapter navigation" className="mt-8 flex flex-col gap-3 border-t border-line pt-8 sm:flex-row sm:justify-between">
-            {prev ? (
-              <Link
-                href={`/courses/${course.slug}/${prev.slug}`}
-                className="flex flex-col rounded-md border border-line px-4 py-3 text-caption transition-colors hover:border-line-strong sm:max-w-[48%]"
-              >
-                <span className="font-mono text-micro text-ink-subtle uppercase">Previous</span>
-                <span className="text-ink"><InlineText text={prev.title} /></span>
-              </Link>
-            ) : (
-              <span />
-            )}
-            {next ? (
-              <Link
-                href={`/courses/${course.slug}/${next.slug}`}
-                className="group flex flex-col rounded-xl border border-accent bg-accent px-5 py-3.5 text-left text-caption text-accent-contrast shadow-[var(--shadow-sm)] transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-accent-strong hover:shadow-[var(--shadow-md)] sm:ml-auto sm:max-w-[52%] sm:text-right"
-              >
-                <span className="font-mono text-micro text-accent-contrast/75 uppercase">Next chapter</span>
-                <span className="mt-0.5 flex items-center gap-2 font-semibold sm:justify-end">
-                  <InlineText text={next.title} />
-                  <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">→</span>
-                </span>
-              </Link>
-            ) : (
-              <span />
-            )}
-          </nav>
-        </article>
-      </div>
-    </AppShell>
+          <aside aria-label="Lesson tools" className="hidden space-y-5 xl:sticky xl:top-24 xl:block xl:self-start">
+            <section className="rounded-2xl border border-accent/25 bg-[linear-gradient(145deg,var(--accent-wash),var(--surface-raised))] p-5 shadow-[var(--shadow-sm)]">
+              <p className="font-mono text-micro font-semibold tracking-widest text-accent uppercase">Learning progress</p>
+              <div className="mt-3"><CourseRailProgress courseSlug={course.slug} chapters={chapterRefs} /></div>
+            </section>
+            {arenaCount > 0 ? (
+              <section className="rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]">
+                <span className="grid size-9 place-items-center rounded-xl bg-warning-wash text-warning"><ArenaPracticeIcon className="size-5" /></span>
+                <h2 className="mt-3 text-heading font-semibold text-ink">Make it stick</h2>
+                <p className="mt-1 text-caption leading-relaxed text-ink-muted">Solve {arenaCount} focused {arenaCount === 1 ? "challenge" : "challenges"} after the lesson.</p>
+                <Link href={`/arena/${course.slug}?chapter=${chapter.slug}`} className="mt-4 inline-flex text-caption font-semibold text-accent hover:underline">Start practice →</Link>
+              </section>
+            ) : null}
+            <section className="rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]">
+              <OnThisPage blocks={chapter.blocks} />
+            </section>
+          </aside>
+        </div>
+      </main>
+      <CourseSiteFooter />
+    </div>
   );
 }

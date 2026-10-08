@@ -84,6 +84,30 @@ export function CourseCardProgress({ courseSlug, chapters }: { courseSlug: strin
   return <ProgressBar done={summary.done} total={summary.total} label="Course progress" />;
 }
 
+/** Compact, always-present progress summary for the chapter reader's context rail. */
+export function CourseRailProgress({ courseSlug, chapters }: { courseSlug: string; chapters: ChapterRef[] }) {
+  const { completed, ready } = useCourseProgress(courseSlug);
+  if (!ready) {
+    return <p className="text-caption text-ink-muted">Loading your course progress…</p>;
+  }
+
+  const summary = summarizeChapters(chapters, completed);
+  return (
+    <div className="flex flex-col gap-3">
+      <ProgressBar done={summary.done} total={summary.total} label="Course progress" />
+      {summary.finished ? (
+        <p className="text-caption font-medium text-positive">Course complete. Revisit any chapter whenever you like.</p>
+      ) : summary.next ? (
+        <p className="text-caption leading-relaxed text-ink-muted">
+          Up next: <span className="font-semibold text-ink"><InlineText text={summary.next.title} /></span>
+        </p>
+      ) : (
+        <p className="text-caption text-ink-muted">Start with this chapter and build from here.</p>
+      )}
+    </div>
+  );
+}
+
 /** "2 of 5 done" for a module heading. Empty until something in it is complete. */
 export function ModuleProgress({ courseSlug, chapterSlugs }: { courseSlug: string; chapterSlugs: string[] }) {
   const { completed, ready } = useCourseProgress(courseSlug);

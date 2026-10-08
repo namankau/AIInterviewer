@@ -1,47 +1,42 @@
 # Handoff — 2026-10-08
 
 ## Task
-Finish the remaining UI integration, reconcile feature branches, merge only CI-green work into `develop`, clean safely merged branches, and open a fresh `develop` → `main` release PR. No task file.
+Review the remaining Dependabot branches, merge safe dependency updates into `develop`, repair any CI failure, and delete all merged branches. No task file.
 
 ## What I built
-- Merged the two human-gated, CI-green branches through their existing PRs:
-  - account deletion, including the already-applied `20261007000000_account_deletion_outbox.sql` migration (PR #37);
-  - privacy, terms, and contact pages (PR #39).
-- Integrated the proof-of-progress review artifact on `fix/finish-ui-integration`:
-  - `apps/web/src/components/proof-of-progress/progress-page-prototype.tsx` renders an accessible synthetic preview with completion facts and explicit privacy boundaries;
-  - `apps/web/src/components/proof-of-progress/progress-page-prototype.test.tsx` verifies truthful completion language, first-party links, dates, and excluded private evidence;
-  - `docs/proof-of-progress-information-architecture.md` records the allow-list, owner states, provenance language, and decisions required before implementation.
-- Regenerated local Next.js route types before verification so the newly merged `/privacy` and `/terms` routes were included in typed-link checking. Generated `.next` files remain ignored and were not committed.
+- Merged five Dependabot updates into `develop` after exact-head CI passed:
+  - `@testing-library/jest-dom` 6.9.1 → 7.0.1 (PR #34);
+  - `jsdom` 27.4.0 → 30.1.2 (PR #32);
+  - `vitest` 4.1.11 → 5.0.3 (PR #31);
+  - `@vitejs/plugin-react` 5.2.0 → 6.1.1 (PR #33);
+  - Kotlin 2.3.21 → 2.4.20 and Gradle 9.7.1 → 9.8.0 (PR #36).
+- Fixed the Kotlin upgrade's ktlint failure in `apps/api/build.gradle.kts` by keeping ktlint's isolated configurations on the Kotlin compiler version embedded by ktlint 1.8.0 (`2.2.21`), while application compilation remains on Kotlin 2.4.20.
+- Normalized `apps/api/gradlew.bat` according to the existing `.gitattributes` rule so a fresh Windows checkout no longer appears dirty after the Gradle wrapper update (PR #42).
 
 ## Assumptions I made
-- The proof-of-progress work remains a review artifact only. It uses synthetic data and is intentionally not wired to a route, user record, publishing control, or public URL until the human-reviewed privacy and threat decisions in the information architecture are settled.
-- “Merge all feature branches” means preserve every coherent branch that contains unique work, while deleting branches only after Git proves their commits are safely merged. It does not override the repository’s human-review or CI gates.
-- The release step means opening a `develop` → `main` PR. `main` remains owner-controlled and was not pushed or merged directly.
+- The instruction to merge the Dependabot branches covered all five open dependency PRs, subject to the repository's exact-head CI gate.
+- The ktlint repair is intentionally scoped to configurations whose names start with `ktlint`; no application dependency or compiler version was downgraded.
+- The wrapper cleanup is line-ending-only. Its filtered worktree blob matched the merged remote blob exactly, and the semantic diff was empty with `--ignore-space-at-eol`.
 
 ## What I could NOT verify
-- Final visual approval of the proof-of-progress prototype; the project rules reserve final visual direction for the owner.
-- Public-link security, publishing/revocation UX, retention, and deletion propagation because the prototype deliberately has no production route or persistence.
-- No live interview or live Gemini call was run, per the no-live-spend rule.
+- No live interview or live Gemini call was run, per the no-live-spend rule; these dependency updates do not require one.
+- No migration was added or changed, so no database push was required.
 
 ## Verification status
-- Web typecheck: pass after `next typegen` refreshed ignored route metadata.
-- Web lint: pass.
-- Web tests: pass, 65 files / 2,974 tests.
-- Web production build: pass, including 178 generated static pages.
-- API `ktlintCheck test build`: pass (`BUILD SUCCESSFUL`, 16 tasks).
-- Remote CI: pass for `fix/finish-ui-integration` ([run 37644222912](https://github.com/namankau/AIInterviewer/actions/runs/37644222912)).
-- Post-merge `develop` CI: pass on `7eefc5b` ([run 37644734629](https://github.com/namankau/AIInterviewer/actions/runs/37644734629)); web, API, and image jobs are green.
-- Final handoff CI: pass on `d523826` ([run 37645572873](https://github.com/namankau/AIInterviewer/actions/runs/37645572873)); the matching release-PR checks also passed.
-- After the release, the owner's combined Dependabot merges passed `develop` CI on `66afe7d` ([run 37649680375](https://github.com/namankau/AIInterviewer/actions/runs/37649680375)).
+- Every dependency PR passed exact-head GitHub Actions before merge: web typecheck/lint/tests/build, API ktlint/tests/build, and Docker image builds.
+- Kotlin/Gradle local backend verification: `gradlew.bat ktlintCheck test build --no-daemon` passed (16 tasks).
+- Kotlin/Gradle post-merge `develop` CI: pass on `a7cc16d` ([run 37730445380](https://github.com/namankau/AIInterviewer/actions/runs/37730445380)).
+- Final dependency/line-ending post-merge `develop` CI: pass on `4b7df49` ([run 37770868635](https://github.com/namankau/AIInterviewer/actions/runs/37770868635)); web, API, and image jobs are green.
+- Final audit: local and remote `develop` match, the worktree is clean, and there are no open PRs.
 
 ## Merge status
-- PR #37 and PR #39 are merged into `develop`; linked Supabase migrations match through `20261008000000`.
-- The final prototype integration is merged into `develop` at `7eefc5b`; its branch and every other proven-merged work branch were deleted locally and remotely without force.
-- The owner (`namankau`) merged release PR #41 from `develop` to `main` at 21:37 IST on 7 October: https://github.com/namankau/AIInterviewer/pull/41. The release merge is `b80ca6a`; this agent did not merge or push `main`.
-- After the release, the owner merged Dependabot PR #40 and PR #35 into `develop`, advancing it to `66afe7d`. Those dependency changes are not in release commit `b80ca6a`.
+- All five Dependabot PRs and cleanup PR #42 are merged into `develop`; the completed dependency state is at `4b7df49`.
+- All merged Dependabot, repair, and cleanup branches were deleted locally and remotely. Only `main` and `develop` remain.
+- `main` was not changed or pushed.
+- The owner's pre-existing stash `On develop: codex-course-prototype-handoff` remains untouched.
 
 ## Suggested next task
-- Review the proof-of-progress information architecture and decide whether to authorize a production publishing design.
+- Review Dependabot grouping if fewer simultaneous major-version update PRs are preferred; no dependency work is currently outstanding.
 
 ## Open questions for you
-- None blocking this integration run.
+- None.

@@ -4,6 +4,7 @@ import {
   MINIMUM_ANSWER_MS,
   SILENCE_TO_END_MS,
   SPEECH_LEVEL,
+  SPEECH_TO_START_MS,
   initialSilenceState,
   observe,
   shouldEnd,
@@ -33,6 +34,15 @@ describe("ending an answer on silence", () => {
     expect(shouldEnd(state, now, 0)).toBe(false);
   });
 
+  it("does not mistake one microphone noise spike for the candidate starting", () => {
+    let state = initialSilenceState;
+    state = observe(state, LOUD, 10_000);
+    state = observe(state, QUIET, 10_200);
+
+    expect(state.hasSpoken).toBe(false);
+    expect(shouldEnd(state, 20_000, 0)).toBe(false);
+  });
+
   it("ends once they have spoken and then stopped", () => {
     const { state, now } = run([...Array(10).fill(LOUD), ...Array(40).fill(QUIET)]);
 
@@ -50,6 +60,7 @@ describe("ending an answer on silence", () => {
   it("starts the silence over when they speak again", () => {
     let state = initialSilenceState;
     state = observe(state, LOUD, 0);
+    state = observe(state, LOUD, SPEECH_TO_START_MS);
     state = observe(state, QUIET, 1_000);
     expect(state.silentSince).toBe(1_000);
 

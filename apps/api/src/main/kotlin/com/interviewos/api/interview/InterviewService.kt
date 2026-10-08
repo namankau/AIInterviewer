@@ -259,7 +259,15 @@ class InterviewService(
                 code = "custom_duration_invalid",
             )
         }
-        val normalisedRequest = request.copy(focusTopic = focusTopic?.takeIf { roundType == RoundType.CUSTOM_TOPIC })
+        val normalisedRequest =
+            request.copy(
+                // A custom-topic round is intentionally not employer or job-title
+                // preparation. Normalise this server-side too: older clients and browser
+                // autofill must not quietly put an employer rubric back into it.
+                companyName = if (roundType == RoundType.CUSTOM_TOPIC) CUSTOM_TOPIC_COMPANY else request.companyName.trim(),
+                roleTitle = if (roundType == RoundType.CUSTOM_TOPIC) CUSTOM_TOPIC_ROLE else request.roleTitle.trim(),
+                focusTopic = focusTopic?.takeIf { roundType == RoundType.CUSTOM_TOPIC },
+            )
 
         // Optional, and rejected outright when it does not parse rather than silently
         // dropped — the same treatment an unrecognised round type gets above.
@@ -677,7 +685,17 @@ class InterviewService(
                     )
                 }
 
-            val nextAction = if (mustMoveOn) "move_on" else normaliseAction(assessment.value.suggestedNextAction)
+            val suggestedAction = normaliseAction(assessment.value.suggestedNextAction)
+            // The model advises how to continue; it does not own the clock. It sometimes
+            // returned `conclude` after one or two short answers, which completed the
+            // session and made a report out of almost no evidence. Only the engine's
+            // clock/turn ceiling or the candidate's explicit submit may end a round.
+            val nextAction =
+                if (mustMoveOn || (suggestedAction == "conclude" && !plan.mustConclude)) {
+                    "move_on"
+                } else {
+                    suggestedAction
+                }
             val intervention = Intervention.parse(assessment.value.intervention)
             // The upload has almost always finished under the assessment by now. Waiting for it
             // cannot fail the turn: storeOrWarn has already turned its own errors into nulls.
@@ -730,7 +748,7 @@ class InterviewService(
                     val answered = repository.countAnsweredTurns(sessionId, userId)
                     // The clock ends the round. `mustConclude` also covers the turn ceiling, which is
                     // there so a runaway session cannot run up an unbounded model bill.
-                    val shouldConclude = endRound || plan.mustConclude || nextAction == "conclude"
+                    val shouldConclude = endRound || plan.mustConclude
                     if (shouldConclude) {
                         if (!repository.markSessionStatus(sessionId, userId, "completed")) throw sessionStateChanged()
                         return@inTransaction persistAnswerResponse(
@@ -753,29 +771,14 @@ class InterviewService(
                     }
 
                     // Trimmed here rather than trusted to the prompt: three rounds of telling the
-                    // model not to open with "That's a great overview" did not stop it.
+                    // model not to open with "That's a great overview" did not stop it. A missing
+                    // question is a malformed continuation, not permission to manufacture a
+                    // two-answer report, so a conservative scope-bound question keeps it alive.
                     val modelText =
                         assessment.value.nextQuestionText
                             ?.let { QuestionText.withoutPreamble(it) }
                             ?.takeIf { it.isNotBlank() }
-                    if (modelText == null) {
-                        // The model had nothing left to ask. That is a conclusion too, and it gets the
-                        // same goodbye — the candidate cannot tell this apart from a planned ending,
-                        // and should not have to.
-                        if (!repository.markSessionStatus(sessionId, userId, "completed")) throw sessionStateChanged()
-                        return@inTransaction persistAnswerResponse(
-                            sessionId,
-                            userId,
-                            turnIndex,
-                            requestId,
-                            SubmitAnswerResponse(
-                                sessionComplete = true,
-                                turnsCompleted = answered,
-                                nextTurn = null,
-                                closingRemark = ClosingRemark.forRound(ranOutOfTime = false),
-                            ),
-                        )
-                    }
+                            ?: continuationQuestion(roundType, session.focusTopic, answered)
 
                     // Whether this turn asks the planned question is the engine's call, checked against
                     // its stored wording; a drifted question is replaced after its lead-in.
@@ -1497,6 +1500,32 @@ class InterviewService(
     /** The model's suggestion is advisory; the engine owns what actually happens next. */
     private fun normaliseAction(suggested: String): String = suggested.lowercase().trim().takeIf { it in ALLOWED_ACTIONS } ?: "move_on"
 
+    /**
+     * Last-resort continuation when an assessment violates its contract and supplies no
+     * next question before the engine says the round is over. These questions make no
+     * employer claim and stay inside the selected scope; they are deliberately plain
+     * because they should be rare, but a plain question is safer than ending the round.
+     */
+    private fun continuationQuestion(
+        roundType: RoundType,
+        focusTopic: String?,
+        answeredTurns: Int,
+    ): String {
+        if (roundType != RoundType.CUSTOM_TOPIC) {
+            return "Let's move to another part of this round. How would you approach it in practice?"
+        }
+
+        val topic = focusTopic?.takeIf { it.isNotBlank() } ?: "this topic"
+        val questions =
+            listOf(
+                "Let's stay with $topic. Walk me through another core concept and when you would use it.",
+                "Within $topic, what trade-off tends to matter most in practice, and why?",
+                "What common failure mode or misconception in $topic would you watch for?",
+                "Choose a concrete $topic example and explain how it behaves step by step.",
+            )
+        return questions[answeredTurns % questions.size]
+    }
+
     private fun extensionFor(contentType: String): String =
         when {
             contentType.contains("webm") -> "webm"
@@ -1513,6 +1542,8 @@ class InterviewService(
         const val MIN_ROUND_MINUTES = 10
         const val MAX_ROUND_MINUTES = 120
         const val DEFAULT_CUSTOM_ROUND_MINUTES = 20
+        const val CUSTOM_TOPIC_COMPANY = "General practice"
+        const val CUSTOM_TOPIC_ROLE = "Topic practice"
         const val REQUEST_LEASE_SECONDS = 10 * 60L
 
         /**

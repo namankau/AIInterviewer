@@ -247,7 +247,7 @@ export function DashboardView({
             <section aria-labelledby="readiness" className="flex flex-col gap-4">
               <SectionHead title="Where you stand" id="readiness" note="From finished rounds" />
               <ul className="flex flex-col gap-3">
-                {readiness.map((group) => (
+                {readiness.slice(0, DASHBOARD_READINESS_GROUPS).map((group) => (
                   <li
                     key={`${group.companyName}-${group.roleTitle}`}
                     className="flex flex-col gap-3 rounded-2xl border border-line bg-surface-raised px-5 py-5 shadow-[var(--shadow-sm)] transition-shadow hover:shadow-[var(--shadow-md)]"
@@ -282,6 +282,14 @@ export function DashboardView({
                   </li>
                 ))}
               </ul>
+              {readiness.length > DASHBOARD_READINESS_GROUPS ? (
+                <Link
+                  href="/history"
+                  className="self-start rounded-sm text-caption font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                >
+                  See all reports
+                </Link>
+              ) : null}
             </section>
           ) : null}
         </div>
@@ -292,6 +300,9 @@ export function DashboardView({
 
 /** How many rounds the dashboard lists before pointing at the full history. */
 const DASHBOARD_ROUNDS = 3;
+
+/** Keep the readiness column as a summary; the complete report list lives in history. */
+const DASHBOARD_READINESS_GROUPS = 3;
 
 /**
  * The past-rounds list. With a `limit`, only the newest rounds are shown (the API returns

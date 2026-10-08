@@ -155,7 +155,9 @@ describe("DeviceCheck", () => {
     const onEnter = vi.fn();
     render(<DeviceCheck session={session} capture={capture()} onEnter={onEnter} />);
 
-    await userEvent.click(screen.getByRole("button", { name: /enter the room/i }));
+    const enter = screen.getByRole("button", { name: /enter the room/i });
+    await waitFor(() => expect(enter).toBeEnabled());
+    await userEvent.click(enter);
 
     expect(onEnter).toHaveBeenCalled();
   });
@@ -264,11 +266,7 @@ describe("DeviceCheck", () => {
       expect(screen.getByText("1 of 4")).toBeInTheDocument();
     });
 
-    /**
-     * A candidate in a shared office may not want to talk to their laptop yet, and the
-     * sequence must not stall behind them. Hearing nothing is a note, never a failure.
-     */
-    it("gives up listening rather than stalling, and still lets them in", async () => {
+    it("keeps later checks and room entry waiting until it hears the candidate", async () => {
       vi.useFakeTimers();
       render(<DeviceCheck session={session} capture={capture({ level: 0 })} onEnter={vi.fn()} />);
 
@@ -276,8 +274,10 @@ describe("DeviceCheck", () => {
         await vi.advanceTimersByTimeAsync(20_000);
       });
 
-      expect(within(row("Your microphone")).getByText(/nothing yet/i)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /enter the room/i })).toBeEnabled();
+      expect(within(row("Your microphone")).getByText(/testing, one two/i)).toBeInTheDocument();
+      expect(within(row("The interviewer's voice")).getByText(/will say hello/i)).toBeInTheDocument();
+      expect(screen.getByText("1 of 4")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /enter the room/i })).toBeDisabled();
     });
   });
 

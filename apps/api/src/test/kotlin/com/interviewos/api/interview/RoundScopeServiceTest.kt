@@ -115,6 +115,58 @@ class RoundScopeServiceTest {
         assertEquals("move_on", recordedAnswer.arguments[7])
     }
 
+    @Test
+    fun `a model cannot end a custom round after two answers`() {
+        val harness = BankRoundHarness()
+        val now = Instant.now()
+        given(harness.repository.findSession(sessionId, candidate)).willReturn(
+            SessionRow(
+                id = sessionId,
+                companyName = "General practice",
+                archetype = Archetype.GLOBAL_PRODUCT.dbValue,
+                archetypeConfidence = Confidence.INFERRED.dbValue,
+                roleTitle = "Topic practice",
+                roundType = RoundType.CUSTOM_TOPIC.dbValue,
+                language = "english",
+                status = "in_progress",
+                startedAt = now.minusSeconds(60),
+                endedAt = null,
+                consentVideo = false,
+                durationMinutes = 20,
+                focusTopic = "Java collections",
+            ),
+        )
+        given(harness.repository.findTurn(sessionId, candidate, 1)).willReturn(
+            turn(1, "When would you choose an ArrayList over a LinkedList?"),
+        )
+        given(harness.repository.listTranscript(sessionId, candidate)).willReturn(
+            listOf(turn(0, "What is the Java Collections Framework?", "A set of collection interfaces and implementations.", "move_on")),
+        )
+        given(harness.repository.countAnsweredTurns(sessionId, candidate)).willReturn(1, 2)
+        harness.assessment =
+            AnswerAssessment(
+                transcript = "ArrayList gives fast indexed access.",
+                suggestedNextAction = "conclude",
+                nextQuestionText = null,
+            )
+
+        val response =
+            harness.service.submitAnswer(
+                userId = candidate,
+                sessionId = sessionId,
+                turnIndex = 1,
+                audio = AnswerAudio("answer".toByteArray(), "audio/webm"),
+                speaksLocally = true,
+            )
+
+        assertEquals(false, response.sessionComplete)
+        assertTrue(response.nextTurn?.questionText?.contains("Java collections") == true)
+        assertTrue(mockingDetails(harness.repository).invocations.none { it.method.name == "markSessionStatus" })
+        val recordedAnswer =
+            mockingDetails(harness.repository).invocations.single { it.method.name == "recordAnswer" }
+        assertEquals("move_on", recordedAnswer.arguments[7])
+    }
+
     private fun customStart(
         focusTopic: String?,
         durationMinutes: Int = 20,

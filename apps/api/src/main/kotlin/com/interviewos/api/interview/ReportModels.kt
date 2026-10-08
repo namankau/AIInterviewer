@@ -10,6 +10,8 @@ data class SessionReportView(
     val roleTitle: String,
     val roundType: String,
     val roundLabel: String,
+    /** The candidate-selected scope for a custom round; null for every catalogue round. */
+    val focusTopic: String? = null,
     val archetypeLabel: String,
     val answeredTurns: Int,
     val generatedAt: Instant,

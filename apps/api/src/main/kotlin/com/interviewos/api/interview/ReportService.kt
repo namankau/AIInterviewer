@@ -37,8 +37,13 @@ class ReportService(
         sessionId: UUID,
         leaseId: UUID = UUID.randomUUID(),
     ): SessionReportView {
-        repository.findReportJson(sessionId, userId)?.let {
-            return storedReport(it)
+        repository.findReportJson(sessionId, userId)?.let { payload ->
+            // Reports are immutable, but their public envelope can learn new context.
+            // Custom reports written before `focusTopic` entered the payload still have
+            // it on the owning session; enrich them here so refreshing an old report no
+            // longer brings the irrelevant employer/role header back.
+            val storedTopic = repository.findSession(sessionId, userId)?.focusTopic
+            return storedReport(payload, storedTopic)
         }
 
         val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
@@ -78,6 +83,7 @@ class ReportService(
 
         val archetype = Archetype.fromDbValue(session.archetype)
         val roundType = RoundType.fromDbValue(session.roundType)
+        val customTopic = session.focusTopic?.takeIf { roundType == RoundType.CUSTOM_TOPIC }
         // Measured before the model is asked anything, from the browser's timings and the
         // transcript, so the model writes against the real figures rather than its own
         // impression of the candidate's pace.
@@ -101,21 +107,41 @@ class ReportService(
             )
         val brief =
             InterviewBrief(
-                company = session.companyName,
-                archetype = archetype.label,
-                role = session.roleTitle,
-                roundType = "${roundType.label}. ${roundType.brief}",
+                company = if (customTopic != null) "Not employer-specific" else session.companyName,
+                archetype = if (customTopic != null) "general topic practice" else archetype.label,
+                role = if (customTopic != null) "Not role-specific" else session.roleTitle,
+                roundType =
+                    if (customTopic != null) {
+                        "${roundType.label}: $customTopic. ${roundType.brief}"
+                    } else {
+                        "${roundType.label}. ${roundType.brief}"
+                    },
                 // What the round was meant to get across. The report reads it to judge
                 // coverage — an interview that never left one topic is a fact about the
                 // round, and the candidate should not be marked down for ground the
                 // interviewer never took them to.
-                roundCovers = stage.covers(roundType).joinToString("\n") { "- $it" },
+                roundCovers =
+                    if (customTopic != null) {
+                        listOf(
+                            "the core concepts inside $customTopic",
+                            "how $customTopic behaves in a concrete example",
+                            "common failure modes and misconceptions in $customTopic",
+                            "trade-offs and boundaries within $customTopic",
+                        ).joinToString("\n") { "- $it" }
+                    } else {
+                        stage.covers(roundType).joinToString("\n") { "- $it" }
+                    },
                 language = session.language,
                 candidateFunction = null,
                 candidateLevel = stage.candidateDescription,
                 targetLevel = stage.targetDescription,
                 levelCalibration = stage.reportCalibration(),
-                grounding = archetype.roundEmphasis,
+                grounding =
+                    if (customTopic != null) {
+                        "This was topic practice for $customTopic, not an employer-specific interview."
+                    } else {
+                        archetype.roundEmphasis
+                    },
                 spokenEnglish = SpokenEnglish.promptContext(spoken),
             )
 
@@ -126,7 +152,7 @@ class ReportService(
         val claim = repository.claimReportGeneration(sessionId, userId, leaseId, REPORT_LEASE_SECONDS)
         when (claim.status) {
             ReportGenerationClaimStatus.COMPLETED -> {
-                return storedReport(checkNotNull(claim.payloadJson))
+                return storedReport(checkNotNull(claim.payloadJson), session.focusTopic)
             }
 
             ReportGenerationClaimStatus.IN_PROGRESS -> {
@@ -199,7 +225,7 @@ class ReportService(
             ) {
                 repository.findReportJson(sessionId, userId)?.let {
                     saved = true
-                    return storedReport(it)
+                    return storedReport(it, session.focusTopic)
                 }
                 throw ApiException.conflict(
                     "The interview changed while its report was being generated. Refresh to see its current state.",
@@ -233,10 +259,19 @@ class ReportService(
      * once, including the mobile apps that do not exist yet — and it keeps the shape of
      * the response a promise the API keeps rather than one each client has to re-check.
      */
-    private fun storedReport(payloadJson: String): SessionReportView {
+    private fun storedReport(
+        payloadJson: String,
+        sessionFocusTopic: String? = null,
+    ): SessionReportView {
         @Suppress("UNCHECKED_CAST")
         val stored = objectMapper.readValue(payloadJson, Map::class.java) as Map<String, Any?>
-        val complete = stored + EMPTY_SECTIONS.filterKeys { it !in stored }
+        val contextual =
+            if (stored["roundType"] == RoundType.CUSTOM_TOPIC.dbValue && !sessionFocusTopic.isNullOrBlank()) {
+                stored + ("focusTopic" to sessionFocusTopic)
+            } else {
+                stored
+            }
+        val complete = contextual + EMPTY_SECTIONS.filterKeys { it !in contextual }
         return objectMapper.readValue(objectMapper.writeValueAsString(complete), SessionReportView::class.java)
     }
 
@@ -315,6 +350,7 @@ class ReportService(
             roleTitle = session.roleTitle,
             roundType = roundType.dbValue,
             roundLabel = roundType.label,
+            focusTopic = session.focusTopic?.takeIf { roundType == RoundType.CUSTOM_TOPIC },
             archetypeLabel = archetype.label,
             answeredTurns = turns.size,
             generatedAt = java.time.Instant.now(),
@@ -422,6 +458,7 @@ class ReportService(
         archetype: Archetype,
         turns: List<TurnRow>,
     ): ReportQuestionSourcesView {
+        val customTopic = session.focusTopic?.takeIf { session.roundType == RoundType.CUSTOM_TOPIC.dbValue }
         val entries =
             turns.mapNotNull { turn ->
                 val provenance =
@@ -444,7 +481,12 @@ class ReportService(
                     tier = provenance.tier.dbValue,
                     // A pool question's own label replaces the tier's general sentence: it is
                     // the one thing the report says about where that question came from.
-                    tierDisclosure = provenance.label ?: provenance.tier.disclosure,
+                    tierDisclosure =
+                        if (customTopic != null && provenance.tier == ProvenanceTier.MODEL_KNOWLEDGE) {
+                            "Written for this $customTopic practice round from general technical knowledge."
+                        } else {
+                            provenance.label ?: provenance.tier.disclosure
+                        },
                     sources =
                         provenance.sources.map {
                             ReportProvenanceSourceView(
@@ -456,6 +498,16 @@ class ReportService(
                         },
                 )
             }
+
+        if (customTopic != null) {
+            return ReportQuestionSourcesView(
+                entries = entries,
+                employerRecognised = false,
+                archetypeLabel = "Topic practice",
+                headline = "These questions were composed specifically for your $customTopic practice round.",
+                disclosure = "This was not an employer-specific round, so no question is presented as one a company has asked.",
+            )
+        }
 
         val recognised = Confidence.entries.firstOrNull { it.dbValue == session.archetypeConfidence } == Confidence.RECOGNISED
         // Counted from the tiers recorded per turn, which the engine set when each question

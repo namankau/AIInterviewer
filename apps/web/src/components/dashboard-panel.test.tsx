@@ -1,4 +1,4 @@
-import type { SessionSummary } from "@acemyinterview/shared";
+import type { ReadinessGroup, SessionSummary } from "@acemyinterview/shared";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -189,6 +189,54 @@ describe("DashboardView history length", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
     expect(screen.getByRole("heading", { name: "All interviews" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /see all/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("DashboardView readiness length", () => {
+  const readiness = ["Infosys", "Adyen", "Deloitte", "Microsoft", "Google"].map(
+    (companyName, index): ReadinessGroup => ({
+      companyName,
+      roleTitle: `Role ${index + 1}`,
+      sessionsCompleted: 1,
+      firstAttemptAt: "2026-09-01T10:00:00Z",
+      latestAttemptAt: "2026-09-01T10:00:00Z",
+      firstAverageScore: 40,
+      latestAverageScore: 40,
+      recurringWeaknesses: [],
+    }),
+  );
+
+  it("shows three readiness summaries and points to the full report history", () => {
+    render(
+      <DashboardView
+        entitlement={null}
+        sessions={[]}
+        readiness={readiness}
+        loaded
+      />,
+    );
+
+    const section = screen.getByRole("region", { name: /where you stand/i });
+    expect(within(section).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(section).getByText("Infosys")).toBeInTheDocument();
+    expect(within(section).queryByText("Microsoft")).not.toBeInTheDocument();
+    expect(within(section).getByRole("link", { name: "See all reports" })).toHaveAttribute(
+      "href",
+      "/history",
+    );
+  });
+
+  it("does not show the all-reports link when all readiness summaries fit", () => {
+    render(
+      <DashboardView
+        entitlement={null}
+        sessions={[]}
+        readiness={readiness.slice(0, 3)}
+        loaded
+      />,
+    );
+
+    expect(screen.queryByRole("link", { name: "See all reports" })).not.toBeInTheDocument();
   });
 });
 

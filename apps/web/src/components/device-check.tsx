@@ -72,18 +72,17 @@ export function DeviceCheck({
 
   const firstName = useCandidateFirstName();
 
-  const ready = capture.state === "ready" || capture.state === "recording";
+  const accessReady = capture.state === "ready" || capture.state === "recording";
   const blocked = capture.state === "denied" || capture.state === "unsupported";
 
   /* ---- 1. The microphone, as the browser sees it. ------------------------------- */
 
-  const microphone: CheckStatus = ready ? "passed" : blocked ? "blocked" : "running";
+  const microphone: CheckStatus = accessReady ? "passed" : blocked ? "blocked" : "running";
   const microphoneSettled = microphone === "passed";
 
   /* ---- 2. The microphone, as the room will hear it. ----------------------------- */
 
   const [heard, setHeard] = useState(false);
-  const [gaveUpListening, setGaveUpListening] = useState(false);
 
   // The meter changes on every animation frame. Depending on it directly would rebuild the
   // sampler each frame and throw away the readings it has accumulated, so it is read
@@ -94,7 +93,7 @@ export function DeviceCheck({
   });
 
   useEffect(() => {
-    if (!microphoneSettled || heard || gaveUpListening) return;
+    if (!microphoneSettled || heard) return;
 
     // Sound is counted rather than latched. One frame over the threshold is a door closing
     // or a chair moving; a third of a second of it, which need not be continuous, is
@@ -107,24 +106,16 @@ export function DeviceCheck({
       if (ticksHeard >= HEARD_TICKS) setHeard(true);
     }, HEARD_TICK_MS);
 
-    // A candidate in a quiet office may simply not want to talk to their laptop yet, and
-    // the sequence must not stall behind them. Giving up is recorded as a note, never a
-    // failure: the meter is live in the room too.
-    const giveUp = setTimeout(() => setGaveUpListening(true), LISTEN_FOR_MS);
-
     return () => {
       clearInterval(meter);
-      clearTimeout(giveUp);
     };
-  }, [gaveUpListening, heard, microphoneSettled]);
+  }, [heard, microphoneSettled]);
 
   const hearing: CheckStatus = !microphoneSettled
     ? "waiting"
     : heard
       ? "passed"
-      : gaveUpListening
-        ? "noted"
-        : "running";
+      : "running";
   const hearingSettled = settled(hearing);
 
   /* ---- 3. The interviewer's voice, said out loud. ------------------------------- */
@@ -239,9 +230,7 @@ export function DeviceCheck({
           ? "The meter has to actually move before this one passes."
           : heard
             ? "Heard you. That is the level the interviewer will be working from."
-            : gaveUpListening
-              ? "Nothing yet — but the meter is live in the room as well, so this is not worth waiting on."
-              : "Say something. “Testing, one two” is plenty, and the meter should move.",
+            : "Say something. “Testing, one two” is plenty, and the meter should move.",
       status: hearing,
       aside: microphoneSettled ? <LevelMeter level={capture.level} /> : undefined,
     },
@@ -296,10 +285,12 @@ export function DeviceCheck({
     ? capture.error
       ? null
       : "The round is spoken, so it cannot start without a microphone."
-    : !ready
+    : !accessReady
       ? "Your browser is asking for the microphone. Answer that and this opens."
+      : !heard
+        ? "Say “testing, one two” so we know the microphone carries your voice. The remaining checks start after that."
       : !allSettled
-        ? "Still checking. You can go in whenever you like — the rest of this is information, not a gate."
+        ? "Your microphone works. Finishing the remaining checks now."
         : anythingNoted
           ? "You are set. A couple of things work differently on this browser — noted above, and none of them stop the round."
           : "Everything works. The interviewer speaks first; take your time when it does. Thinking before you answer is what a good candidate does.";
@@ -416,7 +407,7 @@ export function DeviceCheck({
           <button
             type="button"
             onClick={onEnter}
-            disabled={!ready || entering}
+            disabled={!accessReady || !heard || entering}
             className="self-start rounded-xl bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             {entering ? "Starting the interview…" : "Enter the room"}
@@ -470,9 +461,6 @@ const VOICE_LINE = "Hello — I'll be your interviewer today. Can you hear me?";
 /** Roughly a third of a second of sound, which need not be continuous. */
 const HEARD_TICKS = 3;
 const HEARD_TICK_MS = 100;
-
-/** How long the microphone check waits for a word before noting that it heard none. */
-const LISTEN_FOR_MS = 15_000;
 
 /**
  * How long a synthesiser gets to finish the line before it is treated as held back.

@@ -135,6 +135,29 @@ describe("ReportDocument — the evidence quote", () => {
   });
 });
 
+describe("ReportDocument custom-topic context", () => {
+  it("shows the chosen topic without presenting an employer, role, or employer rubric", () => {
+    render(
+      <ReportDocument
+        report={buildReport({
+          companyName: "Deloitte",
+          roleTitle: "Java developer",
+          roundType: "custom_topic",
+          roundLabel: "Custom topic",
+          focusTopic: "Java collections",
+          archetypeLabel: "Consulting or Big Four",
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Custom topic · Java collections")).toBeInTheDocument();
+    expect(screen.getByText(/5 answers · assessed within your chosen topic/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Deloitte/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Java developer/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/consulting or big four rubric/i)).not.toBeInTheDocument();
+  });
+});
+
 /**
  * Task 053 hard constraint: nothing on this page may describe how the candidate looked.
  * Nothing watches the candidate's camera, so a

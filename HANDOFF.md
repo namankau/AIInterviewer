@@ -10,6 +10,7 @@ Fix the dashboard report count, custom-round setup context, system-check orderin
 - Hardened answer-end detection in `apps/web/src/lib/silence.ts`: one analyser noise spike no longer counts as the candidate beginning an answer.
 - Removed the model's authority to complete a live round in `InterviewService.kt`; only the clock/turn ceiling or the candidate's explicit submit can finish it. A missing next question now gets a conservative scope-bound continuation instead of producing a two-answer report.
 - Passed the custom topic into report generation and removed employer/role/archetype labelling from custom report headers in `apps/api/src/main/kotlin/com/interviewos/api/interview/ReportService.kt` and `apps/web/src/components/report-view.tsx`.
+- Enriched custom reports stored before the new field existed from the session's saved `focus_topic`, so the already-generated report gets the topic-aware header without another AI call.
 - Added regression coverage for all of the above, including the exact premature `conclude` case and custom report calibration.
 
 ## Assumptions I made
@@ -27,12 +28,14 @@ Fix the dashboard report count, custom-round setup context, system-check orderin
 - Frontend lint: pass.
 - Frontend tests: pass, 65 files / 2,978 tests.
 - Frontend production build: pass, 178 static pages generated.
-- Backend `ktlintCheck test build`: pass, 692 tests in the full suite.
+- Backend `ktlintCheck test build`: pass, 693 tests in the full suite.
 - Focused regressions: frontend 70 tests passed; backend custom lifecycle/report/contract/idempotency tests passed.
+- Historical stored-report backfill regression, backend ktlint, and full backend build: pass.
 - Exact branch-head GitHub Actions: pass on `4fe7c8d` ([run 37780299315](https://github.com/namankau/AIInterviewer/actions/runs/37780299315)); web, API, and Docker image jobs are green.
 
 ## Merge status
 - Merged `fix/custom-round-lifecycle` into `develop` in the merge commit containing this handoff, after exact-head CI passed on `4fe7c8d`.
+- Follow-up branch `fix/custom-report-backfill` contains the historical stored-report repair; exact-head CI and merge are pending.
 - `main` was not changed and will not be pushed.
 
 ## Suggested next task

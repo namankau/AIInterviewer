@@ -37,8 +37,13 @@ class ReportService(
         sessionId: UUID,
         leaseId: UUID = UUID.randomUUID(),
     ): SessionReportView {
-        repository.findReportJson(sessionId, userId)?.let {
-            return storedReport(it)
+        repository.findReportJson(sessionId, userId)?.let { payload ->
+            // Reports are immutable, but their public envelope can learn new context.
+            // Custom reports written before `focusTopic` entered the payload still have
+            // it on the owning session; enrich them here so refreshing an old report no
+            // longer brings the irrelevant employer/role header back.
+            val storedTopic = repository.findSession(sessionId, userId)?.focusTopic
+            return storedReport(payload, storedTopic)
         }
 
         val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
@@ -147,7 +152,7 @@ class ReportService(
         val claim = repository.claimReportGeneration(sessionId, userId, leaseId, REPORT_LEASE_SECONDS)
         when (claim.status) {
             ReportGenerationClaimStatus.COMPLETED -> {
-                return storedReport(checkNotNull(claim.payloadJson))
+                return storedReport(checkNotNull(claim.payloadJson), session.focusTopic)
             }
 
             ReportGenerationClaimStatus.IN_PROGRESS -> {
@@ -220,7 +225,7 @@ class ReportService(
             ) {
                 repository.findReportJson(sessionId, userId)?.let {
                     saved = true
-                    return storedReport(it)
+                    return storedReport(it, session.focusTopic)
                 }
                 throw ApiException.conflict(
                     "The interview changed while its report was being generated. Refresh to see its current state.",
@@ -254,10 +259,19 @@ class ReportService(
      * once, including the mobile apps that do not exist yet — and it keeps the shape of
      * the response a promise the API keeps rather than one each client has to re-check.
      */
-    private fun storedReport(payloadJson: String): SessionReportView {
+    private fun storedReport(
+        payloadJson: String,
+        sessionFocusTopic: String? = null,
+    ): SessionReportView {
         @Suppress("UNCHECKED_CAST")
         val stored = objectMapper.readValue(payloadJson, Map::class.java) as Map<String, Any?>
-        val complete = stored + EMPTY_SECTIONS.filterKeys { it !in stored }
+        val contextual =
+            if (stored["roundType"] == RoundType.CUSTOM_TOPIC.dbValue && !sessionFocusTopic.isNullOrBlank()) {
+                stored + ("focusTopic" to sessionFocusTopic)
+            } else {
+                stored
+            }
+        val complete = contextual + EMPTY_SECTIONS.filterKeys { it !in contextual }
         return objectMapper.readValue(objectMapper.writeValueAsString(complete), SessionReportView::class.java)
     }
 

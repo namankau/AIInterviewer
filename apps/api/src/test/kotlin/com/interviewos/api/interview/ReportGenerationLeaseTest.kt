@@ -43,6 +43,43 @@ class ReportGenerationLeaseTest {
     }
 
     @Test
+    fun `an old stored custom report gains its topic from the session without calling AI`() {
+        val oldReport =
+            reportView("Stored custom report").copy(
+                companyName = "Deloitte",
+                roleTitle = "Java developer",
+                roundType = RoundType.CUSTOM_TOPIC.dbValue,
+                roundLabel = RoundType.CUSTOM_TOPIC.label,
+                focusTopic = null,
+            )
+        given(harness.repository.findReportJson(sessionId, candidate)).willReturn(
+            harness.mapper.writeValueAsString(oldReport),
+        )
+        given(harness.repository.findSession(sessionId, candidate)).willReturn(
+            SessionRow(
+                id = sessionId,
+                companyName = "Deloitte",
+                archetype = Archetype.CONSULTING_BIG_FOUR.dbValue,
+                archetypeConfidence = Confidence.RECOGNISED.dbValue,
+                roleTitle = "Java developer",
+                roundType = RoundType.CUSTOM_TOPIC.dbValue,
+                language = "english",
+                status = "completed",
+                startedAt = Instant.parse("2026-09-23T08:00:00Z"),
+                endedAt = Instant.parse("2026-09-23T08:20:00Z"),
+                consentVideo = false,
+                durationMinutes = 20,
+                focusTopic = "Java collections",
+            ),
+        )
+
+        val report = harness.reportService.report(candidate, sessionId, leaseId)
+
+        assertThat(report.focusTopic).isEqualTo("Java collections")
+        assertThat(aiCalls("composeReport")).isZero()
+    }
+
+    @Test
     fun `a concurrent report request does not call AI twice and AI runs outside a transaction`() {
         givenCompletedRound()
         given(harness.repository.findReportJson(sessionId, candidate)).willReturn(null)

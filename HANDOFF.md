@@ -1,113 +1,47 @@
-# Handoff — 2026-10-03 (loop brief, plan, stalls, spoken English, fresher option)
-
-## Start here (for the next agent, Codex or Claude)
-- Everything from this run is merged into `develop`. No branch is left open.
-- **Migrations:** `20261003000000_answer_timing.sql` was applied at merge. The remote
-  database matches local. Nothing is pending.
-- **Untracked on purpose:** `.codex/` and `AGENTS.md`, which exist only on the owner's
-  machine.
-- Start new work from `origin/develop`. The next task file is 066.
+# Handoff — 2026-10-08
 
 ## Task
-Owner requests on 3 Oct, with no task file:
-1. Never show the "we don't hold a sourced account" banner; fetch from the web or the AI
-   instead.
-2. The plan cards ignored what had been fetched about the employer.
-3. Interviews of 20 minutes or more pause partway through.
-4. A fresher / campus-placement option.
-5. A spoken-English section in the report.
+Finish the remaining UI integration, reconcile feature branches, merge only CI-green work into `develop`, clean safely merged branches, and open a fresh `develop` → `main` release PR. No task file.
 
 ## What I built
-1. **No unsourced-employer banner** (`fix/loop-brief-model-knowledge`, `9b0951a`), PRD §04.
-   - Source order for the brief: our sourced record → web search → the model's own
-     knowledge (`ModelEmployerKnowledge`, which reuses the pool's knowledge check) →
-     archetype pattern.
-   - Each section carries its own label instead of a banner.
-2. **Plan from the employer's own rounds** (`fix/plan-from-employer-knowledge`, `cf4362c`).
-   - The rounds the model names for an employer are mapped to round types by
-     `StageRoundMatcher`.
-   - The plan uses them in place of the archetype pattern and does not top them up with
-     generic rounds.
-   - Each card is labelled "as the AI knows it".
-3. **Mid-round stalls** (`fix/interview-mid-round-stalls`, `3786bb5`).
-   - Root cause: the hourly Supabase token refresh re-ran the room's load effect, which
-     sent a live round back to the device check with the mic shut. The room now loads
-     once per sign-in.
-   - The primary model gets a 20s in-room deadline before the chain falls back
-     (`InRoomDeadline`, `in-room-timeout`). Before, it could wait 3 minutes.
-   - The next question waits at most 2s for the previous answer's audio upload
-     (`attachAnswerAudio` links a late recording to its answer afterwards).
-   - With the server-rendered voice, the floor now passes to the candidate 4s after the
-     voice wait times out.
-4. **Spoken English in the report** (`feat/spoken-english-report`, `9e14bcd`, with a
-   migration).
-   - The browser measures speech timing from the mic level (`speech-timing.ts`). The
-     server checks it and computes the figures (`AnswerTiming.kt`, `SpokenEnglish.kt`):
-     - words per minute against a stated rough range of 120–160;
-     - pauses of 1s or more;
-     - time to first word;
-     - um/uh counts.
-   - Model observations must quote the transcript. Any that state numbers or mention
-     accent or pronunciation are dropped.
-   - In Hindi-English rounds, English is not assessed.
-   - UI: `spoken-english-panel.tsx`.
-5. **Fresher / campus option** (`feat/fresher-campus-loop`).
-   - A checkbox on the composer, "I am a fresher preparing for campus placement", sends
-     `level=student|recent_graduate` to the brief and plan, and prefills the setup form.
-   - A hand-written, archetype-level campus pattern (`CampusLoopPattern.kt`). It names no
-     employer.
-   - The plan drops system design, techno-managerial and client-scenario rounds for
-     freshers.
-   - `CampusRounds` covers gained SQL, shifts, higher studies and the spoken
-     introduction.
-   - Research: an open-source and official-page survey, kept in the run scratchpad and
-     not committed. Most official campus pages could not be read, so no employer-specific
-     campus detail was added.
+- Merged the two human-gated, CI-green branches through their existing PRs:
+  - account deletion, including the already-applied `20261007000000_account_deletion_outbox.sql` migration (PR #37);
+  - privacy, terms, and contact pages (PR #39).
+- Integrated the proof-of-progress review artifact on `fix/finish-ui-integration`:
+  - `apps/web/src/components/proof-of-progress/progress-page-prototype.tsx` renders an accessible synthetic preview with completion facts and explicit privacy boundaries;
+  - `apps/web/src/components/proof-of-progress/progress-page-prototype.test.tsx` verifies truthful completion language, first-party links, dates, and excluded private evidence;
+  - `docs/proof-of-progress-information-architecture.md` records the allow-list, owner states, provenance language, and decisions required before implementation.
+- Regenerated local Next.js route types before verification so the newly merged `/privacy` and `/terms` routes were included in typed-link checking. Generated `.next` files remain ignored and were not committed.
 
 ## Assumptions I made
-- "Never show this message" means the banner. Provenance stays as per-section labels
-  (CLAUDE.md requires a tier on every piece of employer knowledge).
-- Stall fixes: the 20s deadline applies only to the first provider; the 2s upload wait is
-  a judgement call.
-- Spoken English: a pause is silence of 1s or more between sounds; pace is measured from
-  the first word to the last.
-  - Pace and pauses are not measured in rounds with a code or drawing workspace.
-  - Pronunciation and accent are never assessed.
-- The fresher option is opt-in only, from the stated level. It does not change anyone who
-  leaves it unchecked.
+- The proof-of-progress work remains a review artifact only. It uses synthetic data and is intentionally not wired to a route, user record, publishing control, or public URL until the human-reviewed privacy and threat decisions in the information architecture are settled.
+- “Merge all feature branches” means preserve every coherent branch that contains unique work, while deleting branches only after Git proves their commits are safely merged. It does not override the repository’s human-review or CI gates.
+- The release step means opening a `develop` → `main` PR. `main` remains owner-controlled and was not pushed or merged directly.
 
-## What I could NOT verify (no live rounds, per rule 7)
-- What the model actually says about Infosys, and why its web search came back empty.
-- Whether the token-refresh fix is what removed the owner's pauses. One 20+ minute round
-  on `develop` will tell. Also how often Gemini calls hang (search the logs for "did not
-  answer … in time").
-- Whether the speech threshold suits real microphones (noise suppression, quiet
-  speakers), and whether Gemini follows the quote-only rule for observations.
-- How the new UI looks: the composer checkbox, the spoken-English panel, and the "From AI
-  knowledge" section.
-- Known gaps:
-  - The brief's AI-knowledge section is not level-aware, so it may still name a
-    managerial round for a student. The plan is filtered.
-  - An answer submitted after a laptop sleeps with an expired token is lost.
+## What I could NOT verify
+- Final visual approval of the proof-of-progress prototype; the project rules reserve final visual direction for the owner.
+- Public-link security, publishing/revocation UX, retention, and deletion propagation because the prototype deliberately has no production route or persistence.
+- No live interview or live Gemini call was run, per the no-live-spend rule.
 
 ## Verification status
-- Every branch passed typecheck, lint, test and build (web) and ktlintCheck, test and
-  build (api), on CI and locally.
-  - The spoken-English and fresher branches were re-run on CI after `develop` was merged
-    into them.
-- Flaky: `device-check.test.tsx` and one other web test failed once each under local
-  load (while Gradle ran in parallel), then passed on rerun. CI never failed. Worth
-  hardening.
-- Size: the spoken-English change is about 2,000 lines, half of them tests. That is over
-  the roughly 800-line guideline; capture and report could have been split.
+- Web typecheck: pass after `next typegen` refreshed ignored route metadata.
+- Web lint: pass.
+- Web tests: pass, 65 files / 2,974 tests.
+- Web production build: pass, including 178 generated static pages.
+- API `ktlintCheck test build`: pass (`BUILD SUCCESSFUL`, 16 tasks).
+- Remote CI: pass for `fix/finish-ui-integration` ([run 37644222912](https://github.com/namankau/AIInterviewer/actions/runs/37644222912)).
+- Post-merge `develop` CI: pass on `7eefc5b` ([run 37644734629](https://github.com/namankau/AIInterviewer/actions/runs/37644734629)); web, API, and image jobs are green.
+- Final handoff CI: pass on `d523826` ([run 37645572873](https://github.com/namankau/AIInterviewer/actions/runs/37645572873)); the matching release-PR checks also passed.
+- After the release, the owner's combined Dependabot merges passed `develop` CI on `66afe7d` ([run 37649680375](https://github.com/namankau/AIInterviewer/actions/runs/37649680375)).
 
 ## Merge status
-- All five branches are merged into `develop`. The final merge is the fresher branch;
-  see `git log`.
+- PR #37 and PR #39 are merged into `develop`; linked Supabase migrations match through `20261008000000`.
+- The final prototype integration is merged into `develop` at `7eefc5b`; its branch and every other proven-merged work branch were deleted locally and remotely without force.
+- The owner (`namankau`) merged release PR #41 from `develop` to `main` at 21:37 IST on 7 October: https://github.com/namankau/AIInterviewer/pull/41. The release merge is `b80ca6a`; this agent did not merge or push `main`.
+- After the release, the owner merged Dependabot PR #40 and PR #35 into `develop`, advancing it to `66afe7d`. Those dependency changes are not in release commit `b80ca6a`.
 
 ## Suggested next task
-- A live 25-minute round on `develop` to confirm the stall fixes and the spoken-English
-  figures. It spends money, so it is the owner's call.
+- Review the proof-of-progress information architecture and decide whether to authorize a production publishing design.
 
 ## Open questions for you
-- None.
+- None blocking this integration run.

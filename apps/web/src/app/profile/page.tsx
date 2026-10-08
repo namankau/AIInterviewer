@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AppShell } from "@/components/app-shell";
+import { DeleteAccountSection } from "@/components/delete-account-section";
 import { ProfilePanel } from "@/components/profile-panel";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getCourseOutlines } from "@/lib/course-outline";
@@ -19,40 +20,39 @@ export default function ProfilePage() {
   return (
     <AppShell breadcrumb="profile">
       <div className="flex w-full max-w-5xl flex-col gap-8">
-        <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] sm:p-9">
-          <div aria-hidden="true" className="absolute -top-24 -right-16 size-64 rounded-full bg-accent/20 blur-3xl" />
-          <div className="relative flex flex-col gap-3">
-          <p className="pill pill-navy w-fit">Your learning workspace</p>
-          <h1 className="text-display text-balance text-on-navy">One view of everything you are building.</h1>
-          <p className="max-w-2xl text-body text-on-navy-muted">
-            See course progress and interview practice together, then keep the context that makes
-            each round about your real work rather than only a job title.
+        <header className="flex flex-col gap-2">
+          <h1 className="text-display text-balance text-ink">Your profile</h1>
+          <p className="max-w-2xl text-body text-ink-muted">
+            Your resume and details shape every round you take. Account settings are at the
+            foot of the page.
           </p>
-          </div>
         </header>
 
         <ProfilePanel outlines={courseOutlines} />
 
         {/*
-          * Signing out lives here rather than in the rail. It is rare, it cannot be undone
-          * without a password, and a control like that sitting permanently beside the
-          * navigation is both clutter and something to hit by accident. This is the page
-          * that is already about "my account", so this is where leaving it belongs.
+          * Signing out and deleting the account share one place: both are about the
+          * account rather than the profile, and both are rare. The rail's account menu
+          * links straight here.
           */}
         <section
-          aria-labelledby="session"
-          className="flex flex-col gap-3 rounded-2xl border border-line bg-surface-sunken p-6"
+          id="account"
+          aria-labelledby="account-heading"
+          className="flex scroll-mt-24 flex-col gap-6 rounded-2xl border border-line bg-surface-sunken p-6"
         >
-          <h2 id="session" className="text-heading text-ink">
-            This browser
+          <h2 id="account-heading" className="text-heading text-ink">
+            Account
           </h2>
-          <p className="max-w-prose text-caption text-ink-subtle">
-            Signing out clears your session on this device only. Your resume, rounds and reports
-            are untouched and are here when you come back.
-          </p>
-          <div className="flex pt-1">
-            <SignOutButton />
+          <div className="flex flex-col gap-3">
+            <p className="max-w-prose text-caption text-ink-subtle">
+              Signing out clears your session on this device only. Your resume, rounds and
+              reports are untouched and are here when you come back.
+            </p>
+            <div className="flex">
+              <SignOutButton />
+            </div>
           </div>
+          <DeleteAccountSection />
         </section>
       </div>
     </AppShell>

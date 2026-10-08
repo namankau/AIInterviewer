@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { ActionLink } from "@/components/ui/action-link";
 import { courses, totalChapters, totalMinutes } from "@/content/courses";
+import { LEGAL_LINKS } from "@/components/legal-page";
 import { fetchUsage } from "@/lib/api";
 
 export const metadata: Metadata = {
@@ -588,6 +589,11 @@ function SiteFooter() {
             <Link href="/login" className="text-caption text-on-navy-muted hover:text-on-navy">
               Sign in
             </Link>
+            {LEGAL_LINKS.map((link) => (
+              <Link key={link.href} href={link.href} className="text-caption text-on-navy-muted hover:text-on-navy">
+                {link.label}
+              </Link>
+            ))}
           </nav>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-6">

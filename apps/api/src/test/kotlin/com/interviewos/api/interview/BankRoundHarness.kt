@@ -59,8 +59,14 @@ class BankRoundHarness(
         mock(SessionRepository::class.java) { invocation ->
             when (invocation.method.returnType) {
                 Boolean::class.javaPrimitiveType -> true
+
                 TurnRequestClaim::class.java -> TurnRequestClaim(TurnRequestClaimStatus.ACQUIRED)
+
                 ReportGenerationClaim::class.java -> ReportGenerationClaim(ReportGenerationClaimStatus.ACQUIRED)
+
+                // Today's practice ledger: nothing used yet, so the daily allowance admits the round.
+                Pair::class.java -> 0 to 0
+
                 else -> RETURNS_DEFAULTS.answer(invocation)
             }
         }

@@ -1,4 +1,4 @@
-import type { LoopBrief, PrepPlan, RoundDraft } from "@acemyinterview/shared";
+import type { EntitlementView, LoopBrief, PrepPlan, RoundDraft } from "@acemyinterview/shared";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,12 +10,14 @@ const startSession = vi.hoisted(() => vi.fn());
 const fetchLoopBrief = vi.hoisted(() => vi.fn());
 const fetchPrepPlan = vi.hoisted(() => vi.fn());
 const push = vi.hoisted(() => vi.fn());
+const fetchEntitlement = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api", () => ({
   composeRound,
   startSession,
   fetchLoopBrief,
   fetchPrepPlan,
+  fetchEntitlement,
   ApiRequestError: class ApiRequestError extends Error {},
 }));
 
@@ -68,6 +70,8 @@ const draft: RoundDraft = {
 
 describe("NewInterviewForm", () => {
   beforeEach(() => {
+    // Nothing used today unless a test says otherwise.
+    fetchEntitlement.mockReset().mockResolvedValue(allowance({}));
     composeRound.mockReset();
     startSession.mockReset();
     push.mockReset();
@@ -122,6 +126,96 @@ describe("NewInterviewForm", () => {
     expect(screen.getByDisplayValue("Java: Collections")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /Length/i })).toHaveValue("20");
     expect(composeRound).not.toHaveBeenCalled();
+  });
+
+  it("opens a catalogue round with that interview type already selected", () => {
+    render(<NewInterviewForm initialRoundType="system_design" />);
+
+    expect(screen.getByRole("radio", { name: /system or solution design/i })).toBeChecked();
+    expect(screen.getByRole("combobox", { name: /Length/i })).toHaveValue("40");
+    expect(composeRound).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Chosen from the rounds page: the round is settled, so the picker gives way to a summary
+   * with a way back, but company and role are still asked for — every session is scoped to
+   * one employer and one role, and the server refuses a round without them.
+   */
+  it("locks a round chosen from the catalogue, and still asks for employer and role", async () => {
+    startSession.mockResolvedValue({ id: "8b0d1e2f-3a4b-4c5d-9e6f-7a8b9c0d1e2f" });
+    render(<NewInterviewForm initialRoundType="system_design" roundPreselected />);
+
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: /system or solution design/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /change round/i })).toHaveAttribute("href", "/rounds");
+    // A topic only survives on the server for a custom-topic round, so it is not asked for here.
+    expect(screen.queryByLabelText(/topic to practise/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /Length/i })).toHaveValue("40");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: /record my voice/i }));
+    const begin = screen.getByRole("button", { name: /begin interview/i });
+    expect(begin).toBeDisabled();
+
+    await userEvent.type(screen.getByRole("textbox", { name: /company/i }), "Flipkart");
+    await userEvent.type(screen.getByRole("textbox", { name: /role/i }), "SDE 2");
+    await userEvent.click(begin);
+
+    await waitFor(() =>
+      expect(startSession).toHaveBeenCalledWith(
+        "token",
+        expect.objectContaining({
+          companyName: "Flipkart",
+          roleTitle: "SDE 2",
+          roundType: "system_design",
+          focusTopic: undefined,
+          consentAudio: true,
+        }),
+      ),
+    );
+  });
+
+  it("keeps the consent gate on a catalogue round", async () => {
+    render(<NewInterviewForm initialRoundType="behavioural_competency" roundPreselected />);
+
+    await userEvent.type(screen.getByRole("textbox", { name: /company/i }), "Infosys");
+    await userEvent.type(screen.getByRole("textbox", { name: /role/i }), "Engineer");
+
+    expect(screen.getByRole("button", { name: /begin interview/i })).toBeDisabled();
+    expect(screen.getByText(/voice recording is required to continue/i)).toBeInTheDocument();
+  });
+
+  it("asks for the topic when the catalogue round is a custom topic", () => {
+    render(<NewInterviewForm initialRoundType="custom_topic" roundPreselected />);
+
+    expect(screen.getByLabelText(/topic to practise/i)).toBeRequired();
+    expect(screen.getByRole("combobox", { name: /Length/i })).toHaveValue("20");
+  });
+
+  it("tells a candidate who has used today's allowance before they fill anything in", async () => {
+    fetchEntitlement.mockResolvedValue(
+      allowance({
+        allowed: false,
+        reason: "daily_rounds_reached",
+        message: "You have used today's free practice (2 rounds or 60 minutes a day).",
+        remainingRoundsToday: 0,
+      }),
+    );
+    render(<NewInterviewForm />);
+
+    expect(await screen.findByRole("heading", { name: /today.s free practice is used/i })).toBeInTheDocument();
+    expect(screen.getByText(/pro · coming soon/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/describe the interview/i)).not.toBeInTheDocument();
+  });
+
+  it("offers only round lengths that fit in the minutes left today", async () => {
+    fetchEntitlement.mockResolvedValue(allowance({ remainingRoundsToday: 1, remainingMinutesToday: 20 }));
+    render(<NewInterviewForm initialRoundType="system_design" roundPreselected />);
+
+    const length = screen.getByRole("combobox", { name: /Length/i });
+    await waitFor(() => expect(length).toHaveValue("20"));
+    const offered = within(length).getAllByRole("option").map((option) => option.getAttribute("value"));
+    expect(offered).toEqual(["5", "20"]);
+    expect(screen.getByText(/20 free minutes left today/i)).toBeInTheDocument();
   });
 
   it("turns one line into a round, and shows it back before anything starts", async () => {
@@ -429,3 +523,17 @@ describe("NewInterviewForm", () => {
     });
   });
 });
+
+function allowance(over: Partial<EntitlementView>): EntitlementView {
+  return {
+    allowed: true,
+    reason: "allowed",
+    message: "Free practice today: 2 rounds and 60 minutes left.",
+    remainingFree: null,
+    dailyRoundLimit: 2,
+    dailyMinuteLimit: 60,
+    remainingRoundsToday: 2,
+    remainingMinutesToday: 60,
+    ...over,
+  };
+}

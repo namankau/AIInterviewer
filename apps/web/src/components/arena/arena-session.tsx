@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 
-import { ChallengeCard } from "@/components/arena/challenge-card";
+import { ChallengeCard, FOCUS_RING } from "@/components/arena/challenge-card";
 import { celebrate } from "@/lib/arena/celebrate";
 import { levelForXp } from "@/lib/arena/progression";
 import { useArenaSession, type AnswerRecord } from "@/lib/arena/use-arena-session";
@@ -135,11 +135,17 @@ function ResultScreen({
 }) {
   const level = levelForXp(totalXp);
   const byId = new Map(challenges.map((c) => [c.id, c]));
-  const wrongChapterKeys = new Set<string>();
+  // Keyed by route, so two wrong answers in one chapter name it once.
+  const toRevise = new Map<string, string>();
   for (const answer of answers) {
     if (answer.correct) continue;
     const challenge = byId.get(answer.challengeId);
-    if (challenge) wrongChapterKeys.add(`${challenge.courseSlug}/${challenge.chapterSlug}`);
+    if (challenge) {
+      toRevise.set(
+        `/courses/${challenge.courseSlug}/${challenge.chapterSlug}`,
+        challenge.chapterTitle ?? readableSlug(challenge.chapterSlug),
+      );
+    }
   }
 
   return (
@@ -175,22 +181,19 @@ function ResultScreen({
         </div>
       ) : null}
 
-      {wrongChapterKeys.size === 0 ? (
+      {toRevise.size === 0 ? (
         <p className="text-body text-positive">Everything in this run, correct. Nothing to revise.</p>
       ) : (
         <div className="flex flex-col gap-2">
           <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Worth revising</p>
           <ul className="flex flex-col gap-1.5">
-            {Array.from(wrongChapterKeys).map((key) => {
-              const [course, chapter] = key.split("/");
-              return (
-                <li key={key}>
-                  <Link href={`/courses/${course}/${chapter}` as Route} className="text-body text-accent hover:underline">
-                    {course}/{chapter}
-                  </Link>
-                </li>
-              );
-            })}
+            {Array.from(toRevise).map(([href, title]) => (
+              <li key={href}>
+                <Link href={href as Route} className={`rounded-sm text-body text-accent hover:underline ${FOCUS_RING}`}>
+                  {title}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
       )}
@@ -200,22 +203,28 @@ function ResultScreen({
           <button
             type="button"
             onClick={onPlayAgain}
-            className="rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong"
+            className={`rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong ${FOCUS_RING}`}
           >
             Play again
           </button>
         ) : (
           <Link
             href={(courseSlug ? `/arena/${courseSlug}` : "/arena") as Route}
-            className="rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong"
+            className={`rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong ${FOCUS_RING}`}
           >
             Play again
           </Link>
         )}
-        <Link href="/arena" className="text-caption font-medium text-accent hover:underline">
+        <Link href="/arena" className={`rounded-sm text-caption font-medium text-accent hover:underline ${FOCUS_RING}`}>
           Back to Arena
         </Link>
       </div>
     </div>
   );
+}
+
+/** "two-pointers" → "Two pointers", for a challenge that arrived without its chapter title. */
+function readableSlug(slug: string): string {
+  const words = slug.replace(/-/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }

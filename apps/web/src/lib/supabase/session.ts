@@ -16,6 +16,7 @@ const PROTECTED_PREFIXES = [
   "/interview",
   "/rounds",
   "/profile",
+  "/history",
   "/report",
 ];
 

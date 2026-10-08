@@ -1,13 +1,16 @@
 "use client";
 
-import type { CandidateStage, RoundDraft, RoundType } from "@acemyinterview/shared";
+import type { CandidateStage, EntitlementView, RoundDraft, RoundType } from "@acemyinterview/shared";
+import type { Route } from "next";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { CONTROL_CLASS } from "@/components/ui/field";
+import { DailyLimitNotice, isDailyLimitReached } from "@/components/daily-limit-notice";
 import { LoopBriefStep } from "@/components/loop-brief-step";
-import { ApiRequestError, composeRound, startSession } from "@/lib/api";
+import { ApiRequestError, composeRound, fetchEntitlement, startSession } from "@/lib/api";
 import { loadVoices, pickVoice } from "@/lib/browser-speech";
 import { ROUND_CATALOGUE } from "@/lib/rounds";
 import { useAccessToken } from "@/lib/use-access-token";
@@ -41,14 +44,22 @@ const EXAMPLES = [
  * Company and role are still named per session and nothing is stored as a target
  * (PRD 05). The composer changes how they are typed, not what is kept.
  */
-export function NewInterviewForm({ initialTopic = "" }: { initialTopic?: string }) {
+export function NewInterviewForm({
+  initialRoundType,
+  initialTopic = "",
+  roundPreselected = false,
+}: {
+  initialRoundType?: RoundType;
+  initialTopic?: string;
+  roundPreselected?: boolean;
+}) {
   const router = useRouter();
   const accessToken = useAccessToken();
   const topic = initialTopic.trim();
 
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<RoundDraft | null>(() =>
-    topic === "" ? null : blankDraft(topic),
+    topic === "" && !initialRoundType ? null : blankDraft(topic, initialRoundType),
   );
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +72,34 @@ export function NewInterviewForm({ initialTopic = "" }: { initialTopic?: string 
   // stated stage starts from it.
   const [stage, setStage] = useState<CandidateStage | "">("");
   const campus = stage === "student" || stage === "recent_graduate";
+  // Today's allowance, read once so a candidate who has used it is told before filling
+  // anything in. The server enforces it either way; this only saves them the wasted form.
+  const [entitlement, setEntitlement] = useState<EntitlementView | null>(null);
+  useEffect(() => {
+    if (!accessToken) return;
+    let active = true;
+    fetchEntitlement({ accessToken })
+      .then((value) => {
+        if (active) setEntitlement(value);
+      })
+      .catch(() => {
+        // Not knowing the allowance is not a reason to block setup; the start call will say.
+      });
+    return () => {
+      active = false;
+    };
+  }, [accessToken]);
+
+  if (isDailyLimitReached(entitlement) && entitlement) {
+    return (
+      <div className="flex flex-col gap-6">
+        <DailyLimitNotice entitlement={entitlement} />
+        <a href="/dashboard" className="w-fit text-caption font-medium text-accent hover:underline">
+          Back to your dashboard
+        </a>
+      </div>
+    );
+  }
 
   async function read(event: React.FormEvent) {
     event.preventDefault();
@@ -92,7 +131,7 @@ export function NewInterviewForm({ initialTopic = "" }: { initialTopic?: string 
       setChosenRoundType(null);
     };
 
-    if (hasCompany && draft.roundType !== "custom_topic" && !pastBrief) {
+    if (!roundPreselected && hasCompany && draft.roundType !== "custom_topic" && !pastBrief) {
       return (
         <LoopBriefStep
           companyName={draft.companyName}
@@ -116,11 +155,12 @@ export function NewInterviewForm({ initialTopic = "" }: { initialTopic?: string 
         initialStage={stage}
         error={error}
         onEdit={onEdit}
+        roundPreselected={roundPreselected}
         // The brief was shown first whenever a company was recognised — that's the only
         // path into this screen with `hasCompany` true, so it's also the only case
         // "back to the brief" makes sense.
         onBackToBrief={
-          hasCompany && draft.roundType !== "custom_topic"
+          !roundPreselected && hasCompany && draft.roundType !== "custom_topic"
             ? () => {
                 setChosenRoundType(null);
                 setPastBrief(false);
@@ -129,6 +169,7 @@ export function NewInterviewForm({ initialTopic = "" }: { initialTopic?: string 
         }
         onStart={(id) => router.push(`/interview/${id}`)}
         accessToken={accessToken}
+        minutesLeftToday={entitlement?.remainingMinutesToday ?? null}
       />
     );
   }
@@ -250,6 +291,8 @@ function RoundSetup({
   onBackToBrief,
   onStart,
   accessToken,
+  roundPreselected,
+  minutesLeftToday = null,
 }: {
   draft: RoundDraft;
   query: string;
@@ -261,6 +304,10 @@ function RoundSetup({
   onBackToBrief: (() => void) | null;
   onStart: (sessionId: string) => void;
   accessToken: string | null | undefined;
+  /** True when the candidate deliberately chose this round from the rounds catalogue. */
+  roundPreselected: boolean;
+  /** Free minutes left today, or null when there is no daily limit (or it is unknown). */
+  minutesLeftToday?: number | null;
 }) {
   const [companyName, setCompanyName] = useState(draft.companyName);
   const [roleTitle, setRoleTitle] = useState(draft.roleTitle);
@@ -291,11 +338,24 @@ function RoundSetup({
   }, [language]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lengthOptions = (roundType === "custom_topic" ? CUSTOM_LENGTHS : ROUND_LENGTHS).filter(
+    (option) => minutesLeftToday === null || option.minutes <= minutesLeftToday,
+  );
+  // The chosen length, kept inside what is left today: one that cannot start would only be
+  // refused by the server after the candidate had filled everything in.
+  const effectiveMinutes = lengthOptions.some((option) => option.minutes === durationMinutes)
+    ? durationMinutes
+    : (lengthOptions.at(-1)?.minutes ?? durationMinutes);
+  const selectedRound = ROUND_CATALOGUE.find((item) => item.value === roundType);
+  // The server keeps a focus topic only for a custom-topic round and drops it for every
+  // other one, so asking for it anywhere else would collect words that go nowhere.
+  const topicRequired = roundType === "custom_topic";
 
   const ready =
     companyName.trim() !== "" &&
     roleTitle.trim() !== "" &&
-    (roundType !== "custom_topic" || focusTopic.trim() !== "") &&
+    (!topicRequired || focusTopic.trim() !== "") &&
+    lengthOptions.length > 0 &&
     consentAudio &&
     !!accessToken;
 
@@ -326,9 +386,9 @@ function RoundSetup({
         // is recorded, uploaded or analysed — it is on so the candidate practises
         // being looked at, which is a benefit that never leaves their own screen.
         consentVideo: cameraOn,
-        durationMinutes,
+        durationMinutes: effectiveMinutes,
         candidateStage: candidateStage === "" ? undefined : candidateStage,
-        focusTopic: roundType === "custom_topic" ? focusTopic.trim() : undefined,
+        focusTopic: topicRequired ? focusTopic.trim() : undefined,
       });
       onStart(session.id);
     } catch (cause) {
@@ -346,7 +406,9 @@ function RoundSetup({
       <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] sm:p-9">
         <div aria-hidden="true" className="absolute -top-20 -right-14 size-56 rounded-full bg-accent/25 blur-3xl" />
         <div className="relative flex flex-col gap-3">
-        <p className="pill pill-navy w-fit">Confirm your round</p>
+        <p className="pill pill-navy w-fit">
+          {roundPreselected ? "Practise this round" : "Confirm your round"}
+        </p>
         {onBackToBrief ? (
           <button
             type="button"
@@ -357,9 +419,17 @@ function RoundSetup({
           </button>
         ) : null}
         <h1 className="text-title text-balance text-on-navy">
-          {draft.understood || "Set up your round"}
+          {roundPreselected
+            ? (selectedRound?.label ?? draft.roundLabel)
+            : draft.understood || "Set up your round"}
         </h1>
-        {query ? (
+        {roundPreselected ? (
+          <p className="max-w-2xl text-body text-on-navy-muted">
+            The round is chosen. Name the employer and role so the interviewer uses the right
+            rubric, then agree to recording and begin.
+          </p>
+        ) : null}
+        {!roundPreselected && query ? (
           <p className="text-caption text-on-navy-muted">
             From: &ldquo;{query}&rdquo;{" "}
             <button
@@ -380,7 +450,7 @@ function RoundSetup({
         </p>
       ) : null}
 
-      {draft.assumptions.length > 0 ? (
+      {!roundPreselected && draft.assumptions.length > 0 ? (
         <section aria-labelledby="assumed" className="rounded-2xl border border-highlight/35 bg-highlight/10 p-5 sm:p-6">
           <h2 id="assumed" className="pb-2 font-mono text-micro tracking-widest text-ink-subtle uppercase">
             What we filled in for you
@@ -444,6 +514,28 @@ function RoundSetup({
         </select>
       </Field>
 
+      {roundPreselected && selectedRound ? (
+        <section
+          aria-labelledby="chosen-round"
+          className="flex flex-col gap-3 rounded-2xl border border-accent/30 bg-accent-wash p-5 shadow-[var(--shadow-sm)] sm:flex-row sm:items-start sm:justify-between sm:p-6"
+        >
+          <div className="flex flex-col gap-1">
+            <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
+              {selectedRound.eyebrow}
+            </p>
+            <h2 id="chosen-round" className="text-heading text-ink">
+              {selectedRound.label}
+            </h2>
+            <p className="max-w-prose text-caption text-ink-muted">{selectedRound.blurb}</p>
+          </div>
+          <Link
+            href="/rounds"
+            className="shrink-0 self-start rounded-full border border-line bg-surface-raised px-4 py-2 text-caption font-medium text-ink transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+          >
+            Change round
+          </Link>
+        </section>
+      ) : (
       <fieldset className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-6">
         <legend className="pb-1 text-heading text-ink">Which round?</legend>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -475,8 +567,9 @@ function RoundSetup({
           })}
         </div>
       </fieldset>
+      )}
 
-      {roundType === "custom_topic" ? (
+      {topicRequired ? (
         <Field
           label="Topic to practise"
           hint="The interviewer stays within this scope. Try Java collections, operating systems, SQL joins, or SOLID principles."
@@ -494,27 +587,26 @@ function RoundSetup({
       ) : null}
 
       <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="Length" hint="Real rounds are time-boxed. The clock ends this one.">
+        <Field
+          label="Length"
+          hint={
+            lengthOptions.length === 0
+              ? `Only ${minutesLeftToday} free minutes are left today, which is shorter than this round can run. Choose a different round, or come back tomorrow.`
+              : minutesLeftToday === null
+                ? "Real rounds are time-boxed. The clock ends this one."
+                : `Real rounds are time-boxed. ${minutesLeftToday} free minutes left today.`
+          }
+        >
           <select
-            value={durationMinutes}
+            value={effectiveMinutes}
             onChange={(event) => setDurationMinutes(Number(event.target.value))}
             className={CONTROL_CLASS}
           >
-            {roundType === "custom_topic" ? (
-              <>
-                <option value={10}>10 minutes — a quick topic check</option>
-                <option value={20}>20 minutes — focused practice</option>
-                <option value={30}>30 minutes — a thorough topic round</option>
-              </>
-            ) : (
-              <>
-                <option value={5}>5 minutes — just testing the room</option>
-                <option value={20}>20 minutes — a short round</option>
-                <option value={30}>30 minutes</option>
-                <option value={40}>40 minutes — a typical round</option>
-                <option value={60}>60 minutes — a full panel</option>
-              </>
-            )}
+            {lengthOptions.map((option) => (
+              <option key={option.minutes} value={option.minutes}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </Field>
         <Field label="Language" hint="The register the interviewer uses.">
@@ -536,7 +628,11 @@ function RoundSetup({
         <legend className="px-2 text-heading text-ink">Before we start</legend>
         <p className="text-caption text-ink-muted">
           This interview is spoken. Nothing is recorded until you agree, and everything
-          recorded is private to your account — you can delete it at any time.
+          recorded is private to your account — you can delete it at any time. Recordings,
+          transcripts and the report are deleted after 28 days.{" "}
+          <Link href={"/privacy" as Route} target="_blank" className="font-medium text-accent hover:underline">
+            How we handle your data
+          </Link>
         </p>
         <Consent
           checked={consentAudio}
@@ -570,19 +666,40 @@ function RoundSetup({
   );
 }
 
+const CUSTOM_LENGTHS = [
+  { minutes: 10, label: "10 minutes — a quick topic check" },
+  { minutes: 20, label: "20 minutes — focused practice" },
+  { minutes: 30, label: "30 minutes — a thorough topic round" },
+];
+
+const ROUND_LENGTHS = [
+  { minutes: 5, label: "5 minutes — just testing the room" },
+  { minutes: 20, label: "20 minutes — a short round" },
+  { minutes: 30, label: "30 minutes" },
+  { minutes: 40, label: "40 minutes — a typical round" },
+  { minutes: 60, label: "60 minutes — a full panel" },
+];
+
 /** The manual path: the same setup with nothing filled in and nothing assumed. */
-function blankDraft(focusTopic = ""): RoundDraft {
+function blankDraft(focusTopic = "", initialRoundType?: RoundType): RoundDraft {
   const customTopic = focusTopic.trim();
+  const catalogueRound = ROUND_CATALOGUE.find((round) => round.value === initialRoundType);
+  const roundType = customTopic === "" ? (catalogueRound?.value ?? "project_deep_dive") : "custom_topic";
+  const roundLabel = customTopic === "" ? (catalogueRound?.label ?? "Project deep-dive") : "Custom topic";
   return {
     companyName: "",
     roleTitle: "",
     level: "",
-    roundType: customTopic === "" ? "project_deep_dive" : "custom_topic",
-    roundLabel: customTopic === "" ? "Project deep-dive" : "Custom topic",
-    durationMinutes: customTopic === "" ? 40 : 20,
+    roundType,
+    roundLabel,
+    durationMinutes: roundType === "custom_topic" ? 20 : 40,
     language: "english",
     understood:
-      customTopic === "" ? "Who are you interviewing with?" : `Practise ${customTopic} in a focused interview.`,
+      customTopic !== ""
+        ? `Practise ${customTopic} in a focused interview.`
+        : catalogueRound
+          ? `Set up a ${catalogueRound.label.toLowerCase()} interview.`
+          : "Who are you interviewing with?",
     assumptions: [],
     confidence: "low",
     archetypeLabel: "",

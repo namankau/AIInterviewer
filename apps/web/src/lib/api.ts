@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import type {
   ApiError,
   ArenaBadgesView,
@@ -37,6 +38,17 @@ import { env } from "@/lib/env";
 import type { AnswerTiming } from "@/lib/speech-timing";
 
 /** A non-2xx response from the API, carrying the error envelope it returned. */
+/**
+ * A 5xx is our fault, so it is reported; a 4xx is the API saying no for a reason the
+ * page already shows (not signed in, limit reached, not found), so it is not.
+ */
+function reportIfServerFault(path: string, error: ApiRequestError): ApiRequestError {
+  if (error.status >= 500) {
+    Sentry.captureException(error, { tags: { api_path: path, api_code: error.code } });
+  }
+  return error;
+}
+
 export class ApiRequestError extends Error {
   readonly status: number;
   readonly code: string;
@@ -67,10 +79,13 @@ async function apiGet<T>(path: string, { accessToken, signal }: ApiGetOptions): 
 
   if (!response.ok) {
     const envelope = (await response.json().catch(() => null)) as ApiError | null;
-    throw new ApiRequestError(
-      response.status,
-      envelope?.error ?? "unknown_error",
-      envelope?.message ?? `Request to ${path} failed with status ${response.status}.`,
+    throw reportIfServerFault(
+      path,
+      new ApiRequestError(
+        response.status,
+        envelope?.error ?? "unknown_error",
+        envelope?.message ?? `Request to ${path} failed with status ${response.status}.`,
+      ),
     );
   }
 
@@ -97,10 +112,13 @@ async function apiSend<T>(
 
   if (!response.ok) {
     const envelope = (await response.json().catch(() => null)) as ApiError | null;
-    throw new ApiRequestError(
-      response.status,
-      envelope?.error ?? "unknown_error",
-      envelope?.message ?? `Request to ${path} failed with status ${response.status}.`,
+    throw reportIfServerFault(
+      path,
+      new ApiRequestError(
+        response.status,
+        envelope?.error ?? "unknown_error",
+        envelope?.message ?? `Request to ${path} failed with status ${response.status}.`,
+      ),
     );
   }
 
@@ -367,6 +385,11 @@ export function abandonSession(accessToken: string, id: string): Promise<void> {
  */
 export async function deleteSession(accessToken: string, id: string): Promise<void> {
   await apiSend<void>(`/api/v1/sessions/${id}`, "DELETE", accessToken);
+}
+
+/** Deletes the caller's whole account, its stored files and its sign-in. Cannot be undone. */
+export async function deleteAccount(accessToken: string): Promise<void> {
+  await apiSend<void>("/api/v1/me", "DELETE", accessToken);
 }
 
 /** Uploads one spoken answer. Camera preview frames never leave the browser. */

@@ -4,6 +4,7 @@ import type { EntitlementView, ReadinessGroup, SessionSummary } from "@acemyinte
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { DailyLimitNotice, isDailyLimitReached } from "@/components/daily-limit-notice";
 import { deleteSession, fetchEntitlement, fetchReadiness, fetchSessions } from "@/lib/api";
 import { useAccessToken } from "@/lib/use-access-token";
 
@@ -22,6 +23,48 @@ import { useAccessToken } from "@/lib/use-access-token";
  * important thing here after the heading.
  */
 export function DashboardPanel() {
+  const { visible, handleDelete } = useRoundData();
+
+  return (
+    <DashboardView
+      entitlement={visible.entitlement}
+      sessions={visible.sessions}
+      readiness={visible.readiness}
+      loaded={visible.loaded}
+      onDelete={handleDelete}
+    />
+  );
+}
+
+/**
+ * Every round, on its own page. The dashboard shows only the latest few so starting the
+ * next interview stays the first thing on it; this is where the rest live, with the same
+ * report links and the same delete.
+ */
+export function RoundHistoryPanel() {
+  const { visible, handleDelete } = useRoundData();
+
+  if (!visible.loaded) {
+    return <p className="text-body text-ink-muted">Loading your rounds…</p>;
+  }
+  if (visible.sessions.length === 0) {
+    return (
+      <div className="flex flex-col items-start gap-4 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)]">
+        <p className="text-body text-ink-muted">No rounds yet. Your finished interviews will be listed here.</p>
+        <Link
+          href="/interview/new"
+          className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          Start an interview
+        </Link>
+      </div>
+    );
+  }
+  return <PastRoundsSection sessions={visible.sessions} onDelete={handleDelete} />;
+}
+
+/** Sessions, entitlement and readiness for the signed-in account, plus round deletion. */
+function useRoundData() {
   const accessToken = useAccessToken();
   const [dashboard, setDashboard] = useState<DashboardState>(() => emptyDashboard(null));
 
@@ -90,15 +133,7 @@ export function DashboardPanel() {
     [accessToken],
   );
 
-  return (
-    <DashboardView
-      entitlement={visible.entitlement}
-      sessions={visible.sessions}
-      readiness={visible.readiness}
-      loaded={visible.loaded}
-      onDelete={handleDelete}
-    />
-  );
+  return { visible, handleDelete };
 }
 
 interface DashboardState {
@@ -135,9 +170,6 @@ export function DashboardView({
   onDelete?: (id: string) => Promise<void>;
 }) {
   const openSession = sessions.find((s) => s.status === "in_progress");
-  // Every row carries the same window; the server is the authority on the number and
-  // this page only repeats it. Nothing is claimed if the API has not said.
-  const retentionDays = sessions.find((s) => s.reportRetentionDays > 0)?.reportRetentionDays ?? null;
 
   return (
     <div className="flex flex-col gap-12">
@@ -180,7 +212,7 @@ export function DashboardView({
             </Link>
           )}
 
-          {loaded && entitlement ? (
+          {loaded && entitlement && !isDailyLimitReached(entitlement) ? (
             <p className="text-caption text-ink-subtle">
               {/*
                 * `remainingFree` is null while there is no limit, which is the case
@@ -188,41 +220,27 @@ export function DashboardView({
                 * a product that has no paywall.
                 */}
               {entitlement.allowed
-                ? entitlement.remainingFree === null
-                  ? "Every round is free while we are building this. Report included, no card."
-                  : entitlement.remainingFree > 0
-                    ? "Your first interview is free, report included."
-                    : null
+                ? entitlement.dailyRoundLimit !== null || entitlement.dailyMinuteLimit !== null
+                  ? `${entitlement.message} Report included, no card.`
+                  : entitlement.remainingFree === null
+                    ? "Every round is free while we are building this. Report included, no card."
+                    : entitlement.remainingFree > 0
+                      ? "Your first interview is free, report included."
+                      : null
                 : entitlement.message}
             </p>
           ) : null}
         </div>
+
+        {loaded && entitlement && isDailyLimitReached(entitlement) ? (
+          <DailyLimitNotice entitlement={entitlement} />
+        ) : null}
       </section>
 
       {sessions.length > 0 || readiness.length > 0 ? (
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:gap-16">
           {sessions.length > 0 ? (
-            <section aria-labelledby="history" className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-6">
-              <SectionHead title="Past interviews" id="history" note={`${sessions.length} total`} />
-              {/*
-                * The rule, stated before it bites rather than explained afterwards. A
-                * candidate who comes back in five weeks for the report they were promised
-                * and finds it gone has been surprised by us, and being surprised by a
-                * product holding your career anxiety is the thing to avoid.
-                */}
-              {retentionDays ? (
-                <p className="max-w-prose text-caption text-ink-subtle">
-                  Reports are kept for {retentionDays} days after the round. After that the report,
-                  the transcript and the recording are deleted, and the round stays here as a line
-                  without one. You can delete any round yourself before then.
-                </p>
-              ) : null}
-              <ul className="flex flex-col divide-y divide-line">
-                {sessions.map((session) => (
-                  <PastRound key={session.id} session={session} onDelete={onDelete} />
-                ))}
-              </ul>
-            </section>
+            <PastRoundsSection sessions={sessions} onDelete={onDelete} limit={DASHBOARD_ROUNDS} />
           ) : null}
 
           {readiness.length > 0 ? (
@@ -269,6 +287,66 @@ export function DashboardView({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** How many rounds the dashboard lists before pointing at the full history. */
+const DASHBOARD_ROUNDS = 3;
+
+/**
+ * The past-rounds list. With a `limit`, only the newest rounds are shown (the API returns
+ * newest first) and the rest are a link away, so a long history never pushes the
+ * readiness panel and the next interview out of view.
+ */
+export function PastRoundsSection({
+  sessions,
+  onDelete,
+  limit,
+}: {
+  sessions: SessionSummary[];
+  onDelete?: (id: string) => Promise<void>;
+  limit?: number;
+}) {
+  const shown = limit === undefined ? sessions : sessions.slice(0, limit);
+  const hidden = sessions.length - shown.length;
+  // Every row carries the same window; the server is the authority on the number and
+  // this page only repeats it. Nothing is claimed if the API has not said.
+  const retentionDays = sessions.find((s) => s.reportRetentionDays > 0)?.reportRetentionDays ?? null;
+
+  return (
+    <section aria-labelledby="history" className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-6">
+      <SectionHead
+        title={limit === undefined ? "All interviews" : "Recent interviews"}
+        id="history"
+        note={`${sessions.length} total`}
+      />
+      {/*
+        * The rule, stated before it bites rather than explained afterwards. A
+        * candidate who comes back in five weeks for the report they were promised
+        * and finds it gone has been surprised by us, and being surprised by a
+        * product holding your career anxiety is the thing to avoid.
+        */}
+      {retentionDays ? (
+        <p className="max-w-prose text-caption text-ink-subtle">
+          Reports are kept for {retentionDays} days after the round. After that the report,
+          the transcript and the recording are deleted, and the round stays here as a line
+          without one. You can delete any round yourself before then.
+        </p>
+      ) : null}
+      <ul className="flex flex-col divide-y divide-line">
+        {shown.map((session) => (
+          <PastRound key={session.id} session={session} onDelete={onDelete} />
+        ))}
+      </ul>
+      {hidden > 0 ? (
+        <Link
+          href="/history"
+          className="self-start rounded-sm text-caption font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          See all {sessions.length} rounds
+        </Link>
+      ) : null}
+    </section>
   );
 }
 

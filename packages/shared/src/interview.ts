@@ -16,7 +16,13 @@ export interface UsageCounts {
 /** Whether the candidate may start another interview, and why not if not. */
 export interface EntitlementView {
   allowed: boolean;
-  reason: "allowed" | "session_in_progress" | "free_tier_exhausted";
+  reason:
+    | "allowed"
+    | "session_in_progress"
+    | "free_tier_exhausted"
+    | "daily_rounds_reached"
+    | "daily_minutes_reached"
+    | "daily_minutes_short";
   message: string;
   /**
    * How many free rounds are left, or null when there is no limit.
@@ -25,6 +31,14 @@ export interface EntitlementView {
    * against. `free_tier_exhausted` cannot occur while it is null.
    */
   remainingFree: number | null;
+  /**
+   * The daily free allowance (2 rounds and 60 planned minutes a day, reset at midnight
+   * India time). Each is null when that allowance is switched off on the server.
+   */
+  dailyRoundLimit: number | null;
+  dailyMinuteLimit: number | null;
+  remainingRoundsToday: number | null;
+  remainingMinutesToday: number | null;
 }
 
 export interface TurnView {

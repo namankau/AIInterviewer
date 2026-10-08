@@ -98,7 +98,8 @@ Decide what this answer needs, and set `suggestedNextAction` to exactly one of:
 - `challenge` — push back on a weak or overstated claim
 - `move_on` — this line is exhausted; go to the next area
 - `raise_difficulty` — they are comfortable; make it harder
-- `conclude` — the round is done; close it off
+- `conclude` — **only** when the pacing instruction above explicitly says the time is up;
+  otherwise the round continues and this action is forbidden
 
 **When they need a hand**
 - `redirect` — they are rambling, drifting, or answering a different question. Cut in

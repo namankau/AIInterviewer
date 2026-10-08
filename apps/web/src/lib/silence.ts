@@ -27,14 +27,23 @@ export const SILENCE_TO_END_MS = 3_500;
 /** Nothing ends an answer in its first moments, however quiet it is. */
 export const MINIMUM_ANSWER_MS = 2_000;
 
+/**
+ * Sound must persist this long before it counts as the candidate starting. A chair bump,
+ * notification or one noisy analyser frame must not begin the silence countdown while
+ * somebody is still thinking about the question.
+ */
+export const SPEECH_TO_START_MS = 400;
+
 export interface SilenceState {
   /** Whether the candidate has said anything at all yet. */
   hasSpoken: boolean;
   /** When the current run of silence began, or null if sound is being heard. */
   silentSince: number | null;
+  /** When sustained sound began, until it is long enough to count as speech. */
+  loudSince: number | null;
 }
 
-export const initialSilenceState: SilenceState = { hasSpoken: false, silentSince: null };
+export const initialSilenceState: SilenceState = { hasSpoken: false, silentSince: null, loudSince: null };
 
 /**
  * Folds one meter reading into the running state. Pure, so the thresholds above can be
@@ -42,12 +51,17 @@ export const initialSilenceState: SilenceState = { hasSpoken: false, silentSince
  */
 export function observe(state: SilenceState, level: number, now: number): SilenceState {
   if (level >= SPEECH_LEVEL) {
-    return { hasSpoken: true, silentSince: null };
+    if (state.hasSpoken) return { hasSpoken: true, silentSince: null, loudSince: null };
+    const loudSince = state.loudSince ?? now;
+    if (now - loudSince >= SPEECH_TO_START_MS) {
+      return { hasSpoken: true, silentSince: null, loudSince: null };
+    }
+    return { hasSpoken: false, silentSince: null, loudSince };
   }
   if (!state.hasSpoken) {
-    return state;
+    return state.loudSince === null ? state : { ...state, loudSince: null };
   }
-  return { hasSpoken: true, silentSince: state.silentSince ?? now };
+  return { hasSpoken: true, silentSince: state.silentSince ?? now, loudSince: null };
 }
 
 /** Whether the answer should now be submitted on its own. */

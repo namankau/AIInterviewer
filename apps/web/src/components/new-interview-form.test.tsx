@@ -98,6 +98,8 @@ describe("NewInterviewForm", () => {
     await waitFor(() => expect(screen.getByDisplayValue("Java collections")).toBeInTheDocument());
     expect(screen.queryByRole("heading", { name: /how infosys interviews/i })).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /custom topic/i })).toBeChecked();
+    expect(screen.queryByRole("textbox", { name: /company/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /role/i })).not.toBeInTheDocument();
     expect(
       within(screen.getByRole("combobox", { name: /Length/i }))
         .getAllByRole("option")
@@ -114,6 +116,8 @@ describe("NewInterviewForm", () => {
           roundType: "custom_topic",
           focusTopic: "Java collections",
           durationMinutes: 20,
+          companyName: "General practice",
+          roleTitle: "Topic practice",
         }),
       ),
     );
@@ -184,11 +188,30 @@ describe("NewInterviewForm", () => {
     expect(screen.getByText(/voice recording is required to continue/i)).toBeInTheDocument();
   });
 
-  it("asks for the topic when the catalogue round is a custom topic", () => {
+  it("asks only for the topic when the catalogue round is a custom topic", async () => {
+    startSession.mockResolvedValue({ id: "8b0d1e2f-3a4b-4c5d-9e6f-7a8b9c0d1e2f" });
     render(<NewInterviewForm initialRoundType="custom_topic" roundPreselected />);
 
     expect(screen.getByLabelText(/topic to practise/i)).toBeRequired();
+    expect(screen.queryByRole("textbox", { name: /company/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /role/i })).not.toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /Length/i })).toHaveValue("20");
+
+    await userEvent.type(screen.getByLabelText(/topic to practise/i), "Java collections");
+    await userEvent.click(screen.getByRole("checkbox", { name: /record my voice/i }));
+    await userEvent.click(screen.getByRole("button", { name: /begin interview/i }));
+
+    await waitFor(() =>
+      expect(startSession).toHaveBeenCalledWith(
+        "token",
+        expect.objectContaining({
+          companyName: "General practice",
+          roleTitle: "Topic practice",
+          roundType: "custom_topic",
+          focusTopic: "Java collections",
+        }),
+      ),
+    );
   });
 
   it("tells a candidate who has used today's allowance before they fill anything in", async () => {

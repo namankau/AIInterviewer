@@ -350,10 +350,16 @@ function RoundSetup({
   // The server keeps a focus topic only for a custom-topic round and drops it for every
   // other one, so asking for it anywhere else would collect words that go nowhere.
   const topicRequired = roundType === "custom_topic";
+  // A custom-topic round is deliberately not preparation for one employer or job title.
+  // The database still keeps a complete session context for every client, so the request
+  // carries explicit neutral values rather than stale/autofilled fields the candidate
+  // never chose for this round.
+  const effectiveCompanyName = topicRequired ? CUSTOM_TOPIC_COMPANY : companyName.trim();
+  const effectiveRoleTitle = topicRequired ? CUSTOM_TOPIC_ROLE : roleTitle.trim();
 
   const ready =
-    companyName.trim() !== "" &&
-    roleTitle.trim() !== "" &&
+    effectiveCompanyName !== "" &&
+    effectiveRoleTitle !== "" &&
     (!topicRequired || focusTopic.trim() !== "") &&
     lengthOptions.length > 0 &&
     consentAudio &&
@@ -377,8 +383,8 @@ function RoundSetup({
     try {
       const session = await startSession(accessToken, {
         speaksLocally,
-        companyName: companyName.trim(),
-        roleTitle: roleTitle.trim(),
+        companyName: effectiveCompanyName,
+        roleTitle: effectiveRoleTitle,
         roundType,
         language,
         consentAudio,
@@ -425,8 +431,9 @@ function RoundSetup({
         </h1>
         {roundPreselected ? (
           <p className="max-w-2xl text-body text-on-navy-muted">
-            The round is chosen. Name the employer and role so the interviewer uses the right
-            rubric, then agree to recording and begin.
+            {topicRequired
+              ? "The topic is the whole scope. Choose what to practise, then agree to recording and begin."
+              : "The round is chosen. Name the employer and role so the interviewer uses the right rubric, then agree to recording and begin."}
           </p>
         ) : null}
         {!roundPreselected && query ? (
@@ -469,32 +476,34 @@ function RoundSetup({
         </section>
       ) : null}
 
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Field label="Company" hint="The employer you're interviewing with.">
-          <input
-            value={companyName}
-            onChange={(event) => setCompanyName(event.target.value)}
-            placeholder="Infosys"
-            autoComplete="organization"
-            required
-            maxLength={120}
-            className={CONTROL_CLASS}
-          />
-        </Field>
-        <Field label="Role" hint="As it appears on the job posting.">
-          <input
-            value={roleTitle}
-            onChange={(event) => setRoleTitle(event.target.value)}
-            placeholder="Senior Backend Engineer"
-            autoComplete="organization-title"
-            required
-            maxLength={120}
-            className={CONTROL_CLASS}
-          />
-        </Field>
-      </div>
+      {!topicRequired ? (
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Field label="Company" hint="The employer you're interviewing with.">
+            <input
+              value={companyName}
+              onChange={(event) => setCompanyName(event.target.value)}
+              placeholder="Infosys"
+              autoComplete="organization"
+              required
+              maxLength={120}
+              className={CONTROL_CLASS}
+            />
+          </Field>
+          <Field label="Role" hint="As it appears on the job posting.">
+            <input
+              value={roleTitle}
+              onChange={(event) => setRoleTitle(event.target.value)}
+              placeholder="Senior Backend Engineer"
+              autoComplete="organization-title"
+              required
+              maxLength={120}
+              className={CONTROL_CLASS}
+            />
+          </Field>
+        </div>
+      ) : null}
 
-      {companyName.trim() !== "" ? (
+      {!topicRequired && companyName.trim() !== "" ? (
         <p className="text-caption text-ink-muted">{draft.groundingNote}</p>
       ) : null}
 
@@ -671,6 +680,10 @@ const CUSTOM_LENGTHS = [
   { minutes: 20, label: "20 minutes — focused practice" },
   { minutes: 30, label: "30 minutes — a thorough topic round" },
 ];
+
+/** Neutral stored context for a round whose scope is the topic, not an employer or role. */
+const CUSTOM_TOPIC_COMPANY = "General practice";
+const CUSTOM_TOPIC_ROLE = "Topic practice";
 
 const ROUND_LENGTHS = [
   { minutes: 5, label: "5 minutes — just testing the room" },

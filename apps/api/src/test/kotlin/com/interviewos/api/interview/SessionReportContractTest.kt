@@ -82,6 +82,7 @@ class SessionReportContractTest {
                 "roleTitle",
                 "roundType",
                 "roundLabel",
+                "focusTopic",
                 "archetypeLabel",
                 "answeredTurns",
                 "generatedAt",

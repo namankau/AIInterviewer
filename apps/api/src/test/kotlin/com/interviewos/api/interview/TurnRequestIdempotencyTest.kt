@@ -47,8 +47,8 @@ class TurnRequestIdempotencyTest {
         harness.assessment =
             AnswerAssessment(
                 transcript = "An answer.",
-                suggestedNextAction = "conclude",
-                nextQuestionText = null,
+                suggestedNextAction = "move_on",
+                nextQuestionText = "What did you do next?",
             )
         val firstClaim = AtomicBoolean(true)
         given(harness.repository.claimAnswerRequest(sessionId, candidate, 2, requestId, 600)).willAnswer {
@@ -97,7 +97,9 @@ class TurnRequestIdempotencyTest {
             assertEquals("request_in_progress", duplicate.code)
             assertEquals(1, aiCalls("assessAnswer"))
             releaseModel.countDown()
-            assertTrue(accepted.get(5, TimeUnit.SECONDS).sessionComplete)
+            val response = accepted.get(5, TimeUnit.SECONDS)
+            assertEquals(false, response.sessionComplete)
+            assertEquals("What did you do next?", response.nextTurn?.questionText)
         } finally {
             releaseModel.countDown()
             executor.shutdownNow()

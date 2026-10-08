@@ -1,42 +1,42 @@
 # Handoff — 2026-10-08
 
 ## Task
-Review the remaining Dependabot branches, merge safe dependency updates into `develop`, repair any CI failure, and delete all merged branches. No task file.
+Fix the dashboard report count, custom-round setup context, system-check ordering, premature custom-round completion, and irrelevant custom report labelling. User request; no task file.
 
 ## What I built
-- Merged five Dependabot updates into `develop` after exact-head CI passed:
-  - `@testing-library/jest-dom` 6.9.1 → 7.0.1 (PR #34);
-  - `jsdom` 27.4.0 → 30.1.2 (PR #32);
-  - `vitest` 4.1.11 → 5.0.3 (PR #31);
-  - `@vitejs/plugin-react` 5.2.0 → 6.1.1 (PR #33);
-  - Kotlin 2.3.21 → 2.4.20 and Gradle 9.7.1 → 9.8.0 (PR #36).
-- Fixed the Kotlin upgrade's ktlint failure in `apps/api/build.gradle.kts` by keeping ktlint's isolated configurations on the Kotlin compiler version embedded by ktlint 1.8.0 (`2.2.21`), while application compilation remains on Kotlin 2.4.20.
-- Normalized `apps/api/gradlew.bat` according to the existing `.gitattributes` rule so a fresh Windows checkout no longer appears dirty after the Gradle wrapper update (PR #42).
+- Limited `Where you stand` to three summaries and added `See all reports` linking to `/history` in `apps/web/src/components/dashboard-panel.tsx`.
+- Removed company and role inputs from custom-topic setup in `apps/web/src/components/new-interview-form.tsx`; custom sessions use explicit neutral context instead of stale/autofilled employer data, with matching server normalisation in `apps/api/src/main/kotlin/com/interviewos/api/interview/InterviewService.kt`.
+- Made the spoken microphone test a real second-step gate in `apps/web/src/components/device-check.tsx`; later checks and room entry remain waiting until the meter has heard sustained sound.
+- Hardened answer-end detection in `apps/web/src/lib/silence.ts`: one analyser noise spike no longer counts as the candidate beginning an answer.
+- Removed the model's authority to complete a live round in `InterviewService.kt`; only the clock/turn ceiling or the candidate's explicit submit can finish it. A missing next question now gets a conservative scope-bound continuation instead of producing a two-answer report.
+- Passed the custom topic into report generation and removed employer/role/archetype labelling from custom report headers in `apps/api/src/main/kotlin/com/interviewos/api/interview/ReportService.kt` and `apps/web/src/components/report-view.tsx`.
+- Added regression coverage for all of the above, including the exact premature `conclude` case and custom report calibration.
 
 ## Assumptions I made
-- The instruction to merge the Dependabot branches covered all five open dependency PRs, subject to the repository's exact-head CI gate.
-- The ktlint repair is intentionally scoped to configurations whose names start with `ktlint`; no application dependency or compiler version was downgraded.
-- The wrapper cleanup is line-ending-only. Its filtered worktree blob matched the merged remote blob exactly, and the semantic diff was empty with `--ignore-space-at-eol`.
+- “Company and Role should not be shown on screen for custom round” means custom-topic rounds are topic practice, not employer preparation; the stored neutral values are `General practice` and `Topic practice`, and are not displayed in the custom report header.
+- `See all reports` should lead to the existing full history page rather than creating a second report-list surface.
+- The round-duration promise already shown to candidates is authoritative: an AI suggestion is advisory and must not end the round before the engine clock does.
 
 ## What I could NOT verify
-- No live interview or live Gemini call was run, per the no-live-spend rule; these dependency updates do not require one.
-- No migration was added or changed, so no database push was required.
+- No live interview or Gemini call was run, per the no-live-spend rule. Microphone behaviour, voice timing, and model compliance were verified through mocked/unit tests, not a paid live round.
+- No human judgement of microphone feel, interviewer pacing, or report tone was attempted; those need an owner-run live round.
+- No migration was added or changed, so no database push is required.
 
 ## Verification status
-- Every dependency PR passed exact-head GitHub Actions before merge: web typecheck/lint/tests/build, API ktlint/tests/build, and Docker image builds.
-- Kotlin/Gradle local backend verification: `gradlew.bat ktlintCheck test build --no-daemon` passed (16 tasks).
-- Kotlin/Gradle post-merge `develop` CI: pass on `a7cc16d` ([run 37730445380](https://github.com/namankau/AIInterviewer/actions/runs/37730445380)).
-- Final dependency/line-ending post-merge `develop` CI: pass on `4b7df49` ([run 37770868635](https://github.com/namankau/AIInterviewer/actions/runs/37770868635)); web, API, and image jobs are green.
-- Final audit: local and remote `develop` match, the worktree is clean, and there are no open PRs.
+- Frontend typecheck: pass.
+- Frontend lint: pass.
+- Frontend tests: pass, 65 files / 2,978 tests.
+- Frontend production build: pass, 178 static pages generated.
+- Backend `ktlintCheck test build`: pass, 692 tests in the full suite.
+- Focused regressions: frontend 70 tests passed; backend custom lifecycle/report/contract/idempotency tests passed.
+- Exact branch-head GitHub Actions: pass on `4fe7c8d` ([run 37780299315](https://github.com/namankau/AIInterviewer/actions/runs/37780299315)); web, API, and Docker image jobs are green.
 
 ## Merge status
-- All five Dependabot PRs and cleanup PR #42 are merged into `develop`; the completed dependency state is at `4b7df49`.
-- All merged Dependabot, repair, and cleanup branches were deleted locally and remotely. Only `main` and `develop` remain.
-- `main` was not changed or pushed.
-- The owner's pre-existing stash `On develop: codex-course-prototype-handoff` remains untouched.
+- Merged `fix/custom-round-lifecycle` into `develop` in the merge commit containing this handoff, after exact-head CI passed on `4fe7c8d`.
+- `main` was not changed and will not be pushed.
 
 ## Suggested next task
-- Review Dependabot grouping if fewer simultaneous major-version update PRs are preferred; no dependency work is currently outstanding.
+- With owner approval for live AI spend, sit one 10-minute custom Java collections round and judge microphone threshold, interviewer pacing, and report relevance end to end.
 
 ## Open questions for you
 - None.

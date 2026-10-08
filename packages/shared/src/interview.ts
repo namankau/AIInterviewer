@@ -463,6 +463,8 @@ export interface SessionReport {
   roleTitle: string;
   roundType: RoundType;
   roundLabel: string;
+  /** The candidate-selected scope for a custom round; absent on older stored reports. */
+  focusTopic?: string | null;
   archetypeLabel: string;
   answeredTurns: number;
   generatedAt: string;

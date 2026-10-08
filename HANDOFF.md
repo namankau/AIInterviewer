@@ -20,10 +20,10 @@ Reconcile outstanding feature/fix branches, remove merged branch pointers, and o
 - Deleted branch heads were verified as ancestors of `origin/develop` before deletion.
 - GitHub's branch API showed only `develop` and `main` after cleanup.
 - Latest pre-handoff `develop` CI: pass at `ffead60` ([run 37782544959](https://github.com/namankau/AIInterviewer/actions/runs/37782544959)); web, API, and Docker image jobs are green.
-- Documentation-only handoff branch CI: pending.
+- Documentation-only handoff branch CI: pass at `a8ec2c9` ([run 37811874628](https://github.com/namankau/AIInterviewer/actions/runs/37811874628)); web, API, and Docker image jobs are green.
 
 ## Merge status
-- Branch `fix/release-pr-handoff` will be merged into `develop` only after exact-head CI passes, then deleted.
+- Merged `fix/release-pr-handoff` into `develop` in the merge commit containing this handoff after exact-head CI passed, then deleted the branch.
 - Release PR [#44](https://github.com/namankau/AIInterviewer/pull/44) is open from `develop` to `main` for owner review.
 
 ## Suggested next task

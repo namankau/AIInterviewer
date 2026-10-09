@@ -94,6 +94,14 @@ describe("deriveChallenges", () => {
   it("which-column challenges never offer the same label twice and the answer is a real column label", () => {
     const whichColumn = challenges.filter((c) => c.kind === "which-column");
     expect(whichColumn.length).toBeGreaterThan(0);
+    for (const challenge of whichColumn) {
+      const chapter = getChapter(challenge.courseSlug, challenge.chapterSlug);
+      expect(chapter).toBeDefined();
+      expect(challenge.context).toMatch(/classify this example/i);
+      expect(challenge.context).toContain(chapter!.title);
+      expect(challenge.prompt).toBe("Which category does this example belong to?");
+      expect(challenge.why).not.toMatch(/listed under/i);
+    }
   });
 
   it("spot-mistake challenges never use the mistake text itself as an option (the mistake is not the answer)", () => {

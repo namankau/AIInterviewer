@@ -83,7 +83,7 @@ data class AssistanceSummary(
          * is credited at whichever was more generous, since crediting the lesser would
          * let a hint that shaped the whole answer disappear behind a mild intervention.
          */
-        private fun helpOn(turn: TurnRow): Intervention {
+        internal fun helpOn(turn: TurnRow): Intervention {
             val onAnswer = Intervention.parse(turn.intervention)
             val asked = turn.hintText?.let { Intervention.parse(turn.hintLevel) } ?: Intervention.NONE
             return if (asked.credit < onAnswer.credit) asked else onAnswer

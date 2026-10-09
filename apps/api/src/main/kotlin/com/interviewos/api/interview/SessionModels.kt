@@ -30,10 +30,8 @@ data class StartSessionRequest(
      * has no usable voice, and that round should be spoken by the model as before.
      */
     val speaksLocally: Boolean = false,
-    @field:NotBlank(message = "Name the company you are interviewing with.")
     @field:Size(max = 120)
     val companyName: String = "",
-    @field:NotBlank(message = "Name the role you are interviewing for.")
     @field:Size(max = 120)
     val roleTitle: String = "",
     @field:NotBlank
@@ -53,7 +51,7 @@ data class StartSessionRequest(
      * How long the round should run. Real loops are time-boxed and so is this one — the
      * clock is what ends the interview, not a turn counter.
      */
-    @field:Min(5)
+    @field:Min(10)
     @field:Max(120)
     val durationMinutes: Int = 40,
     /**

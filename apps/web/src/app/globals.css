@@ -173,6 +173,7 @@
   --text-micro: 0.6875rem;
   --text-micro--line-height: 1.4;
   --text-micro--letter-spacing: 0.08em;
+  --text-inline-code: 0.9em;
 }
 
 @layer base {
@@ -198,6 +199,10 @@
   /* Tabular figures everywhere numbers are compared down a column. */
   .font-mono {
     font-variant-numeric: tabular-nums;
+  }
+
+  .inline-code {
+    font-size: var(--text-inline-code);
   }
 
   :focus-visible {

@@ -228,7 +228,9 @@ export interface ComposeRoundRequest {
  * worse, because it silently changes which loop the candidate practises against.
  */
 export interface RoundDraft {
+  /** Optional context is represented by an empty string so form controls stay controlled. */
   companyName: string;
+  /** Optional context is represented by an empty string so form controls stay controlled. */
   roleTitle: string;
   level: string;
   roundType: RoundType;
@@ -467,6 +469,8 @@ export interface SessionReport {
   focusTopic?: string | null;
   archetypeLabel: string;
   answeredTurns: number;
+  /** Non-warm-up answers that can support a competency judgement. */
+  assessableTurns?: number;
   generatedAt: string;
   headline: string;
   summary: string;

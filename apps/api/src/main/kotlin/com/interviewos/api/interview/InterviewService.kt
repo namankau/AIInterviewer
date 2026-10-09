@@ -264,8 +264,18 @@ class InterviewService(
                 // A custom-topic round is intentionally not employer or job-title
                 // preparation. Normalise this server-side too: older clients and browser
                 // autofill must not quietly put an employer rubric back into it.
-                companyName = if (roundType == RoundType.CUSTOM_TOPIC) CUSTOM_TOPIC_COMPANY else request.companyName.trim(),
-                roleTitle = if (roundType == RoundType.CUSTOM_TOPIC) CUSTOM_TOPIC_ROLE else request.roleTitle.trim(),
+                companyName =
+                    if (roundType == RoundType.CUSTOM_TOPIC) {
+                        CUSTOM_TOPIC_COMPANY
+                    } else {
+                        request.companyName.trim().ifBlank { GENERAL_PRACTICE_COMPANY }
+                    },
+                roleTitle =
+                    if (roundType == RoundType.CUSTOM_TOPIC) {
+                        CUSTOM_TOPIC_ROLE
+                    } else {
+                        request.roleTitle.trim().ifBlank { GENERAL_PRACTICE_ROLE }
+                    },
                 focusTopic = focusTopic?.takeIf { roundType == RoundType.CUSTOM_TOPIC },
             )
 
@@ -618,7 +628,7 @@ class InterviewService(
                 InterviewPlan.forTurn(
                     turnIndex = turnIndex + 1,
                     answeredTurns = repository.countAnsweredTurns(sessionId, userId) + 1,
-                    startedAt = session.startedAt,
+                    startedAt = session.enteredAt ?: session.startedAt,
                     durationMinutes = session.durationMinutes,
                     now = Instant.now(),
                     warmupTurns = if (session.workspace == null) roundType.warmupTurns(session.durationMinutes) else 0,
@@ -951,7 +961,7 @@ class InterviewService(
                 InterviewPlan.forTurn(
                     turnIndex = turnIndex,
                     answeredTurns = repository.countAnsweredTurns(sessionId, userId),
-                    startedAt = session.startedAt,
+                    startedAt = session.enteredAt ?: session.startedAt,
                     durationMinutes = session.durationMinutes,
                     now = Instant.now(),
                     warmupTurns = if (session.workspace == null) roundType.warmupTurns(session.durationMinutes) else 0,
@@ -1085,7 +1095,7 @@ class InterviewService(
                 .forTurn(
                     turnIndex = answered,
                     answeredTurns = answered,
-                    startedAt = session.startedAt,
+                    startedAt = session.enteredAt ?: session.startedAt,
                     durationMinutes = session.durationMinutes,
                     now = Instant.now(),
                 ).outOfTime
@@ -1178,12 +1188,12 @@ class InterviewService(
             language = session.language,
             status = session.status,
             consentVideo = session.consentVideo,
-            startedAt = session.startedAt,
+            startedAt = session.enteredAt ?: session.startedAt,
             endedAt = session.endedAt,
             durationMinutes = session.durationMinutes,
             // The deadline is the server's, so a client clock that drifts or a tab that
             // sleeps cannot buy the candidate extra time.
-            scheduledEndAt = session.startedAt?.plus(Duration.ofMinutes(session.durationMinutes.toLong())),
+            scheduledEndAt = session.enteredAt?.plus(Duration.ofMinutes(session.durationMinutes.toLong())),
             turnsCompleted = repository.countAnsweredTurns(sessionId, userId),
             maxTurns = InterviewPlan.MAX_TURNS,
             workspace = workspace,
@@ -1542,6 +1552,8 @@ class InterviewService(
         const val MIN_ROUND_MINUTES = 10
         const val MAX_ROUND_MINUTES = 120
         const val DEFAULT_CUSTOM_ROUND_MINUTES = 20
+        const val GENERAL_PRACTICE_COMPANY = "General practice"
+        const val GENERAL_PRACTICE_ROLE = "Role not specified"
         const val CUSTOM_TOPIC_COMPANY = "General practice"
         const val CUSTOM_TOPIC_ROLE = "Topic practice"
         const val REQUEST_LEASE_SECONDS = 10 * 60L

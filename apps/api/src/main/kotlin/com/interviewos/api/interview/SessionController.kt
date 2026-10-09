@@ -2,6 +2,7 @@ package com.interviewos.api.interview
 
 import com.interviewos.api.ai.AnswerAudio
 import com.interviewos.api.common.ApiException
+import com.interviewos.api.common.ContentTypes
 import com.interviewos.api.user.SupabaseIdentity
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -112,11 +113,24 @@ class SessionController(
                 code = "video_not_supported",
             )
         }
+        if (audio.size > MAX_ANSWER_AUDIO_BYTES) {
+            throw ApiException.badRequest(
+                "That recording is too large to process as one answer. Keep each answer under 25 MB.",
+                code = "answer_too_large",
+            )
+        }
+        val audioContentType = audio.contentType ?: ContentTypes.FALLBACK
+        if (ContentTypes.base(audioContentType) !in SUPPORTED_AUDIO_TYPES) {
+            throw ApiException.badRequest(
+                "That file is not a supported audio recording.",
+                code = "unsupported_audio_type",
+            )
+        }
         return interviewService.submitAnswer(
             userId = callerOf(jwt),
             sessionId = id,
             turnIndex = turnIndex,
-            audio = AnswerAudio(audio.bytes, audio.contentType ?: "audio/webm"),
+            audio = AnswerAudio(audio.bytes, audioContentType),
             speaksLocally = speaksLocally,
             endRound = endRound,
             requestId = requestId,
@@ -223,6 +237,26 @@ class SessionController(
     fun readiness(
         @AuthenticationPrincipal jwt: Jwt,
     ): List<ReadinessGroup> = readinessService.readiness(callerOf(jwt))
+
+    private companion object {
+        const val MAX_ANSWER_AUDIO_BYTES = 25L * 1024L * 1024L
+        val SUPPORTED_AUDIO_TYPES =
+            setOf(
+                // MediaRecorder is allowed to omit its container type. The browser then
+                // sends the Blob as opaque bytes; keep that standards-compliant fallback
+                // while rejecting types that positively identify non-audio content.
+                ContentTypes.FALLBACK,
+                "audio/webm",
+                "audio/mp4",
+                "audio/ogg",
+                "audio/wav",
+                "audio/mpeg",
+                "audio/aac",
+                "audio/flac",
+                "audio/l16",
+                "audio/x-m4a",
+            )
+    }
 
     private fun callerOf(jwt: Jwt): UUID = SupabaseIdentity.from(jwt).id
 }

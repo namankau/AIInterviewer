@@ -14,6 +14,8 @@ data class SessionReportView(
     val focusTopic: String? = null,
     val archetypeLabel: String,
     val answeredTurns: Int,
+    /** Answers outside the warm-up that can support a competency judgement. */
+    val assessableTurns: Int = answeredTurns,
     val generatedAt: Instant,
     val headline: String,
     val summary: String,

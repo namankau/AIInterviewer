@@ -86,6 +86,12 @@ export function ChallengeCard({
         <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">{challenge.moduleTitle}</span>
       </div>
 
+      {challenge.context ? (
+        <p className="rounded-xl border border-line bg-surface-sunken px-4 py-3 text-body leading-relaxed text-ink-muted">
+          {challenge.context}
+        </p>
+      ) : null}
+
       {challenge.kind === "what-next" && challenge.viz && challenge.frameIndex !== undefined ? (
         <div className="flex justify-center rounded-xl border border-line bg-surface-sunken px-3 py-5">
           <ArenaVizFrame viz={challenge.viz} frameIndex={challenge.frameIndex} />

@@ -139,14 +139,14 @@ export function Playground({ block }: { block: PlaygroundBlockData }) {
         {result && !result.message && (
           <div className="flex flex-col gap-2">
             <div>
-              <p className="text-[0.7rem] uppercase tracking-wider text-ink-subtle">Output</p>
+              <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Output</p>
               <pre className="mt-0.5 overflow-x-auto whitespace-pre-wrap font-mono text-caption text-ink">
                 {result.stdout || "(nothing printed)"}
               </pre>
             </div>
             {result.stderr ? (
               <div>
-                <p className="text-[0.7rem] uppercase tracking-wider text-ink-subtle">Error</p>
+                <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Error</p>
                 <pre className="mt-0.5 overflow-x-auto whitespace-pre-wrap font-mono text-caption text-danger">
                   {result.stderr}
                 </pre>

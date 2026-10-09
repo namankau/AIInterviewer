@@ -17,7 +17,7 @@ export function InlineText({ text }: { text: string }) {
     <>
       {tokens.map((token, i) =>
         token.kind === "code" ? (
-          <code key={i} className="rounded bg-surface-sunken px-1.5 py-0.5 font-mono text-[0.9em] text-ink">
+          <code key={i} className="inline-code rounded bg-surface-sunken px-1.5 py-0.5 font-mono text-ink">
             {token.text}
           </code>
         ) : token.kind === "bold" ? (

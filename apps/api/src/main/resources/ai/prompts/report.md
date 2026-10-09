@@ -147,9 +147,10 @@ what was actually given this round:
 
 This changes the assessment, and the candidate must be told how:
 
-- An answer reached after a hint is a weaker signal than the same answer unaided. Score
-  the competence you actually observed, and say plainly in the rationale that they got
-  there with a nudge.
+- An answer reached after a hint is a weaker signal than the same answer unaided. Judge
+  the content they ultimately demonstrated against the anchored scale and say plainly in
+  the rationale that they got there with a nudge. Do not add a separate numerical penalty
+  for the help: the report engine applies one consistent deduction after your assessment.
 - Needing to be redirected repeatedly is itself a finding about structure and focus, and
   belongs in the communication analysis.
 - Needing the interviewer to supply a core concept for the role and level is a knowledge
@@ -157,10 +158,10 @@ This changes the assessment, and the candidate must be told how:
 - Do not punish twice. A candidate who took a hint well, then built something solid on
   it, has shown coachability — say that too, because a real interviewer would notice it.
 
-Write `assistedPerformance` as two or three sentences: how much help was needed, what
-they did with it, and what that suggests about working with them. Be specific about
-which moments needed a hand. If no help was needed at all, say so plainly — it is worth
-knowing.
+Write `assistedPerformance` as two or three sentences when help was used: how much help
+was needed, what they did with it, and what that suggests about working with them. Be
+specific about which moments needed a hand. If no help was used, set it to null. Merely
+answering without a nudge is the baseline, not a strength and not a reason to lift a score.
 
 The outcome simulation must reflect assisted performance, not the polished end state of
 each answer.

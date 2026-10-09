@@ -12,6 +12,14 @@ updates:
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
+    # Node types describe the oldest runtime we support, and ESLint majors must move
+    # with Next's full plugin chain. Treating either as a routine version bump creates
+    # green-looking PRs that are semantically wrong or fail lint outright.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: gradle
     directory: "/apps/api"

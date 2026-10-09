@@ -95,7 +95,7 @@ export default async function ChapterPage({
   return (
     <div className="min-h-dvh bg-[linear-gradient(180deg,var(--surface-tint)_0,transparent_22rem)]">
       <CourseSiteHeader />
-      <main className="mx-auto w-full max-w-[108rem] px-5 py-6 sm:px-7 lg:px-8 lg:py-8">
+      <main className="mx-auto w-full max-w-[120rem] px-5 py-6 sm:px-7 lg:px-8 lg:py-8">
         <div className="mb-5 flex flex-wrap items-center gap-2 font-mono text-micro tracking-widest text-ink-subtle uppercase">
           <Link href="/courses" className="transition-colors hover:text-accent">Courses</Link>
           <span aria-hidden="true">/</span>

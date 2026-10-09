@@ -281,10 +281,8 @@ describe("BlockRenderer", () => {
   });
 
   it("keeps full-bleed blocks from forcing page-level horizontal scroll at mobile width", () => {
-    // A `steps` strip is wider than a phone once it has more than a step or two, and a
-    // `compare` block has 2-3 columns — neither should widen the page itself. `steps`
-    // scrolls its own content (like a code block); `compare` stacks to one column by
-    // default and only grows columns from `sm:` up (task 052).
+    // Both blocks stack on a phone and expand into the available row at larger widths;
+    // neither uses fixed-width children that leave half the lesson empty.
     const { container } = render(
       <BlockRenderer
         blocks={[
@@ -308,8 +306,10 @@ describe("BlockRenderer", () => {
       />,
     );
 
-    const stepsList = container.querySelector("ol.overflow-x-auto");
+    const stepsList = container.querySelector("ol.grid");
     expect(stepsList).toBeInTheDocument();
+    expect(stepsList?.className).toContain("auto-fit");
+    expect(container.querySelector(".w-56")).not.toBeInTheDocument();
 
     const compareGrid = container.querySelector(".grid.grid-cols-1");
     expect(compareGrid).toBeInTheDocument();

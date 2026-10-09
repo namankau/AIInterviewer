@@ -43,7 +43,8 @@ class ReportService(
             // it on the owning session; enrich them here so refreshing an old report no
             // longer brings the irrelevant employer/role header back.
             val storedTopic = repository.findSession(sessionId, userId)?.focusTopic
-            return storedReport(payload, storedTopic)
+            val storedTurns = repository.listTranscript(sessionId, userId).filter { it.answerTranscript != null }
+            return storedReport(payload, storedTopic, assessableTurnsOf(storedTurns))
         }
 
         val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
@@ -152,7 +153,7 @@ class ReportService(
         val claim = repository.claimReportGeneration(sessionId, userId, leaseId, REPORT_LEASE_SECONDS)
         when (claim.status) {
             ReportGenerationClaimStatus.COMPLETED -> {
-                return storedReport(checkNotNull(claim.payloadJson), session.focusTopic)
+                return storedReport(checkNotNull(claim.payloadJson), session.focusTopic, assessableTurnsOf(turns))
             }
 
             ReportGenerationClaimStatus.IN_PROGRESS -> {
@@ -169,9 +170,7 @@ class ReportService(
                 )
             }
 
-            ReportGenerationClaimStatus.ACQUIRED -> {
-                Unit
-            }
+            ReportGenerationClaimStatus.ACQUIRED -> {}
         }
 
         var saved = false
@@ -199,6 +198,7 @@ class ReportService(
             val verified =
                 withVerifiedEvidence(composed.value, turns)
                     .withoutCameraClaims()
+                    .let { ReportScoreCalibration.adjust(it, turns) }
                     // Every answered question gets a note, whether or not the model wrote one
                     // for it (see AnswerAnnotations).
                     .let { it.copy(annotations = AnswerAnnotations.of(turns, it.annotations)) }
@@ -225,7 +225,7 @@ class ReportService(
             ) {
                 repository.findReportJson(sessionId, userId)?.let {
                     saved = true
-                    return storedReport(it, session.focusTopic)
+                    return storedReport(it, session.focusTopic, assessableTurnsOf(turns))
                 }
                 throw ApiException.conflict(
                     "The interview changed while its report was being generated. Refresh to see its current state.",
@@ -262,6 +262,7 @@ class ReportService(
     private fun storedReport(
         payloadJson: String,
         sessionFocusTopic: String? = null,
+        actualAssessableTurns: Int? = null,
     ): SessionReportView {
         @Suppress("UNCHECKED_CAST")
         val stored = objectMapper.readValue(payloadJson, Map::class.java) as Map<String, Any?>
@@ -271,9 +272,24 @@ class ReportService(
             } else {
                 stored
             }
-        val complete = contextual + EMPTY_SECTIONS.filterKeys { it !in contextual }
+        val withEvidenceCount =
+            if ("assessableTurns" in contextual) {
+                contextual
+            } else {
+                contextual +
+                    (
+                        "assessableTurns" to
+                            (actualAssessableTurns ?: (contextual["answeredTurns"] as? Number)?.toInt() ?: 0)
+                    )
+            }
+        val complete = withEvidenceCount + EMPTY_SECTIONS.filterKeys { it !in withEvidenceCount }
         return objectMapper.readValue(objectMapper.writeValueAsString(complete), SessionReportView::class.java)
     }
+
+    private fun assessableTurnsOf(turns: List<TurnRow>): Int? =
+        turns
+            .takeIf { it.isNotEmpty() }
+            ?.count { TurnPhase.fromDbValue(it.phase) != TurnPhase.WARMUP }
 
     /**
      * Strips any claim about how the candidate looked when nothing looked at them. A model
@@ -353,6 +369,7 @@ class ReportService(
             focusTopic = session.focusTopic?.takeIf { roundType == RoundType.CUSTOM_TOPIC },
             archetypeLabel = archetype.label,
             answeredTurns = turns.size,
+            assessableTurns = turns.count { TurnPhase.fromDbValue(it.phase) != TurnPhase.WARMUP },
             generatedAt = java.time.Instant.now(),
             headline = content.headline,
             summary = content.summary,

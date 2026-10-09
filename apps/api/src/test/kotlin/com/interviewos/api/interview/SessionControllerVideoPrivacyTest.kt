@@ -62,6 +62,46 @@ class SessionControllerVideoPrivacyTest {
     }
 
     @Test
+    fun `rejects a non-audio upload before it reaches the interview service`() {
+        val audio = MockMultipartFile("audio", "answer.png", "image/png", byteArrayOf(1, 2, 3))
+
+        mockMvc
+            .perform(
+                multipart("/api/v1/sessions/$sessionId/turns")
+                    .file(audio)
+                    .param("turnIndex", "0")
+                    .param("requestId", "176bd50a-e9a4-4df4-ad50-1c2f47a0c283")
+                    .with(tokenFor(candidate)),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("unsupported_audio_type"))
+
+        verifyNoInteractions(interviewService)
+    }
+
+    @Test
+    fun `rejects an oversized answer before it reaches the interview service`() {
+        val audio =
+            MockMultipartFile(
+                "audio",
+                "answer.webm",
+                "audio/webm",
+                ByteArray(25 * 1024 * 1024 + 1),
+            )
+
+        mockMvc
+            .perform(
+                multipart("/api/v1/sessions/$sessionId/turns")
+                    .file(audio)
+                    .param("turnIndex", "0")
+                    .param("requestId", "176bd50a-e9a4-4df4-ad50-1c2f47a0c283")
+                    .with(tokenFor(candidate)),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("answer_too_large"))
+
+        verifyNoInteractions(interviewService)
+    }
+
+    @Test
     fun `forwards the answer request ID to the idempotency boundary`() {
         val requestId = UUID.fromString("176bd50a-e9a4-4df4-ad50-1c2f47a0c283")
         val audio = MockMultipartFile("audio", "answer.webm", "audio/webm", byteArrayOf(1, 2, 3))

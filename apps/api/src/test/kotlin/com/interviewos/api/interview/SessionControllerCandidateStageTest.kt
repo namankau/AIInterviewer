@@ -214,6 +214,85 @@ class SessionControllerCandidateStageTest {
     }
 
     @Test
+    fun `company and role are optional and normalise to honest general context`() {
+        val resolution = harness.archetypes.resolve("General practice")
+        given(
+            harness.repository.insertSession(
+                candidate,
+                "General practice",
+                resolution.archetype,
+                resolution.confidence,
+                "Role not specified",
+                "system_design",
+                "english",
+                true,
+                false,
+                20,
+                null,
+            ),
+        ).willReturn(sessionId)
+        given(harness.repository.findSession(sessionId, candidate)).willReturn(
+            SessionRow(
+                id = sessionId,
+                companyName = "General practice",
+                archetype = resolution.archetype.dbValue,
+                archetypeConfidence = resolution.confidence.dbValue,
+                roleTitle = "Role not specified",
+                roundType = "system_design",
+                language = "english",
+                status = "in_progress",
+                startedAt = null,
+                endedAt = null,
+                consentVideo = false,
+                durationMinutes = 20,
+            ),
+        )
+        harness.case =
+            ComposedCase(
+                title = "A general design round",
+                summary = "A design problem without employer-specific assumptions.",
+                constraints = listOf("State assumptions"),
+                openingPrompt = "What does this system need to do?",
+                deepDiveOptions = listOf("Data model"),
+            )
+
+        val body =
+            """
+            {"companyName":"","roleTitle":"","roundType":"system_design",
+             "language":"english","consentAudio":true,"consentVideo":false,"durationMinutes":20}
+            """.trimIndent()
+
+        mockMvc
+            .perform(
+                post("/api/v1/sessions")
+                    .with(tokenFor(candidate))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body),
+            ).andExpect(status().isCreated)
+            .andExpect(jsonPath("$.companyName").value("General practice"))
+            .andExpect(jsonPath("$.roleTitle").value("Role not specified"))
+    }
+
+    @Test
+    fun `rejects a five minute pseudo-round before anything is written`() {
+        val body =
+            """
+            {"companyName":"","roleTitle":"","roundType":"technical_fundamentals",
+             "language":"english","consentAudio":true,"consentVideo":false,"durationMinutes":5}
+            """.trimIndent()
+
+        mockMvc
+            .perform(
+                post("/api/v1/sessions")
+                    .with(tokenFor(candidate))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body),
+            ).andExpect(status().isBadRequest)
+
+        verifyNoInteractions(harness.repository)
+    }
+
+    @Test
     fun `rejects a start with no token even when candidateStage is set`() {
         val body =
             """

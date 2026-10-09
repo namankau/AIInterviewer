@@ -169,7 +169,7 @@ class SessionRepository(
                 """
                 select id, company_name, company_archetype::text as archetype, role_title,
                        round_type::text as round_type, language::text as language,
-                       status::text as status, started_at, ended_at, report_expired_at,
+                       status::text as status, started_at, entered_at, ended_at, report_expired_at,
                        (consent_video_at is not null) as consent_video, duration_minutes,
                        coalesce(archetype_confidence, 'inferred') as archetype_confidence,
                        workspace::text as workspace, board::text as board, stated_level, focus_topic
@@ -241,16 +241,13 @@ class SessionRepository(
     /**
      * Starts the round's clock, once: the moment the candidate enters the room.
      *
-     * `started_at` is written at insert, and until now that was when the clock started —
-     * before the problem had been composed, before the device check, before the candidate
-     * had seen a single word. A five-minute round opened on 3:50.
+     * `started_at` is written at insert because the existing constraints require it, but
+     * it is not evidence that the candidate entered the room. `entered_at` is the explicit
+     * clock latch. Inferring entry from `started_at = created_at` made correctness depend
+     * on two implementation timestamps remaining identical across schema changes.
      *
-     * The insert still writes it, because the constraints need a start before any end and
-     * a round abandoned during setup still ends. What marks the clock as not yet started
-     * is `started_at = created_at`: both are `now()` in the insert's own transaction, so
-     * they are equal to the microsecond until this moves one of them. That makes the
-     * update idempotent — reloading the room mid-round finds them unequal and changes
-     * nothing, so a refresh never buys anybody more time.
+     * The null check makes this idempotent: a reload keeps the first room-entry time, so a
+     * refresh never buys extra time.
      */
     fun startClock(
         sessionId: UUID,
@@ -260,10 +257,10 @@ class SessionRepository(
             .sql(
                 """
                 update public.sessions
-                   set started_at = now()
+                   set started_at = now(), entered_at = now()
                  where id = :id and user_id = :u
                    and status = 'in_progress'
-                   and started_at = created_at
+                   and entered_at is null
                 """.trimIndent(),
             ).param("id", sessionId)
             .param("u", userId)
@@ -1180,6 +1177,7 @@ class SessionRepository(
             language = rs.getString("language"),
             status = rs.getString("status"),
             startedAt = rs.getTimestamp("started_at")?.toInstant(),
+            enteredAt = rs.getTimestamp("entered_at")?.toInstant(),
             endedAt = rs.getTimestamp("ended_at")?.toInstant(),
             consentVideo = rs.getBoolean("consent_video"),
             durationMinutes = rs.getInt("duration_minutes"),
@@ -1242,6 +1240,8 @@ data class SessionRow(
     val declaredStage: DeclaredStage? = null,
     /** Candidate-supplied subject for a custom topic round. Null for standard rounds. */
     val focusTopic: String? = null,
+    /** The first time the candidate entered the room; the round clock starts here. */
+    val enteredAt: Instant? = startedAt,
 )
 
 /**

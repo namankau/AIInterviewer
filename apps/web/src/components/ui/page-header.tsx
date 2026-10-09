@@ -22,7 +22,7 @@ export function PageHeader({
     >
       <div className="max-w-3xl">
         {eyebrow ? (
-          <p className="mb-2 text-micro font-bold tracking-[0.14em] text-accent uppercase">
+          <p className="mb-2 font-mono text-micro font-bold tracking-widest text-accent uppercase">
             {eyebrow}
           </p>
         ) : null}

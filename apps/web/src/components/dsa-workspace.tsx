@@ -156,13 +156,13 @@ export function DsaWorkspace({
 function ProblemPanel({ problem }: { problem: CodingProblem }) {
   return (
     <aside className="min-h-0 overflow-y-auto bg-surface-raised p-6">
-      <h2 className="font-serif text-2xl leading-tight text-ink">{problem.title}</h2>
-      <p className="mt-2 text-xs uppercase tracking-[0.14em] text-ink-subtle">
+      <h2 className="text-title text-ink">{problem.title}</h2>
+      <p className="mt-2 font-mono text-micro tracking-widest text-ink-subtle uppercase">
         {problem.difficulty} · {problem.topic}
       </p>
 
       <Section title="Problem">
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-muted">{problem.statement}</p>
+        <p className="whitespace-pre-wrap text-body leading-relaxed text-ink-muted">{problem.statement}</p>
       </Section>
 
       {problem.examples.length > 0 && (
@@ -170,11 +170,11 @@ function ProblemPanel({ problem }: { problem: CodingProblem }) {
           <div className="space-y-3">
             {problem.examples.map((example, index) => (
               <div key={index} className="rounded-lg bg-surface-sunken p-3">
-                <p className="text-xs font-medium text-ink">Example {index + 1}</p>
+                <p className="text-caption font-medium text-ink">Example {index + 1}</p>
                 <Field label="Input" value={example.input} />
                 <Field label="Output" value={example.output} />
                 {example.explanation && (
-                  <p className="mt-2 text-xs leading-relaxed text-ink-muted">{example.explanation}</p>
+                  <p className="mt-2 text-caption leading-relaxed text-ink-muted">{example.explanation}</p>
                 )}
               </div>
             ))}
@@ -186,7 +186,7 @@ function ProblemPanel({ problem }: { problem: CodingProblem }) {
         <Section title="Constraints">
           <ul className="space-y-1">
             {problem.constraints.map((constraint) => (
-              <li key={constraint} className="font-mono text-xs text-ink-muted">
+              <li key={constraint} className="font-mono text-caption text-ink-muted">
                 · {constraint}
               </li>
             ))}
@@ -200,7 +200,7 @@ function ProblemPanel({ problem }: { problem: CodingProblem }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-6">
-      <h3 className="mb-2 text-xs uppercase tracking-[0.14em] text-ink-subtle">{title}</h3>
+      <h3 className="mb-2 font-mono text-micro tracking-widest text-ink-subtle uppercase">{title}</h3>
       {children}
     </section>
   );
@@ -209,8 +209,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div className="mt-2">
-      <p className="text-[0.7rem] uppercase tracking-wider text-ink-subtle">{label}</p>
-      <pre className="mt-0.5 overflow-x-auto font-mono text-xs text-ink">{value}</pre>
+      <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">{label}</p>
+      <pre className="mt-0.5 overflow-x-auto font-mono text-caption text-ink">{value}</pre>
     </div>
   );
 }
@@ -239,7 +239,7 @@ function EditorBar({
             type="button"
             onClick={() => onLanguage(option)}
             aria-pressed={language === option}
-            className={`rounded-md px-2.5 py-1 text-xs capitalize transition ${
+            className={`rounded-md px-2.5 py-1 text-caption capitalize transition ${
               language === option ? "bg-ink text-surface-raised" : "text-ink-muted hover:bg-surface-sunken"
             }`}
           >
@@ -252,22 +252,22 @@ function EditorBar({
         type="button"
         onClick={onRun}
         disabled={running || !canRun}
-        className="rounded-lg bg-accent px-3 py-1 text-xs font-medium text-accent-contrast transition hover:bg-accent-strong disabled:opacity-50"
+        className="rounded-lg bg-accent px-3 py-1 text-caption font-medium text-accent-contrast transition hover:bg-accent-strong disabled:opacity-50"
       >
         {running ? "Running…" : "Run"}
       </button>
 
       {/* Said once, plainly, rather than discovered when Run does nothing. */}
       {language === "python" && pythonReady === null && (
-        <span className="text-xs text-ink-subtle">Loading Python…</span>
+        <span className="text-caption text-ink-subtle">Loading Python…</span>
       )}
       {language === "python" && pythonReady === true && (
-        <span className="text-xs text-ink-subtle">Runs in your browser — your code stays on this machine.</span>
+        <span className="text-caption text-ink-subtle">Runs in your browser — your code stays on this machine.</span>
       )}
       {language === "python" && pythonReady === false && (
-        <span className="text-xs text-ink-subtle">Python could not load. The round runs out loud.</span>
+        <span className="text-caption text-ink-subtle">Python could not load. The round runs out loud.</span>
       )}
-      {language === "java" && <span className="text-xs text-ink-subtle">Java needs a server runner — not configured.</span>}
+      {language === "java" && <span className="text-caption text-ink-subtle">Java needs a server runner — not configured.</span>}
     </div>
   );
 }
@@ -298,7 +298,7 @@ function TestCases({
 
   if (cases.length === 0) {
     return (
-      <div className="border-t border-line px-4 py-3 text-xs text-ink-subtle">
+      <div className="border-t border-line px-4 py-3 text-caption text-ink-subtle">
         This problem came without test cases. Run is off; talk the interviewer through it instead.
       </div>
     );
@@ -314,7 +314,7 @@ function TestCases({
             role="tab"
             aria-selected={selected === index}
             onClick={() => onSelect(index)}
-            className={`rounded-md px-2.5 py-1 text-xs transition ${
+            className={`rounded-md px-2.5 py-1 text-caption transition ${
               selected === index ? "bg-surface-sunken text-ink" : "text-ink-muted hover:bg-surface-sunken"
             }`}
           >
@@ -329,7 +329,7 @@ function TestCases({
         panel must never do without a warning.
       */}
       {!verified && (
-        <p className="px-4 pt-2 text-[0.7rem] leading-relaxed text-ink-subtle">
+        <p className="px-4 pt-2 text-micro leading-relaxed text-ink-subtle">
           These expected outputs were not checked by running a solution, so one may be wrong. If your
           output differs and you think you are right, say why — that is a good thing to argue.
         </p>
@@ -338,19 +338,19 @@ function TestCases({
       <div className="grid gap-4 px-4 py-3 sm:grid-cols-2">
         <div>
           <Field label="Input" value={active?.input ?? ""} />
-          <p className="mt-1 text-[0.7rem] text-ink-subtle">{stdinFormat}</p>
+          <p className="mt-1 text-micro text-ink-subtle">{stdinFormat}</p>
           <Field label="Expected" value={active?.expected ?? ""} />
         </div>
         <div>
-          {!shown && <p className="text-xs text-ink-subtle">Run to see what your code prints.</p>}
-          {shown?.message && <p className="text-xs text-ink-muted">{shown.message}</p>}
+          {!shown && <p className="text-caption text-ink-subtle">Run to see what your code prints.</p>}
+          {shown?.message && <p className="text-caption text-ink-muted">{shown.message}</p>}
           {shown && !shown.message && (
             <>
               <Field label="Your output" value={shown.stdout || "(nothing printed)"} />
               {shown.stderr && (
                 <div className="mt-2">
-                  <p className="text-[0.7rem] uppercase tracking-wider text-ink-subtle">Error</p>
-                  <pre className="mt-0.5 overflow-x-auto whitespace-pre-wrap font-mono text-xs text-danger">
+                  <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Error</p>
+                  <pre className="mt-0.5 overflow-x-auto whitespace-pre-wrap font-mono text-caption text-danger">
                     {shown.stderr}
                   </pre>
                 </div>
@@ -360,7 +360,7 @@ function TestCases({
                 interviewer's to say at the debrief, not this panel's.
               */}
               {shown.passed !== null && (
-                <p className={`mt-2 text-xs ${shown.passed ? "text-positive" : "text-ink-muted"}`}>
+                <p className={`mt-2 text-caption ${shown.passed ? "text-positive" : "text-ink-muted"}`}>
                   {shown.passed ? "Matches the expected output." : "Does not match the expected output."}
                 </p>
               )}

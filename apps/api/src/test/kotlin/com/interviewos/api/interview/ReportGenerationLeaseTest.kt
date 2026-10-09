@@ -51,6 +51,7 @@ class ReportGenerationLeaseTest {
                 roundType = RoundType.CUSTOM_TOPIC.dbValue,
                 roundLabel = RoundType.CUSTOM_TOPIC.label,
                 focusTopic = null,
+                answeredTurns = 2,
             )
         given(harness.repository.findReportJson(sessionId, candidate)).willReturn(
             harness.mapper.writeValueAsString(oldReport),
@@ -72,10 +73,17 @@ class ReportGenerationLeaseTest {
                 focusTopic = "Java collections",
             ),
         )
+        given(harness.repository.listTranscript(sessionId, candidate)).willReturn(
+            listOf(
+                answeredTurn(0, TurnPhase.WARMUP),
+                answeredTurn(1, TurnPhase.MAIN),
+            ),
+        )
 
         val report = harness.reportService.report(candidate, sessionId, leaseId)
 
         assertThat(report.focusTopic).isEqualTo("Java collections")
+        assertThat(report.assessableTurns).isEqualTo(1)
         assertThat(aiCalls("composeReport")).isZero()
     }
 
@@ -167,6 +175,18 @@ class ReportGenerationLeaseTest {
     }
 
     private fun aiCalls(methodName: String): Int = mockingDetails(harness.ai).invocations.count { it.method.name == methodName }
+
+    private fun answeredTurn(
+        index: Int,
+        phase: TurnPhase,
+    ) = TurnRow(
+        turnIndex = index,
+        questionText = "Question $index",
+        questionAudioPath = null,
+        answerTranscript = "Answer $index",
+        answeredAt = Instant.parse("2026-09-23T08:10:00Z").plusSeconds(index.toLong()),
+        phase = phase.dbValue,
+    )
 
     private fun reportView(headline: String) =
         SessionReportView(

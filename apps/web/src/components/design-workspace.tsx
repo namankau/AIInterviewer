@@ -85,25 +85,25 @@ export function DesignWorkspace({
   return (
     <div className="grid h-full min-h-0 grid-cols-1 gap-px bg-line lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
       <aside className="min-h-0 overflow-y-auto bg-surface-raised p-6">
-        <p className="text-xs uppercase tracking-[0.14em] text-ink-subtle">The case</p>
-        <h2 className="mt-1 font-serif text-2xl leading-tight text-ink">{designCase.title}</h2>
+        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">The case</p>
+        <h2 className="mt-1 text-title text-ink">{designCase.title}</h2>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
           {designCase.constraints.map((constraint) => (
             <span
               key={constraint}
-              className="rounded-full border border-line-strong px-2.5 py-1 font-mono text-xs text-ink-muted"
+              className="rounded-full border border-line-strong px-2.5 py-1 font-mono text-caption text-ink-muted"
             >
               {constraint}
             </span>
           ))}
         </div>
 
-        <p className="mt-4 text-sm leading-relaxed text-ink-muted">{designCase.summary}</p>
+        <p className="mt-4 text-body leading-relaxed text-ink-muted">{designCase.summary}</p>
 
         <PhaseRail current={phase} />
 
-        <p className="mt-6 text-xs leading-relaxed text-ink-subtle">
+        <p className="mt-6 text-caption leading-relaxed text-ink-subtle">
           The board is yours. Nothing on it is scored on neatness — it is here so you can point at
           something while you think.
         </p>
@@ -124,7 +124,7 @@ function PhaseRail({ current }: { current: DesignPhase }) {
   const items = useMemo(() => DESIGN_PHASES, []);
   return (
     <nav className="mt-6" aria-label="Round shape">
-      <p className="mb-2 text-xs uppercase tracking-[0.14em] text-ink-subtle">Time</p>
+      <p className="mb-2 font-mono text-micro tracking-widest text-ink-subtle uppercase">Time</p>
       <ol className="space-y-1">
         {items.map((phase) => {
           const active = phase === current;
@@ -132,7 +132,7 @@ function PhaseRail({ current }: { current: DesignPhase }) {
             <li key={phase}>
               <div
                 aria-current={active ? "step" : undefined}
-                className={`rounded-md px-2.5 py-1.5 text-sm transition ${
+                className={`rounded-md px-2.5 py-1.5 text-caption transition ${
                   active ? "bg-surface-sunken font-medium text-ink" : "text-ink-subtle"
                 }`}
               >
@@ -149,7 +149,7 @@ function PhaseRail({ current }: { current: DesignPhase }) {
 function CanvasPlaceholder({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-full items-center justify-center bg-surface-raised">
-      <p className="text-sm text-ink-subtle">{children}</p>
+      <p className="text-caption text-ink-subtle">{children}</p>
     </div>
   );
 }

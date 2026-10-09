@@ -78,8 +78,8 @@ const privateItems = [
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-2xl border border-white/15 bg-white/10 px-5 py-4 backdrop-blur-sm">
-      <p className="text-3xl font-extrabold tracking-tight text-on-navy">{value}</p>
-      <p className="mt-1 text-sm leading-6 text-on-navy-muted">{label}</p>
+      <p className="text-title font-extrabold text-on-navy">{value}</p>
+      <p className="mt-1 text-caption leading-relaxed text-on-navy-muted">{label}</p>
     </div>
   );
 }
@@ -122,19 +122,19 @@ export function ProgressPagePrototype({
             <Badge tone="positive" className="bg-positive-wash text-positive">
               Synthetic preview
             </Badge>
-            <p className="mt-6 text-sm font-bold uppercase tracking-[0.18em] text-accent-on-navy">
+            <p className="mt-6 font-mono text-micro font-bold tracking-widest text-accent-on-navy uppercase">
               Proof of progress
             </p>
             <h1
               id="progress-title"
-              className="mt-3 font-display text-4xl font-extrabold tracking-tight text-on-navy sm:text-5xl"
+              className="mt-3 text-display font-extrabold text-on-navy"
             >
               {profile.displayName}
             </h1>
-            <p className="mt-4 max-w-2xl text-lg leading-8 text-on-navy-muted">
+            <p className="mt-4 max-w-2xl text-body leading-relaxed text-on-navy-muted">
               Learning and interview practice completed on InterviewOS.
             </p>
-            <p className="mt-4 text-sm text-on-navy-muted">
+            <p className="mt-4 text-caption text-on-navy-muted">
               Last updated <time dateTime={profile.updatedAt}>{profile.updatedAtLabel}</time>
             </p>
           </div>
@@ -152,12 +152,12 @@ export function ProgressPagePrototype({
           <div className="flex gap-4">
             <span
               aria-hidden="true"
-              className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-lg font-black text-accent-contrast"
+              className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-heading font-black text-accent-contrast"
             >
               i
             </span>
             <div>
-              <h2 className="text-lg font-extrabold text-ink">Completion, explained plainly</h2>
+              <h2 className="text-heading font-extrabold text-ink">Completion, explained plainly</h2>
               <p className="mt-2 max-w-4xl leading-7 text-ink-muted">
                 This page records activities completed on InterviewOS. It is not a certification,
                 a claim of skill mastery, or an employer endorsement.
@@ -168,8 +168,8 @@ export function ProgressPagePrototype({
 
         <section aria-labelledby="course-work-title">
           <div className="max-w-2xl">
-            <p className="text-sm font-bold uppercase tracking-[0.16em] text-accent">Learning</p>
-            <h2 id="course-work-title" className="mt-2 text-3xl font-extrabold tracking-tight">
+            <p className="font-mono text-micro font-bold tracking-widest text-accent uppercase">Learning</p>
+            <h2 id="course-work-title" className="mt-2 text-title font-extrabold">
               Course work
             </h2>
             <p className="mt-3 leading-7 text-ink-muted">
@@ -184,14 +184,14 @@ export function ProgressPagePrototype({
                   <CompletionMark />
                   <div>
                     <Badge tone="positive">Completed</Badge>
-                    <h3 className="mt-3 text-xl font-extrabold tracking-tight">{course.title}</h3>
+                    <h3 className="mt-3 text-heading font-extrabold">{course.title}</h3>
                   </div>
                 </div>
-                <p className="mt-5 text-sm text-ink-muted">
+                <p className="mt-5 text-caption text-ink-muted">
                   {course.completedChapterCount} chapters completed ·{" "}
                   <time dateTime={course.completedAt}>{course.completedAtLabel}</time>
                 </p>
-                <ul className="mt-5 space-y-2 text-sm text-ink-muted" aria-label="Visible chapter groups">
+                <ul className="mt-5 space-y-2 text-caption text-ink-muted" aria-label="Visible chapter groups">
                   {course.visibleChapters.map((chapter) => (
                     <li key={chapter} className="flex gap-2">
                       <span aria-hidden="true" className="mt-2 size-1.5 rounded-full bg-accent" />
@@ -213,8 +213,8 @@ export function ProgressPagePrototype({
 
         <section aria-labelledby="practice-title">
           <div className="max-w-2xl">
-            <p className="text-sm font-bold uppercase tracking-[0.16em] text-accent">Practice</p>
-            <h2 id="practice-title" className="mt-2 text-3xl font-extrabold tracking-tight">
+            <p className="font-mono text-micro font-bold tracking-widest text-accent uppercase">Practice</p>
+            <h2 id="practice-title" className="mt-2 text-title font-extrabold">
               Interview practice
             </h2>
             <p className="mt-3 leading-7 text-ink-muted">
@@ -228,8 +228,8 @@ export function ProgressPagePrototype({
                 <div className="flex items-start gap-4">
                   <CompletionMark className="bg-accent-wash text-accent" />
                   <div>
-                    <h3 className="text-lg font-extrabold">{practice.topic}</h3>
-                    <p className="mt-2 text-sm leading-6 text-ink-muted">
+                    <h3 className="text-heading font-extrabold">{practice.topic}</h3>
+                    <p className="mt-2 text-caption leading-relaxed text-ink-muted">
                       {practice.completedSessionCount}{" "}
                       {practice.completedSessionCount === 1 ? "session" : "sessions"} completed ·{" "}
                       <time dateTime={practice.completedAt}>{practice.completedAtLabel}</time>
@@ -252,7 +252,7 @@ export function ProgressPagePrototype({
           <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
             <div>
               <Badge tone="navy">Privacy boundary</Badge>
-              <h2 id="privacy-title" className="mt-4 text-3xl font-extrabold tracking-tight">
+              <h2 id="privacy-title" className="mt-4 text-title font-extrabold">
                 Evidence without private interview content
               </h2>
               <p className="mt-3 leading-7 text-ink-muted">
@@ -264,7 +264,7 @@ export function ProgressPagePrototype({
             <div className="grid gap-4 sm:grid-cols-2">
               <Card className="p-5 shadow-none">
                 <h3 className="font-extrabold text-positive">This page shows</h3>
-                <ul className="mt-4 space-y-3 text-sm leading-6 text-ink-muted">
+                <ul className="mt-4 space-y-3 text-caption leading-relaxed text-ink-muted">
                   <li>Selected course and chapter completions</li>
                   <li>Selected topics practised in completed interviews</li>
                   <li>Completion dates and first-party explanations</li>
@@ -272,7 +272,7 @@ export function ProgressPagePrototype({
               </Card>
               <Card className="p-5 shadow-none">
                 <h3 className="font-extrabold">What stays private</h3>
-                <ul className="mt-4 space-y-3 text-sm leading-6 text-ink-muted">
+                <ul className="mt-4 space-y-3 text-caption leading-relaxed text-ink-muted">
                   {privateItems.map((item) => (
                     <li key={item}>{item}</li>
                   ))}
@@ -282,7 +282,7 @@ export function ProgressPagePrototype({
           </div>
         </section>
 
-        <footer className="border-t border-line pt-7 text-sm leading-6 text-ink-muted">
+        <footer className="border-t border-line pt-7 text-caption leading-relaxed text-ink-muted">
           InterviewOS recorded the listed completion events. This page does not certify expertise or
           represent an employer endorsement.
         </footer>

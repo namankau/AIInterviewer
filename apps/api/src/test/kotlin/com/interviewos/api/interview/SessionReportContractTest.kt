@@ -85,6 +85,7 @@ class SessionReportContractTest {
                 "focusTopic",
                 "archetypeLabel",
                 "answeredTurns",
+                "assessableTurns",
                 "generatedAt",
                 "headline",
                 "summary",

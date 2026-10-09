@@ -18,6 +18,7 @@ function buildReport(overrides: Partial<SessionReport> = {}): SessionReport {
     roundLabel: "Technical round",
     archetypeLabel: "Product company",
     answeredTurns: 5,
+    assessableTurns: 4,
     generatedAt: "2026-09-01T10:00:00Z",
     headline: "A solid technical round with one gap in system design.",
     summary: "You handled the coding questions well but struggled to reason about scale.",
@@ -132,6 +133,36 @@ describe("ReportDocument — the evidence quote", () => {
     render(<ReportDocument report={buildReport()} />);
 
     expect(screen.getByText(/reached a workable shape only after/i)).not.toBeVisible();
+  });
+});
+
+describe("ReportDocument evidence threshold", () => {
+  it("does not turn one substantive answer into an overall percentage", () => {
+    render(<ReportDocument report={buildReport({ answeredTurns: 1, assessableTurns: 1 })} />);
+
+    expect(screen.getByRole("heading", { name: /no overall score yet/i })).toBeInTheDocument();
+    expect(screen.getByText(/one substantive answer is not enough/i)).toBeInTheDocument();
+    expect(screen.queryByRole("meter", { name: /overall score/i })).not.toBeInTheDocument();
+  });
+
+  it("does not celebrate the absence of assistance", () => {
+    render(
+      <ReportDocument
+        report={buildReport({
+          assistance: {
+            totalAnswers: 4,
+            unaidedAnswers: 4,
+            assistedAnswers: 0,
+            headline: "Answered all four questions unaided.",
+            narrative: null,
+            breakdown: [],
+            moments: [],
+          },
+        })}
+      />,
+    );
+
+    expect(screen.queryByRole("heading", { name: /you did this unaided/i })).not.toBeInTheDocument();
   });
 });
 

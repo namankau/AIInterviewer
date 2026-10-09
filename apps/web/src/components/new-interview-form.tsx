@@ -358,8 +358,6 @@ function RoundSetup({
   const effectiveRoleTitle = topicRequired ? CUSTOM_TOPIC_ROLE : roleTitle.trim();
 
   const ready =
-    effectiveCompanyName !== "" &&
-    effectiveRoleTitle !== "" &&
     (!topicRequired || focusTopic.trim() !== "") &&
     lengthOptions.length > 0 &&
     consentAudio &&
@@ -433,7 +431,7 @@ function RoundSetup({
           <p className="max-w-2xl text-body text-on-navy-muted">
             {topicRequired
               ? "The topic is the whole scope. Choose what to practise, then agree to recording and begin."
-              : "The round is chosen. Name the employer and role so the interviewer uses the right rubric, then agree to recording and begin."}
+              : "The round is chosen. Add an employer or role if you want extra tailoring, or leave both blank for general practice."}
           </p>
         ) : null}
         {!roundPreselected && query ? (
@@ -478,24 +476,22 @@ function RoundSetup({
 
       {!topicRequired ? (
         <div className="grid gap-6 sm:grid-cols-2">
-          <Field label="Company" hint="The employer you're interviewing with.">
+          <Field label="Company (optional)" hint="Add it for employer-shaped questions, or leave it blank for general practice.">
             <input
               value={companyName}
               onChange={(event) => setCompanyName(event.target.value)}
               placeholder="Infosys"
               autoComplete="organization"
-              required
               maxLength={120}
               className={CONTROL_CLASS}
             />
           </Field>
-          <Field label="Role" hint="As it appears on the job posting.">
+          <Field label="Role (optional)" hint="Add it to tune the level and function, or leave it blank for role-neutral practice.">
             <input
               value={roleTitle}
               onChange={(event) => setRoleTitle(event.target.value)}
               placeholder="Senior Backend Engineer"
               autoComplete="organization-title"
-              required
               maxLength={120}
               className={CONTROL_CLASS}
             />
@@ -686,7 +682,7 @@ const CUSTOM_TOPIC_COMPANY = "General practice";
 const CUSTOM_TOPIC_ROLE = "Topic practice";
 
 const ROUND_LENGTHS = [
-  { minutes: 5, label: "5 minutes — just testing the room" },
+  { minutes: 10, label: "10 minutes — a focused check-in" },
   { minutes: 20, label: "20 minutes — a short round" },
   { minutes: 30, label: "30 minutes" },
   { minutes: 40, label: "40 minutes — a typical round" },

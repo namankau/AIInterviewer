@@ -67,6 +67,10 @@ interface ChapterLoc {
   chapter: Chapter;
 }
 
+function lessonContext(loc: ChapterLoc): string {
+  return `From “${loc.chapter.title}”: ${loc.chapter.summary}`;
+}
+
 function locations(courses: Course[]): ChapterLoc[] {
   const out: ChapterLoc[] = [];
   for (const course of courses) {
@@ -121,6 +125,7 @@ function deriveMcq(loc: ChapterLoc, used: Set<string>): Challenge[] {
       courseSlug: loc.course.slug,
       chapterSlug: loc.chapter.slug,
       moduleTitle: loc.courseModule.title,
+      context: lessonContext(loc),
       prompt: quiz.question,
       options: quiz.options,
       correctIndex: quiz.answer,
@@ -150,6 +155,7 @@ function derivePredictOutput(loc: ChapterLoc, pool: string[], used: Set<string>)
       courseSlug: loc.course.slug,
       chapterSlug: loc.chapter.slug,
       moduleTitle: loc.courseModule.title,
+      context: lessonContext(loc),
       prompt: "What does this program print?",
       options: built.options,
       correctIndex: built.correctIndex,
@@ -180,6 +186,7 @@ function derivePredictOutput(loc: ChapterLoc, pool: string[], used: Set<string>)
       courseSlug: loc.course.slug,
       chapterSlug: loc.chapter.slug,
       moduleTitle: loc.courseModule.title,
+      context: lessonContext(loc),
       prompt: "What should running this code print?",
       options: built.options,
       correctIndex: built.correctIndex,
@@ -215,6 +222,7 @@ function deriveSpotMistake(loc: ChapterLoc, used: Set<string>): Challenge[] {
       courseSlug: loc.course.slug,
       chapterSlug: loc.chapter.slug,
       moduleTitle: loc.courseModule.title,
+      context: lessonContext(loc),
       prompt: `A common mistake here: "${item.mistake}". What actually goes wrong?`,
       options: built.options,
       correctIndex: built.correctIndex,
@@ -246,10 +254,15 @@ function deriveWhichColumn(loc: ChapterLoc, used: Set<string>): Challenge[] {
           courseSlug: loc.course.slug,
           chapterSlug: loc.chapter.slug,
           moduleTitle: loc.courseModule.title,
-          prompt: `${block.title ? `${block.title} — ` : ""}Which one does this describe?\n"${item}"`,
+          context:
+            `${lessonContext(loc)} ` +
+            `Use the ${block.title ? `“${block.title}”` : "lesson"} comparison to classify this example: “${item}”`,
+          prompt: "Which category does this example belong to?",
           options: built.options,
           correctIndex: built.correctIndex,
-          why: `This is listed under "${column.label}"${block.title ? ` in ${block.title}` : ""}.`,
+          why:
+            `“${item}” belongs to “${column.label}”` +
+            `${block.title ? ` in the lesson's “${block.title}” comparison` : " in this lesson"}.`,
         });
       }
     }
@@ -279,6 +292,7 @@ function deriveWhatNext(loc: ChapterLoc, used: Set<string>): Challenge[] {
         courseSlug: loc.course.slug,
         chapterSlug: loc.chapter.slug,
         moduleTitle: loc.courseModule.title,
+        context: `${lessonContext(loc)} Read the current diagram state, then choose the next change in the sequence.`,
         prompt: "What does the next step say?",
         options: built.options,
         correctIndex: built.correctIndex,

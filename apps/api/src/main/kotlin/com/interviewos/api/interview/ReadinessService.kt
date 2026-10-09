@@ -60,6 +60,7 @@ class ReadinessService(
 
     /** Mean competency score as a percentage, so rubrics with different maxima compare. */
     private fun averageScore(payloadJson: String): Double? {
+        if (!hasEnoughEvidence(payloadJson)) return null
         val competencies = competenciesOf(payloadJson)
         if (competencies.isEmpty()) return null
 
@@ -80,7 +81,7 @@ class ReadinessService(
         if (rows.size < 2) return emptyList()
 
         val weakCounts = mutableMapOf<String, Int>()
-        rows.forEach { row ->
+        rows.filter { hasEnoughEvidence(it.payloadJson) }.forEach { row ->
             competenciesOf(row.payloadJson)
                 .mapNotNull { competency ->
                     val name = competency["competency"] as? String ?: return@mapNotNull null
@@ -102,7 +103,20 @@ class ReadinessService(
             emptyList()
         }
 
+    private fun hasEnoughEvidence(payloadJson: String): Boolean =
+        try {
+            val payload = objectMapper.readValue(payloadJson, Map::class.java)
+            val assessable =
+                (payload["assessableTurns"] as? Number)?.toInt()
+                    ?: (payload["answeredTurns"] as? Number)?.toInt()
+                    ?: 0
+            assessable >= MIN_ASSESSABLE_TURNS
+        } catch (_: Exception) {
+            false
+        }
+
     private companion object {
         const val WEAK_THRESHOLD = 0.5
+        const val MIN_ASSESSABLE_TURNS = 2
     }
 }

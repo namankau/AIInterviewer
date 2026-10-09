@@ -125,6 +125,9 @@ export function ReportDocument({ report }: { report: SessionReport }) {
   const strengths = report.strengths ?? [];
   const developmentAreas = report.developmentAreas ?? [];
   const customTopic = report.roundType === "custom_topic" ? report.focusTopic?.trim() : null;
+  const assessableTurns = report.assessableTurns ?? report.answeredTurns;
+  const hasGroundedCompetency = competencies.some((item) => item.maxScore > 0);
+  const hasReliableOverallScore = assessableTurns >= 2 && hasGroundedCompetency;
 
   return (
     <article className="flex flex-col gap-8 md:gap-10">
@@ -152,11 +155,18 @@ export function ReportDocument({ report }: { report: SessionReport }) {
         * there is room for both; below it they stack in the order that matters more first.
         */}
       <div className="grid gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
-        <OverallScore competencies={competencies} />
+        {hasReliableOverallScore ? (
+          <OverallScore competencies={competencies} />
+        ) : (
+          <LimitedEvidencePanel
+            assessableTurns={assessableTurns}
+            hasGroundedCompetency={hasGroundedCompetency}
+          />
+        )}
         <CompetencyHighlights competencies={competencies} />
       </div>
 
-      {report.assistance ? <AssistancePanel assistance={report.assistance} /> : null}
+      {report.assistance?.assistedAnswers > 0 ? <AssistancePanel assistance={report.assistance} /> : null}
 
       {practicePlan.length > 0 ? <PracticePlanPanel items={practicePlan} /> : null}
 
@@ -318,6 +328,31 @@ export function ReportDocument({ report }: { report: SessionReport }) {
   );
 }
 
+function LimitedEvidencePanel({
+  assessableTurns,
+  hasGroundedCompetency,
+}: {
+  assessableTurns: number;
+  hasGroundedCompetency: boolean;
+}) {
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl border border-highlight/35 bg-highlight/10 p-6 shadow-[var(--shadow-sm)] sm:p-7">
+      <p className="font-mono text-micro tracking-widest text-warning uppercase">Evidence check</p>
+      <h2 className="text-title text-ink">No overall score yet</h2>
+      <p className="max-w-prose text-body text-ink-muted">
+        {!hasGroundedCompetency
+          ? "No competency score could be tied to a verified quote from your answers, so showing a percentage would misrepresent the evidence."
+          : assessableTurns === 0
+            ? "The round did not reach a substantive answer, so a percentage would be invented precision."
+            : "One substantive answer is not enough to turn into a credible interview percentage. The answer-specific feedback below is still useful, but it is not a readiness score."}
+      </p>
+      <p className="text-caption font-medium text-ink">
+        Complete at least two substantive questions before treating the result as a trend.
+      </p>
+    </section>
+  );
+}
+
 /**
  * How much the interviewer stepped in.
  *
@@ -326,22 +361,17 @@ export function ReportDocument({ report }: { report: SessionReport }) {
  * answers into the same score as unaided ones is flattering them into a real rejection.
  */
 function AssistancePanel({ assistance }: { assistance: ReportAssistance }) {
-  const unaided = assistance.assistedAnswers === 0;
   const breakdown = assistance.breakdown ?? [];
   const moments = assistance.moments ?? [];
 
   return (
     <section
       aria-labelledby="assistance"
-      className={`flex flex-col gap-4 rounded-2xl border p-6 shadow-[var(--shadow-sm)] sm:p-7 ${
-        unaided
-          ? "border-positive/25 bg-positive/5"
-          : "border-highlight/35 bg-highlight/10"
-      }`}
+      className="flex flex-col gap-4 rounded-2xl border border-highlight/35 bg-highlight/10 p-6 shadow-[var(--shadow-sm)] sm:p-7"
     >
       <div className="flex flex-col gap-1">
         <h2 id="assistance" className="text-heading text-ink">
-          {unaided ? "You did this unaided" : "Where you needed a hand"}
+          Where you needed a hand
         </h2>
         <p className="text-caption text-ink-subtle">{assistance.headline}</p>
       </div>

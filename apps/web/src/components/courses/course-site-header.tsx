@@ -15,7 +15,7 @@ import { ActionLink } from "@/components/ui/action-link";
 export function CourseSiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface-raised/90 shadow-[var(--shadow-sm)] backdrop-blur-xl">
-      <div className="mx-auto flex max-w-[100rem] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 py-3 md:px-12">
+      <div className="mx-auto flex max-w-[120rem] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 py-3 md:px-12">
         <Link
           href="/dashboard"
           className="group flex items-center gap-2.5 text-heading font-bold tracking-tight text-ink"

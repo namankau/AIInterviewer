@@ -50,6 +50,8 @@ export interface Challenge {
    * derivation and the open-source supplement are built without it.
    */
   chapterTitle?: string;
+  /** The minimum lesson/scenario context needed to answer without guessing. */
+  context?: string;
   /** The question or scenario shown above the options. */
   prompt: string;
   options: string[];

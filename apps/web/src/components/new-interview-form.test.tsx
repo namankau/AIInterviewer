@@ -142,10 +142,9 @@ describe("NewInterviewForm", () => {
 
   /**
    * Chosen from the rounds page: the round is settled, so the picker gives way to a summary
-   * with a way back, but company and role are still asked for — every session is scoped to
-   * one employer and one role, and the server refuses a round without them.
+   * with a way back. Company and role remain useful context, but neither blocks practice.
    */
-  it("locks a round chosen from the catalogue, and still asks for employer and role", async () => {
+  it("locks a catalogue round and starts even when employer and role are blank", async () => {
     startSession.mockResolvedValue({ id: "8b0d1e2f-3a4b-4c5d-9e6f-7a8b9c0d1e2f" });
     render(<NewInterviewForm initialRoundType="system_design" roundPreselected />);
 
@@ -158,18 +157,17 @@ describe("NewInterviewForm", () => {
 
     await userEvent.click(screen.getByRole("checkbox", { name: /record my voice/i }));
     const begin = screen.getByRole("button", { name: /begin interview/i });
-    expect(begin).toBeDisabled();
-
-    await userEvent.type(screen.getByRole("textbox", { name: /company/i }), "Flipkart");
-    await userEvent.type(screen.getByRole("textbox", { name: /role/i }), "SDE 2");
+    expect(begin).toBeEnabled();
+    expect(screen.getByRole("textbox", { name: /company/i })).not.toBeRequired();
+    expect(screen.getByRole("textbox", { name: /role/i })).not.toBeRequired();
     await userEvent.click(begin);
 
     await waitFor(() =>
       expect(startSession).toHaveBeenCalledWith(
         "token",
         expect.objectContaining({
-          companyName: "Flipkart",
-          roleTitle: "SDE 2",
+          companyName: "",
+          roleTitle: "",
           roundType: "system_design",
           focusTopic: undefined,
           consentAudio: true,
@@ -237,7 +235,7 @@ describe("NewInterviewForm", () => {
     const length = screen.getByRole("combobox", { name: /Length/i });
     await waitFor(() => expect(length).toHaveValue("20"));
     const offered = within(length).getAllByRole("option").map((option) => option.getAttribute("value"));
-    expect(offered).toEqual(["5", "20"]);
+    expect(offered).toEqual(["10", "20"]);
     expect(screen.getByText(/20 free minutes left today/i)).toBeInTheDocument();
   });
 

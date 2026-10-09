@@ -64,6 +64,10 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
   const runMeter = useCallback(() => {
     const analyser = analyserRef.current;
     if (!analyser) return;
+    // Device check already owns a meter loop when recording begins. Replace it rather
+    // than starting a second loop: two RAF chains double-rendered the room and folded
+    // every sound sample into the answer timing twice.
+    stopMeter();
     const data = new Uint8Array(analyser.frequencyBinCount);
 
     const tick = () => {
@@ -78,7 +82,7 @@ export function useInterviewCapture({ withVideo }: UseInterviewCaptureOptions) {
       rafRef.current = requestAnimationFrame(tick);
     };
     tick();
-  }, []);
+  }, [stopMeter]);
 
   const requestDevices = useCallback(async (): Promise<MediaStream | null> => {
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {

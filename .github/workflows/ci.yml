@@ -63,7 +63,7 @@ jobs:
     name: images (docker build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: API image
         run: docker build -t acemyinterview-api apps/api

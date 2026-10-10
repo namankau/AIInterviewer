@@ -1,33 +1,36 @@
 # Handoff — 2026-10-10
 
 ## Task
-Ensure all completed work is on `develop` and delete the independent feature and handoff branches. User request; no task file.
+Revamp the existing product UI to match the supplied Figma layouts while retaining the AceMyInterview name. User request; no task file.
 
 ## What I built
-- Verified every non-release remote branch head was already an ancestor of `develop` before deleting it.
-- Deleted the merged remote branches `feat/course-learning-workspace`, `fix/interview-quality-guardrails`, `fix/dependency-update-policy`, `docs/course-learning-release-handoff`, `docs/interview-quality-release-handoff`, and `docs/dependency-maintenance-handoff`.
-- Fast-forwarded the local `develop` checkout to the exact remote head and deleted the corresponding local feature branches.
+- Reworked the signed-in shell into a responsive horizontal product bar with AceMyInterview branding, active-route treatment, real account data, and an accessible mobile navigation strip (`apps/web/src/components/app-shell.tsx`, `rail-nav.tsx`, `account-summary.tsx`).
+- Added the Figma-derived indigo, navy, mint, and amber visual system, along with shared hero, card, shadow, focus, and action styles (`apps/web/src/app/globals.css`).
+- Revamped the dashboard, courses catalogue, mock-interview setup, learner profile, and report experience while preserving their existing API-backed data and actions (`dashboard-panel.tsx`, `courses/page.tsx`, `new-interview-form.tsx`, `profile-panel.tsx`, `report-view.tsx`).
+- Aligned public navigation, login, legal, course, and landing-page brand marks with the AceMyInterview identity.
+- Updated navigation and feature-flag tests for the new information architecture.
 
 ## Assumptions I made
-- “Independent feature branches” means every branch other than the permanent `main` and `develop` branches, provided it has no commits outside `develop`.
-- Release PR #50 remains an owner-reviewed `develop` to `main` operation and should not be merged or replaced by a direct push.
+- The screenshots are the visual target, not permission to reproduce fictional LoopLearn data or claims. Existing AceMyInterview content, real metrics, entitlement values, and backend behaviour remain authoritative.
+- The Figma export's Vite scaffolding was reference material only; the implementation stays in the existing Next.js architecture and component boundaries.
+- “Enhance wherever needed” includes responsive navigation, visible focus states, honest empty/loading states, and removal of placeholder usage claims, without adding new product features or dependencies.
 
 ## What I could NOT verify
-- Nothing material; GitHub's branch API and the local Git refs both show the intended final branch set.
+- Final visual-design approval remains a human judgement. Desktop and exact 390px mobile browser QA were completed, but production accounts may expose data combinations not present in local fixtures.
+- No live Gemini interview, voice-quality, or paid third-party check was run, in accordance with the repository rules.
 
 ## Verification status
-- No application files changed in this cleanup.
-- The current `develop` application tree already passed the full web, API, and Docker matrices before cleanup.
-- Remote branch inventory after deletion: `develop` and `main` only.
-- Local branch inventory after deletion: `develop` and `main` only.
+- Frontend: typecheck, lint, 2,984 tests, and production build pass locally.
+- Backend: `ktlintCheck`, tests, and build pass locally.
+- GitHub branch CI: web, API, and Docker image/smoke-test jobs pass ([run 38038077576](https://github.com/namankau/AIInterviewer/actions/runs/38038077576)).
+- Visual QA: desktop landing/dashboard/courses/interview setup and exact-width mobile dashboard checked; no document-level horizontal overflow.
 
 ## Merge status
-- All completed application and dependency-maintenance work is on `develop`.
-- Release PR [#50](https://github.com/namankau/AIInterviewer/pull/50) remains the path from `develop` to `main`; `main` was not pushed directly.
-- The temporary `fix/branch-cleanup-record` handoff branch will be CI-gated, fast-forwarded into `develop`, and deleted before this run finishes.
+- Merged into remote `develop` at `1def44c664b9f05ae6094c724d3c3d9109aba460` after the feature-branch CI gate passed.
+- `main` was not modified. The local GitHub CLI credential is expired, so the authenticated GitHub connector was used to publish and merge the byte-identical Git trees.
 
 ## Suggested next task
-- Review and merge PR #50 when ready to advance `main`.
+- Review the revamped authenticated pages with representative production data, then refine any content-density differences that only appear with long company, role, or course names.
 
 ## Open questions for you
 - None.

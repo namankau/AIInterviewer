@@ -29,7 +29,7 @@ export function LegalPage({
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-6 py-4">
           <Link href="/" className="flex items-center gap-2.5 text-heading font-bold text-ink">
             <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast">
-              AI
+              A
             </span>
             {LEGAL.productName}
           </Link>

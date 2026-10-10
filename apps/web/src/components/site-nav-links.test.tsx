@@ -13,7 +13,7 @@ describe("SiteNavLinks", () => {
     pathname.mockReturnValue("/arena");
     render(<SiteNavLinks />);
 
-    for (const name of ["Home", "Rounds", "Courses", "Arena", "Profile"]) {
+    for (const name of ["Dashboard", "Courses", "Mock interviews", "Arena", "My reports"]) {
       expect(screen.getByRole("link", { name })).toBeInTheDocument();
     }
   });

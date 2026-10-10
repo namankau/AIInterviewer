@@ -3,20 +3,14 @@ import Link from "next/link";
 
 import { AccountSummary } from "@/components/account-summary";
 import { RailNav } from "@/components/rail-nav";
-import { ActionLink } from "@/components/ui/action-link";
 
 /**
  * The frame every signed-in page sits in.
  *
- * A rail rather than a top bar, because the pages behind it are lists and documents —
- * a report, a history, a catalogue — and a persistent left edge is what makes a set of
- * pages read as one tool instead of as a series of screens. It is also where a candidate
- * looks for the thing they came to do, which is why "New interview" sits at the top of
- * it and nothing competes with it.
- *
- * The deep-navy rail gives the workspace a stable visual anchor while the page remains a
- * bright working surface. The same blue carries the primary action and current-page marker,
- * so colour has a predictable meaning instead of acting as decoration.
+ * The Figma direction uses a horizontal learning-platform bar: brand at the left, stable
+ * product destinations in the middle, and the signed-in person at the right. Keeping that
+ * bar across the product makes the broad dashboard, catalogue and report canvases feel like
+ * one place while leaving the content the full width it needs.
  *
  * Deliberately not applied to the interview room. That page is near-empty by design and
  * a navigation rail beside a live interview would be an invitation to leave it.
@@ -35,42 +29,33 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-dvh bg-surface md:grid md:grid-cols-[17rem_minmax(0,1fr)]">
-      <nav
-        aria-label="Main"
-        className="flex shrink-0 flex-col gap-7 border-b border-white/10 bg-navy px-5 py-5 text-on-navy md:sticky md:top-0 md:h-dvh md:border-r md:border-b-0 md:px-6 md:py-7"
-      >
-        <Link
-          href="/dashboard"
-          className="group flex items-center gap-3 rounded-lg text-heading font-bold tracking-tight text-on-navy"
-        >
-          <span className="grid size-9 place-items-center rounded-xl bg-accent text-caption font-extrabold text-accent-contrast shadow-[0_8px_24px_rgba(26,100,240,0.32)] transition-transform group-hover:-rotate-3">
-            AI
-          </span>
-          <span>AceMyInterview</span>
-        </Link>
+    <div className="min-h-dvh overflow-x-hidden bg-surface">
+      <header className="sticky top-0 z-40 border-b border-line bg-surface-raised/95 shadow-[var(--shadow-sm)] backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[78rem] flex-wrap items-center gap-x-5 px-4 sm:flex-nowrap sm:px-6 lg:px-8">
+          <Link
+            href="/dashboard"
+            className="group flex shrink-0 items-center gap-2.5 py-3.5 text-heading font-bold tracking-tight text-ink"
+          >
+            <span className="grid size-9 place-items-center rounded-[0.7rem] bg-accent text-caption font-extrabold text-accent-contrast shadow-[0_8px_22px_rgba(70,84,220,0.25)] transition-transform group-hover:-rotate-3">
+              A
+            </span>
+            <span className="hidden sm:inline">AceMyInterview</span>
+          </Link>
 
-        <ActionLink
-          href="/interview/new"
-          className="w-full shadow-[0_10px_28px_rgba(26,100,240,0.28)]"
-        >
-          <span aria-hidden="true" className="text-heading leading-none">
-            +
-          </span>
-          New interview
-        </ActionLink>
+          <nav aria-label="Main" className="nav-scroll order-3 w-full min-w-0 overflow-x-auto border-t border-line sm:order-none sm:w-auto sm:flex-1 sm:border-t-0">
+            <RailNav />
+          </nav>
 
-        <RailNav />
-
-        <div className="md:mt-auto">
-          <AccountSummary />
+          <div className="ml-auto shrink-0 sm:ml-0">
+            <AccountSummary />
+          </div>
         </div>
-      </nav>
+      </header>
 
-      <div className="flex min-w-0 flex-1 flex-col bg-[linear-gradient(180deg,var(--surface-tint)_0,transparent_22rem)]">
+      <div className="flex min-w-0 flex-1 flex-col bg-[linear-gradient(180deg,var(--surface-tint)_0,transparent_24rem)]">
         {breadcrumb ? (
-          <div className="border-b border-line bg-surface-raised/85 px-6 py-3 backdrop-blur md:px-12">
-            <p className="font-mono text-micro tracking-widest text-ink-subtle lowercase">
+          <div className="border-b border-line bg-surface-raised/75 px-6 py-2.5 backdrop-blur">
+            <p className="mx-auto max-w-[78rem] text-micro text-ink-subtle">
               <Link href="/dashboard" className="hover:text-ink">
                 home
               </Link>
@@ -90,7 +75,7 @@ export function AppShell({
             {parent ? (
               <Link
                 href={parent.href}
-                className="mt-1.5 inline-block text-caption font-medium text-accent-strong hover:underline"
+                className="mx-auto mt-1.5 block max-w-[78rem] text-caption font-medium text-accent-strong hover:underline"
               >
                 <span aria-hidden="true">←</span> Back to {parent.label}
               </Link>
@@ -105,7 +90,7 @@ export function AppShell({
           */}
         <main
           className={`mx-auto w-full flex-1 px-6 py-10 md:px-12 md:py-14 ${
-            wide ? "max-w-[100rem]" : "max-w-6xl"
+            wide ? "max-w-[100rem]" : "max-w-[78rem]"
           }`}
         >
           {children}

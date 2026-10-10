@@ -13,40 +13,40 @@
 :root {
   /* Page background is a hair off pure white so a full-bleed card can sit on it without
      a border and still read as separate; raised cards are true white with a soft shadow. */
-  --surface: #f7f9fc;
+  --surface: #f8faff;
   --surface-raised: #ffffff;
-  --surface-sunken: #f2f6ff;
+  --surface-sunken: #f1f4fb;
   /* Soft-blue tint used for section bands and hero backdrops behind the navy. */
-  --surface-tint: #f2f6ff;
-  --navy: #0b1a33;
-  --navy-raised: #12244a;
-  --ink: #0f172a;
-  --ink-muted: #475569;
-  --ink-subtle: #5f6b7a;
+  --surface-tint: #f3f6ff;
+  --navy: #18213f;
+  --navy-raised: #252f58;
+  --ink: #111936;
+  --ink-muted: #5e6884;
+  --ink-subtle: #74809d;
   /* Text set on the navy surfaces (hero, nav, footer). */
   --on-navy: #f8fafc;
-  --on-navy-muted: #b9c4d6;
+  --on-navy-muted: #c8d0ed;
 
-  --line: #0f172a17;
-  --line-strong: #0f172a2e;
+  --line: #dce2ef;
+  --line-strong: #c9d1e3;
 
-  --accent: #1a64f0;
-  --accent-strong: #1550c4;
+  --accent: #4654dc;
+  --accent-strong: #3442c5;
   --accent-contrast: #ffffff;
-  --accent-on-navy: #8db5ff;
-  --accent-wash: #eaf1ff;
+  --accent-on-navy: #bfc7ff;
+  --accent-wash: #edf0ff;
 
   /* Secondary accents for badges, status and the "how it works" rhythm. Never used as
      the primary call to action — one accent still carries that meaning. */
-  --accent-2: #12a150;
-  --highlight: #f5a524;
+  --accent-2: #15957b;
+  --highlight: #e9a72d;
 
   --danger: #b3261e;
-  --positive: #0a7d3c;
+  --positive: #087f68;
   --warning: #9a5b08;
   --info: #1550c4;
   --danger-wash: #fff0ef;
-  --positive-wash: #eaf8ef;
+  --positive-wash: #e4f8f2;
   --warning-wash: #fff7e5;
   --info-wash: #eaf1ff;
   --grid: rgba(15, 23, 42, 0.05);
@@ -63,9 +63,9 @@
   --motion-base: 200ms;
   --ease-product: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 1px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05);
-  --shadow-lg: 0 24px 64px rgba(15, 23, 42, 0.14), 0 8px 20px rgba(15, 23, 42, 0.08);
+  --shadow-sm: 0 1px 2px rgba(17, 25, 54, 0.04), 0 1px 1px rgba(17, 25, 54, 0.03);
+  --shadow-md: 0 14px 36px rgba(39, 50, 96, 0.09), 0 3px 10px rgba(17, 25, 54, 0.04);
+  --shadow-lg: 0 28px 72px rgba(39, 50, 96, 0.16), 0 10px 24px rgba(17, 25, 54, 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -189,6 +189,10 @@
     text-rendering: optimizeLegibility;
   }
 
+  html {
+    scroll-padding-top: 7rem;
+  }
+
   .text-hero,
   .text-display,
   .text-title {
@@ -238,7 +242,7 @@
   .card {
     background-color: var(--surface-raised);
     border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-xl);
     box-shadow: var(--shadow-sm);
   }
 
@@ -274,7 +278,7 @@
       transform var(--motion-fast) var(--ease-product);
   }
   .action-primary {
-    background: var(--accent);
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
     color: var(--accent-contrast);
     box-shadow: var(--shadow-sm);
   }
@@ -352,6 +356,31 @@
   .pill-navy {
     background-color: color-mix(in srgb, var(--on-navy) 14%, transparent);
     color: var(--on-navy);
+  }
+
+  .eyebrow {
+    font-size: var(--text-micro);
+    line-height: var(--text-micro--line-height);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .hero-band {
+    background:
+      radial-gradient(circle at 84% 0%, rgba(255, 255, 255, 0.11), transparent 28%),
+      linear-gradient(135deg, var(--accent-strong), #303b94 58%, var(--navy));
+    color: var(--on-navy);
+    border-radius: 1.5rem;
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav-scroll {
+    scrollbar-width: none;
+  }
+
+  .nav-scroll::-webkit-scrollbar {
+    display: none;
   }
 }
 

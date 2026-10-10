@@ -27,7 +27,7 @@ export default async function LoginPage({
 
         <Link href="/" className="relative flex w-fit items-center gap-2.5 text-heading font-bold tracking-tight text-on-navy">
           <span className="grid size-9 place-items-center rounded-xl bg-accent text-micro font-extrabold text-accent-contrast shadow-[0_8px_24px_rgba(26,100,240,0.32)]">
-            AI
+            A
           </span>
           <span>AceMyInterview</span>
         </Link>
@@ -66,7 +66,7 @@ export default async function LoginPage({
         <div className="flex w-full max-w-md flex-col gap-9 rounded-[1.5rem] border border-line bg-surface-raised p-7 shadow-[var(--shadow-lg)] sm:p-10 lg:shadow-[var(--shadow-md)]">
           <Link href="/" className="flex w-fit items-center gap-2.5 text-heading font-bold tracking-tight text-ink lg:hidden">
             <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast">
-              AI
+              A
             </span>
             <span>AceMyInterview</span>
           </Link>

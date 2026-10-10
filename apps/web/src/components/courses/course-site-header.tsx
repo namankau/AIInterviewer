@@ -21,7 +21,7 @@ export function CourseSiteHeader() {
           className="group flex items-center gap-2.5 text-heading font-bold tracking-tight text-ink"
         >
           <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast shadow-[var(--shadow-sm)] transition-transform group-hover:-rotate-3">
-            AI
+            A
           </span>
           <span>AceMyInterview</span>
         </Link>

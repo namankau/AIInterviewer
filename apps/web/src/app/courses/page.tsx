@@ -17,22 +17,36 @@ export const metadata: Metadata = {
 
 /** The signed-in learning catalogue, presented inside the same workspace as the Arena and rounds. */
 export default function CoursesPage() {
+  const lessonCount = courses.reduce((total, course) => total + totalChapters(course), 0);
+
   return (
     <AppShell breadcrumb="courses">
       <ImportBrowserProgress />
-      <header className="relative overflow-hidden rounded-3xl border border-accent/20 bg-[linear-gradient(135deg,var(--navy)_0%,var(--navy-raised)_65%,var(--accent-strong)_140%)] px-7 py-10 text-on-navy shadow-[var(--shadow-md)] md:px-10 md:py-12">
-        <div aria-hidden="true" className="absolute -right-16 -top-20 size-64 rounded-full border-[32px] border-white/5" />
-        <div className="relative max-w-3xl">
-          <p className="w-fit rounded-full border border-white/15 bg-white/10 px-3 py-1 font-mono text-micro tracking-widest text-accent-on-navy uppercase">
-            Guided learning paths
-          </p>
-          <h1 className="mt-5 text-display text-balance text-on-navy">Learn the skill. Practise the pattern.</h1>
-          <p className="mt-4 max-w-2xl text-body leading-relaxed text-on-navy-muted">
-            Short, structured chapters pair plain-language explanations with runnable code, visual examples
-            and quick checks—so study feels active rather than endless.
-          </p>
+      <header className="hero-band relative overflow-hidden px-7 py-10 md:px-10 md:py-12">
+        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_14rem] lg:items-center">
+          <div className="max-w-3xl">
+            <p className="eyebrow text-accent-on-navy">Learn by doing</p>
+            <h1 className="mt-4 text-display text-balance text-on-navy">Build skills that stick.</h1>
+            <p className="mt-3 max-w-2xl text-body leading-relaxed text-on-navy-muted">
+              Short, interactive chapters with runnable examples, visual explanations and quick checks.
+              No passive video queue.
+            </p>
+          </div>
+          <div className="border-white/15 lg:border-l lg:pl-10">
+            <p className="text-display text-on-navy">{lessonCount}</p>
+            <p className="mt-1 text-caption text-on-navy-muted">free interactive chapters</p>
+          </div>
         </div>
       </header>
+
+      <section className="mt-7 flex flex-col gap-5 rounded-2xl border border-accent/20 bg-[linear-gradient(100deg,var(--accent-wash),var(--positive-wash))] p-6 shadow-[var(--shadow-sm)] sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="eyebrow text-accent">Daily practice</p>
+          <h2 className="mt-2 text-heading text-ink">Turn today&apos;s chapter into a short recall round.</h2>
+          <p className="mt-1 text-caption text-ink-muted">The Arena pulls its challenges directly from these learning paths.</p>
+        </div>
+        <Link href="/arena" className="action-primary shrink-0">Open today&apos;s challenge <span aria-hidden>→</span></Link>
+      </section>
 
       <section aria-labelledby="learning-paths" className="mt-12">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -42,12 +56,12 @@ export default function CoursesPage() {
           </div>
           <p className="text-caption text-ink-muted">Continue from exactly where you stopped.</p>
         </div>
-        <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {courses.map((course) => (
             <li key={course.slug} className="min-w-0">
               <Link
                 href={`/courses/${course.slug}`}
-                className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-1 hover:border-accent/35 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-1 hover:border-accent/35 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -90,21 +104,6 @@ export default function CoursesPage() {
         </ul>
       </section>
 
-      <div className="mt-12 flex flex-col items-start gap-4 rounded-2xl border border-accent/20 bg-accent-wash px-6 py-6 shadow-[var(--shadow-sm)] sm:flex-row sm:items-center sm:justify-between md:px-8">
-          <div className="flex flex-col gap-1.5">
-            <p className="font-mono text-micro tracking-widest text-accent uppercase">Daily practice</p>
-            <p className="text-body text-ink">
-              Rather test yourself than read? Try <span className="font-medium">the Arena</span> — short, gamified
-              rounds derived straight from these chapters.
-            </p>
-          </div>
-          <Link
-            href="/arena"
-            className="shrink-0 rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-accent-strong"
-          >
-            Play the Arena
-          </Link>
-      </div>
     </AppShell>
   );
 }

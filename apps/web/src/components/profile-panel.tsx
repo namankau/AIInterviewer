@@ -352,7 +352,7 @@ function ProfileOverview({
       aria-labelledby="profile-overview"
       className="overflow-hidden rounded-[1.5rem] border border-line bg-surface-raised shadow-[var(--shadow-md)]"
     >
-      <div className="grid gap-8 bg-[linear-gradient(135deg,var(--accent-wash),var(--surface-raised)_62%)] p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+      <div className="hero-band grid gap-8 rounded-none p-6 shadow-none sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div className="flex min-w-0 items-center gap-5">
           <div className="relative shrink-0">
             {details?.avatarUrl ? (
@@ -365,7 +365,7 @@ function ProfileOverview({
             ) : (
               <span
                 aria-label="Profile photo placeholder"
-                className="grid size-24 place-items-center rounded-2xl bg-navy font-mono text-title font-bold text-on-navy shadow-[var(--shadow-md)]"
+                className="grid size-24 place-items-center rounded-2xl bg-[#a8e7d7] text-title font-bold text-accent-strong shadow-[var(--shadow-md)]"
               >
                 {initials}
               </span>
@@ -393,11 +393,11 @@ function ProfileOverview({
           </div>
 
           <div className="min-w-0">
-            <p className="font-mono text-micro tracking-widest text-accent-strong uppercase">Candidate workspace</p>
-            <h2 id="profile-overview" className="mt-1 truncate text-title text-ink">
+            <p className="eyebrow text-accent-on-navy">Candidate workspace</p>
+            <h2 id="profile-overview" className="mt-2 truncate text-title text-on-navy">
               {name}
             </h2>
-            <p className="mt-1 text-caption text-ink-muted">
+            <p className="mt-1 text-caption text-on-navy-muted">
               {details?.targetLevel ? `Working toward ${details.targetLevel}` : "Add a target role to shape future rounds."}
             </p>
           </div>
@@ -405,7 +405,7 @@ function ProfileOverview({
 
         <Link
           href="/interview/new"
-          className="w-fit rounded-xl bg-accent px-5 py-3 text-caption font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-accent-strong"
+          className="w-fit rounded-xl bg-surface-raised px-5 py-3 text-caption font-semibold text-ink shadow-[var(--shadow-sm)] transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
         >
           Start a new round
         </Link>

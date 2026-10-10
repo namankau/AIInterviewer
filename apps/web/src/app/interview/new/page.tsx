@@ -27,7 +27,7 @@ export default async function NewInterviewPage({
   const roundType = ROUND_CATALOGUE.find((round) => round.value === requestedRound)?.value;
   return (
     <AppShell breadcrumb="new interview">
-      <div className="w-full max-w-2xl">
+      <div className="mx-auto w-full max-w-5xl">
         <NewInterviewForm
           initialRoundType={roundType}
           initialTopic={topic}

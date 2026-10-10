@@ -1,6 +1,7 @@
 "use client";
 
 import type { EntitlementView, ReadinessGroup, SessionSummary } from "@acemyinterview/shared";
+import type { Route } from "next";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -170,87 +171,75 @@ export function DashboardView({
   onDelete?: (id: string) => Promise<void>;
 }) {
   const openSession = sessions.find((s) => s.status === "in_progress");
+  const primaryHref = (openSession ? `/interview/${openSession.id}` : "/interview/new") as Route;
+  const primaryLabel = openSession ? "Resume interview" : "Start an interview";
+  const disabled = !openSession && entitlement?.allowed === false;
 
   return (
-    <div className="flex flex-col gap-12">
-      <section
-        aria-labelledby="next-interview"
-        className="-mx-6 flex flex-col gap-5 rounded-2xl border border-accent/20 bg-accent-wash px-6 py-9 shadow-[var(--shadow-sm)] sm:mx-0 sm:px-10 sm:py-10"
-      >
-        <p className="w-fit rounded-full bg-surface-raised px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase shadow-[var(--shadow-sm)]">
-          {sessions.length === 0
-            ? "Nothing practised yet"
-            : `${sessions.length} ${sessions.length === 1 ? "round" : "rounds"} behind you`}
-        </p>
-        <h1 id="next-interview" className="max-w-3xl text-display text-balance text-ink">
-          {sessions.length === 0 ? "Start your first interview" : "Start your next interview"}
-        </h1>
-        <p className="max-w-prose text-body text-ink-muted">
-          You name the company and the role when you begin. Nothing to set up in advance, and no
-          limit on how many employers you practise for.
-        </p>
-
-        <div className="flex flex-wrap items-center gap-4 pt-1">
-          {openSession ? (
-            <Link
-              href={`/interview/${openSession.id}`}
-              className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
-            >
-              Resume interview
-            </Link>
-          ) : (
-            <Link
-              href="/interview/new"
-              aria-disabled={entitlement?.allowed === false}
-              className={
-                entitlement?.allowed === false
-                  ? "pointer-events-none rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast opacity-50"
-                  : "rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong"
-              }
-            >
-              Start an interview
-            </Link>
-          )}
-
-          {loaded && entitlement && !isDailyLimitReached(entitlement) ? (
-            <p className="text-caption text-ink-subtle">
-              {/*
-                * `remainingFree` is null while there is no limit, which is the case
-                * today. Reading that as "none left" would have put a paywall notice on
-                * a product that has no paywall.
-                */}
-              {entitlement.allowed
-                ? entitlement.dailyRoundLimit !== null || entitlement.dailyMinuteLimit !== null
-                  ? `${entitlement.message} Report included, no card.`
-                  : entitlement.remainingFree === null
-                    ? "Every round is free while we are building this. Report included, no card."
-                    : entitlement.remainingFree > 0
-                      ? "Your first interview is free, report included."
-                      : null
-                : entitlement.message}
-            </p>
-          ) : null}
+    <div className="flex flex-col gap-9 md:gap-11">
+      <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="eyebrow text-accent">Your practice workspace</p>
+          <h1 id="next-interview" className="mt-2 max-w-3xl text-display text-balance text-ink">
+            {sessions.length === 0 ? "Start building interview momentum." : "Keep your momentum going."}
+          </h1>
+          <p className="mt-2 max-w-2xl text-body text-ink-muted">
+            One focused round today gets you closer to answering calmly when the real follow-up lands.
+          </p>
         </div>
+        <Link
+          href={primaryHref}
+          aria-disabled={disabled}
+          className={`action-primary min-h-12 shrink-0 px-6 text-body ${disabled ? "pointer-events-none opacity-50" : ""}`}
+        >
+          {primaryLabel} <span aria-hidden>→</span>
+        </Link>
+      </header>
 
-        {loaded && entitlement && isDailyLimitReached(entitlement) ? (
-          <DailyLimitNotice entitlement={entitlement} />
-        ) : null}
+      <section aria-labelledby="practice-allowance" className="hero-band overflow-hidden px-6 py-7 sm:px-9 sm:py-8">
+        <div className="grid gap-7 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-14">
+          <div>
+            <p className="eyebrow text-accent-on-navy">Today&apos;s practice</p>
+            <h2 id="practice-allowance" className="mt-3 text-title text-on-navy">
+              {entitlement?.dailyRoundLimit !== null && entitlement?.dailyRoundLimit !== undefined
+                ? `${entitlement.dailyRoundLimit} focused rounds, at your pace.`
+                : "Practise the round you need, when you need it."}
+            </h2>
+            <p className="mt-2 max-w-xl text-caption text-on-navy-muted">
+              {loaded && entitlement
+                ? entitlement.allowed
+                  ? entitlement.dailyRoundLimit !== null || entitlement.dailyMinuteLimit !== null
+                    ? `${entitlement.message} The full report is included.`
+                    : entitlement.remainingFree === null
+                      ? "Every round is free while we are building this. The full report is included."
+                      : "Your report is included with the round."
+                  : entitlement.message
+                : "Your practice availability will appear here."}
+            </p>
+          </div>
+
+          <AllowanceMeters entitlement={entitlement} loaded={loaded} />
+        </div>
       </section>
 
+      {loaded && entitlement && isDailyLimitReached(entitlement) ? (
+        <DailyLimitNotice entitlement={entitlement} />
+      ) : null}
+
       {sessions.length > 0 || readiness.length > 0 ? (
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:gap-16">
+        <div className="grid gap-7 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
           {sessions.length > 0 ? (
             <PastRoundsSection sessions={sessions} onDelete={onDelete} limit={DASHBOARD_ROUNDS} />
           ) : null}
 
           {readiness.length > 0 ? (
-            <section aria-labelledby="readiness" className="flex flex-col gap-4">
-              <SectionHead title="Where you stand" id="readiness" note="From finished rounds" />
+            <section aria-labelledby="readiness" className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-6">
+              <SectionHead title="Where you stand" id="readiness" note="Readiness by goal" />
               <ul className="flex flex-col gap-3">
                 {readiness.slice(0, DASHBOARD_READINESS_GROUPS).map((group) => (
                   <li
                     key={`${group.companyName}-${group.roleTitle}`}
-                    className="flex flex-col gap-3 rounded-2xl border border-line bg-surface-raised px-5 py-5 shadow-[var(--shadow-sm)] transition-shadow hover:shadow-[var(--shadow-md)]"
+                    className="flex flex-col gap-3 rounded-xl bg-surface-sunken/75 px-4 py-4"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <span className="text-body text-ink">
@@ -295,6 +284,58 @@ export function DashboardView({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function AllowanceMeters({ entitlement, loaded }: { entitlement: EntitlementView | null; loaded: boolean }) {
+  if (!loaded || !entitlement) {
+    return <p role="status" className="text-caption text-on-navy-muted">Loading today&apos;s allowance…</p>;
+  }
+
+  const meters = [
+    entitlement.dailyRoundLimit === null
+      ? null
+      : {
+          label: "Interviews",
+          used: Math.max(0, entitlement.dailyRoundLimit - (entitlement.remainingRoundsToday ?? 0)),
+          limit: entitlement.dailyRoundLimit,
+        },
+    entitlement.dailyMinuteLimit === null
+      ? null
+      : {
+          label: "Practice time",
+          used: Math.max(0, entitlement.dailyMinuteLimit - (entitlement.remainingMinutesToday ?? 0)),
+          limit: entitlement.dailyMinuteLimit,
+        },
+  ].filter((meter): meter is { label: string; used: number; limit: number } => meter !== null);
+
+  if (meters.length === 0) {
+    return (
+      <div className="rounded-2xl border border-white/12 bg-white/8 px-5 py-4">
+        <p className="eyebrow text-accent-on-navy">Open access</p>
+        <p className="mt-2 text-caption text-on-navy">No daily round or minute limit is active.</p>
+      </div>
+    );
+  }
+
+  return (
+    <dl className="grid gap-4">
+      {meters.map((meter) => {
+        const percent = meter.limit === 0 ? 0 : Math.min(100, (meter.used / meter.limit) * 100);
+        const unit = meter.label === "Practice time" ? " min" : "";
+        return (
+          <div key={meter.label}>
+            <div className="flex items-center justify-between gap-4 text-caption">
+              <dt className="text-on-navy-muted">{meter.label}</dt>
+              <dd className="font-semibold text-on-navy">{meter.used} of {meter.limit}{unit} used</dd>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15" aria-hidden>
+              <span className="block h-full rounded-full bg-[#a8e7d7]" style={{ width: `${percent}%` }} />
+            </div>
+          </div>
+        );
+      })}
+    </dl>
   );
 }
 

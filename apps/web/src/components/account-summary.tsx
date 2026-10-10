@@ -69,15 +69,16 @@ export function AccountSummary() {
   }, []);
 
   return (
-    <div className="border-t border-white/12 pt-4">
+    <div>
       {state.status === "loading" ? (
-        <p role="status" className="text-caption text-on-navy-muted">
-          Loading your profile…
-        </p>
+        <span role="status" className="grid size-9 animate-pulse place-items-center rounded-full bg-surface-sunken">
+          <span className="sr-only">Loading your profile…</span>
+        </span>
       ) : state.status === "error" ? (
-        <p role="alert" className="rounded-lg bg-danger-wash px-3 py-2 text-caption text-danger">
-          {state.message}
-        </p>
+        <Link href="/profile" role="alert" title={state.message} className="grid size-9 place-items-center rounded-full bg-danger-wash text-caption font-bold text-danger">
+          <span aria-hidden>!</span>
+          <span className="sr-only">{state.message}</span>
+        </Link>
       ) : (
         <AccountMenu me={state.me} />
       )}
@@ -86,7 +87,7 @@ export function AccountSummary() {
 }
 
 const MENU_ITEM =
-  "flex w-full items-center rounded-lg px-3 py-2 text-left text-caption text-on-navy transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-60";
+  "flex w-full items-center rounded-lg px-3 py-2 text-left text-caption text-ink transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60";
 
 /**
  * A disclosure rather than an ARIA `menu`: it is a short list of links and one button, and
@@ -130,7 +131,7 @@ function AccountMenu({ me }: { me: MeResponse }) {
   }
 
   return (
-    <div ref={container} className="flex flex-col gap-2">
+    <div ref={container} className="relative">
       <button
         ref={trigger}
         type="button"
@@ -138,31 +139,31 @@ function AccountMenu({ me }: { me: MeResponse }) {
         aria-controls={menuId}
         aria-label={`Account menu for ${name}`}
         onClick={() => setOpen((value) => !value)}
-        className="-mx-2 flex items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-white/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        className="flex items-center gap-2.5 rounded-xl px-1 py-2 text-left transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <span
           aria-hidden
-          className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/12 font-mono text-micro font-bold text-on-navy ring-1 ring-white/15"
+          className="grid size-10 shrink-0 place-items-center rounded-full bg-[#a8e7d7] text-caption font-bold text-navy ring-1 ring-white"
         >
           {initialsOf(name)}
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-caption font-semibold text-on-navy">{name}</span>
-          <span className="truncate text-micro text-on-navy-muted">
+          <span className="hidden max-w-28 truncate text-caption font-semibold text-ink lg:block">{name}</span>
+          <span className="hidden truncate text-micro text-ink-subtle lg:block">
             {LANGUAGE_LABELS[me.preferredLanguage] ?? me.preferredLanguage}
           </span>
         </span>
         <svg
           aria-hidden="true"
           viewBox="0 0 16 16"
-          className={`size-4 shrink-0 fill-none stroke-current stroke-2 text-on-navy-muted transition-transform ${open ? "" : "rotate-180"}`}
+          className={`hidden size-4 shrink-0 fill-none stroke-current stroke-2 text-ink-subtle transition-transform lg:block ${open ? "" : "rotate-180"}`}
         >
           <polyline points="4,10 8,6 12,10" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
       {open ? (
-        <ul id={menuId} className="flex flex-col gap-0.5 rounded-xl bg-white/6 p-1.5 ring-1 ring-white/10">
+        <ul id={menuId} className="absolute top-[calc(100%+0.5rem)] right-0 z-50 flex min-w-56 flex-col gap-0.5 rounded-xl border border-line bg-surface-raised p-1.5 shadow-[var(--shadow-lg)]">
           <li>
             <Link href="/profile" className={MENU_ITEM} onClick={() => setOpen(false)}>
               Profile and resume
@@ -184,10 +185,10 @@ function AccountMenu({ me }: { me: MeResponse }) {
               {signingOut ? "Signing out…" : "Sign out"}
             </button>
           </li>
-          <li className="mt-1 border-t border-white/10 pt-1">
+          <li className="mt-1 border-t border-line pt-1">
             <Link
               href="/profile#delete-account"
-              className={`${MENU_ITEM} text-on-navy-muted hover:text-on-navy`}
+              className={`${MENU_ITEM} text-ink-subtle hover:text-danger`}
               onClick={() => setOpen(false)}
             >
               Delete account…

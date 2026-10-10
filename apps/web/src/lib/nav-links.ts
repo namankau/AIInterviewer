@@ -4,10 +4,10 @@
  * are on, so these are literals rather than a widened string[].
  */
 export const NAV_LINKS = [
-  { href: "/dashboard", label: "Home" },
-  { href: "/rounds", label: "Rounds" },
-  { href: "/questions", label: "Questions" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/courses", label: "Courses" },
+  { href: "/interview/new", label: "Mock interviews" },
   { href: "/arena", label: "Arena" },
-  { href: "/profile", label: "Profile" },
+  { href: "/history", label: "My reports" },
+  { href: "/questions", label: "Questions" },
 ] as const;

@@ -44,7 +44,7 @@ describe("/questions while the bank is not browsable", () => {
     render(<RailNav />);
 
     expect(screen.queryByRole("link", { name: "Questions" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Rounds" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Mock interviews" })).toBeInTheDocument();
   });
 });
 

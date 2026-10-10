@@ -10,7 +10,7 @@ import type {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { CompetencyBars, CompetencyHighlights, OverallScore, bandFor } from "@/components/report-charts";
+import { CompetencyBars, CompetencyHighlights, OverallScore, bandFor, overallScore } from "@/components/report-charts";
 import { SpokenEnglishPanel } from "@/components/spoken-english-panel";
 import { ApiRequestError, fetchReport } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -128,22 +128,41 @@ export function ReportDocument({ report }: { report: SessionReport }) {
   const assessableTurns = report.assessableTurns ?? report.answeredTurns;
   const hasGroundedCompetency = competencies.some((item) => item.maxScore > 0);
   const hasReliableOverallScore = assessableTurns >= 2 && hasGroundedCompetency;
+  const headlineScore = hasReliableOverallScore ? overallScore(competencies) : null;
+  const headlineBand = headlineScore === null ? null : bandFor(headlineScore);
 
   return (
     <article className="flex flex-col gap-8 md:gap-10">
-      <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-lg)] sm:p-10">
+      <header className="hero-band relative overflow-hidden p-7 sm:p-10">
         <div aria-hidden="true" className="absolute -top-24 -right-20 size-72 rounded-full bg-accent/20 blur-3xl" />
-        <div className="relative flex flex-col gap-4">
-        <p className="pill pill-navy w-fit">
-          {customTopic ? `${report.roundLabel} · ${customTopic}` : `${report.roundLabel} · ${report.companyName}`}
-        </p>
-        <h1 className="text-display text-balance text-on-navy">{report.headline}</h1>
-        <p className="max-w-3xl text-body text-on-navy-muted">{report.summary}</p>
-        <p className="text-caption text-on-navy-muted">
-          {customTopic
-            ? `${report.answeredTurns} answers · assessed within your chosen topic`
-            : `${report.roleTitle} · ${report.answeredTurns} answers · assessed against a ${report.archetypeLabel.toLowerCase()} rubric`}
-        </p>
+        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_10rem] lg:items-center">
+          <div className="flex flex-col gap-4">
+            <p className="eyebrow text-accent-on-navy">
+              {customTopic ? `${report.roundLabel} · ${customTopic}` : `${report.roundLabel} · ${report.companyName}`}
+            </p>
+            <h1 className="text-display text-balance text-on-navy">{report.headline}</h1>
+            <p className="max-w-3xl text-body text-on-navy-muted">{report.summary}</p>
+            <p className="text-caption text-on-navy-muted">
+              {customTopic
+                ? `${report.answeredTurns} answers · assessed within your chosen topic`
+                : `${report.roleTitle} · ${report.answeredTurns} answers · assessed against a ${report.archetypeLabel.toLowerCase()} rubric`}
+            </p>
+          </div>
+          {headlineScore !== null && headlineBand ? (
+            <div
+              role="img"
+              aria-label={`Overall score ${headlineScore} percent, ${headlineBand.name}`}
+              className="grid size-32 place-items-center rounded-full p-2 lg:justify-self-end"
+              style={{ background: `conic-gradient(#a8e7d7 ${headlineScore}%, rgba(255,255,255,0.16) 0)` }}
+            >
+              <div className="grid size-full place-items-center rounded-full bg-[#303b94] text-center">
+                <span>
+                  <strong className="block text-title text-on-navy">{headlineScore}%</strong>
+                  <span className="block max-w-20 text-micro text-accent-on-navy">{headlineBand.name}</span>
+                </span>
+              </div>
+            </div>
+          ) : null}
         </div>
       </header>
 

@@ -54,7 +54,7 @@ function SiteHeader() {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
         <Link href="/" className="group flex items-center gap-2.5">
           <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast shadow-[var(--shadow-sm)] transition-transform group-hover:-rotate-3">
-            AI
+            A
           </span>
           <span className="text-heading font-bold tracking-tight text-ink">AceMyInterview</span>
           <span className="hidden font-mono text-micro tracking-widest text-ink-subtle uppercase sm:inline">
@@ -575,7 +575,7 @@ function SiteFooter() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <span className="flex items-center gap-2.5 text-heading font-bold text-on-navy">
             <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast">
-              AI
+              A
             </span>
             AceMyInterview
           </span>

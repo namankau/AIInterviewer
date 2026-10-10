@@ -8,7 +8,7 @@ import { questionBankBrowsable } from "@/lib/flags";
 import { NAV_LINKS } from "@/lib/nav-links";
 
 /**
- * The rail's links, with the page you are on marked.
+ * The signed-in product navigation, with the page you are on marked.
  *
  * Three identical grey words with no current-page state is not navigation, it is a list;
  * you cannot tell where you are, and every page therefore looks like the same page. The
@@ -20,18 +20,21 @@ export function RailNav() {
   const pathname = usePathname();
 
   return (
-    <ul className="flex flex-wrap gap-1.5 md:flex-col" aria-label="Workspace">
+    <ul className="flex min-w-max items-stretch gap-1" aria-label="Workspace">
       {NAV_LINKS.filter((link) => link.href !== "/questions" || questionBankBrowsable()).map((link) => {
-        const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+        const active =
+          pathname === link.href ||
+          pathname.startsWith(`${link.href}/`) ||
+          (link.href === "/history" && pathname.startsWith("/report/"));
         return (
           <li key={link.href}>
             <Link
               href={link.href as Route}
               aria-current={active ? "page" : undefined}
-              className={`block rounded-xl px-3 py-2.5 text-caption transition-colors ${
+              className={`relative block h-full px-3 py-5 text-caption transition-colors after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full ${
                 active
-                  ? "bg-white/14 font-semibold text-on-navy shadow-[inset_3px_0_0_var(--accent)]"
-                  : "text-on-navy-muted hover:bg-white/8 hover:text-on-navy"
+                  ? "font-semibold text-ink after:bg-accent"
+                  : "text-ink-muted after:bg-transparent hover:text-ink"
               }`}
             >
               {link.label}

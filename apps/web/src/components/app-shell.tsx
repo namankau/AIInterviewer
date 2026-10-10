@@ -29,7 +29,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="min-h-dvh overflow-x-hidden bg-surface">
       <header className="sticky top-0 z-40 border-b border-line bg-surface-raised/95 shadow-[var(--shadow-sm)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-[78rem] flex-wrap items-center gap-x-5 px-4 sm:flex-nowrap sm:px-6 lg:px-8">
           <Link
@@ -42,7 +42,7 @@ export function AppShell({
             <span className="hidden sm:inline">AceMyInterview</span>
           </Link>
 
-          <nav aria-label="Main" className="order-3 -mx-4 w-[calc(100%+2rem)] overflow-x-auto border-t border-line px-4 sm:order-none sm:mx-0 sm:w-auto sm:flex-1 sm:border-t-0 sm:px-0">
+          <nav aria-label="Main" className="nav-scroll order-3 w-full min-w-0 overflow-x-auto border-t border-line sm:order-none sm:w-auto sm:flex-1 sm:border-t-0">
             <RailNav />
           </nav>
 

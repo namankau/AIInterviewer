@@ -374,6 +374,14 @@
     border-radius: 1.5rem;
     box-shadow: var(--shadow-md);
   }
+
+  .nav-scroll {
+    scrollbar-width: none;
+  }
+
+  .nav-scroll::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /*

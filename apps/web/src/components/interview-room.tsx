@@ -15,6 +15,7 @@ import {
   fetchSession,
   finishSession,
   type InterviewClientEvent,
+  type InterviewClientPhase,
   reportInterviewClientEvent,
   requestHint,
   saveBoard,
@@ -57,6 +58,12 @@ const BOARD_SAVE_MS = 1_000;
 
 /** How often the design rail re-checks which phase the round is in. */
 const ROUND_CLOCK_TICK_MS = 10_000;
+
+/** A missing next heartbeat bounds when a room stopped making progress. */
+const OBSERVABILITY_HEARTBEAT_MS = 30_000;
+
+/** Last-provider calls may use the API's three-minute read deadline. This reports the stall without aborting it. */
+const ANSWER_SUBMISSION_SLOW_MS = 190_000;
 
 /**
  * How long a candidate gets to read a question that has no voice, before the microphone
@@ -153,6 +160,28 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     },
     [accessToken, sessionId],
   );
+  const reportRoomEvent = useCallback(
+    (
+      event: InterviewClientEvent,
+      eventPhase: InterviewClientPhase,
+      eventTurnIndex?: number,
+      requestId?: string,
+    ) => {
+      if (!accessToken) return;
+      void reportInterviewClientEvent(
+        accessToken,
+        sessionId,
+        event,
+        eventTurnIndex,
+        undefined,
+        requestId,
+        eventPhase,
+      ).catch(() => {
+        // A diagnostic signal must never interfere with the interview it describes.
+      });
+    },
+    [accessToken, sessionId],
+  );
   const questionAudio = useQuestionAudio({
     sessionId,
     turn,
@@ -175,6 +204,27 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
    */
   const questionText = turn?.questionText ?? "";
   const turnIndex = turn?.turnIndex ?? null;
+
+  useEffect(() => {
+    reportRoomEvent("client_phase_changed", phase, turnIndex ?? undefined);
+  }, [phase, reportRoomEvent, turnIndex]);
+
+  useEffect(() => {
+    if (phase === "complete" || phase === "terminal") return;
+    const heartbeat = () => reportRoomEvent("client_heartbeat", phase, turnIndex ?? undefined);
+    const timer = window.setInterval(heartbeat, OBSERVABILITY_HEARTBEAT_MS);
+    return () => window.clearInterval(timer);
+  }, [phase, reportRoomEvent, turnIndex]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        reportRoomEvent("client_page_hidden", phase, turnIndex ?? undefined);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [phase, reportRoomEvent, turnIndex]);
 
   // Both of these carry the turn they belong to, and a mismatch reads as "not yet"
   // during the same render. Clearing them in an effect instead would show one frame of
@@ -327,6 +377,22 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     setError(null);
     const requestId = answerRequestIds.current.get(turn.turnIndex) ?? crypto.randomUUID();
     answerRequestIds.current.set(turn.turnIndex, requestId);
+    reportRoomEvent("answer_submission_started", "submitting", turn.turnIndex, requestId);
+    const slowRequestTimer = window.setTimeout(
+      () =>
+        reportInterviewClientEvent(
+          accessToken,
+          sessionId,
+          "answer_submission_slow",
+          turn.turnIndex,
+          ANSWER_SUBMISSION_SLOW_MS,
+          requestId,
+          "submitting",
+        ).catch(() => {
+          // Reporting a stuck request must not abort or duplicate the idempotent answer.
+        }),
+      ANSWER_SUBMISSION_SLOW_MS,
+    );
     try {
       const result = await submitAnswer(
         accessToken,
@@ -361,12 +427,15 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
       );
       setPhase("asking");
     } catch (cause) {
+      reportRoomEvent("answer_submission_failed", "error", turn.turnIndex, requestId);
       setPhase("error");
       setError(
         cause instanceof ApiRequestError ? cause.message : "That answer could not be submitted.",
       );
+    } finally {
+      window.clearTimeout(slowRequestTimer);
     }
-  }, [accessToken, capture, closeRound, liveTranscript, sessionId, speaksLocally, turn]);
+  }, [accessToken, capture, closeRound, liveTranscript, reportRoomEvent, sessionId, speaksLocally, turn]);
 
   // The meter and the submit callback are read through refs by the tick below. The
   // meter changes on every animation frame, and rebuilding the interval each time would

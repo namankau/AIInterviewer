@@ -1,36 +1,38 @@
-# Handoff — 2026-10-10
+# Handoff — 2026-10-11
 
 ## Task
-Revamp the existing product UI to match the supplied Figma layouts while retaining the AceMyInterview name. User request; no task file.
+Add production-grade interview observability so a stopped or stalled mock interview can be reconstructed by user, elapsed time, turn, system phase, provider attempt, and interviewer decision. User request; no task file.
 
 ## What I built
-- Reworked the signed-in shell into a responsive horizontal product bar with AceMyInterview branding, active-route treatment, real account data, and an accessible mobile navigation strip (`apps/web/src/components/app-shell.tsx`, `rail-nav.tsx`, `account-summary.tsx`).
-- Added the Figma-derived indigo, navy, mint, and amber visual system, along with shared hero, card, shadow, focus, and action styles (`apps/web/src/app/globals.css`).
-- Revamped the dashboard, courses catalogue, mock-interview setup, learner profile, and report experience while preserving their existing API-backed data and actions (`dashboard-panel.tsx`, `courses/page.tsx`, `new-interview-form.tsx`, `profile-panel.tsx`, `report-view.tsx`).
-- Aligned public navigation, login, legal, course, and landing-page brand marks with the AceMyInterview identity.
-- Updated navigation and feature-flag tests for the new information architecture.
+- Added ADR 001 defining a privacy-safe, append-only interview event ledger, its event vocabulary, access boundary, retention, and failure semantics (`docs/adr/001-interview-event-ledger.md`).
+- Added the RLS-protected `interview_events` table with ownership, session/request correlation, bounded diagnostic fields, cascade deletion, indexes, and 28-day retention support (`supabase/migrations/20261010000000_interview_event_ledger.sql`). The migration was applied to the linked Supabase project and local/remote migration state was verified in sync.
+- Added a best-effort, independent server-side recorder plus scheduled retention purge and an admin-only session timeline endpoint (`apps/api/src/main/kotlin/com/interviewos/api/interview/InterviewEventLedger.kt`).
+- Instrumented answer ingress, assessment, persistence, provider attempts/fallbacks, speech generation, interviewer action/intervention, and terminal session outcomes without storing transcripts, audio, prompts, model output, names, emails, URLs, stack traces, or exception text.
+- Instrumented the interview room with phase transitions, a 30-second heartbeat, page-hidden markers, answer submission start/failure/slow events, browser speech failures, question-audio polling failures, and playback failures/timeouts.
+- Added backend access/ledger/telemetry/speech tests and frontend behaviour tests. The change is larger than 800 lines because the schema, server and browser instrumentation, privacy contract, endpoint, and tests must ship as one coherent observability boundary.
 
 ## Assumptions I made
-- The screenshots are the visual target, not permission to reproduce fictional LoopLearn data or claims. Existing AceMyInterview content, real metrics, entitlement values, and backend behaviour remain authoritative.
-- The Figma export's Vite scaffolding was reference material only; the implementation stays in the existing Next.js architecture and component boundaries.
-- “Enhance wherever needed” includes responsive navigation, visible focus states, honest empty/loading states, and removal of placeholder usage claims, without adding new product features or dependencies.
+- “Which user” means the immutable owner UUID returned only through the existing admin authorization boundary, not duplicating email or profile data into the ledger.
+- Diagnostic events are retained for 28 days, long enough for incident investigation while limiting personal-data exposure.
+- Interviewer behaviour is represented by bounded action and intervention enums (for example `probe`, `move_on`, `redirected`, `hinted`) rather than storing generated question text or candidate content.
+- A 30-second browser heartbeat is sufficient to distinguish an active but slow round from a closed, hidden, disconnected, or frozen client without producing excessive write volume.
+- The browser's 190-second marker is named `answer_submission_slow`, not timeout, because it does not abort the request and a late response may still succeed.
 
 ## What I could NOT verify
-- Final visual-design approval remains a human judgement. Desktop and exact 390px mobile browser QA were completed, but production accounts may expose data combinations not present in local fixtures.
-- No live Gemini interview, voice-quality, or paid third-party check was run, in accordance with the repository rules.
+- The original six-minute incident cannot be reconstructed retroactively because these events did not exist when it happened.
+- No live interview or Gemini call was run, in accordance with the repository's no-live-AI-spend rule. Provider behaviour and voice quality therefore remain unverified in a real session.
+- Application deployment is outside this branch; the database is ready, but new event recording begins only after the API and web changes are deployed.
 
 ## Verification status
-- Frontend: typecheck, lint, 2,984 tests, and production build pass locally.
-- Backend: `ktlintCheck`, tests, and build pass locally.
-- GitHub branch CI: web, API, and Docker image/smoke-test jobs pass ([run 38038077576](https://github.com/namankau/AIInterviewer/actions/runs/38038077576)).
-- Visual QA: desktop landing/dashboard/courses/interview setup and exact-width mobile dashboard checked; no document-level horizontal overflow.
+- Frontend: typecheck, lint, 2,985 tests, and production build pass locally.
+- Backend: `ktlintCheck`, 709 tests, and production build pass locally.
+- Database: migration `20261010000000` applied to the linked Supabase project; local and remote migration histories match.
 
 ## Merge status
-- Merged into remote `develop` at `1def44c664b9f05ae6094c724d3c3d9109aba460` after the feature-branch CI gate passed.
-- `main` was not modified. The local GitHub CLI credential is expired, so the authenticated GitHub connector was used to publish and merge the byte-identical Git trees.
+- Branch `feat/interview-observability-ledger` pushed unmerged for a human-review PR because this change defines personal-data observability and an admin permission boundary. `develop` and `main` were not modified.
 
 ## Suggested next task
-- Review the revamped authenticated pages with representative production data, then refine any content-density differences that only appear with long company, role, or course names.
+- Add an operator-facing timeline view or runbook over the admin endpoint, and connect the existing structured application logs/Sentry configuration to the production collector for infrastructure-level incidents outside an interview session.
 
 ## Open questions for you
 - None.

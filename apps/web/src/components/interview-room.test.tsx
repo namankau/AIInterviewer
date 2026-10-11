@@ -9,6 +9,9 @@ import { ApiRequestError } from "@/lib/api";
 const fetchSession = vi.hoisted(() => vi.fn());
 const beginSession = vi.hoisted(() => vi.fn());
 const captureStart = vi.hoisted(() => vi.fn());
+const captureStop = vi.hoisted(() => vi.fn());
+const reportInterviewClientEvent = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const submitAnswer = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ token: "token-abc" }));
 const questionAudio = vi.hoisted(() => ({ current: { url: null as string | null, status: "unavailable" } }));
 
@@ -28,9 +31,9 @@ vi.mock("@/lib/api", () => ({
   abandonSession: vi.fn(),
   finishSession: vi.fn(),
   requestHint: vi.fn(),
-  reportInterviewClientEvent: vi.fn().mockResolvedValue(undefined),
+  reportInterviewClientEvent,
   saveBoard: vi.fn(),
-  submitAnswer: vi.fn(),
+  submitAnswer,
 }));
 vi.mock("@/lib/use-access-token", () => ({ useAccessToken: () => auth.token }));
 vi.mock("@/components/device-check", () => ({
@@ -67,7 +70,7 @@ vi.mock("@/lib/use-interview-capture", () => ({
     stream: null,
     requestDevices: vi.fn(),
     start: captureStart,
-    stop: vi.fn(),
+    stop: captureStop,
     release: vi.fn(),
     isRecording: false,
   }),
@@ -85,7 +88,7 @@ vi.mock("@/lib/use-browser-voice", () => ({
   }),
 }));
 vi.mock("@/lib/use-live-transcript", () => ({
-  useLiveTranscript: () => ({ supported: false, text: "", start: vi.fn(), stop: vi.fn() }),
+  useLiveTranscript: () => ({ supported: false, text: "", start: vi.fn(), stop: vi.fn(), reset: vi.fn() }),
 }));
 vi.mock("@/lib/use-question-audio", () => ({
   useQuestionAudio: () => questionAudio.current,
@@ -238,5 +241,89 @@ describe("InterviewRoom when the interviewer's recorded voice is slow", () => {
       vi.advanceTimersByTime(4_000);
     });
     expect(captureStart).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("InterviewRoom operational telemetry", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    auth.token = "token-abc";
+    questionAudio.current = { url: null, status: "unavailable" };
+    captureStart.mockResolvedValue(true);
+    captureStop.mockResolvedValue({
+      audio: new Blob(["voice"], { type: "audio/webm" }),
+      timing: null,
+    });
+    submitAnswer.mockReturnValue(new Promise(() => undefined));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("reports phases, heartbeats, submission start and a still-pending request as slow", async () => {
+    fetchSession.mockResolvedValue({ ...baseSession, workspace: { kind: "dsa" } });
+    beginSession.mockResolvedValue({
+      ...baseSession,
+      workspace: { kind: "dsa" },
+      startedAt: new Date().toISOString(),
+      scheduledEndAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+    });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<InterviewRoom sessionId={baseSession.id} />);
+
+    await user.click(await screen.findByRole("button", { name: "Enter the room" }));
+    await act(async () => {
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(captureStart).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Over to you" })).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+    });
+
+    expect(reportInterviewClientEvent).toHaveBeenCalledWith(
+      "token-abc",
+      baseSession.id,
+      "client_phase_changed",
+      0,
+      undefined,
+      undefined,
+      "answering",
+    );
+    expect(reportInterviewClientEvent).toHaveBeenCalledWith(
+      "token-abc",
+      baseSession.id,
+      "client_heartbeat",
+      0,
+      undefined,
+      undefined,
+      expect.any(String),
+    );
+    await user.click(screen.getByRole("button", { name: "Over to you" }));
+    expect(submitAnswer).toHaveBeenCalledTimes(1);
+    expect(reportInterviewClientEvent).toHaveBeenCalledWith(
+      "token-abc",
+      baseSession.id,
+      "answer_submission_started",
+      0,
+      undefined,
+      expect.any(String),
+      "submitting",
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(190_000);
+    });
+    expect(reportInterviewClientEvent).toHaveBeenCalledWith(
+      "token-abc",
+      baseSession.id,
+      "answer_submission_slow",
+      0,
+      190_000,
+      expect.any(String),
+      "submitting",
+    );
   });
 });

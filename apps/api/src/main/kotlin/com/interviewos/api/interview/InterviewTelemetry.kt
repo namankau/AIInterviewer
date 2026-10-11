@@ -23,10 +23,12 @@ data class InterviewClientEventRequest(
     @field:NotBlank
     val event: String,
     @field:Min(0)
-    val turnIndex: Int,
+    val turnIndex: Int? = null,
     @field:Min(0)
-    @field:Max(120_000)
+    @field:Max(600_000)
     val durationMs: Long? = null,
+    val requestId: UUID? = null,
+    val phase: String? = null,
 )
 
 /**
@@ -39,6 +41,7 @@ data class InterviewClientEventRequest(
 @Service
 class InterviewTelemetryService(
     private val repository: SessionRepository,
+    private val events: InterviewEventRecorder,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -54,21 +57,49 @@ class InterviewTelemetryService(
                 code = "invalid_client_event",
             )
         }
+        if (request.phase != null && request.phase !in ALLOWED_PHASES) {
+            throw ApiException.badRequest(
+                message = "Unknown interview client phase.",
+                code = "invalid_client_phase",
+            )
+        }
 
-        val event =
-            log
-                .atWarn()
-                .addKeyValue("event", "interview_client_failure")
-                .addKeyValue("event_type", request.event)
-                .addKeyValue("session_id", sessionId)
-                .addKeyValue("turn_index", request.turnIndex)
-        request.durationMs?.let { event.addKeyValue("duration_ms", it) }
-        event.log("Interview client reported a speech failure")
+        events.record(
+            InterviewEvent(
+                userId = userId,
+                sessionId = sessionId,
+                type = request.event,
+                turnIndex = request.turnIndex,
+                requestId = request.requestId,
+                phase = request.phase,
+                outcome = clientOutcome(request.event),
+                errorType = clientErrorType(request.event),
+                durationMs = request.durationMs,
+            ),
+        )
+
+        if (request.event in FAILURE_EVENTS) {
+            val event =
+                log
+                    .atWarn()
+                    .addKeyValue("event", "interview_client_failure")
+                    .addKeyValue("event_type", request.event)
+                    .addKeyValue("session_id", sessionId)
+                    .addKeyValue("turn_index", request.turnIndex)
+            request.durationMs?.let { event.addKeyValue("duration_ms", it) }
+            event.log("Interview client reported a failure")
+        }
     }
 
     private companion object {
         val ALLOWED_EVENTS =
             setOf(
+                "client_phase_changed",
+                "client_heartbeat",
+                "client_page_hidden",
+                "answer_submission_started",
+                "answer_submission_failed",
+                "answer_submission_slow",
                 "browser_speech_failed",
                 "browser_speech_timed_out",
                 "question_audio_poll_timed_out",
@@ -77,6 +108,43 @@ class InterviewTelemetryService(
                 "model_audio_stalled",
                 "model_audio_timed_out",
             )
+        val ALLOWED_PHASES =
+            setOf("loading", "checking", "asking", "answering", "submitting", "closing", "complete", "terminal", "error")
+        val FAILURE_EVENTS =
+            ALLOWED_EVENTS -
+                setOf(
+                    "client_phase_changed",
+                    "client_heartbeat",
+                    "client_page_hidden",
+                    "answer_submission_started",
+                    "answer_submission_slow",
+                )
+
+        fun clientOutcome(event: String): String? =
+            when {
+                event.endsWith("_started") -> "started"
+
+                event.endsWith("_timed_out") -> "timed_out"
+
+                event.endsWith("_failed") || event.endsWith("_error") || event.endsWith("_stalled") ||
+                    event.endsWith("_rejected") -> "failed"
+
+                else -> null
+            }
+
+        fun clientErrorType(event: String): String? =
+            when {
+                event == "answer_submission_failed" -> "request_failed"
+
+                event == "answer_submission_slow" -> null
+
+                event.endsWith("_timed_out") -> "client_timeout"
+
+                event.endsWith("_failed") || event.endsWith("_error") || event.endsWith("_stalled") ||
+                    event.endsWith("_rejected") -> "browser_media_error"
+
+                else -> null
+            }
     }
 }
 

@@ -55,6 +55,8 @@ object AiSpendContext {
         val sessionId: UUID?,
         /** Set by [ofPoolRun]; null for everything a candidate is actually sitting in. */
         val poolRunId: UUID? = null,
+        val turnIndex: Int? = null,
+        val requestId: UUID? = null,
     )
 
     /**
@@ -70,6 +72,23 @@ object AiSpendContext {
     ): T {
         val previous = current.get()
         current.set(Attribution(userId, sessionId))
+        return try {
+            block()
+        } finally {
+            if (previous == null) current.remove() else current.set(previous)
+        }
+    }
+
+    /** Adds turn/request correlation for provider attempts in one submitted answer. */
+    fun <T> ofInterview(
+        userId: UUID,
+        sessionId: UUID,
+        turnIndex: Int,
+        requestId: UUID,
+        block: () -> T,
+    ): T {
+        val previous = current.get()
+        current.set(Attribution(userId, sessionId, turnIndex = turnIndex, requestId = requestId))
         return try {
             block()
         } finally {

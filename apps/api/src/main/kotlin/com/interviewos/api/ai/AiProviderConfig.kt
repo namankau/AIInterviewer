@@ -1,5 +1,6 @@
 package com.interviewos.api.ai
 
+import com.interviewos.api.interview.InterviewEventRecorder
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -52,6 +53,7 @@ class AiProviderConfig {
         objectMapper: ObjectMapper,
         restClientBuilder: RestClient.Builder,
         recorder: AiSpendRecorder,
+        eventRecorder: InterviewEventRecorder,
     ): InterviewAi {
         val configured =
             properties.providers.mapNotNull { provider ->
@@ -101,7 +103,7 @@ class AiProviderConfig {
                 )
             }
 
-        val ai = FallbackInterviewAi(chain, recorder)
+        val ai = FallbackInterviewAi(chain, recorder, eventRecorder)
         log.info("Interview AI will try, in order: {}", ai.providerName)
         warnAboutSingleMultimodalProvider(chain)
         return ai

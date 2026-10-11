@@ -175,7 +175,7 @@ export function MarkCompleteButton({ courseSlug, chapterSlug }: { courseSlug: st
         {done
           ? "Completed — click to undo"
           : lessonLocked
-            ? "Visit all lesson beats to complete"
+            ? "Visit all lesson sections to complete"
             : progressLoading
               ? "Loading progress…"
               : "Mark chapter as complete"}

@@ -290,12 +290,12 @@ describe("InterviewRoom operational telemetry", () => {
 
     await user.click(await screen.findByRole("button", { name: "Enter the room" }));
     await act(async () => {
-      vi.advanceTimersByTime(5_000);
+      await vi.advanceTimersByTimeAsync(5_000);
     });
     expect(captureStart).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "Over to you" })).toBeInTheDocument();
     await act(async () => {
-      vi.advanceTimersByTime(30_000);
+      await vi.advanceTimersByTimeAsync(30_000);
     });
 
     expect(reportInterviewClientEvent).toHaveBeenCalledWith(

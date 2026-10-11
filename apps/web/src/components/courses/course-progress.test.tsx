@@ -55,7 +55,7 @@ beforeEach(() => {
 });
 
 describe("MarkCompleteButton", () => {
-  it("unlocks only after the learner has visited every guided beat", async () => {
+  it("unlocks only after the learner has visited every guided section", async () => {
     const user = userEvent.setup();
     render(
       <GuidedLessonControls
@@ -64,14 +64,14 @@ describe("MarkCompleteButton", () => {
       />,
     );
 
-    const locked = await screen.findByRole("button", { name: /visit all lesson beats/i });
+    const locked = await screen.findByRole("button", { name: /visit all lesson sections/i });
     await waitFor(() => expect(fetchCourseProgress).toHaveBeenCalled());
     expect(locked).toBeDisabled();
-    expect(screen.getByText(/1 of 5 beats explored/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 of 5 sections reached/i)).toBeInTheDocument();
 
     await visitRemainingBeats(user);
 
-    expect(screen.getByText(/explored every beat/i)).toBeInTheDocument();
+    expect(screen.getByText(/reached every section/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /mark chapter as complete/i })).toBeEnabled();
   });
 

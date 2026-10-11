@@ -6,11 +6,13 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
 import java.util.UUID
 
 class InterviewTelemetryServiceTest {
     private val repository = mock(SessionRepository::class.java)
-    private val service = InterviewTelemetryService(repository)
+    private val events = mock(InterviewEventRecorder::class.java)
+    private val service = InterviewTelemetryService(repository, events)
     private val userId = UUID.fromString("6f1b7f4c-2b2a-4c3e-9a51-0a5f4f2f2a11")
     private val sessionId = UUID.fromString("2b0e2f6c-7a1e-4a0f-9c3d-5c1b2f9a8e01")
 
@@ -24,6 +26,18 @@ class InterviewTelemetryServiceTest {
             InterviewClientEventRequest(
                 event = "model_audio_stalled",
                 turnIndex = 3,
+                durationMs = 18_000,
+            ),
+        )
+
+        verify(events).record(
+            InterviewEvent(
+                userId = userId,
+                sessionId = sessionId,
+                type = "model_audio_stalled",
+                turnIndex = 3,
+                outcome = "failed",
+                errorType = "browser_media_error",
                 durationMs = 18_000,
             ),
         )

@@ -55,6 +55,7 @@ class QuestionSpeech(
     private val storage: ObjectStorage,
     private val storageProperties: StorageProperties,
     private val repository: SessionRepository,
+    private val events: InterviewEventRecorder,
     @Qualifier("interviewBackgroundExecutor") private val executor: TaskExecutor,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -78,6 +79,17 @@ class QuestionSpeech(
 
     private fun renderNow(request: SpeechRequest) {
         val startedAt = System.nanoTime()
+        events.record(
+            InterviewEvent(
+                userId = request.userId,
+                sessionId = request.sessionId,
+                type = "question_speech_started",
+                turnIndex = request.turnIndex,
+                provider = interviewAi.providerName,
+                operation = "synthesizeSpeech",
+                outcome = "started",
+            ),
+        )
         log
             .atInfo()
             .addKeyValue("event", "question_speech_started")
@@ -94,6 +106,24 @@ class QuestionSpeech(
                 objectPath
             } catch (e: RuntimeException) {
                 val cause = rootCause(e)
+                events.record(
+                    InterviewEvent(
+                        userId = request.userId,
+                        sessionId = request.sessionId,
+                        type = "question_speech_failed",
+                        turnIndex = request.turnIndex,
+                        provider = interviewAi.providerName,
+                        operation = "synthesizeSpeech",
+                        outcome = "failed",
+                        errorType =
+                            if (cause is com.interviewos.api.storage.ObjectStorageException) {
+                                "storage_unavailable"
+                            } else {
+                                "ai_unavailable"
+                            },
+                        durationMs = elapsedMillis(startedAt),
+                    ),
+                )
                 log
                     .atWarn()
                     .setCause(cause)
@@ -116,6 +146,20 @@ class QuestionSpeech(
                 audioPath = path,
                 status = status,
             )
+            if (status == SpeechStatus.READY) {
+                events.record(
+                    InterviewEvent(
+                        userId = request.userId,
+                        sessionId = request.sessionId,
+                        type = "question_speech_succeeded",
+                        turnIndex = request.turnIndex,
+                        provider = interviewAi.providerName,
+                        operation = "synthesizeSpeech",
+                        outcome = "succeeded",
+                        durationMs = elapsedMillis(startedAt),
+                    ),
+                )
+            }
             log
                 .atInfo()
                 .addKeyValue("event", "question_speech_finished")
@@ -126,6 +170,19 @@ class QuestionSpeech(
                 .addKeyValue("status", status.dbValue)
                 .log("Question speech rendering finished")
         } catch (e: RuntimeException) {
+            events.record(
+                InterviewEvent(
+                    userId = request.userId,
+                    sessionId = request.sessionId,
+                    type = "question_speech_state_write_failed",
+                    turnIndex = request.turnIndex,
+                    provider = interviewAi.providerName,
+                    operation = "synthesizeSpeech",
+                    outcome = "failed",
+                    errorType = "database_write_failed",
+                    durationMs = elapsedMillis(startedAt),
+                ),
+            )
             // The room polls while a turn is `pending`. Losing this write would leave it
             // polling forever, so it is worth a line in the log even though the round is
             // unaffected — the candidate still has the question in writing.

@@ -2,7 +2,7 @@
 # packages/shared):
 #   docker build -f apps/web/Dockerfile \
 #     --build-arg NEXT_PUBLIC_SUPABASE_URL=... --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
-#     --build-arg NEXT_PUBLIC_API_BASE_URL=... -t acemyinterview-web .
+#     --build-arg NEXT_PUBLIC_API_BASE_URL=... -t untiered-web .
 # NEXT_PUBLIC_* values are compiled into the browser bundle, so they are build arguments,
 # not runtime environment. None of them is secret.
 

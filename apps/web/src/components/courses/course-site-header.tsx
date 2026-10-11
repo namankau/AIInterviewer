@@ -21,9 +21,9 @@ export function CourseSiteHeader() {
           className="group flex items-center gap-2.5 text-heading font-bold tracking-tight text-ink"
         >
           <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast shadow-[var(--shadow-sm)] transition-transform group-hover:-rotate-3">
-            A
+            U
           </span>
-          <span>AceMyInterview</span>
+          <span>Untiered</span>
         </Link>
         <nav aria-label="Main" className="order-3 flex min-w-0 w-full items-center gap-2 md:order-none md:w-auto">
           <div className="min-w-0 flex-1 overflow-x-auto md:overflow-visible">
@@ -51,7 +51,7 @@ export function CourseSiteFooter() {
     <footer className="border-t border-white/10 bg-navy text-on-navy">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-9">
         <span className="text-caption text-on-navy-muted">
-          AceMyInterview — practice interviews, not interview help.
+          Untiered — practice interviews, not interview help.
         </span>
         <Link
           href="/interview/new"

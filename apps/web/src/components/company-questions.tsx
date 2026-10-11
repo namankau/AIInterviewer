@@ -1,6 +1,6 @@
 "use client";
 
-import type { BankCompany, BankQuestion, RoundType } from "@acemyinterview/shared";
+import type { BankCompany, BankQuestion, RoundType } from "@untiered/shared";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 

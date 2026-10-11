@@ -259,7 +259,7 @@ class SourceFetcher(
         const val MAX_CONTENT_CHARS = 120_000
 
         val USER_AGENT_HEADER =
-            "${RobotsRules.USER_AGENT} (+https://acemyinterview.com/bot; curated source library, not a crawler)"
+            "${RobotsRules.USER_AGENT} (+https://untiered.tech/bot; curated source library, not a crawler)"
 
         private val SCRIPT_OR_STYLE = Regex("(?is)<(script|style)[^>]*>.*?</\\1>")
         private val TAG = Regex("(?s)<[^>]+>")

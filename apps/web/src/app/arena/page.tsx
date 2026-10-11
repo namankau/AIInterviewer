@@ -10,7 +10,7 @@ import { allArenaChallenges, challengesForCourse } from "@/lib/arena/corpus";
 import { dailyCourseQuests, possibleDateKeysWorldwide } from "@/lib/arena/progression";
 
 export const metadata: Metadata = {
-  title: "Arena — AceMyInterview",
+  title: "Arena — Untiered",
   description:
     "Short, sharp practice rounds derived from every chapter of every course — spot the mistake, predict " +
     "the output, say what happens next. Included free in the signed-in learning workspace.",

@@ -1,4 +1,4 @@
-import type { SessionReport } from "@acemyinterview/shared";
+import type { SessionReport } from "@untiered/shared";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 

@@ -32,7 +32,7 @@ import type {
   SubmitAnswerResponse,
   TurnView,
   UsageCounts,
-} from "@acemyinterview/shared";
+} from "@untiered/shared";
 
 import { env } from "@/lib/env";
 import type { AnswerTiming } from "@/lib/speech-timing";

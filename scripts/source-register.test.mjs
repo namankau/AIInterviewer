@@ -134,7 +134,7 @@ describe("robotsAllows (RobotsRulesTest.kt parity)", () => {
   });
 
   test("a rule naming us beats the wildcard block", () => {
-    const robots = "User-agent: *\nDisallow:\n\nUser-agent: AceMyInterviewBot\nDisallow: /";
+    const robots = "User-agent: *\nDisallow:\n\nUser-agent: UntieredBot\nDisallow: /";
     assert.equal(robotsAllows(robots, "https://example.com/blog"), false);
   });
 

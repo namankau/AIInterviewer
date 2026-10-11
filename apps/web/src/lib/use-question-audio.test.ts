@@ -1,4 +1,4 @@
-import type { TurnView } from "@acemyinterview/shared";
+import type { TurnView } from "@untiered/shared";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

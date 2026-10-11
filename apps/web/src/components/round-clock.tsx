@@ -1,6 +1,6 @@
 "use client";
 
-import type { TurnView } from "@acemyinterview/shared";
+import type { TurnView } from "@untiered/shared";
 import { useEffect, useRef, useState } from "react";
 
 /**

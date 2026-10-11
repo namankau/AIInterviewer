@@ -1,38 +1,35 @@
 # Handoff — 2026-10-11
 
 ## Task
-Make the fresher interview description/role optional, bring course lessons closer to HelloInterview's readable long-form structure, and strengthen the sparse post-interview/report UI. User request; no task file.
+Rename the product to Untiered everywhere and remove every former-brand reference. User request; no task file.
 
 ## What I built
-- Added a blank-input campus-placement path in `apps/web/src/components/new-interview-form.tsx`: selecting “I am a fresher” makes the interview description optional, skips the composer when blank, opens the setup with Technical fundamentals selected, and labels the detailed role as optional.
-- Reworked `apps/web/src/components/courses/guided-lesson-controls.tsx` and `block-renderer.tsx` into a continuous editorial lesson: all five sections stay visible, the lesson map scrolls rather than hides content, reading progress follows normal scrolling, and headings/body copy now have a stronger long-form hierarchy.
-- Rebuilt the completed-round handoff in `apps/web/src/components/interview-room.tsx` around the evidence-backed report contents, with clear report/dashboard actions while preserving the deliberately sparse live interview room.
-- Replaced plain round-history rows with polished cards and a proper report CTA in `apps/web/src/components/dashboard-panel.tsx`, and replaced the dull report-loading line with a structured evidence-checking state in `apps/web/src/components/report-view.tsx`.
-- Added or updated behaviour/accessibility tests across the fresher form, lesson reader/progress, interview completion, report loading, and round history. Also made the existing telemetry fake-timer test await timer microtasks so it remains deterministic in the complete suite.
+- Replaced all user-facing former-brand names and `A` monograms with Untiered and `U` across landing, login, app shell, course, legal, error, metadata, and footer surfaces in `apps/web/src`.
+- Renamed the npm workspace and package scope to `untiered` / `@untiered/*` across manifests, lockfile, imports, and Next.js transpilation configuration.
+- Renamed Docker image tags, the Spring application name, the source-library bot identity, and the default test-user domain to Untiered equivalents.
+- Pointed the source-library bot identification URL at the planned `https://untiered.tech/bot` domain.
+- Updated repository documentation, course licence copy, tests, and CI references, and verified that no former-brand text or tracked filenames remain. Extracted PRD PDF text was also checked separately.
 
 ## Assumptions I made
-- “The role textbox above” refers to the one-line interview description shown above the fresher checkbox in the supplied screenshot. The later Role field is also explicitly optional for freshers so both interpretations are covered.
-- HelloInterview was used for information architecture—continuous prose, visible syllabus, in-page navigation, diagrams/code/checks—not copied for claims, wording, or visual identity.
-- The supplied right-hand screens set the polish and hierarchy direction, but invented usage counts, streaks, paid tiers, testimonials, community data, and employer-specific claims were deliberately not added.
-- The live interview screen remains near-empty under the settled product decision; the richer UI begins after the round ends.
+- The requested domain is `untiered.tech`, so the former `.com` bot URL becomes `untiered.tech` rather than `untiered.com`.
+- Internal `InterviewOS` Kotlin package/configuration names and the historical PRD filename are separate engineering identifiers, not product-brand references, and remain unchanged to avoid a much larger unrelated namespace migration.
 
 ## What I could NOT verify
-- No live interview or Gemini call was run, in accordance with the no-live-AI-spend rule. The completion/report states were verified through component tests, but not by generating a new real report.
-- The test user has only abandoned rounds, so there was no existing completed report to inspect end-to-end without spending on a live interview.
-- Final visual judgment remains human-owned; PR #56 is open for that review.
-- During signed-in QA, the existing backend `StorageDeletionWorker` repeatedly failed `SessionRepository.markStorageDeletionSucceeded` at `SessionRepository.kt:518`: PostgreSQL reports that the `completed_at` CASE expression is text rather than `timestamptz`. This is outside this UI task and affects data deletion, so it needs a separate human-reviewed fix.
+- Final visual brand judgment remains human-owned; this change preserves the existing design and updates only its name and monogram.
+- The new domain is not yet connected or deployed, so `https://untiered.tech/bot` could not be checked live.
+- Remote CI is pending for the branch at this handoff revision.
 
 ## Verification status
 - Frontend local: typecheck pass; lint pass; 68 test files / 2,988 tests pass; production build pass.
 - Backend local: `ktlintCheck test build` pass.
-- Signed-in QA: test user verified the blank fresher flow, optional role setup, continuous Java lesson, long-form typography, and upgraded history cards. No interview was started.
-- Remote CI: run 38125811519 passed all web, API, and Docker image/build-and-serve jobs for implementation head `2d26d96`.
+- Rename audit: no old product text in tracked text files, tracked filenames, or extracted PRD PDF text.
+- Remote CI: pending.
 
 ## Merge status
-- Branch `feat/fresher-course-report-polish` pushed and PR #56 opened against `develop`. It remains unmerged because final visual design is a human-review area. `main` was not modified.
+- Branch `feat/rename-untiered` is ready to push and remains unmerged pending visible green CI. `main` was not modified.
 
 ## Suggested next task
-- Fix and regression-test the `StorageDeletionWorker` timestamp update in a separate human-reviewed data-deletion PR before more deletion jobs accumulate retries.
+- Connect `untiered.tech` to the deployed web app and add its production DNS/hosting configuration when the domain is acquired.
 
 ## Open questions for you
 - None.

@@ -9,7 +9,7 @@
 const UNCONFIRMED = "[to be confirmed before launch]";
 
 export const LEGAL = {
-  productName: "AceMyInterview",
+  productName: "Untiered",
   /** The person or company responsible for the data (the "Data Fiduciary"). */
   operatorName: process.env.NEXT_PUBLIC_LEGAL_OPERATOR_NAME || UNCONFIRMED,
   contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "",

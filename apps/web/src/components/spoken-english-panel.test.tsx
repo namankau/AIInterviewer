@@ -1,4 +1,4 @@
-import type { ReportSpokenEnglish } from "@acemyinterview/shared";
+import type { ReportSpokenEnglish } from "@untiered/shared";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 

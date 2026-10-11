@@ -1,4 +1,4 @@
-import type { EntitlementView } from "@acemyinterview/shared";
+import type { EntitlementView } from "@untiered/shared";
 
 /** True when the refusal is the daily free allowance, which is what this notice is for. */
 export function isDailyLimitReached(entitlement: EntitlementView | null | undefined): boolean {

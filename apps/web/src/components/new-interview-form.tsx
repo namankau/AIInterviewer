@@ -1,6 +1,6 @@
 "use client";
 
-import type { CandidateStage, EntitlementView, RoundDraft, RoundType } from "@acemyinterview/shared";
+import type { CandidateStage, EntitlementView, RoundDraft, RoundType } from "@untiered/shared";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

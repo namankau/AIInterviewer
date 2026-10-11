@@ -1,4 +1,4 @@
-import type { ReportSpokenEnglish } from "@acemyinterview/shared";
+import type { ReportSpokenEnglish } from "@untiered/shared";
 
 /**
  * The report's "Spoken English" section (PRD 09).

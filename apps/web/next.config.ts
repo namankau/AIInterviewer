@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
     ? { output: "standalone" as const, outputFileTracingRoot: join(process.cwd(), "..", "..") }
     : {}),
   // Shared API types are consumed straight from TypeScript source in the workspace.
-  transpilePackages: ["@acemyinterview/shared"],
+  transpilePackages: ["@untiered/shared"],
   typedRoutes: true,
   /*
    * No framework badge, and no route-info panel, over the candidate's interview.

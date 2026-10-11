@@ -1,5 +1,5 @@
 # The API as a container. Build from apps/api:
-#   docker build -t acemyinterview-api apps/api
+#   docker build -t untiered-api apps/api
 # Configuration is entirely environment variables (see .env.example, "API" section);
 # nothing secret is baked into the image.
 

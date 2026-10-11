@@ -1,4 +1,4 @@
-import type { EntitlementView, LoopBrief, PrepPlan, RoundDraft } from "@acemyinterview/shared";
+import type { EntitlementView, LoopBrief, PrepPlan, RoundDraft } from "@untiered/shared";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";

@@ -1,4 +1,4 @@
-import type { LoopBrief, PrepPlan } from "@acemyinterview/shared";
+import type { LoopBrief, PrepPlan } from "@untiered/shared";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";

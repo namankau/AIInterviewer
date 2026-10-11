@@ -866,25 +866,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   }
 
   if (phase === "complete") {
-    return (
-      <Centered>
-        <div className="flex max-w-md flex-col items-center gap-6 text-center">
-          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-            Interview finished
-          </p>
-          <h1 className="text-title text-ink">That&rsquo;s the end of the round.</h1>
-          <p className="text-body text-ink-muted">
-            Your report is being put together from what you actually said.
-          </p>
-          <a
-            href={`/report/${sessionId}`}
-            className="rounded-xl bg-accent px-5 py-2.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-strong"
-          >
-            Read the report
-          </a>
-        </div>
-      </Centered>
-    );
+    return <InterviewCompletePanel sessionId={sessionId} />;
   }
 
   if (phase === "terminal" && session) {
@@ -1124,6 +1106,10 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 }
 
 function TerminalSession({ session }: { session: SessionView }) {
+  if (session.status === "completed") {
+    return <InterviewCompletePanel sessionId={session.id} />;
+  }
+
   const content =
     session.status === "abandoned"
       ? {
@@ -1164,6 +1150,67 @@ function TerminalSession({ session }: { session: SessionView }) {
           Back to dashboard
         </a>
       </div>
+    </Centered>
+  );
+}
+
+/**
+ * The handoff from interview to feedback. The live room stays deliberately spare; once
+ * the round is over, the product should make the value of the report concrete instead
+ * of leaving the candidate in a blank screen with one lonely link.
+ */
+function InterviewCompletePanel({ sessionId }: { sessionId: string }) {
+  return (
+    <Centered>
+      <section className="w-full max-w-3xl overflow-hidden rounded-[2rem] border border-line bg-surface-raised text-left shadow-[var(--shadow-lg)]">
+        <div className="hero-band relative overflow-hidden px-6 py-8 sm:px-9 sm:py-10">
+          <div aria-hidden="true" className="absolute -right-16 -top-20 size-64 rounded-full bg-accent/25 blur-3xl" />
+          <div className="relative flex items-start gap-4">
+            <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-2xl border border-white/15 bg-white/10 text-positive-wash">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-6">
+                <path d="m6.5 12 3.5 3.5L17.5 8" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+            </span>
+            <div>
+              <p className="eyebrow text-accent-on-navy">Interview complete</p>
+              <h1 className="mt-2 text-display text-balance text-on-navy">That&rsquo;s the end of the round.</h1>
+              <p className="mt-3 max-w-2xl text-body leading-relaxed text-on-navy-muted">
+                Your report turns what you actually said into evidence, patterns and a focused next practice plan.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-7 sm:px-9 sm:py-8">
+          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">What you will get</p>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+            {[
+              ["01", "Competency breakdown", "See the signals the round could support."],
+              ["02", "Evidence from your answers", "Feedback stays tied to words you actually used."],
+              ["03", "Your next practice plan", "Leave with specific work, not a generic score."],
+            ].map(([number, title, detail]) => (
+              <li key={number} className="rounded-2xl border border-line bg-surface-sunken p-4">
+                <span className="font-mono text-micro font-semibold text-accent">{number}</span>
+                <p className="mt-2 text-caption font-semibold text-ink">{title}</p>
+                <p className="mt-1 text-caption leading-relaxed text-ink-muted">{detail}</p>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <a href={`/report/${sessionId}`} className="action-primary min-h-12 px-6 text-body">
+              Read the report <span aria-hidden="true">→</span>
+            </a>
+            <a href="/dashboard" className="action-secondary min-h-12 px-5 text-body">
+              Back to dashboard
+            </a>
+          </div>
+          <p className="mt-4 max-w-2xl text-caption leading-relaxed text-ink-subtle">
+            Analysis can take a moment. Open the report now — the report page will keep you updated while it finishes.
+          </p>
+        </div>
+      </section>
     </Centered>
   );
 }

@@ -134,6 +134,21 @@ describe("InterviewRoom session entry", () => {
     expect(beginSession).not.toHaveBeenCalled();
   });
 
+  it("turns a completed round into a clear report handoff", async () => {
+    fetchSession.mockResolvedValue({ ...baseSession, status: "completed" });
+
+    render(<InterviewRoom sessionId={baseSession.id} />);
+
+    expect(await screen.findByRole("heading", { name: /that.s the end of the round/i })).toBeInTheDocument();
+    expect(screen.getByText(/competency breakdown/i)).toBeInTheDocument();
+    expect(screen.getByText(/evidence from your answers/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /read the report/i })).toHaveAttribute(
+      "href",
+      `/report/${baseSession.id}`,
+    );
+    expect(screen.getByRole("link", { name: /back to dashboard/i })).toHaveAttribute("href", "/dashboard");
+  });
+
   it("shows the server's begin failure and remains in device check", async () => {
     fetchSession.mockResolvedValue(baseSession);
     beginSession.mockRejectedValue(

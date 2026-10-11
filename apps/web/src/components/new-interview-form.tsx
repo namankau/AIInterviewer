@@ -1,6 +1,6 @@
 "use client";
 
-import type { CandidateStage, EntitlementView, RoundDraft, RoundType } from "@acemyinterview/shared";
+import type { CandidateStage, EntitlementView, RoundDraft, RoundType } from "@untiered/shared";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -103,7 +103,17 @@ export function NewInterviewForm({
 
   async function read(event: React.FormEvent) {
     event.preventDefault();
-    if (!accessToken || reading || query.trim() === "") return;
+    if (!accessToken || reading || (query.trim() === "" && !campus)) return;
+
+    // A campus candidate often does not have a role title yet — that is the point of
+    // placement season. The stage is enough to choose the campus loop, so do not make
+    // them invent a job title (or spend a composer call on an empty sentence) before
+    // they can reach the editable setup.
+    if (query.trim() === "" && campus) {
+      setError(null);
+      setDraft(blankCampusDraft());
+      return;
+    }
 
     setReading(true);
     setError(null);
@@ -198,8 +208,12 @@ export function NewInterviewForm({
           onChange={(event) => setQuery(event.target.value)}
           rows={3}
           maxLength={600}
-          required
-          placeholder="Infosys MR round next Tuesday. 5 years, Java backend."
+          required={!campus}
+          placeholder={
+            campus
+              ? "Optional — add a company, branch, or placement round if you know it."
+              : "Infosys MR round next Tuesday. 5 years, Java backend."
+          }
           className="w-full resize-none rounded-xl border border-line bg-surface px-5 py-4 text-body text-ink shadow-[var(--shadow-sm)] placeholder:text-ink-subtle transition-colors focus:border-accent focus:outline-none"
         />
 
@@ -217,7 +231,8 @@ export function NewInterviewForm({
               </span>
               <span className="text-caption text-ink-muted">
                 Campus loops are different: a written test, then a technical and an HR interview
-                on your syllabus and projects. Leave this off and nothing changes.
+                on your syllabus and projects. You can leave the interview description blank and
+                choose the details on the next screen.
               </span>
             </span>
           </label>
@@ -237,8 +252,16 @@ export function NewInterviewForm({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" disabled={reading || query.trim() === "" || !accessToken} aria-busy={reading}>
-            {reading ? "Reading that…" : "Set up the round"}
+          <Button
+            type="submit"
+            disabled={reading || (query.trim() === "" && !campus) || !accessToken}
+            aria-busy={reading}
+          >
+            {reading
+              ? "Reading that…"
+              : campus && query.trim() === ""
+                ? "Set up my campus round"
+                : "Set up the round"}
           </Button>
           <button
             type="button"
@@ -350,6 +373,7 @@ function RoundSetup({
   // The server keeps a focus topic only for a custom-topic round and drops it for every
   // other one, so asking for it anywhere else would collect words that go nowhere.
   const topicRequired = roundType === "custom_topic";
+  const campusCandidate = candidateStage === "student" || candidateStage === "recent_graduate";
   // A custom-topic round is deliberately not preparation for one employer or job title.
   // The database still keeps a complete session context for every client, so the request
   // carries explicit neutral values rather than stale/autofilled fields the candidate
@@ -486,7 +510,14 @@ function RoundSetup({
               className={CONTROL_CLASS}
             />
           </Field>
-          <Field label="Role (optional)" hint="Add it to tune the level and function, or leave it blank for role-neutral practice.">
+          <Field
+            label={campusCandidate ? "Role (optional for freshers)" : "Role (optional)"}
+            hint={
+              campusCandidate
+                ? "Campus placements may not name a role yet. Leave this blank and we will use your stage, syllabus and projects."
+                : "Add it to tune the level and function, or leave it blank for role-neutral practice."
+            }
+          >
             <input
               value={roleTitle}
               onChange={(event) => setRoleTitle(event.target.value)}
@@ -715,6 +746,14 @@ function blankDraft(focusTopic = "", initialRoundType?: RoundType): RoundDraft {
     archetypeConfidence: "inferred",
     groundingNote: "",
     focusTopic: customTopic === "" ? null : customTopic,
+  };
+}
+
+/** The no-role-yet path for campus candidates, with a useful first round preselected. */
+function blankCampusDraft(): RoundDraft {
+  return {
+    ...blankDraft("", "technical_fundamentals"),
+    understood: "Set up a campus-placement practice round.",
   };
 }
 

@@ -118,6 +118,7 @@ class QuestionSpeechTest {
         storage = storage,
         storageProperties = StorageProperties(),
         repository = repository,
+        events = InterviewEventRecorder.NONE,
         // No transaction is open here, so rendering runs inline and the assertions can
         // read its effects without waiting on a background thread.
         executor = SyncTaskExecutor(),

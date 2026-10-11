@@ -1,4 +1,4 @@
-# AceMyInterview
+# Untiered
 
 Voice-first AI mock interviews grounded in how interviews at real employers actually
 run. The candidate names a company and a role at the start of each session and takes a

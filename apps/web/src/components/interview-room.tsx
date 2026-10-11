@@ -1,6 +1,6 @@
 "use client";
 
-import type { BoardState, HintView, SessionView, TurnView } from "@acemyinterview/shared";
+import type { BoardState, HintView, SessionView, TurnView } from "@untiered/shared";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -15,6 +15,7 @@ import {
   fetchSession,
   finishSession,
   type InterviewClientEvent,
+  type InterviewClientPhase,
   reportInterviewClientEvent,
   requestHint,
   saveBoard,
@@ -57,6 +58,12 @@ const BOARD_SAVE_MS = 1_000;
 
 /** How often the design rail re-checks which phase the round is in. */
 const ROUND_CLOCK_TICK_MS = 10_000;
+
+/** A missing next heartbeat bounds when a room stopped making progress. */
+const OBSERVABILITY_HEARTBEAT_MS = 30_000;
+
+/** Last-provider calls may use the API's three-minute read deadline. This reports the stall without aborting it. */
+const ANSWER_SUBMISSION_SLOW_MS = 190_000;
 
 /**
  * How long a candidate gets to read a question that has no voice, before the microphone
@@ -153,6 +160,28 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     },
     [accessToken, sessionId],
   );
+  const reportRoomEvent = useCallback(
+    (
+      event: InterviewClientEvent,
+      eventPhase: InterviewClientPhase,
+      eventTurnIndex?: number,
+      requestId?: string,
+    ) => {
+      if (!accessToken) return;
+      void reportInterviewClientEvent(
+        accessToken,
+        sessionId,
+        event,
+        eventTurnIndex,
+        undefined,
+        requestId,
+        eventPhase,
+      ).catch(() => {
+        // A diagnostic signal must never interfere with the interview it describes.
+      });
+    },
+    [accessToken, sessionId],
+  );
   const questionAudio = useQuestionAudio({
     sessionId,
     turn,
@@ -175,6 +204,27 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
    */
   const questionText = turn?.questionText ?? "";
   const turnIndex = turn?.turnIndex ?? null;
+
+  useEffect(() => {
+    reportRoomEvent("client_phase_changed", phase, turnIndex ?? undefined);
+  }, [phase, reportRoomEvent, turnIndex]);
+
+  useEffect(() => {
+    if (phase === "complete" || phase === "terminal") return;
+    const heartbeat = () => reportRoomEvent("client_heartbeat", phase, turnIndex ?? undefined);
+    const timer = window.setInterval(heartbeat, OBSERVABILITY_HEARTBEAT_MS);
+    return () => window.clearInterval(timer);
+  }, [phase, reportRoomEvent, turnIndex]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        reportRoomEvent("client_page_hidden", phase, turnIndex ?? undefined);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [phase, reportRoomEvent, turnIndex]);
 
   // Both of these carry the turn they belong to, and a mismatch reads as "not yet"
   // during the same render. Clearing them in an effect instead would show one frame of
@@ -327,6 +377,22 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     setError(null);
     const requestId = answerRequestIds.current.get(turn.turnIndex) ?? crypto.randomUUID();
     answerRequestIds.current.set(turn.turnIndex, requestId);
+    reportRoomEvent("answer_submission_started", "submitting", turn.turnIndex, requestId);
+    const slowRequestTimer = window.setTimeout(
+      () =>
+        reportInterviewClientEvent(
+          accessToken,
+          sessionId,
+          "answer_submission_slow",
+          turn.turnIndex,
+          ANSWER_SUBMISSION_SLOW_MS,
+          requestId,
+          "submitting",
+        ).catch(() => {
+          // Reporting a stuck request must not abort or duplicate the idempotent answer.
+        }),
+      ANSWER_SUBMISSION_SLOW_MS,
+    );
     try {
       const result = await submitAnswer(
         accessToken,
@@ -361,12 +427,15 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
       );
       setPhase("asking");
     } catch (cause) {
+      reportRoomEvent("answer_submission_failed", "error", turn.turnIndex, requestId);
       setPhase("error");
       setError(
         cause instanceof ApiRequestError ? cause.message : "That answer could not be submitted.",
       );
+    } finally {
+      window.clearTimeout(slowRequestTimer);
     }
-  }, [accessToken, capture, closeRound, liveTranscript, sessionId, speaksLocally, turn]);
+  }, [accessToken, capture, closeRound, liveTranscript, reportRoomEvent, sessionId, speaksLocally, turn]);
 
   // The meter and the submit callback are read through refs by the tick below. The
   // meter changes on every animation frame, and rebuilding the interval each time would
@@ -797,25 +866,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   }
 
   if (phase === "complete") {
-    return (
-      <Centered>
-        <div className="flex max-w-md flex-col items-center gap-6 text-center">
-          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-            Interview finished
-          </p>
-          <h1 className="text-title text-ink">That&rsquo;s the end of the round.</h1>
-          <p className="text-body text-ink-muted">
-            Your report is being put together from what you actually said.
-          </p>
-          <a
-            href={`/report/${sessionId}`}
-            className="rounded-xl bg-accent px-5 py-2.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-sm)] hover:bg-accent-strong"
-          >
-            Read the report
-          </a>
-        </div>
-      </Centered>
-    );
+    return <InterviewCompletePanel sessionId={sessionId} />;
   }
 
   if (phase === "terminal" && session) {
@@ -1055,6 +1106,10 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 }
 
 function TerminalSession({ session }: { session: SessionView }) {
+  if (session.status === "completed") {
+    return <InterviewCompletePanel sessionId={session.id} />;
+  }
+
   const content =
     session.status === "abandoned"
       ? {
@@ -1095,6 +1150,67 @@ function TerminalSession({ session }: { session: SessionView }) {
           Back to dashboard
         </a>
       </div>
+    </Centered>
+  );
+}
+
+/**
+ * The handoff from interview to feedback. The live room stays deliberately spare; once
+ * the round is over, the product should make the value of the report concrete instead
+ * of leaving the candidate in a blank screen with one lonely link.
+ */
+function InterviewCompletePanel({ sessionId }: { sessionId: string }) {
+  return (
+    <Centered>
+      <section className="w-full max-w-3xl overflow-hidden rounded-[2rem] border border-line bg-surface-raised text-left shadow-[var(--shadow-lg)]">
+        <div className="hero-band relative overflow-hidden px-6 py-8 sm:px-9 sm:py-10">
+          <div aria-hidden="true" className="absolute -right-16 -top-20 size-64 rounded-full bg-accent/25 blur-3xl" />
+          <div className="relative flex items-start gap-4">
+            <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-2xl border border-white/15 bg-white/10 text-positive-wash">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-6">
+                <path d="m6.5 12 3.5 3.5L17.5 8" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+            </span>
+            <div>
+              <p className="eyebrow text-accent-on-navy">Interview complete</p>
+              <h1 className="mt-2 text-display text-balance text-on-navy">That&rsquo;s the end of the round.</h1>
+              <p className="mt-3 max-w-2xl text-body leading-relaxed text-on-navy-muted">
+                Your report turns what you actually said into evidence, patterns and a focused next practice plan.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-7 sm:px-9 sm:py-8">
+          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">What you will get</p>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+            {[
+              ["01", "Competency breakdown", "See the signals the round could support."],
+              ["02", "Evidence from your answers", "Feedback stays tied to words you actually used."],
+              ["03", "Your next practice plan", "Leave with specific work, not a generic score."],
+            ].map(([number, title, detail]) => (
+              <li key={number} className="rounded-2xl border border-line bg-surface-sunken p-4">
+                <span className="font-mono text-micro font-semibold text-accent">{number}</span>
+                <p className="mt-2 text-caption font-semibold text-ink">{title}</p>
+                <p className="mt-1 text-caption leading-relaxed text-ink-muted">{detail}</p>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <a href={`/report/${sessionId}`} className="action-primary min-h-12 px-6 text-body">
+              Read the report <span aria-hidden="true">→</span>
+            </a>
+            <a href="/dashboard" className="action-secondary min-h-12 px-5 text-body">
+              Back to dashboard
+            </a>
+          </div>
+          <p className="mt-4 max-w-2xl text-caption leading-relaxed text-ink-subtle">
+            Analysis can take a moment. Open the report now — the report page will keep you updated while it finishes.
+          </p>
+        </div>
+      </section>
     </Centered>
   );
 }

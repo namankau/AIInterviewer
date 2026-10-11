@@ -1,6 +1,6 @@
 "use client";
 
-import type { EntitlementView, ReadinessGroup, SessionSummary } from "@acemyinterview/shared";
+import type { EntitlementView, ReadinessGroup, SessionSummary } from "@untiered/shared";
 import type { Route } from "next";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -385,7 +385,7 @@ export function PastRoundsSection({
           without one. You can delete any round yourself before then.
         </p>
       ) : null}
-      <ul className="flex flex-col divide-y divide-line">
+      <ul className="grid gap-3">
         {shown.map((session) => (
           <PastRound key={session.id} session={session} onDelete={onDelete} />
         ))}
@@ -431,16 +431,26 @@ function PastRound({
   const soon = expiringSoon(session);
 
   return (
-    <li className="flex flex-wrap items-baseline justify-between gap-3 py-4">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-body text-ink">
-          {session.companyName} · {session.roleTitle}
+    <li className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-surface px-4 py-4 transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-[var(--shadow-sm)] sm:px-5">
+      <div className="flex min-w-0 items-start gap-3.5">
+        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-wash text-accent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5">
+            <path d="M8 10.5a4 4 0 1 1 8 0v2a4 4 0 1 1-8 0v-2Z" />
+            <path d="M5.5 12.5a6.5 6.5 0 0 0 13 0M12 19v3M9 22h6" />
+          </svg>
         </span>
-        <span className="text-caption text-ink-subtle">
-          {statusLabel(session.status)}
-          {session.endedAt ? ` · ${formatDate(session.endedAt)}` : ""}
-          {soon ? ` · report until ${formatDate(soon)}` : ""}
-        </span>
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="truncate text-body font-semibold text-ink">
+            {session.companyName} · {session.roleTitle}
+          </span>
+          <span className="flex flex-wrap items-center gap-2 text-caption text-ink-subtle">
+            <span className="rounded-full bg-surface-sunken px-2 py-0.5 font-medium text-ink-muted">
+              {statusLabel(session.status)}
+            </span>
+            {session.endedAt ? <span>{formatDate(session.endedAt)}</span> : null}
+            {soon ? <span className="font-medium text-warning">Report until {formatDate(soon)}</span> : null}
+          </span>
+        </div>
         <span aria-live="polite" className="empty:hidden">
           {confirming ? (
             <span className="text-caption text-ink-muted">
@@ -452,7 +462,7 @@ function PastRound({
         </span>
       </div>
 
-      <div className="flex shrink-0 items-baseline gap-4">
+      <div className="flex shrink-0 items-center gap-3">
         {/*
           * No link once retention has cleared the round. Following it would reach a page
           * that can only apologise, which is exactly the dead end `reportExpired` exists
@@ -461,9 +471,9 @@ function PastRound({
         {session.status === "completed" && !session.reportExpired ? (
           <Link
             href={`/report/${session.id}`}
-            className="text-caption text-accent underline-offset-4 hover:underline"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-accent px-4 py-2 text-caption font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-accent-strong"
           >
-            Read report
+            Read report <span aria-hidden="true">→</span>
           </Link>
         ) : null}
         {session.status === "completed" && session.reportExpired ? (

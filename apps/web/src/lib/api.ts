@@ -32,7 +32,7 @@ import type {
   SubmitAnswerResponse,
   TurnView,
   UsageCounts,
-} from "@acemyinterview/shared";
+} from "@untiered/shared";
 
 import { env } from "@/lib/env";
 import type { AnswerTiming } from "@/lib/speech-timing";
@@ -235,6 +235,12 @@ export function fetchTurn(
 }
 
 export type InterviewClientEvent =
+  | "client_phase_changed"
+  | "client_heartbeat"
+  | "client_page_hidden"
+  | "answer_submission_started"
+  | "answer_submission_failed"
+  | "answer_submission_slow"
   | "browser_speech_failed"
   | "browser_speech_timed_out"
   | "question_audio_poll_timed_out"
@@ -242,6 +248,17 @@ export type InterviewClientEvent =
   | "model_audio_error"
   | "model_audio_stalled"
   | "model_audio_timed_out";
+
+export type InterviewClientPhase =
+  | "loading"
+  | "checking"
+  | "asking"
+  | "answering"
+  | "submitting"
+  | "closing"
+  | "complete"
+  | "terminal"
+  | "error";
 
 /**
  * Records a privacy-safe failure marker for the live room. The server deliberately
@@ -252,13 +269,17 @@ export function reportInterviewClientEvent(
   accessToken: string,
   sessionId: string,
   event: InterviewClientEvent,
-  turnIndex: number,
+  turnIndex?: number,
   durationMs?: number,
+  requestId?: string,
+  phase?: InterviewClientPhase,
 ): Promise<void> {
   return apiSend<void>(`/api/v1/sessions/${sessionId}/client-events`, "POST", accessToken, {
     event,
-    turnIndex,
+    ...(turnIndex === undefined ? {} : { turnIndex }),
     ...(durationMs === undefined ? {} : { durationMs }),
+    ...(requestId === undefined ? {} : { requestId }),
+    ...(phase === undefined ? {} : { phase }),
   });
 }
 

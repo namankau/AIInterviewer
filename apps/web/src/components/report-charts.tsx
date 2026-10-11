@@ -1,4 +1,4 @@
-import type { ReportCompetency } from "@acemyinterview/shared";
+import type { ReportCompetency } from "@untiered/shared";
 
 import { cn } from "@/lib/cn";
 

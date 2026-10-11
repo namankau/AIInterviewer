@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { GuidedLessonProgressProvider } from "@/components/courses/guided-lesson-progress";
 
@@ -39,33 +39,58 @@ export function GuidedLessonControls({
   const [visitedBeats, setVisitedBeats] = useState<ReadonlySet<number>>(
     () => new Set(beats.length > 0 ? [0] : []),
   );
+  const beatSections = useRef<Array<HTMLElement | null>>([]);
   const lessonId = useId();
   const allBeatsVisited = visitedBeats.size === beats.length;
 
-  function visitBeat(index: number) {
+  const markVisited = useCallback((index: number) => {
     setActiveBeat(index);
     setVisitedBeats((current) => {
       if (current.has(index)) return current;
       return new Set([...current, index]);
     });
+  }, []);
+
+  function visitBeat(index: number) {
+    markVisited(index);
+    beatSections.current[index]?.scrollIntoView?.({ block: "start", behavior: "smooth" });
   }
+
+  // Reading the article normally counts too. Navigation buttons are useful shortcuts,
+  // not a five-click tax before somebody can mark a chapter complete.
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!visible) return;
+        const index = Number((visible.target as HTMLElement).dataset.beatIndex);
+        if (Number.isInteger(index)) markVisited(index);
+      },
+      { rootMargin: "-15% 0px -60% 0px", threshold: [0.05, 0.25] },
+    );
+    beatSections.current.forEach((section) => section && observer.observe(section));
+    return () => observer.disconnect();
+  }, [beats.length, markVisited]);
 
   return (
     <GuidedLessonProgressProvider
       progress={{ allBeatsVisited, totalCount: beats.length, visitedCount: visitedBeats.size }}
     >
-      <section aria-labelledby={`${lessonId}-title`} className="overflow-hidden rounded-xl border border-line bg-surface-raised shadow-sm">
-        <div className="border-b border-line bg-accent-wash px-4 py-5 sm:px-6">
+      <section aria-labelledby={`${lessonId}-title`} className="overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-[var(--shadow-sm)]">
+        <header className="border-b border-accent/20 bg-[linear-gradient(120deg,var(--accent-wash),var(--positive-wash))] px-4 py-6 sm:px-7 sm:py-7">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="font-mono text-micro tracking-widest text-accent uppercase">Guided lesson</p>
-              <h2 id={`${lessonId}-title`} className="mt-1 text-title text-ink">Learn it in five short beats</h2>
-              <p className="mt-1 max-w-[65ch] text-caption leading-relaxed text-ink-muted">Build the idea from plain-language definitions, test it yourself, then finish with a detailed explanation you can recall in an interview.</p>
+              <h2 id={`${lessonId}-title`} className="mt-2 text-title text-ink">One clear path from idea to interview answer</h2>
+              <p className="mt-2 max-w-[68ch] text-body leading-relaxed text-ink-muted">Read straight through like a guide: start with the everyday picture, test the idea, try it, then leave with the rule and interview use.</p>
             </div>
-            <p className="rounded-full border border-accent/25 bg-surface-raised px-3 py-1 font-mono text-micro text-accent" aria-live="polite">Beat {activeBeat + 1} of {beats.length}</p>
+            <p className="rounded-full border border-accent/25 bg-surface-raised px-3 py-1 font-mono text-micro text-accent" aria-live="polite">Section {activeBeat + 1} of {beats.length}</p>
           </div>
 
-          <nav aria-label="Learning beats" className="mt-5 grid grid-cols-5 gap-1.5 sm:gap-2">
+          <nav aria-label="Lesson sections" className="mt-6 grid grid-cols-5 gap-1.5 sm:gap-2">
             {beats.map((beat, index) => (
               <button key={beat.key} type="button" aria-label={beat.label} aria-current={activeBeat === index ? "step" : undefined} aria-controls={`${lessonId}-${beat.key}`} onClick={() => visitBeat(index)} className={["group flex min-h-11 items-center justify-center gap-2 rounded-lg border px-2 py-2 text-left text-caption font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:justify-start sm:px-3", activeBeat === index ? "border-accent/40 bg-accent text-accent-contrast" : "border-line bg-surface-raised text-ink-muted hover:border-accent/40 hover:text-ink"].join(" ")}>
                 <span className="shrink-0"><BeatIcon beat={beat.key} /></span>
@@ -73,32 +98,44 @@ export function GuidedLessonControls({
               </button>
             ))}
           </nav>
-        </div>
+        </header>
 
-        <div className="p-3 sm:p-5">
+        <div className="px-4 sm:px-7 lg:px-9">
           {beats.map((beat, index) => (
-            <details key={beat.key} id={`${lessonId}-${beat.key}`} data-testid={`lesson-beat-${beat.key}`} open={activeBeat === index} className="group mb-2 rounded-lg border border-line bg-surface last:mb-0 open:border-line-strong open:shadow-sm">
-              <summary onClick={(event) => { event.preventDefault(); visitBeat(index); }} className="flex cursor-pointer list-none items-start gap-3 rounded-lg px-4 py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden">
-                <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-md bg-accent-wash text-accent"><BeatIcon beat={beat.key} /></span>
-                <span className="min-w-0 flex-1"><span className="block text-heading text-ink">{beat.label}</span><span className="mt-0.5 block text-caption leading-relaxed text-ink-muted">{beat.description}</span></span>
-                <span aria-hidden="true" className="mt-1 text-ink-subtle transition-transform group-open:rotate-180">⌄</span>
-              </summary>
-              <div className={`border-t border-line px-4 py-5 sm:px-6 sm:py-7 ${beat.key === "explain" ? "bg-surface-sunken" : ""}`}>
-                {beat.content ?? <p className="max-w-[65ch] rounded-md border border-dashed border-line-strong bg-surface-sunken px-4 py-3 text-caption leading-relaxed text-ink-muted">This chapter does not need a separate activity for this beat. Continue when you are ready.</p>}
-                <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-                  <p className="font-mono text-micro text-ink-subtle">{beat.itemCount} lesson {beat.itemCount === 1 ? "item" : "items"}</p>
-                  {index < beats.length - 1 ? <button type="button" onClick={() => visitBeat(index + 1)} className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 py-2 text-caption font-medium text-accent-contrast transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Continue to {beats[index + 1]!.shortLabel}</button> : null}
+            <section
+              key={beat.key}
+              ref={(node) => { beatSections.current[index] = node; }}
+              id={`${lessonId}-${beat.key}`}
+              data-beat-index={index}
+              data-testid={`lesson-beat-${beat.key}`}
+              data-visited={visitedBeats.has(index) ? "true" : "false"}
+              aria-labelledby={`${lessonId}-${beat.key}-title`}
+              className={`scroll-mt-28 border-b border-line py-9 last:border-b-0 sm:py-12 ${beat.key === "explain" ? "relative before:absolute before:inset-y-5 before:-inset-x-4 before:-z-0 before:rounded-2xl before:bg-surface-sunken sm:before:-inset-x-5" : ""}`}
+            >
+              <div className="relative flex items-start gap-4">
+                <span className={`mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl border ${visitedBeats.has(index) ? "border-accent bg-accent text-accent-contrast" : "border-accent/25 bg-accent-wash text-accent"}`}><BeatIcon beat={beat.key} /></span>
+                <div className="min-w-0">
+                  <p className="font-mono text-micro tracking-widest text-accent uppercase">Step {String(index + 1).padStart(2, "0")}</p>
+                  <h3 id={`${lessonId}-${beat.key}-title`} className="mt-1 text-title text-ink">{beat.label}</h3>
+                  <p className="mt-2 max-w-[68ch] text-body leading-relaxed text-ink-muted">{beat.description}</p>
                 </div>
               </div>
-            </details>
+              <div className="relative mt-8 sm:pl-14">
+                {beat.content ?? <p className="max-w-[65ch] rounded-md border border-dashed border-line-strong bg-surface-sunken px-4 py-3 text-caption leading-relaxed text-ink-muted">This chapter does not need a separate activity for this section. Continue when you are ready.</p>}
+                <div className="mt-9 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+                  <p className="font-mono text-micro text-ink-subtle">{beat.itemCount} lesson {beat.itemCount === 1 ? "item" : "items"}</p>
+                  {index < beats.length - 1 ? <button type="button" onClick={() => visitBeat(index + 1)} className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 py-2 text-caption font-medium text-accent-contrast transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Continue to {beats[index + 1]!.shortLabel} <span aria-hidden="true" className="ml-1">↓</span></button> : null}
+                </div>
+              </div>
+            </section>
           ))}
 
           {completion ? (
-            <div className={`mt-5 flex flex-col items-start gap-2 rounded-xl border px-5 py-4 transition-colors ${allBeatsVisited ? "border-positive/25 bg-positive-wash" : "border-line bg-surface-sunken"}`}>
+            <div className={`mb-7 mt-2 flex flex-col items-start gap-2 rounded-xl border px-5 py-5 transition-colors ${allBeatsVisited ? "border-positive/25 bg-positive-wash" : "border-line bg-surface-sunken"}`}>
               <p className="text-caption text-ink-muted" aria-live="polite">
                 {allBeatsVisited
-                  ? "You explored every beat. Mark the chapter complete when you feel ready."
-                  : `${visitedBeats.size} of ${beats.length} beats explored. Visit each beat to unlock completion.`}
+                  ? "You reached every section. Mark the chapter complete when you feel ready."
+                  : `${visitedBeats.size} of ${beats.length} sections reached. Read or use the lesson map to unlock completion.`}
               </p>
               {completion}
             </div>

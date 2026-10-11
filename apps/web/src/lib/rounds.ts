@@ -1,4 +1,4 @@
-import type { RoundType } from "@acemyinterview/shared";
+import type { RoundType } from "@untiered/shared";
 
 /**
  * The rounds, described the way someone who has sat on both sides of the table would

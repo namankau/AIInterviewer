@@ -67,6 +67,7 @@ class InterviewService(
     private val resumeService: ResumeService,
     private val roundWorkspaceComposer: RoundWorkspaceComposer,
     private val codeRunner: CodeRunner,
+    private val interviewEvents: InterviewEventRecorder,
     transactionManager: PlatformTransactionManager,
     @Qualifier("interviewBackgroundExecutor") private val backgroundExecutor: TaskExecutor,
 ) {
@@ -315,7 +316,11 @@ class InterviewService(
         } catch (e: RuntimeException) {
             runCatching { repository.markSessionStatus(sessionId, userId, "failed") }
                 .onSuccess { changed ->
-                    if (!changed) log.info("Session {} was already terminal when setup failed", sessionId)
+                    if (changed) {
+                        recordEvent(userId, sessionId, "session_failed", outcome = "failed", errorType = "unknown")
+                    } else {
+                        log.info("Session {} was already terminal when setup failed", sessionId)
+                    }
                 }
             throw e
         }
@@ -481,7 +486,9 @@ class InterviewService(
                         )
                     }.value
             } catch (e: AiUnavailableException) {
-                if (!repository.markSessionStatus(sessionId, userId, "failed")) {
+                if (repository.markSessionStatus(sessionId, userId, "failed")) {
+                    recordEvent(userId, sessionId, "session_failed", outcome = "failed", errorType = "ai_unavailable")
+                } else {
                     log.info("Session {} was already terminal when opening-question generation failed", sessionId)
                 }
                 log.warn("Opening question failed for session {}", sessionId, e)
@@ -577,9 +584,10 @@ class InterviewService(
 
             TurnRequestClaimStatus.ACQUIRED,
             TurnRequestClaimStatus.UNAVAILABLE,
-            -> {
-                Unit
-            }
+            -> {}
+        }
+        if (claim.status == TurnRequestClaimStatus.ACQUIRED) {
+            recordEvent(userId, sessionId, "answer_request_claimed", turnIndex, requestId, outcome = "succeeded")
         }
         var durable = false
         try {
@@ -603,9 +611,38 @@ class InterviewService(
             // It also has no bearing on what gets asked next, so it uploads alongside the
             // assessment rather than ahead of it: the candidate waits for the longer of the
             // two rather than for their sum.
+            recordEvent(userId, sessionId, "answer_storage_started", turnIndex, requestId, outcome = "started")
             val storedAudio =
                 CompletableFuture.supplyAsync(
-                    { storeOrWarn(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType) },
+                    {
+                        val startedAt = System.nanoTime()
+                        try {
+                            val stored = storeOrWarn(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType)
+                            recordEvent(
+                                userId,
+                                sessionId,
+                                "answer_storage_finished",
+                                turnIndex,
+                                requestId,
+                                outcome = if (stored == null) "failed" else "succeeded",
+                                errorType = if (stored == null) "storage_unavailable" else null,
+                                durationMs = elapsedMillis(startedAt),
+                            )
+                            stored
+                        } catch (e: RuntimeException) {
+                            recordEvent(
+                                userId,
+                                sessionId,
+                                "answer_storage_finished",
+                                turnIndex,
+                                requestId,
+                                outcome = "failed",
+                                errorType = "unknown",
+                                durationMs = elapsedMillis(startedAt),
+                            )
+                            throw e
+                        }
+                    },
                     backgroundExecutor,
                 )
 
@@ -665,9 +702,11 @@ class InterviewService(
                     focusTopic = session.focusTopic,
                 )
 
+            val assessmentStartedAt = System.nanoTime()
+            recordEvent(userId, sessionId, "answer_assessment_started", turnIndex, requestId, outcome = "started")
             val assessment =
                 try {
-                    AiSpendContext.of(userId, sessionId) {
+                    AiSpendContext.ofInterview(userId, sessionId, turnIndex, requestId) {
                         interviewAi.assessAnswer(
                             brief = brief,
                             round =
@@ -686,14 +725,55 @@ class InterviewService(
                         )
                     }
                 } catch (e: AiUnavailableException) {
-                    if (!repository.markSessionStatus(sessionId, userId, "failed")) {
+                    recordEvent(
+                        userId,
+                        sessionId,
+                        "answer_assessment_failed",
+                        turnIndex,
+                        requestId,
+                        outcome = "failed",
+                        errorType = "ai_unavailable",
+                        durationMs = elapsedMillis(assessmentStartedAt),
+                    )
+                    if (repository.markSessionStatus(sessionId, userId, "failed")) {
+                        recordEvent(
+                            userId,
+                            sessionId,
+                            "session_failed",
+                            turnIndex,
+                            requestId,
+                            outcome = "failed",
+                            errorType = "ai_unavailable",
+                        )
+                    } else {
                         log.info("Session {} was already terminal when answer assessment failed", sessionId)
                     }
                     log.warn("Answer assessment failed for session {} turn {}", sessionId, turnIndex, e)
                     throw ApiException.upstreamUnavailable(
                         "We could not process that answer. The interview has been stopped rather than scored unfairly.",
                     )
+                } catch (e: RuntimeException) {
+                    recordEvent(
+                        userId,
+                        sessionId,
+                        "answer_assessment_failed",
+                        turnIndex,
+                        requestId,
+                        outcome = "failed",
+                        errorType = "unknown",
+                        durationMs = elapsedMillis(assessmentStartedAt),
+                    )
+                    throw e
                 }
+            recordEvent(
+                userId,
+                sessionId,
+                "answer_assessment_succeeded",
+                turnIndex,
+                requestId,
+                outcome = "succeeded",
+                durationMs = elapsedMillis(assessmentStartedAt),
+            )
 
             val suggestedAction = normaliseAction(assessment.value.suggestedNextAction)
             // The model advises how to continue; it does not own the clock. It sometimes
@@ -707,6 +787,17 @@ class InterviewService(
                     suggestedAction
                 }
             val intervention = Intervention.parse(assessment.value.intervention)
+            interviewEvents.record(
+                InterviewEvent(
+                    userId = userId,
+                    sessionId = sessionId,
+                    type = "interviewer_decision",
+                    turnIndex = turnIndex,
+                    requestId = requestId,
+                    action = nextAction,
+                    intervention = intervention.wireValue,
+                ),
+            )
             // The upload has almost always finished under the assessment by now. Waiting for it
             // cannot fail the turn: storeOrWarn has already turned its own errors into nulls.
             //
@@ -731,126 +822,154 @@ class InterviewService(
             // next turn" follows it. One `inTransaction` block, opened only now that the model
             // call is behind us, so a crash or exception partway through can never leave a turn
             // answered with no session-status change or next turn to match it (task 056, L4).
+            val persistStartedAt = System.nanoTime()
+            recordEvent(userId, sessionId, "answer_persist_started", turnIndex, requestId, outcome = "started")
             val response =
-                inTransaction {
-                    val recorded =
-                        repository.recordAnswer(
-                            sessionId = sessionId,
-                            userId = userId,
-                            turnIndex = turnIndex,
-                            transcript = assessment.value.transcript,
-                            audioPath = audioPath,
-                            videoPath = null,
-                            assessmentJson = objectMapper.writeValueAsString(assessment.value),
-                            nextAction = nextAction,
-                            intervention = intervention.wireValue,
-                            // Only keep a note when help was actually given, so the report cannot
-                            // report assistance that did not happen.
-                            interventionNote = assessment.value.interventionNote?.takeIf { intervention.isAssisted },
-                            deliveryNote = assessment.value.deliveryObservation?.takeIf { it.isNotBlank() },
-                            // Re-serialised from the validated value, so what is stored is only
-                            // ever a consistent measurement, never whatever the request carried.
-                            timingJson = AnswerTiming.parse(timing, objectMapper)?.let { objectMapper.writeValueAsString(it) },
-                            requestId = requestId,
-                        )
-                    if (!recorded) throw sessionStateChanged()
+                try {
+                    inTransaction {
+                        val recorded =
+                            repository.recordAnswer(
+                                sessionId = sessionId,
+                                userId = userId,
+                                turnIndex = turnIndex,
+                                transcript = assessment.value.transcript,
+                                audioPath = audioPath,
+                                videoPath = null,
+                                assessmentJson = objectMapper.writeValueAsString(assessment.value),
+                                nextAction = nextAction,
+                                intervention = intervention.wireValue,
+                                // Only keep a note when help was actually given, so the report cannot
+                                // report assistance that did not happen.
+                                interventionNote = assessment.value.interventionNote?.takeIf { intervention.isAssisted },
+                                deliveryNote = assessment.value.deliveryObservation?.takeIf { it.isNotBlank() },
+                                // Re-serialised from the validated value, so what is stored is only
+                                // ever a consistent measurement, never whatever the request carried.
+                                timingJson = AnswerTiming.parse(timing, objectMapper)?.let { objectMapper.writeValueAsString(it) },
+                                requestId = requestId,
+                            )
+                        if (!recorded) throw sessionStateChanged()
 
-                    val answered = repository.countAnsweredTurns(sessionId, userId)
-                    // The clock ends the round. `mustConclude` also covers the turn ceiling, which is
-                    // there so a runaway session cannot run up an unbounded model bill.
-                    val shouldConclude = endRound || plan.mustConclude
-                    if (shouldConclude) {
-                        if (!repository.markSessionStatus(sessionId, userId, "completed")) throw sessionStateChanged()
-                        return@inTransaction persistAnswerResponse(
+                        val answered = repository.countAnsweredTurns(sessionId, userId)
+                        // The clock ends the round. `mustConclude` also covers the turn ceiling, which is
+                        // there so a runaway session cannot run up an unbounded model bill.
+                        val shouldConclude = endRound || plan.mustConclude
+                        if (shouldConclude) {
+                            if (!repository.markSessionStatus(sessionId, userId, "completed")) throw sessionStateChanged()
+                            return@inTransaction persistAnswerResponse(
+                                sessionId,
+                                userId,
+                                turnIndex,
+                                requestId,
+                                SubmitAnswerResponse(
+                                    sessionComplete = true,
+                                    turnsCompleted = answered,
+                                    nextTurn = null,
+                                    // The clock wins over the button. When time runs out the room submits the
+                                    // answer in progress itself, and it arrives here looking exactly like a
+                                    // candidate pressing Submit — thanking them for a decision they did not make
+                                    // would be the machine not noticing what happened.
+                                    closingRemark =
+                                        ClosingRemark.forRound(
+                                            ranOutOfTime = plan.outOfTime,
+                                            endedByCandidate = endRound && !plan.outOfTime,
+                                        ),
+                                ),
+                            )
+                        }
+
+                        // Trimmed here rather than trusted to the prompt: three rounds of telling the
+                        // model not to open with "That's a great overview" did not stop it. A missing
+                        // question is a malformed continuation, not permission to manufacture a
+                        // two-answer report, so a conservative scope-bound question keeps it alive.
+                        val modelText =
+                            assessment.value.nextQuestionText
+                                ?.let { QuestionText.withoutPreamble(it) }
+                                ?.takeIf { it.isNotBlank() }
+                                ?: continuationQuestion(roundType, session.focusTopic, answered)
+
+                        // Whether this turn asks the planned question is the engine's call, checked against
+                        // its stored wording; a drifted question is replaced after its lead-in.
+                        val asked =
+                            PlannedQuestionCheck.resolveText(planned?.text, askNow, assessment.value.askedPlannedQuestion, modelText)
+                        val askedFrom = planned?.takeIf { asked.askedPlanned }
+                        val nextText = asked.text
+                        val nextIndex = turnIndex + 1
+                        val inserted =
+                            repository.insertTurn(
+                                sessionId = sessionId,
+                                userId = userId,
+                                turnIndex = nextIndex,
+                                questionText = nextText,
+                                phase = plan.phase,
+                                // Pending means "a voice is coming". Nothing is coming when the room
+                                // speaks for itself, and saying otherwise leaves it polling for ever.
+                                speechStatus = if (speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
+                                provenanceJson =
+                                    provenanceJson(
+                                        company = session.companyName,
+                                        basis = assessment.value.questionBasis,
+                                        probes = assessment.value.questionProbes.takeIf { asked.faithful },
+                                        askedBecause = assessment.value.questionAskedBecause.takeIf { asked.faithful },
+                                        bankQuestion = (askedFrom as? PlannedFrom.Bank)?.question,
+                                        poolQuestion = askedFrom as? PlannedFrom.Pool,
+                                    ),
+                                bankQuestionId = (askedFrom as? PlannedFrom.Bank)?.question?.id,
+                                poolQuestionId = (askedFrom as? PlannedFrom.Pool)?.question?.id,
+                            )
+                        if (!inserted) throw sessionStateChanged()
+                        // Nothing to synthesise when the room is going to say it: that call is the single
+                        // most expensive thing in a turn and it would be thrown away. Registered inside
+                        // the transaction, same as `composeAndOpen`, so it runs once the turn this reads
+                        // has actually committed.
+                        if (!speaksLocally) {
+                            questionSpeech.render(SpeechRequest(userId, sessionId, nextIndex, nextText, session.language))
+                        }
+
+                        // The question goes back in writing straight away and its voice follows, which
+                        // the room asks for separately. A candidate ready to start talking should not be
+                        // held behind audio they may well talk over.
+                        persistAnswerResponse(
                             sessionId,
                             userId,
                             turnIndex,
                             requestId,
                             SubmitAnswerResponse(
-                                sessionComplete = true,
+                                sessionComplete = false,
                                 turnsCompleted = answered,
-                                nextTurn = null,
-                                // The clock wins over the button. When time runs out the room submits the
-                                // answer in progress itself, and it arrives here looking exactly like a
-                                // candidate pressing Submit — thanking them for a decision they did not make
-                                // would be the machine not noticing what happened.
-                                closingRemark =
-                                    ClosingRemark.forRound(ranOutOfTime = plan.outOfTime, endedByCandidate = endRound && !plan.outOfTime),
+                                nextTurn =
+                                    TurnView(
+                                        turnIndex = nextIndex,
+                                        questionText = nextText,
+                                        questionAudioUrl = null,
+                                        questionAudioStatus = SpeechStatus.PENDING.dbValue,
+                                        phase = plan.phase.dbValue,
+                                        answered = false,
+                                    ),
                             ),
                         )
                     }
-
-                    // Trimmed here rather than trusted to the prompt: three rounds of telling the
-                    // model not to open with "That's a great overview" did not stop it. A missing
-                    // question is a malformed continuation, not permission to manufacture a
-                    // two-answer report, so a conservative scope-bound question keeps it alive.
-                    val modelText =
-                        assessment.value.nextQuestionText
-                            ?.let { QuestionText.withoutPreamble(it) }
-                            ?.takeIf { it.isNotBlank() }
-                            ?: continuationQuestion(roundType, session.focusTopic, answered)
-
-                    // Whether this turn asks the planned question is the engine's call, checked against
-                    // its stored wording; a drifted question is replaced after its lead-in.
-                    val asked =
-                        PlannedQuestionCheck.resolveText(planned?.text, askNow, assessment.value.askedPlannedQuestion, modelText)
-                    val askedFrom = planned?.takeIf { asked.askedPlanned }
-                    val nextText = asked.text
-                    val nextIndex = turnIndex + 1
-                    val inserted =
-                        repository.insertTurn(
-                            sessionId = sessionId,
-                            userId = userId,
-                            turnIndex = nextIndex,
-                            questionText = nextText,
-                            phase = plan.phase,
-                            // Pending means "a voice is coming". Nothing is coming when the room
-                            // speaks for itself, and saying otherwise leaves it polling for ever.
-                            speechStatus = if (speaksLocally) SpeechStatus.UNAVAILABLE else SpeechStatus.PENDING,
-                            provenanceJson =
-                                provenanceJson(
-                                    company = session.companyName,
-                                    basis = assessment.value.questionBasis,
-                                    probes = assessment.value.questionProbes.takeIf { asked.faithful },
-                                    askedBecause = assessment.value.questionAskedBecause.takeIf { asked.faithful },
-                                    bankQuestion = (askedFrom as? PlannedFrom.Bank)?.question,
-                                    poolQuestion = askedFrom as? PlannedFrom.Pool,
-                                ),
-                            bankQuestionId = (askedFrom as? PlannedFrom.Bank)?.question?.id,
-                            poolQuestionId = (askedFrom as? PlannedFrom.Pool)?.question?.id,
-                        )
-                    if (!inserted) throw sessionStateChanged()
-                    // Nothing to synthesise when the room is going to say it: that call is the single
-                    // most expensive thing in a turn and it would be thrown away. Registered inside
-                    // the transaction, same as `composeAndOpen`, so it runs once the turn this reads
-                    // has actually committed.
-                    if (!speaksLocally) {
-                        questionSpeech.render(SpeechRequest(userId, sessionId, nextIndex, nextText, session.language))
-                    }
-
-                    // The question goes back in writing straight away and its voice follows, which
-                    // the room asks for separately. A candidate ready to start talking should not be
-                    // held behind audio they may well talk over.
-                    persistAnswerResponse(
-                        sessionId,
+                } catch (e: RuntimeException) {
+                    recordEvent(
                         userId,
+                        sessionId,
+                        "answer_persist_failed",
                         turnIndex,
                         requestId,
-                        SubmitAnswerResponse(
-                            sessionComplete = false,
-                            turnsCompleted = answered,
-                            nextTurn =
-                                TurnView(
-                                    turnIndex = nextIndex,
-                                    questionText = nextText,
-                                    questionAudioUrl = null,
-                                    questionAudioStatus = SpeechStatus.PENDING.dbValue,
-                                    phase = plan.phase.dbValue,
-                                    answered = false,
-                                ),
-                        ),
+                        outcome = "failed",
+                        errorType = "database_write_failed",
+                        durationMs = elapsedMillis(persistStartedAt),
                     )
+                    throw e
                 }
+            recordEvent(
+                userId,
+                sessionId,
+                "answer_persist_succeeded",
+                turnIndex,
+                requestId,
+                outcome = "succeeded",
+                durationMs = elapsedMillis(persistStartedAt),
+            )
             durable = true
             // Registered only now that the answer has committed: `recordAnswer` writes the
             // audio path too, and attaching before it would be overwritten with the null above.
@@ -862,6 +981,10 @@ class InterviewService(
                             .onFailure { log.warn("Could not attach late answer audio for session {} turn {}", sessionId, turnIndex, it) }
                     }
                 }
+            }
+            recordEvent(userId, sessionId, "answer_response_ready", turnIndex, requestId, outcome = "ready")
+            if (response.sessionComplete) {
+                recordEvent(userId, sessionId, "session_completed", turnIndex, requestId, outcome = "succeeded")
             }
             return response
         } finally {
@@ -907,9 +1030,7 @@ class InterviewService(
 
             TurnRequestClaimStatus.ACQUIRED,
             TurnRequestClaimStatus.UNAVAILABLE,
-            -> {
-                Unit
-            }
+            -> {}
         }
         var durable = false
         try {
@@ -1025,6 +1146,7 @@ class InterviewService(
         val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
         if (session.status == "in_progress") {
             val abandoned = repository.markSessionStatus(sessionId, userId, "abandoned")
+            if (abandoned) recordEvent(userId, sessionId, "session_abandoned", outcome = "succeeded")
             if (!abandoned && repository.findSession(sessionId, userId)?.status == "in_progress") {
                 throw sessionStateChanged()
             }
@@ -1100,6 +1222,7 @@ class InterviewService(
                     now = Instant.now(),
                 ).outOfTime
         if (!repository.markSessionStatus(sessionId, userId, "completed")) throw sessionStateChanged()
+        recordEvent(userId, sessionId, "session_completed", outcome = "succeeded")
         return SubmitAnswerResponse(
             sessionComplete = true,
             turnsCompleted = answered,
@@ -1120,7 +1243,9 @@ class InterviewService(
     ): SessionView {
         val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
         if (session.status != "in_progress") throw sessionStateChanged()
-        repository.startClock(sessionId, userId)
+        if (repository.startClock(sessionId, userId)) {
+            recordEvent(userId, sessionId, "room_entered", outcome = "succeeded")
+        }
         return view(userId, sessionId)
     }
 
@@ -1135,6 +1260,32 @@ class InterviewService(
             "This request is already being processed. Retry it with the same request ID in a moment.",
             code = "request_in_progress",
         )
+
+    private fun recordEvent(
+        userId: UUID,
+        sessionId: UUID,
+        type: String,
+        turnIndex: Int? = null,
+        requestId: UUID? = null,
+        outcome: String? = null,
+        errorType: String? = null,
+        durationMs: Long? = null,
+    ) {
+        interviewEvents.record(
+            InterviewEvent(
+                userId = userId,
+                sessionId = sessionId,
+                type = type,
+                turnIndex = turnIndex,
+                requestId = requestId,
+                outcome = outcome,
+                errorType = errorType,
+                durationMs = durationMs,
+            ),
+        )
+    }
+
+    private fun elapsedMillis(startedAt: Long): Long = (System.nanoTime() - startedAt) / 1_000_000
 
     private fun persistAnswerResponse(
         sessionId: UUID,

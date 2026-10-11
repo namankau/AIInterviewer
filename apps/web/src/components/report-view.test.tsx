@@ -1,8 +1,8 @@
-import type { SessionReport } from "@acemyinterview/shared";
+import type { SessionReport } from "@untiered/shared";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { ReportDocument } from "./report-view";
+import { ReportDocument, ReportLoadingState } from "./report-view";
 
 /**
  * A full, realistic report. Every quote below is something the fixture "said" — the same
@@ -119,6 +119,16 @@ function buildReport(overrides: Partial<SessionReport> = {}): SessionReport {
     ...overrides,
   };
 }
+
+describe("ReportLoadingState", () => {
+  it("explains the evidence checks instead of leaving a blank loading line", () => {
+    render(<ReportLoadingState />);
+
+    expect(screen.getByRole("status")).toHaveAccessibleName(/building your evidence-backed report/i);
+    expect(screen.getByText(/checking each assessment against the transcript/i)).toBeInTheDocument();
+    expect(screen.getByText(/planning the next step/i)).toBeInTheDocument();
+  });
+});
 
 describe("ReportDocument — the evidence quote", () => {
   it("shows the evidence quote directly, never behind the score-rationale disclosure", () => {

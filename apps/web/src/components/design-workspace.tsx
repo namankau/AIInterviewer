@@ -1,6 +1,6 @@
 "use client";
 
-import type { BoardState, DesignCase } from "@acemyinterview/shared";
+import type { BoardState, DesignCase } from "@untiered/shared";
 import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
 

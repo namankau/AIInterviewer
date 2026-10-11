@@ -1,6 +1,6 @@
 "use client";
 
-import type { ArenaProgressView, MeResponse, ProfileDetails, ResumeView, SessionSummary } from "@acemyinterview/shared";
+import type { ArenaProgressView, MeResponse, ProfileDetails, ResumeView, SessionSummary } from "@untiered/shared";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 

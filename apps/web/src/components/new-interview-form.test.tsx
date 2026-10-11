@@ -1,4 +1,4 @@
-import type { EntitlementView, LoopBrief, PrepPlan, RoundDraft } from "@acemyinterview/shared";
+import type { EntitlementView, LoopBrief, PrepPlan, RoundDraft } from "@untiered/shared";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -483,6 +483,27 @@ describe("NewInterviewForm", () => {
       await userEvent.keyboard(" ");
       expect(box).toBeChecked();
       expect(screen.getByRole("combobox", { name: /where are you right now/i })).toHaveValue("student");
+    });
+
+    it("lets a fresher continue without inventing a role or interview description", async () => {
+      render(<NewInterviewForm />);
+
+      const description = screen.getByLabelText(/describe the interview/i);
+      expect(description).toBeRequired();
+      expect(screen.getByRole("button", { name: /set up the round/i })).toBeDisabled();
+
+      await userEvent.click(screen.getByRole("checkbox", { name: /fresher preparing for campus placement/i }));
+
+      expect(description).not.toBeRequired();
+      const continueButton = screen.getByRole("button", { name: /set up my campus round/i });
+      expect(continueButton).toBeEnabled();
+      await userEvent.click(continueButton);
+
+      expect(composeRound).not.toHaveBeenCalled();
+      expect(screen.getByRole("radio", { name: /technical fundamentals/i })).toBeChecked();
+      expect(screen.getByRole("textbox", { name: /role \(optional for freshers\)/i })).not.toBeRequired();
+      expect(screen.getByRole("combobox", { name: /where are you in your career/i })).toHaveValue("student");
+      expect(screen.getByText(/campus placements may not name a role yet/i)).toBeInTheDocument();
     });
 
     it("carries the campus stage into the brief and plan fetches, and prefills the setup stage", async () => {

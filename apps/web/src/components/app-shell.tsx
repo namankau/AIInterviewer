@@ -37,9 +37,9 @@ export function AppShell({
             className="group flex shrink-0 items-center gap-2.5 py-3.5 text-heading font-bold tracking-tight text-ink"
           >
             <span className="grid size-9 place-items-center rounded-[0.7rem] bg-accent text-caption font-extrabold text-accent-contrast shadow-[0_8px_22px_rgba(70,84,220,0.25)] transition-transform group-hover:-rotate-3">
-              A
+              U
             </span>
-            <span className="hidden sm:inline">AceMyInterview</span>
+            <span className="hidden sm:inline">Untiered</span>
           </Link>
 
           <nav aria-label="Main" className="nav-scroll order-3 w-full min-w-0 overflow-x-auto border-t border-line sm:order-none sm:w-auto sm:flex-1 sm:border-t-0">

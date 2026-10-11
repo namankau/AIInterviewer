@@ -1,6 +1,6 @@
 "use client";
 
-import type { SpeechStatus, TurnView } from "@acemyinterview/shared";
+import type { SpeechStatus, TurnView } from "@untiered/shared";
 import { useEffect, useRef, useState } from "react";
 
 import { fetchTurn } from "@/lib/api";

@@ -1,6 +1,6 @@
 "use client";
 
-import type { MeResponse } from "@acemyinterview/shared";
+import type { MeResponse } from "@untiered/shared";
 import { useEffect, useId, useRef, useState } from "react";
 
 import Link from "next/link";

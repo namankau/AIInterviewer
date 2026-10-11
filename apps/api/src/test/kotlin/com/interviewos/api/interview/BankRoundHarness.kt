@@ -132,6 +132,7 @@ class BankRoundHarness(
             resumeService = resumeService,
             roundWorkspaceComposer = RoundWorkspaceComposer(ai, mapper, ProblemVerifier(ai, mapper), poolMaterial),
             codeRunner = mock(CodeRunner::class.java),
+            interviewEvents = InterviewEventRecorder.NONE,
             transactionManager = transactionManager,
             backgroundExecutor = backgroundExecutor,
         )

@@ -1,6 +1,6 @@
 "use client";
 
-import type { CandidateStage, LoopBrief, PrepPlan, RoundType } from "@acemyinterview/shared";
+import type { CandidateStage, LoopBrief, PrepPlan, RoundType } from "@untiered/shared";
 import { useEffect, useState } from "react";
 
 import { ApiRequestError, fetchLoopBrief, fetchPrepPlan } from "@/lib/api";

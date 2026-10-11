@@ -502,17 +502,7 @@ class SessionRepository(
         settled: Boolean,
     ): Boolean =
         jdbcClient
-            .sql(
-                """
-                update public.storage_deletion_jobs
-                   set completed_at = case when :settled then :now else null end,
-                       next_attempt_at = case when :settled then next_attempt_at else settle_after end,
-                       lease_until = null,
-                       last_error = null,
-                       updated_at = :now
-                 where id = :id and completed_at is null
-                """.trimIndent(),
-            ).param("settled", settled)
+            .sql(storageDeletionCompletionSql(settled))
             .param("now", java.sql.Timestamp.from(now))
             .param("id", jobId)
             .update() == 1
@@ -1207,6 +1197,32 @@ class SessionRepository(
             nextAction = rs.getString("next_action"),
         )
 }
+
+/**
+ * PostgreSQL cannot infer a stable type for a CASE that mixes a bound timestamp and an
+ * untyped NULL. Keep the two lifecycle transitions explicit: an early purge schedules
+ * the post-upload sweep, while a settled purge completes the durable job.
+ */
+internal fun storageDeletionCompletionSql(settled: Boolean): String =
+    if (settled) {
+        """
+        update public.storage_deletion_jobs
+           set completed_at = :now,
+               lease_until = null,
+               last_error = null,
+               updated_at = :now
+         where id = :id and completed_at is null
+        """.trimIndent()
+    } else {
+        """
+        update public.storage_deletion_jobs
+           set next_attempt_at = settle_after,
+               lease_until = null,
+               last_error = null,
+               updated_at = :now
+         where id = :id and completed_at is null
+        """.trimIndent()
+    }
 
 data class SessionRow(
     val id: UUID,

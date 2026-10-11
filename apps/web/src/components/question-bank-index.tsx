@@ -1,6 +1,6 @@
 "use client";
 
-import type { BankCompany } from "@acemyinterview/shared";
+import type { BankCompany } from "@untiered/shared";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 

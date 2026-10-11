@@ -45,7 +45,7 @@ class RobotsRulesTest {
             User-agent: *
             Disallow:
 
-            User-agent: AceMyInterviewBot
+            User-agent: UntieredBot
             Disallow: /
             """.trimIndent()
 

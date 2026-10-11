@@ -1,4 +1,4 @@
-import type { BankCitation, RoundType } from "@acemyinterview/shared";
+import type { BankCitation, RoundType } from "@untiered/shared";
 
 import { ROUND_CATALOGUE } from "@/lib/rounds";
 

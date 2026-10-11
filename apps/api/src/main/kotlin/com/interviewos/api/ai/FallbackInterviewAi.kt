@@ -1,5 +1,7 @@
 package com.interviewos.api.ai
 
+import com.interviewos.api.interview.InterviewEvent
+import com.interviewos.api.interview.InterviewEventRecorder
 import org.slf4j.LoggerFactory
 
 /**
@@ -37,6 +39,7 @@ class FallbackInterviewAi(
      * recorded together.
      */
     private val recorder: AiSpendRecorder = AiSpendRecorder.NONE,
+    private val eventRecorder: InterviewEventRecorder = InterviewEventRecorder.NONE,
 ) : InterviewAi {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -154,6 +157,8 @@ class FallbackInterviewAi(
 
         var last: AiUnavailableException? = null
         for ((index, provider) in able.withIndex()) {
+            val startedAt = System.nanoTime()
+            recordProviderEvent(call, provider.providerName, "provider_attempt_started", "started")
             try {
                 val result = work(provider)
                 val fellBackFrom = if (index > 0) able[index - 1].providerName else null
@@ -161,14 +166,30 @@ class FallbackInterviewAi(
                     log.info("{} was served by {} after {} failed", call, provider.providerName, fellBackFrom)
                 }
                 write(call, provider, result.usage, fellBackFrom)
+                recordProviderEvent(
+                    call,
+                    provider.providerName,
+                    "provider_attempt_succeeded",
+                    "succeeded",
+                    elapsedMillis(startedAt),
+                )
                 return result
             } catch (e: AiUnavailableException) {
+                recordProviderEvent(
+                    call,
+                    provider.providerName,
+                    "provider_attempt_failed",
+                    "failed",
+                    elapsedMillis(startedAt),
+                    "ai_unavailable",
+                )
                 if (!e.worthRetryingElsewhere) throw e
                 last = e
                 val next = able.getOrNull(index + 1)
                 if (next == null) {
                     log.warn("{} failed on {} and there is nobody left to ask", call, provider.providerName, e)
                 } else {
+                    recordProviderEvent(call, next.providerName, "provider_fallback", "fallback")
                     log.warn("{} failed on {}; falling back to {}: {}", call, provider.providerName, next.providerName, e.message)
                 }
             }
@@ -179,6 +200,35 @@ class FallbackInterviewAi(
             last,
         )
     }
+
+    private fun recordProviderEvent(
+        call: String,
+        provider: String,
+        type: String,
+        outcome: String,
+        durationMs: Long? = null,
+        errorType: String? = null,
+    ) {
+        val attribution = AiSpendContext.current() ?: return
+        val userId = attribution.userId ?: return
+        val sessionId = attribution.sessionId ?: return
+        eventRecorder.record(
+            InterviewEvent(
+                userId = userId,
+                sessionId = sessionId,
+                type = type,
+                turnIndex = attribution.turnIndex,
+                requestId = attribution.requestId,
+                provider = provider,
+                operation = call,
+                outcome = outcome,
+                errorType = errorType,
+                durationMs = durationMs,
+            ),
+        )
+    }
+
+    private fun elapsedMillis(startedAt: Long): Long = (System.nanoTime() - startedAt) / 1_000_000
 
     /**
      * Writes down what the call cost, and never lets that be the reason a round fails.

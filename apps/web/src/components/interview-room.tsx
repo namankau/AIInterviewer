@@ -1,6 +1,6 @@
 "use client";
 
-import type { BoardState, HintView, SessionView, TurnView } from "@acemyinterview/shared";
+import type { BoardState, HintView, SessionView, TurnView } from "@untiered/shared";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 

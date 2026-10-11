@@ -6,7 +6,7 @@ import type {
   ReportPracticeItem,
   ReportQuestionSources,
   SessionReport,
-} from "@acemyinterview/shared";
+} from "@untiered/shared";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 

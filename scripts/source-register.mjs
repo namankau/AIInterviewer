@@ -32,10 +32,10 @@ import { fileURLToPath } from "node:url";
 // ---------------------------------------------------------------------------------------
 
 /** Mirrors `RobotsRules.USER_AGENT`. */
-export const USER_AGENT = "AceMyInterviewBot";
+export const USER_AGENT = "UntieredBot";
 
 /** Mirrors `SourceFetcher.USER_AGENT_HEADER`. Used for both robots.txt and the page GET. */
-export const USER_AGENT_HEADER = `${USER_AGENT} (+https://acemyinterview.com/bot; curated source library, not a crawler)`;
+export const USER_AGENT_HEADER = `${USER_AGENT} (+https://untiered.tech/bot; curated source library, not a crawler)`;
 
 /** Mirrors `SourceFetcher.MAX_CONTENT_CHARS`. */
 export const MAX_CONTENT_CHARS = 120_000;

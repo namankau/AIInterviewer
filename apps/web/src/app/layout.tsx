@@ -17,8 +17,8 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "AceMyInterview",
-    template: "%s · AceMyInterview",
+    default: "Untiered",
+    template: "%s · Untiered",
   },
   description:
     "Voice-first AI mock interviews grounded in how interviews at real employers actually run — " +

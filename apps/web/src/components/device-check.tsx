@@ -1,6 +1,6 @@
 "use client";
 
-import type { SessionView } from "@acemyinterview/shared";
+import type { SessionView } from "@untiered/shared";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { fetchMe } from "@/lib/api";

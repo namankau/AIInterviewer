@@ -36,7 +36,7 @@ export async function generateMetadata({
   const chapter = getChapter(courseSlug, chapterSlug);
   if (!chapter) return {};
   return {
-    title: `${plainText(chapter.title)} — AceMyInterview`,
+    title: `${plainText(chapter.title)} — Untiered`,
     description: plainText(chapter.summary),
   };
 }

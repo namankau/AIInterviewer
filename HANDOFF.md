@@ -1,35 +1,34 @@
 # Handoff — 2026-10-11
 
 ## Task
-Fix the PostgreSQL type failure that prevents successful storage-deletion jobs from being recorded as complete. User request; no task file.
+Rename the product to Untiered everywhere and remove every former-brand reference. User request; no task file.
 
 ## What I built
-- Replaced the conditional completion update in `apps/api/src/main/kotlin/com/interviewos/api/interview/SessionRepository.kt` with two explicit SQL transitions.
-- An early successful storage sweep now clears its lease/error and schedules the required final post-upload sweep at `settle_after` without marking the job complete.
-- A successful sweep after the settling window now binds `completed_at = :now` directly, avoiding PostgreSQL's timestamp-versus-text inference failure while clearing the lease/error.
-- Added `StorageDeletionCompletionSqlTest.kt`, which executes the repository method through a recording `JdbcClient` and verifies the selected SQL, timestamp/job bindings, absence of the ambiguous `settled` parameter, and both lifecycle branches.
+- Replaced all user-facing former-brand names and `A` monograms with Untiered and `U` across landing, login, app shell, course, legal, error, metadata, and footer surfaces in `apps/web/src`.
+- Renamed the npm workspace and package scope to `untiered` / `@untiered/*` across manifests, lockfile, imports, and Next.js transpilation configuration.
+- Renamed Docker image tags, the Spring application name, the source-library bot identity, and the default test-user domain to Untiered equivalents.
+- Pointed the source-library bot identification URL at the planned `https://untiered.tech/bot` domain.
+- Updated repository documentation, course licence copy, tests, and CI references, and verified that no former-brand text or tracked filenames remain. Extracted PRD PDF text was also checked separately.
 
 ## Assumptions I made
-- The two-phase deletion design is intentional: the first pass removes known objects quickly, and the final pass after `settle_after` catches an upload that was already in flight when deletion began.
-- Existing pending jobs need no data migration or manual rewrite because their leases expire and the scheduled worker will retry them through the corrected update after deployment.
-- Splitting the update is safer and clearer than adding a cast inside the conditional expression because it makes the two privacy lifecycle states explicit and removes the inference problem entirely.
+- The requested domain is `untiered.tech`, so the former `.com` bot URL becomes `untiered.tech` rather than `untiered.com`.
+- Internal `InterviewOS` Kotlin package/configuration names and the historical PRD filename are separate engineering identifiers, not product-brand references, and remain unchanged to avoid a much larger unrelated namespace migration.
 
 ## What I could NOT verify
-- No live storage object was deleted and no production database row was modified during verification.
-- Existing pending jobs should drain through the normal retry worker after deployment, but deployment and production observation remain owner operations.
-- A disposable PostgreSQL image was not present locally, so the regression test verifies the repository-selected SQL and JDBC bindings rather than starting a new downloaded database image.
+- Final visual brand judgment remains human-owned; this change preserves the existing design and updates only its name and monogram.
+- The new domain is not yet connected or deployed, so `https://untiered.tech/bot` could not be checked live.
 
 ## Verification status
-- Focused deletion repository/worker tests: pass.
-- Backend: `ktlintCheck test build` pass.
-- Frontend: typecheck pass; lint pass; 68 test files / 2,988 tests pass; production build pass.
-- No dependency or migration added.
+- Frontend local: typecheck pass; lint pass; 68 test files / 2,988 tests pass; production build pass.
+- Backend local: `ktlintCheck test build` pass.
+- Rename audit: no old product text in tracked text files, tracked filenames, or extracted PRD PDF text.
+- Remote CI: required web, API, and Docker image/build-and-serve jobs passed on the final branch head before merge.
 
 ## Merge status
-- Branch `fix/storage-deletion-timestamp` pushed and PR #57 opened against `develop`. It remains unmerged because personal-data deletion requires human review. `main` was not modified.
+- PR #58 was merged into `develop` only after visible green CI on the final branch head. `main` was not modified.
 
 ## Suggested next task
-- After PR #57 is reviewed, merge and deploy it, then confirm the existing `storage_deletion_jobs` backlog reaches `completed_at` through the normal retry worker without new SQL errors.
+- Connect `untiered.tech` to the deployed web app and add its production DNS/hosting configuration when the domain is acquired.
 
 ## Open questions for you
 - None.

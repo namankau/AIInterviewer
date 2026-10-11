@@ -8,7 +8,7 @@ import { CourseAccentLine, CourseMotif, getCoursePresentation } from "@/componen
 import { courses, totalChapters, totalMinutes } from "@/content/courses";
 
 export const metadata: Metadata = {
-  title: "Courses — AceMyInterview",
+  title: "Courses — Untiered",
   description:
     "Free courses that teach the fundamentals from the very start, chapter by chapter — Java " +
     "programming, data structures & algorithms, AI and agentic AI, and system design with interactive " +

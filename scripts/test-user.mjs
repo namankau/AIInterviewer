@@ -22,7 +22,7 @@ if (!url || !serviceRoleKey || !anonKey) {
   fail("SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set.");
 }
 
-const email = process.argv[2] ?? "e2e.candidate@acemyinterview.test";
+const email = process.argv[2] ?? "e2e.candidate@untiered.test";
 // Fixed so a rerun reuses the same account rather than accumulating orphans, and so the
 // owner can sign in as the test candidate by hand when they want to look at something.
 const password = "interview-harness-9f2c1a";

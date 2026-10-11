@@ -1,7 +1,7 @@
 # System Design course — source and licence notes
 
 The lesson prose, quiz questions, examples, diagrams and architecture-lab scenario wording
-in this course are original to AceMyInterview. They were not copied from a commercial
+in this course are original to Untiered. They were not copied from a commercial
 course, interview-question bank, repository README, or linked third-party article.
 
 The curriculum structure and general technical vocabulary were informed by these openly

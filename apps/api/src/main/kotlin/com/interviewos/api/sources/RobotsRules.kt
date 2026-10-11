@@ -19,7 +19,7 @@ import java.net.URISyntaxException
  */
 object RobotsRules {
     /** What we identify as. A crawler that hides what it is has already lost the argument. */
-    const val USER_AGENT = "AceMyInterviewBot"
+    const val USER_AGENT = "UntieredBot"
 
     private data class Rule(
         val path: String,

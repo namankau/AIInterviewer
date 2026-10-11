@@ -21,7 +21,7 @@ export async function generateMetadata({
   const course = getCourse(courseSlug);
   if (!course) return {};
   return {
-    title: `${course.title} — Arena — AceMyInterview`,
+    title: `${course.title} — Arena — Untiered`,
     description: `Practise ${course.title} as short rounds derived from its own chapters.`,
   };
 }

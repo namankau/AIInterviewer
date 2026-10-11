@@ -27,9 +27,9 @@ export default async function LoginPage({
 
         <Link href="/" className="relative flex w-fit items-center gap-2.5 text-heading font-bold tracking-tight text-on-navy">
           <span className="grid size-9 place-items-center rounded-xl bg-accent text-micro font-extrabold text-accent-contrast shadow-[0_8px_24px_rgba(26,100,240,0.32)]">
-            A
+            U
           </span>
-          <span>AceMyInterview</span>
+          <span>Untiered</span>
         </Link>
 
         <div className="relative max-w-xl">
@@ -66,9 +66,9 @@ export default async function LoginPage({
         <div className="flex w-full max-w-md flex-col gap-9 rounded-[1.5rem] border border-line bg-surface-raised p-7 shadow-[var(--shadow-lg)] sm:p-10 lg:shadow-[var(--shadow-md)]">
           <Link href="/" className="flex w-fit items-center gap-2.5 text-heading font-bold tracking-tight text-ink lg:hidden">
             <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast">
-              A
+              U
             </span>
-            <span>AceMyInterview</span>
+            <span>Untiered</span>
           </Link>
           <div className="flex flex-col gap-3">
             <span className="pill pill-accent w-fit">Continue your preparation</span>

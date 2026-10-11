@@ -1,4 +1,4 @@
-import type { SessionView } from "@acemyinterview/shared";
+import type { SessionView } from "@untiered/shared";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

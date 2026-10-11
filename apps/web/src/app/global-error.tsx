@@ -20,7 +20,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
     <html lang="en">
       <body className="min-h-dvh bg-surface text-ink antialiased">
         <ErrorPanel
-          title="AceMyInterview didn't load"
+          title="Untiered didn't load"
           body="Something failed on our side before the page could start. Trying again usually works."
           onRetry={reset}
         />

@@ -60,7 +60,7 @@ export function BlockRenderer({
   return (
     <div
       data-layout={layout}
-      className={layout === "expanded" ? "grid gap-6 lg:grid-cols-2" : "flex flex-col gap-8"}
+      className={layout === "expanded" ? "grid gap-6 lg:grid-cols-2" : "flex flex-col gap-10"}
     >
       {blocks.map((block, index) => (
         <div
@@ -108,7 +108,7 @@ function BlockView({
   switch (block.kind) {
     case "p":
       return (
-        <p className="text-body leading-relaxed text-ink">
+        <p className="text-heading font-normal leading-relaxed text-ink">
           <InlineText text={block.text} />
         </p>
       );
@@ -117,7 +117,7 @@ function BlockView({
       return (
         <h2
           id={anchorId(block.text)}
-          className="scroll-mt-24 text-title text-ink"
+          className="scroll-mt-24 text-display text-balance text-ink"
         >
           <InlineText text={block.text} />
         </h2>
@@ -139,7 +139,7 @@ function BlockView({
 
     case "list":
       return block.ordered ? (
-        <ol className="list-decimal space-y-2 pl-5 text-body leading-relaxed text-ink marker:text-accent-strong">
+        <ol className="list-decimal space-y-2 pl-5 text-heading font-normal leading-relaxed text-ink marker:text-accent-strong">
           {block.items.map((item, i) => (
             <li key={i}>
               <InlineText text={item} />
@@ -147,7 +147,7 @@ function BlockView({
           ))}
         </ol>
       ) : (
-        <ul className="list-disc space-y-2 pl-5 text-body leading-relaxed text-ink marker:text-accent-strong">
+        <ul className="list-disc space-y-2 pl-5 text-heading font-normal leading-relaxed text-ink marker:text-accent-strong">
           {block.items.map((item, i) => (
             <li key={i}>
               <InlineText text={item} />

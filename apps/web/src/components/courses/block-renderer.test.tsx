@@ -180,8 +180,8 @@ describe("BlockRenderer", () => {
       />,
     );
 
-    expect(screen.getByText("Main explanation").closest("p")).toHaveClass("text-body", "text-ink");
-    expect(screen.getByText("Teaching point").closest("ul")).toHaveClass("text-body", "text-ink");
+    expect(screen.getByText("Main explanation").closest("p")).toHaveClass("text-heading", "text-ink");
+    expect(screen.getByText("Teaching point").closest("ul")).toHaveClass("text-heading", "text-ink");
     const interview = screen.getByText("How this comes up in interviews").closest("aside");
     expect(interview).toHaveClass("border-accent/30", "bg-accent-wash");
     expect(screen.getByText("How this comes up in interviews")).toHaveClass("text-accent-strong");

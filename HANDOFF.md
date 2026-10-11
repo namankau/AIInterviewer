@@ -1,38 +1,38 @@
 # Handoff — 2026-10-11
 
 ## Task
-Add production-grade interview observability so a stopped or stalled mock interview can be reconstructed by user, elapsed time, turn, system phase, provider attempt, and interviewer decision. User request; no task file.
+Make the fresher interview description/role optional, bring course lessons closer to HelloInterview's readable long-form structure, and strengthen the sparse post-interview/report UI. User request; no task file.
 
 ## What I built
-- Added ADR 001 defining a privacy-safe, append-only interview event ledger, its event vocabulary, access boundary, retention, and failure semantics (`docs/adr/001-interview-event-ledger.md`).
-- Added the RLS-protected `interview_events` table with ownership, session/request correlation, bounded diagnostic fields, cascade deletion, indexes, and 28-day retention support (`supabase/migrations/20261010000000_interview_event_ledger.sql`). The migration was applied to the linked Supabase project and local/remote migration state was verified in sync.
-- Added a best-effort, independent server-side recorder plus scheduled retention purge and an admin-only session timeline endpoint (`apps/api/src/main/kotlin/com/interviewos/api/interview/InterviewEventLedger.kt`).
-- Instrumented answer ingress, assessment, persistence, provider attempts/fallbacks, speech generation, interviewer action/intervention, and terminal session outcomes without storing transcripts, audio, prompts, model output, names, emails, URLs, stack traces, or exception text.
-- Instrumented the interview room with phase transitions, a 30-second heartbeat, page-hidden markers, answer submission start/failure/slow events, browser speech failures, question-audio polling failures, and playback failures/timeouts.
-- Added backend access/ledger/telemetry/speech tests and frontend behaviour tests. The change is larger than 800 lines because the schema, server and browser instrumentation, privacy contract, endpoint, and tests must ship as one coherent observability boundary.
+- Added a blank-input campus-placement path in `apps/web/src/components/new-interview-form.tsx`: selecting “I am a fresher” makes the interview description optional, skips the composer when blank, opens the setup with Technical fundamentals selected, and labels the detailed role as optional.
+- Reworked `apps/web/src/components/courses/guided-lesson-controls.tsx` and `block-renderer.tsx` into a continuous editorial lesson: all five sections stay visible, the lesson map scrolls rather than hides content, reading progress follows normal scrolling, and headings/body copy now have a stronger long-form hierarchy.
+- Rebuilt the completed-round handoff in `apps/web/src/components/interview-room.tsx` around the evidence-backed report contents, with clear report/dashboard actions while preserving the deliberately sparse live interview room.
+- Replaced plain round-history rows with polished cards and a proper report CTA in `apps/web/src/components/dashboard-panel.tsx`, and replaced the dull report-loading line with a structured evidence-checking state in `apps/web/src/components/report-view.tsx`.
+- Added or updated behaviour/accessibility tests across the fresher form, lesson reader/progress, interview completion, report loading, and round history. Also made the existing telemetry fake-timer test await timer microtasks so it remains deterministic in the complete suite.
 
 ## Assumptions I made
-- “Which user” means the immutable owner UUID returned only through the existing admin authorization boundary, not duplicating email or profile data into the ledger.
-- Diagnostic events are retained for 28 days, long enough for incident investigation while limiting personal-data exposure.
-- Interviewer behaviour is represented by bounded action and intervention enums (for example `probe`, `move_on`, `redirected`, `hinted`) rather than storing generated question text or candidate content.
-- A 30-second browser heartbeat is sufficient to distinguish an active but slow round from a closed, hidden, disconnected, or frozen client without producing excessive write volume.
-- The browser's 190-second marker is named `answer_submission_slow`, not timeout, because it does not abort the request and a late response may still succeed.
+- “The role textbox above” refers to the one-line interview description shown above the fresher checkbox in the supplied screenshot. The later Role field is also explicitly optional for freshers so both interpretations are covered.
+- HelloInterview was used for information architecture—continuous prose, visible syllabus, in-page navigation, diagrams/code/checks—not copied for claims, wording, or visual identity.
+- The supplied right-hand screens set the polish and hierarchy direction, but invented usage counts, streaks, paid tiers, testimonials, community data, and employer-specific claims were deliberately not added.
+- The live interview screen remains near-empty under the settled product decision; the richer UI begins after the round ends.
 
 ## What I could NOT verify
-- The original six-minute incident cannot be reconstructed retroactively because these events did not exist when it happened.
-- No live interview or Gemini call was run, in accordance with the repository's no-live-AI-spend rule. Provider behaviour and voice quality therefore remain unverified in a real session.
-- Application deployment is outside this branch; the database is ready, but new event recording begins only after the API and web changes are deployed.
+- No live interview or Gemini call was run, in accordance with the no-live-AI-spend rule. The completion/report states were verified through component tests, but not by generating a new real report.
+- The test user has only abandoned rounds, so there was no existing completed report to inspect end-to-end without spending on a live interview.
+- Final visual judgment remains human-owned; PR #56 is open for that review.
+- During signed-in QA, the existing backend `StorageDeletionWorker` repeatedly failed `SessionRepository.markStorageDeletionSucceeded` at `SessionRepository.kt:518`: PostgreSQL reports that the `completed_at` CASE expression is text rather than `timestamptz`. This is outside this UI task and affects data deletion, so it needs a separate human-reviewed fix.
 
 ## Verification status
-- Frontend: typecheck, lint, 2,985 tests, and production build pass locally.
-- Backend: `ktlintCheck`, 709 tests, and production build pass locally.
-- Database: migration `20261010000000` applied to the linked Supabase project; local and remote migration histories match.
+- Frontend local: typecheck pass; lint pass; 68 test files / 2,988 tests pass; production build pass.
+- Backend local: `ktlintCheck test build` pass.
+- Signed-in QA: test user verified the blank fresher flow, optional role setup, continuous Java lesson, long-form typography, and upgraded history cards. No interview was started.
+- Remote CI: run 38125811519 passed all web, API, and Docker image/build-and-serve jobs for implementation head `2d26d96`.
 
 ## Merge status
-- Branch `feat/interview-observability-ledger` pushed unmerged for a human-review PR because this change defines personal-data observability and an admin permission boundary. `develop` and `main` were not modified.
+- Branch `feat/fresher-course-report-polish` pushed and PR #56 opened against `develop`. It remains unmerged because final visual design is a human-review area. `main` was not modified.
 
 ## Suggested next task
-- Add an operator-facing timeline view or runbook over the admin endpoint, and connect the existing structured application logs/Sentry configuration to the production collector for infrastructure-level incidents outside an interview session.
+- Fix and regression-test the `StorageDeletionWorker` timestamp update in a separate human-reviewed data-deletion PR before more deletion jobs accumulate retries.
 
 ## Open questions for you
 - None.

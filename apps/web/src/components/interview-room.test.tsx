@@ -134,6 +134,21 @@ describe("InterviewRoom session entry", () => {
     expect(beginSession).not.toHaveBeenCalled();
   });
 
+  it("turns a completed round into a clear report handoff", async () => {
+    fetchSession.mockResolvedValue({ ...baseSession, status: "completed" });
+
+    render(<InterviewRoom sessionId={baseSession.id} />);
+
+    expect(await screen.findByRole("heading", { name: /that.s the end of the round/i })).toBeInTheDocument();
+    expect(screen.getByText(/competency breakdown/i)).toBeInTheDocument();
+    expect(screen.getByText(/evidence from your answers/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /read the report/i })).toHaveAttribute(
+      "href",
+      `/report/${baseSession.id}`,
+    );
+    expect(screen.getByRole("link", { name: /back to dashboard/i })).toHaveAttribute("href", "/dashboard");
+  });
+
   it("shows the server's begin failure and remains in device check", async () => {
     fetchSession.mockResolvedValue(baseSession);
     beginSession.mockRejectedValue(
@@ -275,12 +290,12 @@ describe("InterviewRoom operational telemetry", () => {
 
     await user.click(await screen.findByRole("button", { name: "Enter the room" }));
     await act(async () => {
-      vi.advanceTimersByTime(5_000);
+      await vi.advanceTimersByTimeAsync(5_000);
     });
     expect(captureStart).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "Over to you" })).toBeInTheDocument();
     await act(async () => {
-      vi.advanceTimersByTime(30_000);
+      await vi.advanceTimersByTimeAsync(30_000);
     });
 
     expect(reportInterviewClientEvent).toHaveBeenCalledWith(

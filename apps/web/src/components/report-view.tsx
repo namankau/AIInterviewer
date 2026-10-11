@@ -95,14 +95,45 @@ export function ReportView({ sessionId }: { sessionId: string }) {
   }
 
   if (!report) {
-    return (
-      <p role="status" className="text-body text-ink-muted">
-        Putting your report together…
-      </p>
-    );
+    return <ReportLoadingState />;
   }
 
   return <ReportDocument report={report} />;
+}
+
+/** A useful waiting room for the model-written report, without inventing a score. */
+export function ReportLoadingState() {
+  return (
+    <section role="status" aria-labelledby="report-loading" className="overflow-hidden rounded-[2rem] border border-line bg-surface-raised shadow-[var(--shadow-md)]">
+      <div className="hero-band relative overflow-hidden px-6 py-8 sm:px-9 sm:py-10">
+        <div aria-hidden="true" className="absolute -right-20 -top-24 size-72 rounded-full bg-accent/25 blur-3xl" />
+        <div className="relative max-w-3xl">
+          <p className="eyebrow text-accent-on-navy">Feedback in progress</p>
+          <h1 id="report-loading" className="mt-3 text-display text-balance text-on-navy">Building your evidence-backed report.</h1>
+          <p className="mt-3 max-w-2xl text-body leading-relaxed text-on-navy-muted">
+            We are checking each assessment against the transcript before it appears here. Unsupported claims are left out.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-3 p-6 sm:grid-cols-3 sm:p-9">
+        {[
+          ["01", "Reviewing the round", "Reading the answers and the path the conversation took."],
+          ["02", "Grounding feedback", "Keeping scores and coaching tied to assessable evidence."],
+          ["03", "Planning the next step", "Turning the strongest gaps into focused practice."],
+        ].map(([number, title, detail], index) => (
+          <div key={number} className="rounded-2xl border border-line bg-surface-sunken p-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-mono text-micro font-semibold text-accent">{number}</span>
+              <span aria-hidden="true" className={`size-2 rounded-full ${index === 0 ? "bg-positive" : "bg-accent/35"}`} />
+            </div>
+            <p className="mt-3 text-caption font-semibold text-ink">{title}</p>
+            <p className="mt-1 text-caption leading-relaxed text-ink-muted">{detail}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 /**

@@ -37,23 +37,25 @@ const FOUR_COURSE_BLOCKS: Block[] = [
 ];
 
 describe("GuidedLesson", () => {
-  it("moves through all five beats with accessible buttons and continue controls", async () => {
+  it("moves focus through all five continuous sections with accessible controls", async () => {
     const user = userEvent.setup();
     render(<GuidedLesson blocks={FOUR_COURSE_BLOCKS} />);
 
-    expect(screen.getByText("Beat 1 of 5")).toBeInTheDocument();
+    expect(screen.getByText("Section 1 of 5")).toBeInTheDocument();
     expect(screen.getByText("2 lesson items")).toBeInTheDocument();
     expect(screen.queryByText(/learning cards/i)).not.toBeInTheDocument();
-    expect(screen.getByTestId("lesson-beat-see")).toHaveAttribute("open");
+    expect(screen.getByTestId("lesson-beat-see")).toHaveAttribute("data-visited", "true");
+    expect(screen.getByTestId("lesson-beat-predict")).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Take a first guess" }));
-    expect(screen.getByText("Beat 2 of 5")).toBeInTheDocument();
-    expect(screen.getByTestId("lesson-beat-predict")).toHaveAttribute("open");
-    expect(screen.getByTestId("lesson-beat-see")).not.toHaveAttribute("open");
+    expect(screen.getByText("Section 2 of 5")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Take a first guess" })).toHaveAttribute("aria-current", "step");
+    expect(screen.getByTestId("lesson-beat-predict")).toHaveAttribute("data-visited", "true");
+    expect(screen.getByTestId("lesson-beat-see")).toHaveAttribute("data-visited", "true");
 
     await user.click(within(screen.getByTestId("lesson-beat-predict")).getByRole("button", { name: "Continue to Try it" }));
-    expect(screen.getByText("Beat 3 of 5")).toBeInTheDocument();
-    expect(screen.getByTestId("lesson-beat-interact")).toHaveAttribute("open");
+    expect(screen.getByText("Section 3 of 5")).toBeInTheDocument();
+    expect(screen.getByTestId("lesson-beat-interact")).toHaveAttribute("data-visited", "true");
   });
 
   it("keeps every authored block in the initial HTML, including closed beats", () => {
@@ -161,7 +163,7 @@ describe("GuidedLesson", () => {
 
     await user.click(screen.getByText("See the idea"));
 
-    expect(screen.getByText("Beat 1 of 5")).toBeInTheDocument();
-    expect(screen.getByTestId("lesson-beat-see")).toHaveAttribute("open");
+    expect(screen.getByText("Section 1 of 5")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "See the idea" })).toHaveAttribute("aria-current", "step");
   });
 });

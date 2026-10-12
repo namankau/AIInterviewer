@@ -33,6 +33,7 @@ const EMPTY_PROGRESS = {
   badges: [],
   cards: {},
   masteredChallengeIds: [],
+  dailyQuestionCompletions: {},
 };
 
 function setMatchMedia(matches: boolean) {

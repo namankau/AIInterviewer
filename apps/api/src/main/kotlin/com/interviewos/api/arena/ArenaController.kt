@@ -5,6 +5,7 @@ import com.interviewos.api.user.SupabaseIdentity
 import com.interviewos.api.user.UserRepository
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -44,6 +45,7 @@ class ArenaController(
 
     /** Records one answered challenge and returns the counters the server now holds. */
     @PostMapping("/answers")
+    @Transactional
     fun answer(
         @AuthenticationPrincipal jwt: Jwt,
         @RequestBody request: RecordAnswerRequest,
@@ -51,11 +53,18 @@ class ArenaController(
         val identity = SupabaseIdentity.from(jwt)
         val challengeId = requireId(request.challengeId, "challengeId")
         val localDate = requireLocalDate(request.localDate)
+        val dailyQuestionDate = request.dailyQuestionDate?.let(::requireLocalDate)
+        if (dailyQuestionDate != null && dailyQuestionDate != localDate) {
+            throw ApiException.badRequest("dailyQuestionDate must match localDate.")
+        }
         val card = request.card ?: throw ApiException.badRequest("card is required.")
 
         userRepository.provision(identity)
         repository.upsertCard(identity.id, card.toStored(challengeId, mastered = request.correct))
         val counters = repository.addAnswer(identity.id, if (request.correct) XP_PER_CORRECT else 0, localDate)
+        if (request.correct && dailyQuestionDate != null) {
+            repository.completeDailyQuestion(identity.id, dailyQuestionDate, challengeId)
+        }
         return counters.toView()
     }
 
@@ -114,6 +123,7 @@ class ArenaController(
     private fun view(userId: java.util.UUID): ArenaProgressView {
         val counters = repository.counters(userId)
         val cards = repository.cards(userId)
+        val dailyQuestionCompletions = repository.dailyQuestionCompletions(userId)
         return ArenaProgressView(
             xp = counters?.xp ?: 0,
             streak =
@@ -125,6 +135,7 @@ class ArenaController(
             badges = repository.badges(userId),
             cards = cards.associate { it.challengeId to it.toView() },
             masteredChallengeIds = cards.filter { it.mastered }.map { it.challengeId },
+            dailyQuestionCompletions = dailyQuestionCompletions.associate { it.localDate.toString() to it.challengeId },
         )
     }
 
@@ -244,12 +255,14 @@ data class ArenaProgressView(
     val badges: List<String>,
     val cards: Map<String, ReviewStateView>,
     val masteredChallengeIds: List<String>,
+    val dailyQuestionCompletions: Map<String, String>,
 )
 
 data class RecordAnswerRequest(
     val challengeId: String = "",
     val correct: Boolean = false,
     val localDate: String = "",
+    val dailyQuestionDate: String? = null,
     val card: ReviewStateView? = null,
 )
 

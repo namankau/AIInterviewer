@@ -89,6 +89,7 @@ function load(accessToken: string) {
           badges: view.badges,
           cards: view.cards as Record<string, ReviewState>,
           masteredChallengeIds: view.masteredChallengeIds,
+          dailyQuestionCompletions: view.dailyQuestionCompletions,
         },
       });
     })
@@ -123,7 +124,13 @@ export interface ArenaProgressHandle {
   status: ArenaStatus;
   ready: boolean;
   /** Resolves false if the answer could not be saved. */
-  recordAnswer: (challengeId: string, correct: boolean, card: ReviewState, now?: Date) => Promise<boolean>;
+  recordAnswer: (
+    challengeId: string,
+    correct: boolean,
+    card: ReviewState,
+    now?: Date,
+    dailyQuestionDate?: string,
+  ) => Promise<boolean>;
   awardBadges: (badgeIds: string[]) => Promise<boolean>;
 }
 
@@ -136,6 +143,7 @@ export function useArenaProgress(): ArenaProgressHandle {
     correct: boolean,
     card: ReviewState,
     now: Date = new Date(),
+    dailyQuestionDate?: string,
   ): Promise<boolean> {
     if (!accessToken) return false;
     const before = state.progress;
@@ -159,11 +167,20 @@ export function useArenaProgress(): ArenaProgressHandle {
         challengeId,
         correct,
         localDate: localDateKey(now),
+        dailyQuestionDate,
         card,
       });
       setState({
         status: "ready",
-        progress: { ...state.progress, xp: counters.xp, streak: counters.streak },
+        progress: {
+          ...state.progress,
+          xp: counters.xp,
+          streak: counters.streak,
+          dailyQuestionCompletions:
+            correct && dailyQuestionDate
+              ? { ...state.progress.dailyQuestionCompletions, [dailyQuestionDate]: challengeId }
+              : state.progress.dailyQuestionCompletions,
+        },
       });
       return true;
     } catch {
@@ -214,6 +231,7 @@ export async function importLegacyArenaProgress(
         badges: view.badges,
         cards: view.cards as Record<string, ReviewState>,
         masteredChallengeIds: view.masteredChallengeIds,
+        dailyQuestionCompletions: view.dailyQuestionCompletions,
       },
     });
     return true;

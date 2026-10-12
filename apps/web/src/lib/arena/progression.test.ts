@@ -8,6 +8,7 @@ import {
   DAILY_QUEST_SIZE,
   levelForXp,
   localDateKey,
+  questionOfTheDay,
   recordActivity,
   xpForLevel,
 } from "@/lib/arena/progression";
@@ -226,6 +227,23 @@ describe("dailyQuest", () => {
     expect(dailyQuest([], "2026-01-01")).toEqual([]);
     const tiny = pool.slice(0, 3);
     expect(dailyQuest(tiny, "2026-01-01")).toHaveLength(3);
+  });
+});
+
+describe("questionOfTheDay", () => {
+  const pool = Array.from({ length: 20 }, (_, i) => makeChallenge({ id: `daily-${i}`, prompt: `q${i}` }));
+
+  it("returns exactly one stable reviewed question for a calendar date", () => {
+    const first = questionOfTheDay(pool, "2026-10-12");
+    const second = questionOfTheDay(pool, "2026-10-12");
+
+    expect(first).toBeDefined();
+    expect(second).toEqual(first);
+    expect(pool).toContain(first);
+  });
+
+  it("returns nothing when no enabled course has questions", () => {
+    expect(questionOfTheDay([], "2026-10-12")).toBeUndefined();
   });
 });
 

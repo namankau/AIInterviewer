@@ -51,54 +51,70 @@ export function DeleteAccountSection() {
   }
 
   return (
-    <section
+    <details
       id="delete-account"
-      aria-labelledby="delete-account-heading"
-      className="flex scroll-mt-24 flex-col gap-4 rounded-2xl border border-danger/30 bg-danger/5 p-6"
+      className="group scroll-mt-24 border-t border-line pt-4"
     >
-      <h3 id="delete-account-heading" className="text-heading text-ink">
-        Delete your account
-      </h3>
-      <p className="max-w-prose text-caption text-ink-muted">
-        This removes everything we hold for you, and it cannot be undone:
-      </p>
-      <ul className="flex max-w-prose list-disc flex-col gap-1 pl-5 text-caption text-ink-muted">
-        <li>every round, with its report, transcript and voice recordings</li>
-        <li>your resume, your profile photo and your profile details</li>
-        <li>your course and Arena progress</li>
-        <li>your sign-in — signing in with Google again starts a new, empty account</li>
-      </ul>
-      <label htmlFor={inputId} className="flex max-w-sm flex-col gap-1.5">
-        <span className="text-caption text-ink">
-          Type <span className="font-mono font-semibold">{CONFIRM_WORD}</span> to confirm
-        </span>
-        <input
-          id={inputId}
-          value={typed}
-          onChange={(event) => setTyped(event.target.value)}
-          autoComplete="off"
-          spellCheck={false}
-          disabled={pending}
-          className={CONTROL_CLASS}
-        />
-      </label>
-      {error ? (
-        <p role="alert" className="text-caption text-danger">
-          {error}
-        </p>
-      ) : null}
-      <div>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={remove}
-          disabled={!confirmed || pending || !accessToken}
-          aria-busy={pending}
-          className="border-danger/40 text-danger hover:border-danger hover:bg-danger/10"
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-lg px-2 text-caption text-ink-subtle transition-colors hover:bg-surface-sunken hover:text-ink focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+        <span>Delete account</span>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 20 20"
+          className="size-4 shrink-0 fill-none stroke-current stroke-2 transition-transform group-open:rotate-180"
         >
-          {pending ? "Deleting your account…" : "Delete my account"}
-        </Button>
-      </div>
-    </section>
+          <path d="m6 8 4 4 4-4" />
+        </svg>
+      </summary>
+
+      <section
+        aria-labelledby="delete-account-heading"
+        className="mt-3 flex flex-col gap-4 rounded-xl border border-line bg-surface-raised p-5"
+      >
+        <h3 id="delete-account-heading" className="text-heading text-ink">
+          Permanently delete your account
+        </h3>
+        <p className="max-w-prose text-caption text-ink-muted">
+          This removes everything we hold for you, and it cannot be undone:
+        </p>
+        <ul className="flex max-w-prose list-disc flex-col gap-1 pl-5 text-caption text-ink-muted">
+          <li>every round, with its report, transcript and voice recordings</li>
+          <li>your resume, your profile photo and your profile details</li>
+          <li>your course and Arena progress</li>
+          <li>your sign-in — signing in with Google again starts a new, empty account</li>
+        </ul>
+        <label htmlFor={inputId} className="flex max-w-sm flex-col gap-1.5">
+          <span className="text-caption text-ink">
+            Type <span className="font-mono font-semibold">{CONFIRM_WORD}</span> to confirm
+          </span>
+          <input
+            id={inputId}
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            disabled={pending}
+            className={CONTROL_CLASS}
+          />
+        </label>
+        {error ? (
+          <p role="alert" className="text-caption text-danger">
+            {error}
+          </p>
+        ) : null}
+        <div>
+          <Button
+            type="button"
+            variant="quiet"
+            size="sm"
+            onClick={remove}
+            disabled={!confirmed || pending || !accessToken}
+            aria-busy={pending}
+            className="text-ink-subtle hover:text-danger"
+          >
+            {pending ? "Deleting your account…" : "Delete my account"}
+          </Button>
+        </div>
+      </section>
+    </details>
   );
 }

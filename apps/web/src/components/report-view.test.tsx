@@ -131,6 +131,18 @@ describe("ReportLoadingState", () => {
 });
 
 describe("ReportDocument — the evidence quote", () => {
+  it("opens with a factual metric strip and one clear next action", () => {
+    render(<ReportDocument report={buildReport()} />);
+
+    expect(screen.getByText("4 of 5")).toBeInTheDocument();
+    expect(screen.getByText("Back-of-envelope estimation")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /practise this focus/i })).toHaveAttribute(
+      "href",
+      "/interview/new",
+    );
+    expect(screen.queryByText(/strong hire|leaning hire/i)).not.toBeInTheDocument();
+  });
+
   it("shows the evidence quote directly, never behind the score-rationale disclosure", () => {
     render(<ReportDocument report={buildReport()} />);
 

@@ -1,39 +1,33 @@
 # Handoff — 2026-10-12
 
 ## Task
-Fix signed-in UI consistency: theme, dashboard salutation, mock-interview setup, profile sections, and upgrade entry. User request; no task file.
+Resolve PR #65 conflicts after `develop` advanced, while preserving the subtle account-deletion control and light Arena introduction. User request; no task file.
 
 ## What I built
-- Aligned the Arena course hero with the shared navy/blue signed-in palette in `apps/web/src/app/arena/[course]/page.tsx`.
-- Added browser-local morning, afternoon, and evening dashboard salutations with the candidate's formatted first name and local date in `apps/web/src/components/dashboard-panel.tsx`.
-- Made a structured company, role, and round selector the primary mock-interview path while retaining the flexible one-line composer in `apps/web/src/components/new-interview-form.tsx`.
-- Split the profile into accessible Overview, Resume & Skills, and Reports tabs backed by real profile and session data in `apps/web/src/components/profile-panel.tsx`.
-- Added a visible Upgrade action on desktop and mobile, an account-menu entry, and the honest `/upgrade` preview in `apps/web/src/app/upgrade/page.tsx`.
-- Added behavioural tests for the new interview hand-off, profile tab/report navigation, account Upgrade entry, identity loading, and salutation formatting.
+- Preserved the collapsed, muted account-deletion disclosure in `apps/web/src/components/delete-account-section.tsx`, including its existing typed confirmation and deletion behaviour.
+- Preserved the light signed-in Arena introduction in `apps/web/src/app/arena/page.tsx`.
+- Merged the latest `origin/develop`, including the already-reviewed mock-interview and report polish; all application-code paths merged automatically.
+- Resolved the sole textual conflict in this handoff file.
 
 ## Assumptions I made
-- No upgrade-screen references were present in the supplied image set or the prior reference-image set, so `/upgrade` does not invent pricing or payment behaviour. It distinguishes today's free access from possible Pro directions.
-- Every interview round and the complete report remain free, per the current product decision; no entitlement limit or checkout was introduced.
-- The existing one-line interview composer remains useful for less common or highly specific rounds, so it stays as a secondary path.
-- Reports in Profile show real completed sessions and link only to available, unexpired reports; no score or employer claim is fabricated.
+- PR #65 should retain its original scope and absorb current `develop`; already-merged product work should not be reverted.
+- “Subtle” continues to mean discoverable but collapsed by default, with the irreversible action guarded after deliberate expansion.
 
 ## What I could NOT verify
-- Final visual-design approval remains human-owned.
-- Profile tab behaviour was verified with component fixtures; the local browser session could not load live signed-in API profile data.
-- No live Gemini call, interview, or payment flow was run.
+- Final visual approval remains with the owner.
+- Account deletion itself was not executed because it is destructive.
 
 ## Verification status
-- Frontend local: typecheck pass; lint pass; shared typography-token test pass; 71 Vitest files / 3,005 tests pass; production build pass.
+- Frontend local: typecheck pass; lint pass; shared typography-token test pass; 71 Vitest files / 3,007 tests pass; production build pass.
 - Backend local: `ktlintCheck test build` pass.
-- Browser QA: desktop and 390px mobile pass on the interview, dashboard, Arena course, and upgrade surfaces; no horizontal overflow on the changed mobile pages.
-- Remote CI: run 38248088389 passed web, API, and Docker image jobs on commit `fcf8f83`.
+- Remote CI: pending after the conflict-resolution push.
 - No migration was added.
 
 ## Merge status
-- PR #63 opened against `develop`: https://github.com/namankau/AIInterviewer/pull/63. The branch is intentionally unmerged because the change requires human visual-design review.
+- PR #65 remains open against `develop`; the conflict-resolution merge is ready to push and remains intentionally unmerged for human review.
 
 ## Suggested next task
-- Review PR #63 visually with a production-like signed-in profile and approve or annotate the three profile tabs and Pro preview.
+- Review PR #65 visually and merge it after the refreshed CI is green.
 
 ## Open questions for you
 - None.

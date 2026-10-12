@@ -7,6 +7,7 @@ import { DashboardPanel } from "./dashboard-panel";
 const auth = vi.hoisted(() => ({ token: "account-a" as string | null | undefined }));
 const api = vi.hoisted(() => ({
   fetchEntitlement: vi.fn(),
+  fetchMe: vi.fn(),
   fetchSessions: vi.fn(),
   fetchReadiness: vi.fn(),
   deleteSession: vi.fn(),
@@ -34,6 +35,14 @@ describe("DashboardPanel account isolation", () => {
     vi.resetAllMocks();
     auth.token = "account-a";
     api.fetchEntitlement.mockResolvedValue({ allowed: true, remainingFree: null });
+    api.fetchMe.mockResolvedValue({
+      id: "candidate-a",
+      email: "candidate@example.com",
+      displayName: "Candidate",
+      preferredLanguage: "english",
+      createdAt: "2026-09-01T00:00:00Z",
+      profile: {},
+    });
     api.fetchReadiness.mockResolvedValue([]);
   });
 

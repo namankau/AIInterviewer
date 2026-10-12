@@ -1,14 +1,56 @@
+export type ProductFeature = "mockInterviews" | "courses" | "arena" | "reports" | "questions";
+
+export type GatedCourseSlug = "java" | "dsa" | "ai-agents" | "system-design";
+
 /**
- * Whether candidates can browse the sourced question bank at `/questions` (task 042).
- *
- * Off unless `NEXT_PUBLIC_QUESTION_BANK_BROWSABLE` is exactly `true`. The API reads the same
- * variable for `interviewos.question-bank.browsable`, so the pages, the nav entry and the API's
- * list endpoints move together. Hiding the bank hides the browsing only: rounds keep asking
- * from it, server-side.
- *
- * A function rather than a constant so a test can flip it; Next still inlines the literal
- * `process.env.NEXT_PUBLIC_…` reference at build time.
+ * Product switches are public deployment configuration, not secrets. They are read
+ * through literal `NEXT_PUBLIC_…` references because Next.js only inlines those at
+ * build time. An unset switch preserves the currently shipped product; an explicit
+ * value must be exactly `true` to enable it.
  */
+function configured(value: string | undefined, defaultValue: boolean): boolean {
+  return value === undefined ? defaultValue : value === "true";
+}
+
+export function featureEnabled(feature: ProductFeature): boolean {
+  switch (feature) {
+    case "mockInterviews":
+      return configured(process.env.NEXT_PUBLIC_FEATURE_MOCK_INTERVIEWS, true);
+    case "courses":
+      return configured(process.env.NEXT_PUBLIC_FEATURE_COURSES, true);
+    case "arena":
+      return configured(process.env.NEXT_PUBLIC_FEATURE_ARENA, true);
+    case "reports":
+      return configured(process.env.NEXT_PUBLIC_FEATURE_REPORTS, true);
+    case "questions":
+      // Keep the original question-bank switch as a fallback so existing deployments
+      // do not expose a bank that was intentionally left private.
+      return configured(
+        process.env.NEXT_PUBLIC_FEATURE_QUESTIONS,
+        process.env.NEXT_PUBLIC_QUESTION_BANK_BROWSABLE === "true",
+      );
+  }
+}
+
+/** Individual course gates are independent from the parent Courses surface so Arena
+ * can continue using an enabled course corpus even when the catalogue itself is hidden. */
+export function courseEnabled(courseSlug: string): boolean {
+  switch (courseSlug as GatedCourseSlug) {
+    case "java":
+      return configured(process.env.NEXT_PUBLIC_COURSE_JAVA_ENABLED, true);
+    case "dsa":
+      return configured(process.env.NEXT_PUBLIC_COURSE_DSA_ENABLED, true);
+    case "ai-agents":
+      return configured(process.env.NEXT_PUBLIC_COURSE_AI_AGENTS_ENABLED, true);
+    case "system-design":
+      return configured(process.env.NEXT_PUBLIC_COURSE_SYSTEM_DESIGN_ENABLED, true);
+    default:
+      // A newly added course must receive an explicit gate before it can appear.
+      return false;
+  }
+}
+
+/** Backwards-compatible name used by the sourced-question components. */
 export function questionBankBrowsable(): boolean {
-  return process.env.NEXT_PUBLIC_QUESTION_BANK_BROWSABLE === "true";
+  return featureEnabled("questions");
 }

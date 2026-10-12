@@ -169,18 +169,21 @@ export function useCourseProgress(courseSlug: string): CourseProgressHandle {
 }
 
 /** Every course's progress at once — for the dashboard's "continue learning" card. */
-export function useAllCourseProgress(): { completed: CompletedByCourse; status: ProgressStatus } {
+export function useAllCourseProgress(enabled = true): { completed: CompletedByCourse; status: ProgressStatus } {
   const accessToken = useAccessToken();
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   useEffect(() => {
+    if (!enabled) return;
     if (accessToken === undefined) return;
     if (accessToken === null) {
       resetCourseProgress();
       return;
     }
     load(accessToken);
-  }, [accessToken]);
+  }, [accessToken, enabled]);
+
+  if (!enabled) return { completed: {}, status: "ready" };
 
   const visibleSnapshot =
     typeof accessToken === "string" && loadedFor === accessToken ? snapshot : EMPTY;

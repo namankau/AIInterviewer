@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { challengesForCourse } from "@/lib/arena/corpus";
+import { courseEnabled, featureEnabled } from "@/lib/flags";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -19,13 +20,16 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * cookie travels with the same-origin fetch, and `getClaims` verifies it.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ course: string }> }) {
+  const { course } = await params;
+  if (!featureEnabled("arena") || !courseEnabled(course)) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims.sub) {
     return NextResponse.json({ error: "Sign in to practise in the Arena." }, { status: 401 });
   }
 
-  const { course } = await params;
   const challenges = challengesForCourse(course);
   return NextResponse.json(challenges);
 }

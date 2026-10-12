@@ -24,7 +24,7 @@ import { useAllCourseProgress } from "@/lib/use-course-progress";
  * needs.
  */
 export function ContinueLearning({ outlines }: { outlines: CourseOutline[] }) {
-  const { completed, status } = useAllCourseProgress();
+  const { completed, status } = useAllCourseProgress(outlines.length > 0);
 
   if (status !== "ready") return null;
 

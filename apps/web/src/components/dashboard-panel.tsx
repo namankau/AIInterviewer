@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { DailyLimitNotice, isDailyLimitReached } from "@/components/daily-limit-notice";
 import { deleteSession, fetchEntitlement, fetchReadiness, fetchSessions } from "@/lib/api";
+import { featureEnabled } from "@/lib/flags";
 import { useAccessToken } from "@/lib/use-access-token";
 
 /**
@@ -49,15 +50,18 @@ export function RoundHistoryPanel() {
     return <p className="text-body text-ink-muted">Loading your rounds…</p>;
   }
   if (visible.sessions.length === 0) {
+    const mockInterviewsEnabled = featureEnabled("mockInterviews");
     return (
       <div className="flex flex-col items-start gap-4 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)]">
         <p className="text-body text-ink-muted">No rounds yet. Your finished interviews will be listed here.</p>
-        <Link
-          href="/interview/new"
-          className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-        >
-          Start an interview
-        </Link>
+        {mockInterviewsEnabled ? (
+          <Link
+            href="/interview/new"
+            className="rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+          >
+            Start an interview
+          </Link>
+        ) : null}
       </div>
     );
   }
@@ -81,11 +85,13 @@ function useRoundData() {
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
+    const mockInterviewsEnabled = featureEnabled("mockInterviews");
+    const reportsEnabled = featureEnabled("reports");
 
     Promise.allSettled([
-      fetchEntitlement({ accessToken }),
-      fetchSessions({ accessToken }),
-      fetchReadiness({ accessToken }),
+      mockInterviewsEnabled ? fetchEntitlement({ accessToken }) : Promise.resolve(null),
+      mockInterviewsEnabled || reportsEnabled ? fetchSessions({ accessToken }) : Promise.resolve([]),
+      reportsEnabled ? fetchReadiness({ accessToken }) : Promise.resolve([]),
     ]).then(([ent, list, ready]) => {
       if (!active) return;
       setDashboard({
@@ -170,35 +176,43 @@ export function DashboardView({
   loaded: boolean;
   onDelete?: (id: string) => Promise<void>;
 }) {
-  const openSession = sessions.find((s) => s.status === "in_progress");
+  const mockInterviewsEnabled = featureEnabled("mockInterviews");
+  const reportsEnabled = featureEnabled("reports");
+  const coursesEnabled = featureEnabled("courses");
+  const arenaEnabled = featureEnabled("arena");
+  const visibleSessions = reportsEnabled ? sessions : [];
+  const visibleReadiness = reportsEnabled ? readiness : [];
+  const openSession = mockInterviewsEnabled ? sessions.find((s) => s.status === "in_progress") : undefined;
   const primaryHref = (openSession ? `/interview/${openSession.id}` : "/interview/new") as Route;
   const primaryLabel = openSession ? "Resume interview" : "Start an interview";
   const disabled = !openSession && entitlement?.allowed === false;
 
   return (
     <div className="flex flex-col gap-9 md:gap-11">
-      <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="eyebrow text-accent">Your practice workspace</p>
-          <h1 id="next-interview" className="mt-2 max-w-3xl text-display text-balance text-ink">
-            {sessions.length === 0 ? "Start building interview momentum." : "Keep your momentum going."}
-          </h1>
-          <p className="mt-2 max-w-2xl text-body text-ink-muted">
-            One focused round today gets you closer to answering calmly when the real follow-up lands.
-          </p>
-        </div>
-        <Link
-          href={primaryHref}
-          aria-disabled={disabled}
-          className={`action-primary min-h-12 shrink-0 px-6 text-body ${disabled ? "pointer-events-none opacity-50" : ""}`}
-        >
-          {primaryLabel} <span aria-hidden>→</span>
-        </Link>
-      </header>
+      {mockInterviewsEnabled ? (
+        <>
+          <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="eyebrow text-accent">Your practice workspace</p>
+              <h1 id="next-interview" className="mt-2 max-w-3xl text-display text-balance text-ink">
+                {sessions.length === 0 ? "Start building interview momentum." : "Keep your momentum going."}
+              </h1>
+              <p className="mt-2 max-w-2xl text-body text-ink-muted">
+                One focused round today gets you closer to answering calmly when the real follow-up lands.
+              </p>
+            </div>
+            <Link
+              href={primaryHref}
+              aria-disabled={disabled}
+              className={`action-primary min-h-12 shrink-0 px-6 text-body ${disabled ? "pointer-events-none opacity-50" : ""}`}
+            >
+              {primaryLabel} <span aria-hidden>→</span>
+            </Link>
+          </header>
 
-      <section aria-labelledby="practice-allowance" className="hero-band overflow-hidden px-6 py-7 sm:px-9 sm:py-8">
-        <div className="grid gap-7 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-14">
-          <div>
+          <section aria-labelledby="practice-allowance" className="hero-band overflow-hidden px-6 py-7 sm:px-9 sm:py-8">
+            <div className="grid gap-7 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-14">
+              <div>
             <p className="eyebrow text-accent-on-navy">Today&apos;s practice</p>
             <h2 id="practice-allowance" className="mt-3 text-title text-on-navy">
               {entitlement?.dailyRoundLimit !== null && entitlement?.dailyRoundLimit !== undefined
@@ -216,27 +230,40 @@ export function DashboardView({
                   : entitlement.message
                 : "Your practice availability will appear here."}
             </p>
-          </div>
+              </div>
 
-          <AllowanceMeters entitlement={entitlement} loaded={loaded} />
-        </div>
-      </section>
+              <AllowanceMeters entitlement={entitlement} loaded={loaded} />
+            </div>
+          </section>
 
-      {loaded && entitlement && isDailyLimitReached(entitlement) ? (
-        <DailyLimitNotice entitlement={entitlement} />
-      ) : null}
+          {loaded && entitlement && isDailyLimitReached(entitlement) ? (
+            <DailyLimitNotice entitlement={entitlement} />
+          ) : null}
+        </>
+      ) : (
+        <header className="hero-band flex flex-col items-start gap-5 px-7 py-9 sm:px-10">
+          <p className="eyebrow text-accent-on-navy">Your learning workspace</p>
+          <h1 className="max-w-3xl text-display text-balance text-on-navy">Keep moving one focused step at a time.</h1>
+          <p className="max-w-2xl text-body text-on-navy-muted">Continue a learning path or sharpen recall with a short Arena session.</p>
+          {coursesEnabled || arenaEnabled ? (
+            <Link href={(coursesEnabled ? "/courses" : "/arena") as Route} className="action-primary">
+              {coursesEnabled ? "Continue learning" : "Open the Arena"} <span aria-hidden>→</span>
+            </Link>
+          ) : null}
+        </header>
+      )}
 
-      {sessions.length > 0 || readiness.length > 0 ? (
+      {visibleSessions.length > 0 || visibleReadiness.length > 0 ? (
         <div className="grid gap-7 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-          {sessions.length > 0 ? (
-            <PastRoundsSection sessions={sessions} onDelete={onDelete} limit={DASHBOARD_ROUNDS} />
+          {visibleSessions.length > 0 ? (
+            <PastRoundsSection sessions={visibleSessions} onDelete={onDelete} limit={DASHBOARD_ROUNDS} />
           ) : null}
 
-          {readiness.length > 0 ? (
+          {visibleReadiness.length > 0 ? (
             <section aria-labelledby="readiness" className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-6">
               <SectionHead title="Where you stand" id="readiness" note="Readiness by goal" />
               <ul className="flex flex-col gap-3">
-                {readiness.slice(0, DASHBOARD_READINESS_GROUPS).map((group) => (
+                {visibleReadiness.slice(0, DASHBOARD_READINESS_GROUPS).map((group) => (
                   <li
                     key={`${group.companyName}-${group.roleTitle}`}
                     className="flex flex-col gap-3 rounded-xl bg-surface-sunken/75 px-4 py-4"
@@ -271,7 +298,7 @@ export function DashboardView({
                   </li>
                 ))}
               </ul>
-              {readiness.length > DASHBOARD_READINESS_GROUPS ? (
+              {visibleReadiness.length > DASHBOARD_READINESS_GROUPS ? (
                 <Link
                   href="/history"
                   className="self-start rounded-sm text-caption font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"

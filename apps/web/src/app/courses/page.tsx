@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { CourseCardProgress } from "@/components/courses/course-progress";
 import { ImportBrowserProgress } from "@/components/courses/import-browser-progress";
 import { CourseAccentLine, CourseMotif, getCoursePresentation } from "@/components/courses/course-visuals";
 import { courses, totalChapters, totalMinutes } from "@/content/courses";
+import { courseEnabled, featureEnabled } from "@/lib/flags";
+import { requireFeature } from "@/lib/require-feature";
 
 export const metadata: Metadata = {
   title: "Courses — Untiered",
@@ -17,7 +20,10 @@ export const metadata: Metadata = {
 
 /** The signed-in learning catalogue, presented inside the same workspace as the Arena and rounds. */
 export default function CoursesPage() {
-  const lessonCount = courses.reduce((total, course) => total + totalChapters(course), 0);
+  requireFeature("courses");
+  const visibleCourses = courses.filter((course) => courseEnabled(course.slug));
+  if (visibleCourses.length === 0) notFound();
+  const lessonCount = visibleCourses.reduce((total, course) => total + totalChapters(course), 0);
 
   return (
     <AppShell breadcrumb="courses">
@@ -39,14 +45,16 @@ export default function CoursesPage() {
         </div>
       </header>
 
-      <section className="mt-7 flex flex-col gap-5 rounded-2xl border border-accent/20 bg-[linear-gradient(100deg,var(--accent-wash),var(--positive-wash))] p-6 shadow-[var(--shadow-sm)] sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="eyebrow text-accent">Daily practice</p>
-          <h2 className="mt-2 text-heading text-ink">Turn today&apos;s chapter into a short recall round.</h2>
-          <p className="mt-1 text-caption text-ink-muted">The Arena pulls its challenges directly from these learning paths.</p>
-        </div>
-        <Link href="/arena" className="action-primary shrink-0">Open today&apos;s challenge <span aria-hidden>→</span></Link>
-      </section>
+      {featureEnabled("arena") ? (
+        <section className="mt-7 flex flex-col gap-5 rounded-2xl border border-accent/20 bg-[linear-gradient(100deg,var(--accent-wash),var(--positive-wash))] p-6 shadow-[var(--shadow-sm)] sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="eyebrow text-accent">Daily practice</p>
+            <h2 className="mt-2 text-heading text-ink">Turn today&apos;s chapter into a short recall round.</h2>
+            <p className="mt-1 text-caption text-ink-muted">The Arena pulls its challenges directly from these learning paths.</p>
+          </div>
+          <Link href="/arena" className="action-primary shrink-0">Open today&apos;s challenge <span aria-hidden>→</span></Link>
+        </section>
+      ) : null}
 
       <section aria-labelledby="learning-paths" className="mt-12">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -57,7 +65,7 @@ export default function CoursesPage() {
           <p className="text-caption text-ink-muted">Continue from exactly where you stopped.</p>
         </div>
         <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {courses.map((course) => (
+          {visibleCourses.map((course) => (
             <li key={course.slug} className="min-w-0">
               <Link
                 href={`/courses/${course.slug}`}

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
 import { ROUND_CATALOGUE } from "@/lib/rounds";
+import { requireFeature } from "@/lib/require-feature";
 
 export const metadata: Metadata = {
   title: "The rounds we run",
@@ -25,6 +26,7 @@ export const metadata: Metadata = {
  * their preparation reads the specifics and skips the adjectives.
  */
 export default function RoundsPage() {
+  requireFeature("mockInterviews");
   return (
     <AppShell breadcrumb="rounds">
       <div className="flex max-w-5xl flex-col gap-12">

@@ -3,9 +3,12 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 
 import { ActionLink } from "@/components/ui/action-link";
+import { Testimonials } from "@/components/testimonials";
 import { courses, totalChapters, totalMinutes } from "@/content/courses";
+import { LANDING_TESTIMONIALS } from "@/content/landing-testimonials";
 import { LEGAL_LINKS } from "@/components/legal-page";
 import { fetchUsage } from "@/lib/api";
+import { courseEnabled, featureEnabled } from "@/lib/flags";
 
 export const metadata: Metadata = {
   title: "Untiered — mock interviews that push back",
@@ -28,27 +31,40 @@ export const metadata: Metadata = {
  */
 export default async function LandingPage() {
   const usage = await fetchUsage();
+  const mockInterviewsEnabled = featureEnabled("mockInterviews");
+  const coursesEnabled = featureEnabled("courses");
+  const arenaEnabled = featureEnabled("arena");
+  const reportsEnabled = featureEnabled("reports");
+  const visibleCourses = courses.filter((course) => courseEnabled(course.slug));
 
   return (
     <div className="min-h-dvh bg-surface">
-      <SiteHeader />
+      <SiteHeader mockInterviewsEnabled={mockInterviewsEnabled} coursesEnabled={coursesEnabled} />
       <main>
-        <Hero usage={usage} />
-        <EmployerStrip />
-        <VoiceSection />
-        <TranscriptSample />
-        <Coverage />
-        <ReportContents />
-        <Courses />
-        <HowItWorks />
-        <CtaBand />
+        <Hero
+          usage={usage}
+          mockInterviewsEnabled={mockInterviewsEnabled}
+          coursesEnabled={coursesEnabled && visibleCourses.length > 0}
+          arenaEnabled={arenaEnabled && visibleCourses.length > 0}
+        />
+        {mockInterviewsEnabled ? <EmployerStrip /> : null}
+        {mockInterviewsEnabled ? <VoiceSection /> : null}
+        {mockInterviewsEnabled ? <TranscriptSample /> : null}
+        {mockInterviewsEnabled ? <Coverage /> : null}
+        {mockInterviewsEnabled && reportsEnabled ? <ReportContents /> : null}
+        {coursesEnabled && visibleCourses.length > 0 ? (
+          <Courses visibleCourses={visibleCourses} arenaEnabled={arenaEnabled} />
+        ) : null}
+        <Testimonials testimonials={LANDING_TESTIMONIALS} />
+        {mockInterviewsEnabled ? <HowItWorks /> : null}
+        <CtaBand mockInterviewsEnabled={mockInterviewsEnabled} coursesEnabled={coursesEnabled} arenaEnabled={arenaEnabled} />
       </main>
-      <SiteFooter />
+      <SiteFooter mockInterviewsEnabled={mockInterviewsEnabled} coursesEnabled={coursesEnabled} />
     </div>
   );
 }
 
-function SiteHeader() {
+function SiteHeader({ mockInterviewsEnabled, coursesEnabled }: { mockInterviewsEnabled: boolean; coursesEnabled: boolean }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface-raised/90 shadow-[var(--shadow-sm)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
@@ -62,12 +78,12 @@ function SiteHeader() {
           </span>
         </Link>
         <nav aria-label="Site" className="hidden items-center gap-8 md:flex">
-          <Link href="/login" className="text-caption font-medium text-ink-muted hover:text-ink">
-            Mock interviews
-          </Link>
-          <Link href={"/courses" as Route} className="text-caption font-medium text-ink-muted hover:text-ink">
-            Courses
-          </Link>
+          {mockInterviewsEnabled ? (
+            <Link href="/login" className="text-caption font-medium text-ink-muted hover:text-ink">Mock interviews</Link>
+          ) : null}
+          {coursesEnabled ? (
+            <Link href={"/courses" as Route} className="text-caption font-medium text-ink-muted hover:text-ink">Courses</Link>
+          ) : null}
         </nav>
         <div className="flex items-center gap-3">
           <Link
@@ -76,8 +92,8 @@ function SiteHeader() {
           >
             Sign in
           </Link>
-          <ActionLink href="/login" size="sm">
-            Start free
+          <ActionLink href={coursesEnabled && !mockInterviewsEnabled ? "/courses" : "/login"} size="sm">
+            {mockInterviewsEnabled ? "Start free" : coursesEnabled ? "Start learning" : "Sign in"}
           </ActionLink>
         </div>
       </div>
@@ -85,45 +101,75 @@ function SiteHeader() {
   );
 }
 
-function Hero({ usage }: { usage: UsageCounts | null }) {
+function Hero({
+  usage,
+  mockInterviewsEnabled,
+  coursesEnabled,
+  arenaEnabled,
+}: {
+  usage: UsageCounts | null;
+  mockInterviewsEnabled: boolean;
+  coursesEnabled: boolean;
+  arenaEnabled: boolean;
+}) {
+  const learningHref = coursesEnabled ? "/courses" : arenaEnabled ? "/arena" : "/login";
   return (
     <section className="bg-navy text-on-navy">
-      <div className="mx-auto grid max-w-6xl gap-14 px-6 py-20 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-10 lg:py-28">
+      <div className={`mx-auto grid max-w-6xl gap-14 px-6 py-20 lg:items-center lg:gap-10 lg:py-28 ${mockInterviewsEnabled ? "lg:grid-cols-[1.1fr_1fr]" : "lg:grid-cols-[1.25fr_.75fr]"}`}>
         <div className="flex flex-col gap-7">
           <span className="pill pill-navy w-fit">
-            Voice · a face across the table · scored on what you actually said
+            {mockInterviewsEnabled
+              ? "Voice · a face across the table · scored on what you actually said"
+              : "Structured learning · daily practice · interview-ready fundamentals"}
           </span>
           <h1 className="text-hero text-balance text-on-navy">
-            A mock interview that <span className="text-accent-on-navy">interrupts you.</span>
+            {mockInterviewsEnabled ? (
+              <>A mock interview that <span className="text-accent-on-navy">interrupts you.</span></>
+            ) : (
+              <>Build skills that <span className="text-accent-on-navy">hold up under pressure.</span></>
+            )}
           </h1>
           <p className="max-w-xl text-body text-on-navy-muted">
-            You speak your answers. It follows up on what you actually said, cuts in when you
-            ramble, and pushes back on claims you cannot defend. Afterwards you get a report where
-            every score is pinned to a sentence out of your own mouth.
+            {mockInterviewsEnabled
+              ? "You speak your answers. It follows up on what you actually said, cuts in when you ramble, and pushes back on claims you cannot defend. Afterwards you get a report where every score is pinned to a sentence out of your own mouth."
+              : "Work through complete learning paths, test your recall in short practice rounds, and return tomorrow with a clear next step instead of another passive video queue."}
           </p>
           <div className="flex flex-wrap items-center gap-4 pt-1">
-            <Link
-              href="/login"
-              className="rounded-lg bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-colors hover:bg-accent-strong"
-            >
-              Take a free interview
-            </Link>
-            <Link
-              href={"/courses" as Route}
-              className="rounded-lg border border-white/20 px-7 py-3.5 text-body font-semibold text-on-navy transition-colors hover:bg-white/10"
-            >
-              Explore free courses
-            </Link>
+            {mockInterviewsEnabled ? (
+              <Link href="/login" className="rounded-lg bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-colors hover:bg-accent-strong">Take a free interview</Link>
+            ) : (
+              <Link href={learningHref as Route} className="rounded-lg bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-colors hover:bg-accent-strong">Start learning</Link>
+            )}
+            {coursesEnabled && mockInterviewsEnabled ? (
+              <Link href={"/courses" as Route} className="rounded-lg border border-white/20 px-7 py-3.5 text-body font-semibold text-on-navy transition-colors hover:bg-white/10">Explore free courses</Link>
+            ) : null}
           </div>
-          <p className="text-caption text-on-navy-muted">
-            Every round free while we build. Full report included, no card.
-          </p>
-          <UsageLine usage={usage} />
+          <p className="text-caption text-on-navy-muted">{mockInterviewsEnabled ? "Every round free while we build. Full report included, no card." : "Free learning paths. Sign in once and continue where you stopped."}</p>
+          {mockInterviewsEnabled ? <UsageLine usage={usage} /> : null}
         </div>
 
-        <HeroVisual />
+        {mockInterviewsEnabled ? <HeroVisual /> : <LearningVisual coursesEnabled={coursesEnabled} arenaEnabled={arenaEnabled} />}
       </div>
     </section>
+  );
+}
+
+function LearningVisual({ coursesEnabled, arenaEnabled }: { coursesEnabled: boolean; arenaEnabled: boolean }) {
+  const cards = [
+    coursesEnabled ? { eyebrow: "Learning paths", title: "Small chapters. Runnable code. Clear progress." } : null,
+    arenaEnabled ? { eyebrow: "Daily Arena", title: "Short recall rounds that change every day." } : null,
+  ].filter((card): card is { eyebrow: string; title: string } => card !== null);
+
+  return (
+    <div className="grid gap-4">
+      {cards.map((card, index) => (
+        <div key={card.eyebrow} className={`card border-white/10 p-6 shadow-[var(--shadow-lg)] ${index === 1 ? "sm:ml-10" : ""}`}>
+          <p className="font-mono text-micro tracking-widest text-accent uppercase">{card.eyebrow}</p>
+          <p className="mt-3 text-heading font-bold text-ink">{card.title}</p>
+          <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-surface-sunken"><span className="block h-full w-2/3 rounded-full bg-accent" /></div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -473,7 +519,13 @@ function ReportContents() {
  * here, so the landing page cannot drift out of step with what the course is actually
  * called.
  */
-function Courses() {
+function Courses({
+  visibleCourses,
+  arenaEnabled,
+}: {
+  visibleCourses: typeof courses;
+  arenaEnabled: boolean;
+}) {
   return (
     <section className="border-b border-line">
       <div className="mx-auto max-w-6xl px-6 py-20">
@@ -486,7 +538,7 @@ function Courses() {
           </p>
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {courses.map((course) => (
+          {visibleCourses.map((course) => (
             <Link
               key={course.slug}
               href={`/courses/${course.slug}` as Route}
@@ -500,18 +552,17 @@ function Courses() {
               <span className="text-caption font-semibold text-accent">Start course →</span>
             </Link>
           ))}
-          <Link
-            href={"/arena" as Route}
-            className="card flex flex-col gap-2 p-6 transition-shadow hover:shadow-[var(--shadow-md)]"
-          >
-            <span className="pill pill-highlight w-fit">New</span>
-            <h3 className="text-heading font-bold text-ink">The Arena</h3>
-            <p className="text-caption text-ink-muted">
-              Short, gamified rounds derived from every chapter above — spot the mistake, predict the output,
-              read a diagram one step ahead.
-            </p>
-            <span className="pt-2 text-caption font-semibold text-accent">Play now →</span>
-          </Link>
+          {arenaEnabled ? (
+            <Link href={"/arena" as Route} className="card flex flex-col gap-2 p-6 transition-shadow hover:shadow-[var(--shadow-md)]">
+              <span className="pill pill-highlight w-fit">New</span>
+              <h3 className="text-heading font-bold text-ink">The Arena</h3>
+              <p className="text-caption text-ink-muted">
+                Short, gamified rounds derived from every chapter above — spot the mistake, predict the output,
+                read a diagram one step ahead.
+              </p>
+              <span className="pt-2 text-caption font-semibold text-accent">Play now →</span>
+            </Link>
+          ) : null}
         </div>
       </div>
     </section>
@@ -547,28 +598,39 @@ function HowItWorks() {
  * free, while it is being built. Saying "free trial" or naming a future price would be
  * selling something that does not exist.
  */
-function CtaBand() {
+function CtaBand({
+  mockInterviewsEnabled,
+  coursesEnabled,
+  arenaEnabled,
+}: {
+  mockInterviewsEnabled: boolean;
+  coursesEnabled: boolean;
+  arenaEnabled: boolean;
+}) {
+  const href = mockInterviewsEnabled ? "/login" : coursesEnabled ? "/courses" : arenaEnabled ? "/arena" : "/login";
   return (
     <section className="bg-navy text-on-navy">
       <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-6 py-20">
-        <h2 className="text-display text-balance text-on-navy">Every round is free right now.</h2>
+        <h2 className="text-display text-balance text-on-navy">
+          {mockInterviewsEnabled ? "Every round is free right now." : "Keep building the skill behind the answer."}
+        </h2>
         <p className="max-w-xl text-body text-on-navy-muted">
-          Not a trial round, and not a sample report — the whole thing, as many times as you
-          want, while we are still building it. No card. When there is something worth charging
-          for, we will say so before we charge for it.
+          {mockInterviewsEnabled
+            ? "Not a trial round, and not a sample report — the whole thing, as many times as you want, while we are still building it. No card. When there is something worth charging for, we will say so before we charge for it."
+            : "Choose a learning path, practise what you studied, and come back with a stronger explanation than the one you had yesterday."}
         </p>
         <Link
-          href="/login"
+          href={href as Route}
           className="rounded-lg bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-colors hover:bg-accent-strong"
         >
-          Start an interview
+          {mockInterviewsEnabled ? "Start an interview" : coursesEnabled ? "Explore courses" : arenaEnabled ? "Open the Arena" : "Sign in"}
         </Link>
       </div>
     </section>
   );
 }
 
-function SiteFooter() {
+function SiteFooter({ mockInterviewsEnabled, coursesEnabled }: { mockInterviewsEnabled: boolean; coursesEnabled: boolean }) {
   return (
     <footer className="border-t border-white/10 bg-navy text-on-navy">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10">
@@ -580,12 +642,12 @@ function SiteFooter() {
             Untiered
           </span>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
-            <Link href="/login" className="text-caption text-on-navy-muted hover:text-on-navy">
-              Mock interviews
-            </Link>
-            <Link href={"/courses" as Route} className="text-caption text-on-navy-muted hover:text-on-navy">
-              Courses
-            </Link>
+            {mockInterviewsEnabled ? (
+              <Link href="/login" className="text-caption text-on-navy-muted hover:text-on-navy">Mock interviews</Link>
+            ) : null}
+            {coursesEnabled ? (
+              <Link href={"/courses" as Route} className="text-caption text-on-navy-muted hover:text-on-navy">Courses</Link>
+            ) : null}
             <Link href="/login" className="text-caption text-on-navy-muted hover:text-on-navy">
               Sign in
             </Link>

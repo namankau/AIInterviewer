@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/app-shell";
 import { NewInterviewForm } from "@/components/new-interview-form";
 import { ROUND_CATALOGUE } from "@/lib/rounds";
+import { requireFeature } from "@/lib/require-feature";
 
 export const metadata: Metadata = { title: "Start an interview" };
 
@@ -20,6 +21,7 @@ export default async function NewInterviewPage({
     from?: string | string[];
   }>;
 }) {
+  requireFeature("mockInterviews");
   const { round: roundParam, topic: topicParam, from: fromParam } = await searchParams;
   const topic = Array.isArray(topicParam) ? topicParam[0] : topicParam;
   const from = Array.isArray(fromParam) ? fromParam[0] : fromParam;

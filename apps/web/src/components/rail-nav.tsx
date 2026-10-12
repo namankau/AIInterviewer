@@ -4,7 +4,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { questionBankBrowsable } from "@/lib/flags";
+import { featureEnabled } from "@/lib/flags";
 import { NAV_LINKS } from "@/lib/nav-links";
 
 /**
@@ -21,7 +21,7 @@ export function RailNav() {
 
   return (
     <ul className="flex min-w-max items-stretch gap-1" aria-label="Workspace">
-      {NAV_LINKS.filter((link) => link.href !== "/questions" || questionBankBrowsable()).map((link) => {
+      {NAV_LINKS.filter((link) => !("feature" in link) || featureEnabled(link.feature)).map((link) => {
         const active =
           pathname === link.href ||
           pathname.startsWith(`${link.href}/`) ||

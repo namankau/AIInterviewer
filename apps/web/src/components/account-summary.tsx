@@ -1,6 +1,7 @@
 "use client";
 
 import type { MeResponse } from "@untiered/shared";
+import type { Route } from "next";
 import { useEffect, useId, useRef, useState } from "react";
 
 import Link from "next/link";
@@ -165,6 +166,15 @@ function AccountMenu({ me }: { me: MeResponse }) {
 
       {open ? (
         <ul id={menuId} className="absolute top-[calc(100%+0.5rem)] right-0 z-50 flex min-w-56 flex-col gap-0.5 rounded-xl border border-line bg-surface-raised p-1.5 shadow-[var(--shadow-lg)]">
+          <li>
+            <Link
+              href={"/upgrade" as Route}
+              className="mb-1 flex w-full items-center justify-between rounded-lg bg-accent-wash px-3 py-2.5 text-left text-caption font-semibold text-accent-strong transition-colors hover:bg-accent hover:text-accent-contrast"
+              onClick={() => setOpen(false)}
+            >
+              Explore Untiered Pro <span aria-hidden>→</span>
+            </Link>
+          </li>
           <li>
             <Link href="/profile" className={MENU_ITEM} onClick={() => setOpen(false)}>
               Profile and resume

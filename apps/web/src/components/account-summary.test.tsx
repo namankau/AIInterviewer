@@ -65,6 +65,7 @@ describe("AccountSummary", () => {
     await userEvent.click(trigger);
 
     expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("link", { name: /explore untiered pro/i })).toHaveAttribute("href", "/upgrade");
     expect(screen.getByRole("link", { name: /profile and resume/i })).toHaveAttribute("href", "/profile");
     expect(screen.getByRole("link", { name: /all your rounds/i })).toHaveAttribute("href", "/history");
     expect(screen.getByRole("link", { name: /delete account/i })).toHaveAttribute(

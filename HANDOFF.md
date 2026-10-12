@@ -1,36 +1,39 @@
 # Handoff — 2026-10-12
 
 ## Task
-Add an account-backed Question of the Day to the signed-in dashboard. User request; no task file.
+Fix signed-in UI consistency: theme, dashboard salutation, mock-interview setup, profile sections, and upgrade entry. User request; no task file.
 
 ## What I built
-- Added a dashboard Question of the Day card in `apps/web/src/components/dashboard-question-of-day.tsx`, using one reviewed Arena challenge that remains stable for the learner's local calendar day.
-- Added accessible selection, keyboard submission, explanatory feedback, retry, loading, and save-failure states. A successfully saved correct answer becomes the requested green “Awesome job” state.
-- Centralised deterministic selection in `questionOfTheDay` so the future daily email can select the same question as the dashboard.
-- Extended Arena progress and its API contract to persist recent daily completions per account and local date.
-- Added `public.daily_question_completions` with an owner foreign key, account-deletion cascade, and select/insert RLS policies in `supabase/migrations/20261012000000_daily_question_completions.sql`.
-- Kept the card behind the Arena feature gate and filtered its corpus through the individual course gates.
+- Aligned the Arena course hero with the shared navy/blue signed-in palette in `apps/web/src/app/arena/[course]/page.tsx`.
+- Added browser-local morning, afternoon, and evening dashboard salutations with the candidate's formatted first name and local date in `apps/web/src/components/dashboard-panel.tsx`.
+- Made a structured company, role, and round selector the primary mock-interview path while retaining the flexible one-line composer in `apps/web/src/components/new-interview-form.tsx`.
+- Split the profile into accessible Overview, Resume & Skills, and Reports tabs backed by real profile and session data in `apps/web/src/components/profile-panel.tsx`.
+- Added a visible Upgrade action on desktop and mobile, an account-menu entry, and the honest `/upgrade` preview in `apps/web/src/app/upgrade/page.tsx`.
+- Added behavioural tests for the new interview hand-off, profile tab/report navigation, account Upgrade entry, identity loading, and salutation formatting.
 
 ## Assumptions I made
-- Question of the Day belongs to the Arena learning surface, so disabling Arena hides it without introducing another product gate.
-- A daily question counts as solved only when the answer is correct and the completion is successfully saved to the account.
-- The learner's browser calendar date is authoritative for the day boundary, matching existing Arena streak behaviour.
-- The existing reviewed Arena corpus is the safe source; this feature does not generate or fabricate new questions.
+- No upgrade-screen references were present in the supplied image set or the prior reference-image set, so `/upgrade` does not invent pricing or payment behaviour. It distinguishes today's free access from possible Pro directions.
+- Every interview round and the complete report remain free, per the current product decision; no entitlement limit or checkout was introduced.
+- The existing one-line interview composer remains useful for less common or highly specific rounds, so it stays as a secondary path.
+- Reports in Profile show real completed sessions and link only to available, unexpired reports; no score or employer claim is fabricated.
 
 ## What I could NOT verify
-- Final visual-design judgment remains human-owned. Behaviour, accessibility hooks, responsive classes, and the production build were verified, but no production account was used for a live visual pass.
+- Final visual-design approval remains human-owned.
+- Profile tab behaviour was verified with component fixtures; the local browser session could not load live signed-in API profile data.
+- No live Gemini call, interview, or payment flow was run.
 
 ## Verification status
-- Frontend local: typecheck pass; lint pass; 71 test files / 3,001 tests pass; production build pass.
+- Frontend local: typecheck pass; lint pass; shared typography-token test pass; 71 Vitest files / 3,005 tests pass; production build pass.
 - Backend local: `ktlintCheck test build` pass.
-- Remote CI: required web, API, and Docker image jobs passed on PR #61 before the handoff commit; the final branch head was also required to pass before merge.
-- Migration: `20261012000000_daily_question_completions.sql` applied with `npm run db:push`; linked migration list confirms matching local and remote versions.
+- Browser QA: desktop and 390px mobile pass on the interview, dashboard, Arena course, and upgrade surfaces; no horizontal overflow on the changed mobile pages.
+- Remote CI: run 38248088389 passed web, API, and Docker image jobs on commit `fcf8f83`.
+- No migration was added.
 
 ## Merge status
-- PR #61 was merged into `develop` only after visible green CI on the final branch head. `main` was not modified.
+- PR #63 opened against `develop`: https://github.com/namankau/AIInterviewer/pull/63. The branch is intentionally unmerged because the change requires human visual-design review.
 
 ## Suggested next task
-- Add the daily email delivery job using `questionOfTheDay`, after choosing the sending provider and supplying its production credentials.
+- Review PR #63 visually with a production-like signed-in profile and approve or annotate the three profile tabs and Pro preview.
 
 ## Open questions for you
 - None.

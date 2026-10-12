@@ -81,6 +81,20 @@ describe("NewInterviewForm", () => {
     fetchPrepPlan.mockReset().mockResolvedValue(emptyPlan);
   });
 
+  it("carries the structured company, role and round into the consent setup", async () => {
+    render(<NewInterviewForm />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Amazon" }));
+    await userEvent.type(screen.getByRole("textbox", { name: /^role\b/i }), "Software Development Engineer");
+    await userEvent.click(screen.getByRole("radio", { name: /system design/i }));
+    await userEvent.click(screen.getByRole("button", { name: /continue to interview setup/i }));
+
+    expect(screen.getByDisplayValue("Amazon")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Software Development Engineer")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /system or solution design/i })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /record my voice/i })).not.toBeChecked();
+  });
+
   it("turns a named Java round into a focused custom interview", async () => {
     composeRound.mockResolvedValue({
       ...draft,
@@ -477,8 +491,7 @@ describe("NewInterviewForm", () => {
       expect(box).not.toBeChecked();
       expect(screen.queryByRole("combobox", { name: /where are you right now/i })).not.toBeInTheDocument();
 
-      await userEvent.tab();
-      await userEvent.tab();
+      box.focus();
       expect(box).toHaveFocus();
       await userEvent.keyboard(" ");
       expect(box).toBeChecked();

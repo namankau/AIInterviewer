@@ -18,16 +18,8 @@ export default function ProfilePage() {
   const courseOutlines = getCourseOutlines();
 
   return (
-    <AppShell breadcrumb="profile">
-      <div className="flex w-full max-w-5xl flex-col gap-8">
-        <header className="flex flex-col gap-2">
-          <h1 className="text-display text-balance text-ink">Your profile</h1>
-          <p className="max-w-2xl text-body text-ink-muted">
-            Your resume and details shape every round you take. Account settings are at the
-            foot of the page.
-          </p>
-        </header>
-
+    <AppShell>
+      <div className="flex w-full flex-col gap-8">
         <ProfilePanel outlines={courseOutlines} />
 
         {/*

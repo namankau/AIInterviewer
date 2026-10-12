@@ -46,7 +46,13 @@ export function AppShell({
             <RailNav />
           </nav>
 
-          <div className="ml-auto shrink-0 sm:ml-0">
+          <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
+            <Link
+              href={"/upgrade" as Route}
+              className="inline-flex rounded-lg bg-accent-wash px-3 py-2 text-caption font-semibold text-accent-strong transition-colors hover:bg-accent hover:text-accent-contrast"
+            >
+              Upgrade
+            </Link>
             <AccountSummary />
           </div>
         </div>

@@ -64,6 +64,7 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
    * having it fail silently, and a candidate who cannot tell will fill the form in twice.
    */
   const [saved, setSaved] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
 
   // A message, spinner or "Saved" belongs to the account that caused it. Reset while
   // rendering, not in an effect, so the next account never sees one for even a frame.
@@ -177,105 +178,148 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
         }
       />
 
-      <section
-        aria-labelledby="resume"
-        className="flex flex-col gap-5 rounded-2xl border border-accent/20 bg-accent-wash p-6 shadow-[var(--shadow-sm)] sm:p-8"
+      <div className="border-b border-line" role="tablist" aria-label="Profile sections">
+        <div className="nav-scroll flex gap-7 overflow-x-auto">
+          {PROFILE_TABS.filter((tab) => tab.id !== "reports" || reportsEnabled).map((tab) => (
+            <button
+              key={tab.id}
+              id={`profile-tab-${tab.id}`}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-controls={`profile-panel-${tab.id}`}
+              onClick={() => setActiveTab(tab.id)}
+              className={`shrink-0 border-b-2 px-0.5 pb-3 text-caption font-semibold transition-colors ${activeTab === tab.id ? "border-accent text-ink" : "border-transparent text-ink-muted hover:text-ink"}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div
+        id="profile-panel-overview"
+        role="tabpanel"
+        aria-labelledby="profile-tab-overview"
+        hidden={activeTab !== "overview"}
       >
-        <div className="flex flex-col gap-1">
-          <h2 id="resume" className="text-title text-ink">
-            Your resume
-          </h2>
-          <p className="max-w-prose text-body text-ink-muted">
-            This is what makes an interview about your work rather than about your job title.
-            Upload it once and every round can dig into what you actually built.
-          </p>
-        </div>
-
-        <input
-          ref={resumeInput}
-          type="file"
-          accept=".pdf,.doc,.docx,.txt,application/pdf,text/plain"
-          className="sr-only"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void onResume(file);
-            event.target.value = "";
-          }}
-        />
-
-        {resume ? <ResumeSummary resume={resume} /> : null}
-
-        <div className="flex flex-wrap items-center gap-4">
-          <Button
-            type="button"
-            onClick={() => resumeInput.current?.click()}
-            disabled={busy !== null}
-            aria-busy={busy === "resume"}
-          >
-            {busy === "resume" ? "Reading it…" : resume ? "Replace resume" : "Upload resume"}
-          </Button>
-          <span className="text-caption text-ink-subtle">
-            PDF, Word or plain text. We read it once — this takes a few seconds.
-          </span>
-        </div>
-      </section>
-
-      <ProfileForm
-        key={visible.ownerToken ?? "signed-out"}
-        details={visible.details}
-        disabled={busy !== null}
-        onSave={(body) =>
-          run("profile", async (operationToken) => {
-            const details = await updateProfile(operationToken, body);
-            setProfile((current) =>
-              current.ownerToken === operationToken ? { ...current, details } : current,
-            );
-          })
-        }
-      />
-
-      <section
-        aria-labelledby="skills"
-        className="flex flex-col gap-5 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8"
-      >
-        <div className="flex flex-col gap-1">
-          <h2 id="skills" className="text-heading text-ink">
-            Skills
-          </h2>
-          <p className="text-caption text-ink-subtle">
-            Pulled from your resume. Mark the ones you would rather not be asked about — the
-            interviewer will know they are a stretch, not that they are off limits.
-          </p>
-        </div>
-
-        <SkillList
-          skills={visible.details?.skills ?? []}
+        <ProfileForm
+          key={visible.ownerToken ?? "signed-out"}
+          details={visible.details}
           disabled={busy !== null}
-          onToggleWeak={(skill) =>
-            run("skill", async (operationToken) => {
-              const skills = await upsertSkill(operationToken, {
-                name: skill.name,
-                selfRatedConfidence: skill.selfRatedConfidence ?? undefined,
-                flaggedAsWeak: !skill.flaggedAsWeak,
-              });
-              setProfile((current) =>
-                current.ownerToken === operationToken && current.details
-                  ? { ...current, details: { ...current.details, skills } }
-                  : current,
-              );
-            })
-          }
-          onRemove={(name) =>
-            run("skill", async (operationToken) => {
-              await deleteSkill(operationToken, name);
-              const details = await fetchProfile({ accessToken: operationToken });
+          onSave={(body) =>
+            run("profile", async (operationToken) => {
+              const details = await updateProfile(operationToken, body);
               setProfile((current) =>
                 current.ownerToken === operationToken ? { ...current, details } : current,
               );
             })
           }
         />
-      </section>
+      </div>
+
+      <div
+        id="profile-panel-resume"
+        role="tabpanel"
+        aria-labelledby="profile-tab-resume"
+        hidden={activeTab !== "resume"}
+        className="flex flex-col gap-6"
+      >
+        <section
+          aria-labelledby="resume"
+          className="flex flex-col gap-5 rounded-2xl border border-accent/20 bg-accent-wash p-6 shadow-[var(--shadow-sm)] sm:p-8"
+        >
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow text-accent">Primary resume</p>
+            <h2 id="resume" className="text-title text-ink">Your resume</h2>
+            <p className="max-w-prose text-body text-ink-muted">
+              This is what makes an interview about your work rather than about your job title.
+              Upload it once and every round can dig into what you actually built.
+            </p>
+          </div>
+
+          <input
+            ref={resumeInput}
+            type="file"
+            accept=".pdf,.doc,.docx,.txt,application/pdf,text/plain"
+            className="sr-only"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void onResume(file);
+              event.target.value = "";
+            }}
+          />
+
+          {resume ? <ResumeSummary resume={resume} /> : null}
+
+          <div className="flex flex-wrap items-center gap-4">
+            <Button
+              type="button"
+              onClick={() => resumeInput.current?.click()}
+              disabled={busy !== null}
+              aria-busy={busy === "resume"}
+            >
+              {busy === "resume" ? "Reading it…" : resume ? "Replace resume" : "Upload resume"}
+            </Button>
+            <span className="text-caption text-ink-subtle">
+              PDF, Word or plain text. We read it once — this takes a few seconds.
+            </span>
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="skills"
+          className="flex flex-col gap-5 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8"
+        >
+          <div className="flex flex-col gap-1">
+            <p className="eyebrow text-accent">Skills and expertise</p>
+            <h2 id="skills" className="text-title text-ink">What you know</h2>
+            <p className="text-caption text-ink-subtle">
+              Pulled from your resume. Mark the ones you would rather not be asked about — the
+              interviewer will know they are a stretch, not that they are off limits.
+            </p>
+          </div>
+
+          <SkillList
+            skills={visible.details?.skills ?? []}
+            disabled={busy !== null}
+            onToggleWeak={(skill) =>
+              run("skill", async (operationToken) => {
+                const skills = await upsertSkill(operationToken, {
+                  name: skill.name,
+                  selfRatedConfidence: skill.selfRatedConfidence ?? undefined,
+                  flaggedAsWeak: !skill.flaggedAsWeak,
+                });
+                setProfile((current) =>
+                  current.ownerToken === operationToken && current.details
+                    ? { ...current, details: { ...current.details, skills } }
+                    : current,
+                );
+              })
+            }
+            onRemove={(name) =>
+              run("skill", async (operationToken) => {
+                await deleteSkill(operationToken, name);
+                const details = await fetchProfile({ accessToken: operationToken });
+                setProfile((current) =>
+                  current.ownerToken === operationToken ? { ...current, details } : current,
+                );
+              })
+            }
+          />
+        </section>
+      </div>
+
+      {reportsEnabled ? (
+        <div
+          id="profile-panel-reports"
+          role="tabpanel"
+          aria-labelledby="profile-tab-reports"
+          hidden={activeTab !== "reports"}
+        >
+          <ProfileReports sessions={visible.sessions} />
+        </div>
+      ) : null}
 
       {/*
         * Both live at the bottom, both announced. `role="status"` rather than `alert`
@@ -295,6 +339,14 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
     </div>
   );
 }
+
+type ProfileTab = "overview" | "resume" | "reports";
+
+const PROFILE_TABS: { id: ProfileTab; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "resume", label: "Resume & Skills" },
+  { id: "reports", label: "Reports" },
+];
 
 interface ProfileState {
   ownerToken: string | null;
@@ -511,6 +563,66 @@ function initialsOf(value: string): string {
 
 function roundLabel(value: SessionSummary["roundType"]): string {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function ProfileReports({ sessions }: { sessions: SessionSummary[] }) {
+  const completed = sessions.filter((session) => session.status === "completed");
+
+  return (
+    <section aria-labelledby="profile-reports" className="card p-6 sm:p-8">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
+        <div>
+          <p className="eyebrow text-accent">Interview reports</p>
+          <h2 id="profile-reports" className="mt-2 text-title text-ink">Your complete practice history</h2>
+        </div>
+        {completed.length > 0 ? (
+          <Link href="/history" className="text-caption font-semibold text-accent hover:underline">
+            Open full history <span aria-hidden>→</span>
+          </Link>
+        ) : null}
+      </div>
+
+      {completed.length === 0 ? (
+        <div className="flex flex-col items-start gap-4 py-8">
+          <p className="text-body text-ink-muted">Your completed interviews and reports will appear here.</p>
+          <Link href="/interview/new" className="action-primary">Start an interview</Link>
+        </div>
+      ) : (
+        <ul className="divide-y divide-line">
+          {completed.map((session) => (
+            <li key={session.id} className="grid gap-3 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+              <div className="flex min-w-0 items-center gap-3">
+                <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-wash text-caption font-bold text-accent-strong">
+                  {session.companyName.trim()[0]?.toUpperCase() ?? "U"}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-heading text-ink">{session.companyName}</p>
+                  <p className="truncate text-caption text-ink-muted">{session.roleTitle} · {roundLabel(session.roundType)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 pl-[3.25rem] sm:pl-0">
+                <span className="text-caption text-ink-subtle">{formatProfileDate(session.endedAt ?? session.startedAt)}</span>
+                {session.hasReport && !session.reportExpired ? (
+                  <Link href={`/report/${session.id}`} className="text-caption font-semibold text-accent hover:underline">
+                    Read report <span aria-hidden>→</span>
+                  </Link>
+                ) : (
+                  <span className="text-caption text-ink-subtle">{session.reportExpired ? "Report expired" : "Report pending"}</span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function formatProfileDate(value: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(date);
 }
 
 /**

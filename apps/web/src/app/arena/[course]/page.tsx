@@ -53,14 +53,14 @@ export default async function ArenaCoursePage({ params }: { params: Promise<{ co
   return (
     <AppShell breadcrumb={course.title.toLowerCase()} parent={{ label: "arena", href: "/arena" }}>
       <div className="flex flex-col gap-10">
-        <header className="relative overflow-hidden rounded-[1.75rem] border border-accent/20 bg-accent-wash px-7 py-9 shadow-[var(--shadow-sm)] sm:px-10 sm:py-11">
-          <div aria-hidden="true" className="absolute -right-16 -bottom-24 size-64 rounded-full bg-accent/15 blur-3xl" />
+        <header className="hero-band relative overflow-hidden px-7 py-9 sm:px-10 sm:py-11">
+          <div aria-hidden="true" className="absolute -right-16 -bottom-24 size-64 rounded-full bg-white/10 blur-3xl" />
           <div className="relative flex flex-col gap-4">
-            <p className="w-fit rounded-full border border-accent/20 bg-surface-raised px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase shadow-[var(--shadow-sm)]">
+            <p className="pill pill-navy w-fit">
               {course.level} · personalised review
             </p>
-            <h1 className="max-w-3xl text-display text-balance text-ink">{course.title}</h1>
-            <p className="max-w-2xl text-body leading-relaxed text-ink-muted">{course.tagline}</p>
+            <h1 className="max-w-3xl text-display text-balance text-on-navy">{course.title}</h1>
+            <p className="max-w-2xl text-body leading-relaxed text-on-navy-muted">{course.tagline}</p>
           </div>
         </header>
 

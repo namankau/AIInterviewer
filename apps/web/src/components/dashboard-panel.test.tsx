@@ -3,9 +3,23 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { DashboardView, PastRoundsSection } from "./dashboard-panel";
+import { DashboardView, formatFirstName, greetingForHour, PastRoundsSection } from "./dashboard-panel";
 
 const DAY = 86_400_000;
+
+describe("dashboard salutation", () => {
+  it("uses the candidate's local time of day", () => {
+    expect(greetingForHour(8)).toBe("Good morning");
+    expect(greetingForHour(14)).toBe("Good afternoon");
+    expect(greetingForHour(20)).toBe("Good evening");
+  });
+
+  it("presents the candidate's first name consistently", () => {
+    expect(formatFirstName("naman kaushik")).toBe("Naman");
+    expect(formatFirstName("  Candidate  ")).toBe("Candidate");
+    expect(formatFirstName(null)).toBeNull();
+  });
+});
 
 const round = (over: Partial<SessionSummary> = {}): SessionSummary => ({
   id: "s1",

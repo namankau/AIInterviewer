@@ -36,6 +36,8 @@ export interface ArenaProgress {
    * "chapter/module complete" badges, since a single right answer is mastery enough to
    * count without requiring a flawless single sitting. */
   masteredChallengeIds: string[];
+  /** Local calendar date to the deterministic challenge solved on that date. */
+  dailyQuestionCompletions: Record<string, string>;
 }
 
 export function defaultProgress(): ArenaProgress {
@@ -46,6 +48,7 @@ export function defaultProgress(): ArenaProgress {
     badges: [],
     cards: {},
     masteredChallengeIds: [],
+    dailyQuestionCompletions: {},
   };
 }
 
@@ -77,6 +80,14 @@ function migrate(raw: unknown): ArenaProgress {
     masteredChallengeIds: Array.isArray(obj.masteredChallengeIds)
       ? obj.masteredChallengeIds.filter((id): id is string => typeof id === "string")
       : [],
+    dailyQuestionCompletions:
+      obj.dailyQuestionCompletions && typeof obj.dailyQuestionCompletions === "object"
+        ? Object.fromEntries(
+            Object.entries(obj.dailyQuestionCompletions).filter(
+              (entry): entry is [string, string] => typeof entry[1] === "string",
+            ),
+          )
+        : {},
   };
 }
 

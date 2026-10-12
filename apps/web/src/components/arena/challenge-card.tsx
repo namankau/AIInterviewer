@@ -33,6 +33,8 @@ export function ChallengeCard({
   onSelect,
   onSubmit,
   onNext,
+  nextLabel = "Next (Enter)",
+  nextDisabled = false,
 }: {
   challenge: Challenge;
   selected: number | null;
@@ -41,6 +43,8 @@ export function ChallengeCard({
   onSelect: (index: number) => void;
   onSubmit: () => void;
   onNext: () => void;
+  nextLabel?: string;
+  nextDisabled?: boolean;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -186,9 +190,10 @@ export function ChallengeCard({
             <button
               type="button"
               onClick={onNext}
-              className={`ml-auto rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong ${FOCUS_RING}`}
+              disabled={nextDisabled}
+              className={`ml-auto rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:cursor-wait disabled:opacity-60 ${FOCUS_RING}`}
             >
-              Next (Enter)
+              {nextLabel}
             </button>
           </div>
         </div>

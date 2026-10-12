@@ -13,6 +13,7 @@ vi.mock("@/lib/api", () => ({
     badges: [],
     cards: {},
     masteredChallengeIds: [],
+    dailyQuestionCompletions: {},
   }),
   recordArenaAnswer: vi.fn(),
   awardArenaBadges: vi.fn(),
@@ -47,6 +48,7 @@ function seed() {
       badges: ["streak-7"],
       cards: { c1: card, c2: card },
       masteredChallengeIds: ["c1"],
+      dailyQuestionCompletions: {},
     }),
   );
 }
@@ -62,6 +64,7 @@ beforeEach(() => {
     badges: ["streak-7"],
     cards: {},
     masteredChallengeIds: [],
+    dailyQuestionCompletions: {},
   });
 });
 
@@ -132,6 +135,7 @@ describe("ImportBrowserArenaProgress", () => {
         badges: [],
         cards: {},
         masteredChallengeIds: [],
+        dailyQuestionCompletions: {},
       }),
     );
     render(<ImportBrowserArenaProgress />);

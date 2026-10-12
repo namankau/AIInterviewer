@@ -47,6 +47,8 @@ class ArenaControllerTest {
         given(repository.counters(CANDIDATE)).willReturn(Counters(120, 3, 9, LocalDate.parse("2026-09-21")))
         given(repository.badges(CANDIDATE)).willReturn(listOf("streak-7"))
         given(repository.cards(CANDIDATE)).willReturn(listOf(card("a", mastered = true), card("b", mastered = false)))
+        given(repository.dailyQuestionCompletions(CANDIDATE))
+            .willReturn(listOf(DailyQuestionCompletion(LocalDate.parse("2026-09-21"), "a")))
 
         mockMvc
             .perform(get("/api/v1/me/arena").with(candidateToken()))
@@ -59,6 +61,7 @@ class ArenaControllerTest {
             .andExpect(jsonPath("$.cards.a.reps").value(2))
             .andExpect(jsonPath("$.masteredChallengeIds.length()").value(1))
             .andExpect(jsonPath("$.masteredChallengeIds[0]").value("a"))
+            .andExpect(jsonPath("$.dailyQuestionCompletions['2026-09-21']").value("a"))
     }
 
     @Test
@@ -66,6 +69,7 @@ class ArenaControllerTest {
         given(repository.counters(CANDIDATE)).willReturn(null)
         given(repository.badges(CANDIDATE)).willReturn(emptyList())
         given(repository.cards(CANDIDATE)).willReturn(emptyList())
+        given(repository.dailyQuestionCompletions(CANDIDATE)).willReturn(emptyList())
 
         mockMvc
             .perform(get("/api/v1/me/arena").with(candidateToken()))
@@ -113,6 +117,43 @@ class ArenaControllerTest {
 
         // Mastery is "answered correctly at least once", so a wrong answer must not set it.
         verify(repository).upsertCard(CANDIDATE, card("mcq-java-one-abc", mastered = false))
+        verify(repository, never()).completeDailyQuestion(anyArg(), anyArg(), anyArg())
+    }
+
+    @Test
+    fun `a correct dashboard question records completion for the candidate's local day`() {
+        given(repository.addAnswer(CANDIDATE, 10, LocalDate.parse("2026-09-21")))
+            .willReturn(Counters(10, 1, 1, LocalDate.parse("2026-09-21")))
+
+        mockMvc
+            .perform(
+                post("/api/v1/me/arena/answers")
+                    .with(candidateToken())
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(answerBody(correct = true, dailyQuestionDate = "2026-09-21")),
+            ).andExpect(status().isOk)
+
+        verify(repository).completeDailyQuestion(
+            CANDIDATE,
+            LocalDate.parse("2026-09-21"),
+            "mcq-java-one-abc",
+        )
+    }
+
+    @Test
+    fun `a daily completion date cannot disagree with the activity date`() {
+        mockMvc
+            .perform(
+                post("/api/v1/me/arena/answers")
+                    .with(candidateToken())
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(answerBody(correct = true, dailyQuestionDate = "2026-09-22")),
+            ).andExpect(status().isBadRequest)
+
+        verify(repository, never()).addAnswer(anyArg(), anyInt(), anyArg())
+        verify(repository, never()).completeDailyQuestion(anyArg(), anyArg(), anyArg())
     }
 
     @Test
@@ -197,11 +238,13 @@ class ArenaControllerTest {
     private fun answerBody(
         correct: Boolean,
         localDate: String = "2026-09-21",
+        dailyQuestionDate: String? = null,
     ) = """
         {
           "challengeId": "mcq-java-one-abc",
           "correct": $correct,
           "localDate": "$localDate",
+          ${dailyQuestionDate?.let { "\"dailyQuestionDate\": \"$it\"," } ?: ""}
           "card": {
             "due": "2026-09-22T10:00:00Z",
             "stability": 3.5,

@@ -22,8 +22,21 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, refresh: vi.fn(
 describe("DeleteAccountSection", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("keeps the destructive controls behind a quiet disclosure", async () => {
+    render(<DeleteAccountSection />);
+
+    const button = screen.getByRole("button", { name: /delete my account/i });
+    expect(button).not.toBeVisible();
+
+    await userEvent.click(screen.getByText(/^delete account$/i));
+
+    expect(button).toBeVisible();
+  });
+
   it("says what goes, and will not delete until the word is typed", async () => {
     render(<DeleteAccountSection />);
+
+    await userEvent.click(screen.getByText(/^delete account$/i));
 
     expect(screen.getByText(/report, transcript and voice recordings/i)).toBeInTheDocument();
     const button = screen.getByRole("button", { name: /delete my account/i });
@@ -39,6 +52,7 @@ describe("DeleteAccountSection", () => {
     deleteAccount.mockResolvedValue(undefined);
     render(<DeleteAccountSection />);
 
+    await userEvent.click(screen.getByText(/^delete account$/i));
     await userEvent.type(screen.getByLabelText(/type delete to confirm/i), "delete");
     await userEvent.click(screen.getByRole("button", { name: /delete my account/i }));
 
@@ -51,6 +65,7 @@ describe("DeleteAccountSection", () => {
     deleteAccount.mockRejectedValue(new Error("offline"));
     render(<DeleteAccountSection />);
 
+    await userEvent.click(screen.getByText(/^delete account$/i));
     await userEvent.type(screen.getByLabelText(/type delete to confirm/i), "delete");
     await userEvent.click(screen.getByRole("button", { name: /delete my account/i }));
 

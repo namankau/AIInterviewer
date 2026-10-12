@@ -1,4 +1,5 @@
 import { courses } from "@/content/courses";
+import { courseEnabled, featureEnabled } from "@/lib/flags";
 
 /**
  * The slim shape of a course a client component is allowed to see (task 056, L2): a slug
@@ -27,7 +28,8 @@ export interface CourseOutline {
  * door — pass its *return value* down as props instead.
  */
 export function getCourseOutlines(): CourseOutline[] {
-  return courses.map((course) => ({
+  if (!featureEnabled("courses")) return [];
+  return courses.filter((course) => courseEnabled(course.slug)).map((course) => ({
     slug: course.slug,
     title: course.title,
     chapters: course.modules.flatMap((module) =>

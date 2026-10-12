@@ -6,6 +6,7 @@ import type { Route } from "next";
 
 import { ArenaVizFrame } from "@/components/arena/arena-viz-frame";
 import type { Challenge } from "@/lib/arena/types";
+import { featureEnabled } from "@/lib/flags";
 
 export const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2";
@@ -174,12 +175,14 @@ export function ChallengeCard({
             </p>
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href={`/courses/${challenge.courseSlug}/${challenge.chapterSlug}` as Route}
-              className={`rounded-sm text-caption font-medium text-accent hover:underline ${FOCUS_RING}`}
-            >
-              {challenge.chapterTitle ? `Revisit ${challenge.chapterTitle}` : "Revisit this chapter"}
-            </Link>
+            {featureEnabled("courses") ? (
+              <Link
+                href={`/courses/${challenge.courseSlug}/${challenge.chapterSlug}` as Route}
+                className={`rounded-sm text-caption font-medium text-accent hover:underline ${FOCUS_RING}`}
+              >
+                {challenge.chapterTitle ? `Revisit ${challenge.chapterTitle}` : "Revisit this chapter"}
+              </Link>
+            ) : null}
             <button
               type="button"
               onClick={onNext}

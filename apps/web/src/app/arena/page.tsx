@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { ImportBrowserArenaProgress } from "@/components/arena/import-browser-arena";
 import { ArenaDailyQuest } from "@/components/arena/arena-daily-quest";
@@ -8,6 +9,8 @@ import { AppShell } from "@/components/app-shell";
 import { courses } from "@/content/courses";
 import { allArenaChallenges, challengesForCourse } from "@/lib/arena/corpus";
 import { dailyCourseQuests, possibleDateKeysWorldwide } from "@/lib/arena/progression";
+import { courseEnabled } from "@/lib/flags";
+import { requireFeature } from "@/lib/require-feature";
 
 export const metadata: Metadata = {
   title: "Arena — Untiered",
@@ -21,8 +24,11 @@ export const metadata: Metadata = {
  * corpus; account progress is the only part that needs the browser.
  */
 export default function ArenaPage() {
+  requireFeature("arena");
+  const visibleCourses = courses.filter((course) => courseEnabled(course.slug));
+  if (visibleCourses.length === 0) notFound();
   const courseNames = new Intl.ListFormat("en", { type: "disjunction" }).format(
-    courses.map((course) => course.title),
+    visibleCourses.map((course) => course.title),
   );
   // Computed here, against the full corpus, server-side — only the resulting handful of
   // challenges (at most 3 dates * number of courses * 3 questions) crosses into the client (task 056, L3).
@@ -31,7 +37,7 @@ export default function ArenaPage() {
       dateKey,
       dailyCourseQuests(
         allArenaChallenges,
-        courses.map(({ slug, title }) => ({ slug, title })),
+        visibleCourses.map(({ slug, title }) => ({ slug, title })),
         dateKey,
       ),
     ]),
@@ -43,7 +49,7 @@ export default function ArenaPage() {
         <header className="relative overflow-hidden rounded-[1.75rem] bg-navy px-7 py-10 text-on-navy shadow-[var(--shadow-md)] sm:px-10 sm:py-12">
           <div aria-hidden="true" className="absolute -top-32 right-0 size-80 rounded-full bg-accent/25 blur-3xl" />
           <div className="relative flex flex-col gap-5">
-            <p className="pill pill-navy w-fit">Daily practice · {courses.length} courses</p>
+            <p className="pill pill-navy w-fit">Daily practice · {visibleCourses.length} courses</p>
             <h1 className="max-w-4xl text-display text-balance text-on-navy">
               A few sharp questions. A different set tomorrow.
             </h1>
@@ -63,7 +69,7 @@ export default function ArenaPage() {
               These sessions use your review history to bring back due questions and mix in unseen topics.
             </p>
             <ul className="mt-6 grid gap-5 sm:grid-cols-2">
-              {courses.map((course) => {
+              {visibleCourses.map((course) => {
                 const count = challengesForCourse(course.slug).length;
                 return (
                   <li key={course.slug}>

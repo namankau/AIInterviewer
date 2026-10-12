@@ -54,6 +54,14 @@ management:
         enabled: true
 
 interviewos:
+  features:
+    # Product-level kill switches. The same public environment variables are compiled
+    # into the Next.js app, so one deployment setting hides the UI and closes its API.
+    mock-interviews: ${NEXT_PUBLIC_FEATURE_MOCK_INTERVIEWS:true}
+    courses: ${NEXT_PUBLIC_FEATURE_COURSES:true}
+    arena: ${NEXT_PUBLIC_FEATURE_ARENA:true}
+    reports: ${NEXT_PUBLIC_FEATURE_REPORTS:true}
+    questions: ${NEXT_PUBLIC_FEATURE_QUESTIONS:${NEXT_PUBLIC_QUESTION_BANK_BROWSABLE:false}}
   auth:
     # Backend verifies Supabase-issued JWTs against the project's published JWKS.
     # No shared secret, and no user id is ever taken from the request body.
@@ -192,7 +200,7 @@ interviewos:
     # list endpoints answer 404 and the web app hides the pages, the nav entry and the loop
     # brief's link; rounds keep asking from the bank either way. The same env var the web
     # app reads, so one switch moves both.
-    browsable: ${NEXT_PUBLIC_QUESTION_BANK_BROWSABLE:false}
+    browsable: ${NEXT_PUBLIC_FEATURE_QUESTIONS:${NEXT_PUBLIC_QUESTION_BANK_BROWSABLE:false}}
 
   pool:
     # The hidden question pool: questions a model writes from its own knowledge, held

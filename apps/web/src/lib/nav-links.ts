@@ -1,3 +1,5 @@
+import type { ProductFeature } from "@/lib/flags";
+
 /**
  * The primary destinations, shared by the left rail (`RailNav`) and the top bar the
  * course and Arena pages use (`SiteNavLinks`) so the two cannot drift apart. Typed routes
@@ -5,9 +7,9 @@
  */
 export const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/courses", label: "Courses" },
-  { href: "/interview/new", label: "Mock interviews" },
-  { href: "/arena", label: "Arena" },
-  { href: "/history", label: "My reports" },
-  { href: "/questions", label: "Questions" },
-] as const;
+  { href: "/courses", label: "Courses", feature: "courses" },
+  { href: "/interview/new", label: "Mock interviews", feature: "mockInterviews" },
+  { href: "/arena", label: "Arena", feature: "arena" },
+  { href: "/history", label: "My reports", feature: "reports" },
+  { href: "/questions", label: "Questions", feature: "questions" },
+] as const satisfies readonly { href: string; label: string; feature?: ProductFeature }[];

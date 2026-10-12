@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { AppShell } from "@/components/app-shell";
 import { RoundHistoryPanel } from "@/components/dashboard-panel";
+import { requireFeature } from "@/lib/require-feature";
 
 export const metadata: Metadata = { title: "Your rounds" };
 
@@ -10,6 +11,7 @@ export const metadata: Metadata = { title: "Your rounds" };
  * grouped by nothing — readiness by company and role stays on the dashboard (PRD 05).
  */
 export default function HistoryPage() {
+  requireFeature("reports");
   return (
     <AppShell breadcrumb="all rounds">
       <div className="flex w-full max-w-4xl flex-col gap-8">

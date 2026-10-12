@@ -7,9 +7,12 @@ import { AppShell } from "@/components/app-shell";
 import { ArenaCoursePractice } from "@/components/arena/arena-course-practice";
 import { courses, getCourse } from "@/content/courses";
 import { challengesForCourse } from "@/lib/arena/corpus";
+import { courseEnabled, featureEnabled } from "@/lib/flags";
+import { requireArenaCourse } from "@/lib/require-feature";
 
 export function generateStaticParams() {
-  return courses.map((course) => ({ course: course.slug }));
+  if (!featureEnabled("arena")) return [];
+  return courses.filter((course) => courseEnabled(course.slug)).map((course) => ({ course: course.slug }));
 }
 
 export async function generateMetadata({
@@ -18,6 +21,7 @@ export async function generateMetadata({
   params: Promise<{ course: string }>;
 }): Promise<Metadata> {
   const { course: courseSlug } = await params;
+  if (!featureEnabled("arena") || !courseEnabled(courseSlug)) return {};
   const course = getCourse(courseSlug);
   if (!course) return {};
   return {
@@ -35,6 +39,7 @@ export async function generateMetadata({
  */
 export default async function ArenaCoursePage({ params }: { params: Promise<{ course: string }> }) {
   const { course: courseSlug } = await params;
+  requireArenaCourse(courseSlug);
   const course = getCourse(courseSlug);
   if (!course) notFound();
 

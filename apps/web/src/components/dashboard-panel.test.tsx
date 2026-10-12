@@ -9,9 +9,14 @@ const DAY = 86_400_000;
 
 describe("dashboard salutation", () => {
   it("uses the candidate's local time of day", () => {
+    expect(greetingForHour(0)).toBe("Good night");
+    expect(greetingForHour(4)).toBe("Good night");
+    expect(greetingForHour(5)).toBe("Good morning");
     expect(greetingForHour(8)).toBe("Good morning");
+    expect(greetingForHour(12)).toBe("Good afternoon");
     expect(greetingForHour(14)).toBe("Good afternoon");
     expect(greetingForHour(20)).toBe("Good evening");
+    expect(greetingForHour(21)).toBe("Good night");
   });
 
   it("presents the candidate's first name consistently", () => {

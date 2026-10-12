@@ -3,7 +3,7 @@
 import type { EntitlementView, MeResponse, ReadinessGroup, SessionSummary } from "@untiered/shared";
 import type { Route } from "next";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 
 import { DailyLimitNotice, isDailyLimitReached } from "@/components/daily-limit-notice";
 import { deleteSession, fetchEntitlement, fetchMe, fetchReadiness, fetchSessions } from "@/lib/api";
@@ -27,6 +27,10 @@ import { useAccessToken } from "@/lib/use-access-token";
 export function DashboardPanel() {
   const { visible, handleDelete } = useRoundData();
 
+  if (!visible.loaded) {
+    return <DashboardLoadingState />;
+  }
+
   return (
     <DashboardView
       entitlement={visible.entitlement}
@@ -36,6 +40,36 @@ export function DashboardPanel() {
       loaded={visible.loaded}
       onDelete={handleDelete}
     />
+  );
+}
+
+/**
+ * The first authenticated paint keeps the final page's geometry without briefly showing
+ * made-up allowance copy or a nameless greeting. Data replaces this once, as a whole.
+ */
+export function DashboardLoadingState() {
+  return (
+    <div role="status" aria-label="Loading your dashboard" className="flex flex-col gap-9 md:gap-11">
+      <div className="flex animate-pulse flex-col gap-4" aria-hidden="true">
+        <div className="h-3 w-44 rounded-full bg-accent/15" />
+        <div className="h-14 w-full max-w-2xl rounded-2xl bg-surface-sunken" />
+        <div className="h-5 w-full max-w-xl rounded-full bg-surface-sunken" />
+      </div>
+      <div className="hero-band min-h-44 animate-pulse px-6 py-7 sm:px-9 sm:py-8" aria-hidden="true">
+        <div className="grid gap-7 lg:grid-cols-2 lg:gap-14">
+          <div className="space-y-4">
+            <div className="h-3 w-32 rounded-full bg-white/15" />
+            <div className="h-9 w-full max-w-lg rounded-xl bg-white/12" />
+            <div className="h-4 w-full max-w-xl rounded-full bg-white/10" />
+          </div>
+          <div className="space-y-5">
+            <div className="h-5 rounded-full bg-white/10" />
+            <div className="h-5 rounded-full bg-white/10" />
+          </div>
+        </div>
+      </div>
+      <span className="sr-only">Loading your dashboard…</span>
+    </div>
   );
 }
 
@@ -329,7 +363,7 @@ function useTimeBoundGreeting(): { greeting: string; dateLabel: string } {
   const [greeting, setGreeting] = useState("Welcome back");
   const [dateLabel, setDateLabel] = useState("Your practice workspace");
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const update = () => {
       const now = new Date();
       setGreeting(greetingForHour(now.getHours()));
@@ -344,9 +378,11 @@ function useTimeBoundGreeting(): { greeting: string; dateLabel: string } {
 }
 
 export function greetingForHour(hour: number): string {
+  if (hour < 5) return "Good night";
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
-  return "Good evening";
+  if (hour < 21) return "Good evening";
+  return "Good night";
 }
 
 export function formatFirstName(displayName?: string | null): string | null {

@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { fetchMe } from "@/lib/api";
 import { featureEnabled } from "@/lib/flags";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useAccessToken } from "@/lib/use-access-token";
 
 type State =
   | { status: "loading" }
@@ -36,22 +37,17 @@ const LANGUAGE_LABELS: Record<string, string> = {
  * profile flows must not acquire a server-rendering dependency (PRD 13).
  */
 export function AccountSummary() {
+  const accessToken = useAccessToken();
   const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {
+    if (!accessToken) return;
+    const operationToken = accessToken;
     const controller = new AbortController();
 
     async function load() {
       try {
-        const {
-          data: { session },
-        } = await createSupabaseBrowserClient().auth.getSession();
-
-        if (!session) {
-          throw new Error("This browser has no active session.");
-        }
-
-        const me = await fetchMe({ accessToken: session.access_token, signal: controller.signal });
+        const me = await fetchMe({ accessToken: operationToken, signal: controller.signal });
         if (!controller.signal.aborted) {
           setState({ status: "ready", me });
         }
@@ -68,7 +64,7 @@ export function AccountSummary() {
 
     void load();
     return () => controller.abort();
-  }, []);
+  }, [accessToken]);
 
   return (
     <div>

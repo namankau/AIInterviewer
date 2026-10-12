@@ -886,17 +886,34 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line bg-surface-raised/90 px-6 py-4 backdrop-blur-sm">
-        <div className="flex items-baseline gap-3">
-          <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-            {session?.roundLabel}
-          </span>
-          <span className="text-caption text-ink-subtle">
-            {session?.companyName} · {session?.roleTitle}
-          </span>
+    <div className="flex min-h-dvh flex-col bg-surface">
+      <header className="grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-line bg-surface-raised/95 px-4 py-3 shadow-[var(--shadow-sm)] backdrop-blur-sm sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+        <div className="flex min-w-0 items-center gap-3">
+          <a
+            href="/dashboard"
+            aria-label="Untiered dashboard"
+            className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-body font-bold text-accent-contrast shadow-[var(--shadow-sm)]"
+          >
+            U
+          </a>
+          <span className="hidden text-heading font-semibold text-ink sm:inline">Untiered</span>
+          <span aria-hidden="true" className="hidden h-6 w-px bg-line sm:block" />
+          <div className="min-w-0">
+            <p className="truncate text-caption font-semibold text-ink">
+              {session?.companyName} · {session?.roleTitle}
+            </p>
+            <p className="truncate font-mono text-micro tracking-widest text-ink-subtle uppercase">
+              {session?.roundLabel}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-5">
+
+        <div className="hidden min-w-32 flex-col items-center gap-1 lg:flex" aria-label={`Question ${(turnIndex ?? 0) + 1}`}>
+          <span aria-hidden="true" className="h-1 w-24 rounded-full bg-accent" />
+          <span className="font-mono text-micro text-ink-subtle">Question {(turnIndex ?? 0) + 1}</span>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 sm:gap-4">
           <RoundClock endsAt={session?.scheduledEndAt ?? null} phase={turn?.phase} onExpired={() => setTimeUp(true)} />
           <button
             type="button"
@@ -907,14 +924,14 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
                 ? "End the round now and get your report"
                 : "Answer at least one question before submitting"
             }
-            className="rounded-lg bg-accent px-3.5 py-2 text-caption font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg bg-accent px-3.5 py-2 text-caption font-semibold whitespace-nowrap text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40"
           >
             Submit and finish
           </button>
           <button
             type="button"
             onClick={() => void leave()}
-            className="text-caption text-ink-muted underline-offset-4 hover:text-ink hover:underline"
+            className="hidden text-caption whitespace-nowrap text-ink-muted underline-offset-4 hover:text-ink hover:underline sm:inline-flex"
           >
             Leave (forfeit)
           </button>
@@ -922,16 +939,20 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
       </header>
 
       <div className={workspace ? "flex min-h-0 flex-1 flex-col lg:flex-row" : "contents"}>
-        {workspace ? <div className="min-h-0 flex-1 border-line lg:border-r">{workspaceNode}</div> : null}
+        {workspace ? (
+          <div className="order-2 min-h-[34rem] flex-1 border-t border-line lg:min-h-0 lg:w-[58%] lg:border-t-0 lg:border-l">
+            {workspaceNode}
+          </div>
+        ) : null}
 
       <main
         className={
           workspace
-            ? "flex w-full shrink-0 flex-col gap-6 overflow-y-auto px-6 py-8 lg:w-[24rem]"
-            : "mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-10 px-6 py-16"
+            ? "order-1 flex w-full shrink-0 flex-col justify-center gap-8 overflow-y-auto bg-surface px-6 py-10 lg:w-[42%] lg:px-10 xl:px-14"
+            : "mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center gap-10 px-6 py-16 sm:px-10"
         }
       >
-        <div className="flex flex-col gap-4">
+        <div className={`flex flex-col gap-5 ${workspace ? "" : "rounded-[2rem] border border-line bg-surface-raised p-7 shadow-[var(--shadow-md)] sm:p-10"}`}>
           <div className="flex items-center justify-between gap-4">
             <InterviewerPresence state={presenceState} level={capture.level} />
             {phase === "answering" ? (
@@ -947,7 +968,8 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
             * a screen reader announcing every partial reveal would be unusable, and the
             * full text is always present in the DOM for assistive technology below.
             */}
-          <p className="text-title text-balance text-ink">
+          <p className="eyebrow mt-4 text-accent">Current question</p>
+          <h1 className="text-display text-balance text-ink">
             {awaitingVoice ? (
               <span className="text-ink-subtle">Composing the next question…</span>
             ) : (
@@ -961,7 +983,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
                 ) : null}
               </>
             )}
-          </p>
+          </h1>
           {/*
             * Assistive technology gets the whole question as soon as it exists, rather
             * than being made to sit through a reveal paced for the ear.
@@ -1162,54 +1184,59 @@ function TerminalSession({ session }: { session: SessionView }) {
 function InterviewCompletePanel({ sessionId }: { sessionId: string }) {
   return (
     <Centered>
-      <section className="w-full max-w-3xl overflow-hidden rounded-[2rem] border border-line bg-surface-raised text-left shadow-[var(--shadow-lg)]">
-        <div className="hero-band relative overflow-hidden px-6 py-8 sm:px-9 sm:py-10">
-          <div aria-hidden="true" className="absolute -right-16 -top-20 size-64 rounded-full bg-accent/25 blur-3xl" />
-          <div className="relative flex items-start gap-4">
-            <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-2xl border border-white/15 bg-white/10 text-positive-wash">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-6">
-                <path d="m6.5 12 3.5 3.5L17.5 8" />
-                <circle cx="12" cy="12" r="9" />
-              </svg>
-            </span>
-            <div>
-              <p className="eyebrow text-accent-on-navy">Interview complete</p>
-              <h1 className="mt-2 text-display text-balance text-on-navy">That&rsquo;s the end of the round.</h1>
-              <p className="mt-3 max-w-2xl text-body leading-relaxed text-on-navy-muted">
-                Your report turns what you actually said into evidence, patterns and a focused next practice plan.
-              </p>
-            </div>
-          </div>
-        </div>
+      <section aria-labelledby="interview-complete" className="w-full max-w-4xl text-center">
+        <span
+          aria-hidden="true"
+          className="mx-auto grid size-16 place-items-center rounded-full bg-accent text-accent-contrast shadow-[var(--shadow-md)]"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-7">
+            <path d="m6.5 12 3.5 3.5L17.5 8" />
+          </svg>
+        </span>
+        <p className="eyebrow mt-5 text-accent">Interview complete</p>
+        <h1 id="interview-complete" className="mt-3 text-display text-balance text-ink">
+          That&rsquo;s the end of the round.
+        </h1>
+        <p className="mx-auto mt-3 max-w-2xl text-body leading-relaxed text-ink-muted">
+          Your report turns what you actually said and built into evidence, patterns and a focused next practice plan.
+        </p>
 
-        <div className="px-6 py-7 sm:px-9 sm:py-8">
-          <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">What you will get</p>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+        <ul className="mt-8 grid gap-3 text-left sm:grid-cols-3">
             {[
               ["01", "Competency breakdown", "See the signals the round could support."],
               ["02", "Evidence from your answers", "Feedback stays tied to words you actually used."],
               ["03", "Your next practice plan", "Leave with specific work, not a generic score."],
             ].map(([number, title, detail]) => (
-              <li key={number} className="rounded-2xl border border-line bg-surface-sunken p-4">
+              <li key={number} className="rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]">
                 <span className="font-mono text-micro font-semibold text-accent">{number}</span>
                 <p className="mt-2 text-caption font-semibold text-ink">{title}</p>
                 <p className="mt-1 text-caption leading-relaxed text-ink-muted">{detail}</p>
               </li>
             ))}
-          </ul>
+        </ul>
 
-          <div className="mt-7 flex flex-wrap items-center gap-3">
+        <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-line bg-surface-raised px-5 py-4 text-left shadow-[var(--shadow-sm)]">
+          <div className="flex min-w-0 items-center gap-3">
+            <span aria-hidden="true" className="size-2.5 shrink-0 animate-pulse rounded-full border-2 border-accent/40 border-t-accent" />
+            <div className="min-w-0">
+              <p className="text-caption font-semibold text-ink">Analysing your interview</p>
+              <p className="truncate text-micro text-ink-subtle">Checking the transcript, evidence and competencies.</p>
+            </div>
+          </div>
+          <span className="shrink-0 font-mono text-micro text-ink-subtle">Report page is ready</span>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
             <a href={`/report/${sessionId}`} className="action-primary min-h-12 px-6 text-body">
               Read the report <span aria-hidden="true">→</span>
             </a>
             <a href="/dashboard" className="action-secondary min-h-12 px-5 text-body">
               Back to dashboard
             </a>
-          </div>
-          <p className="mt-4 max-w-2xl text-caption leading-relaxed text-ink-subtle">
-            Analysis can take a moment. Open the report now — the report page will keep you updated while it finishes.
-          </p>
         </div>
+        <p className="mx-auto mt-4 max-w-2xl text-caption leading-relaxed text-ink-subtle">
+          Analysis can take a moment. Open the report now — the report page will keep you updated while it finishes.
+        </p>
       </section>
     </Centered>
   );
@@ -1227,7 +1254,7 @@ function SpeakingDot({ active, level }: { active: boolean; level: number }) {
 
 function Centered({ children, role }: { children: React.ReactNode; role?: "status" | "alert" }) {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-surface-sunken px-6">
+    <div className="flex min-h-dvh items-center justify-center bg-surface-tint px-6 py-12">
       <div role={role} className="text-body text-ink-muted">
         {children}
       </div>

@@ -3,6 +3,7 @@
 import type {
   ReportAssessedArea,
   ReportAssistance,
+  ReportCompetency,
   ReportPracticeItem,
   ReportQuestionSources,
   SessionReport,
@@ -10,7 +11,7 @@ import type {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { CompetencyBars, CompetencyHighlights, OverallScore, bandFor, overallScore } from "@/components/report-charts";
+import { CompetencyBars, bandFor, overallScore } from "@/components/report-charts";
 import { SpokenEnglishPanel } from "@/components/spoken-english-panel";
 import { ApiRequestError, fetchReport } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -161,6 +162,12 @@ export function ReportDocument({ report }: { report: SessionReport }) {
   const hasReliableOverallScore = assessableTurns >= 2 && hasGroundedCompetency;
   const headlineScore = hasReliableOverallScore ? overallScore(competencies) : null;
   const headlineBand = headlineScore === null ? null : bandFor(headlineScore);
+  const strongestCompetency = competencies
+    .filter((item) => item.maxScore > 0)
+    .reduce<ReportCompetency | null>((best, item) => {
+      if (!best) return item;
+      return item.score / item.maxScore > best.score / best.maxScore ? item : best;
+    }, null);
 
   return (
     <article className="flex flex-col gap-8 md:gap-10">
@@ -197,28 +204,46 @@ export function ReportDocument({ report }: { report: SessionReport }) {
         </div>
       </header>
 
-      {/*
-        * Task 053 — the five-second read. The owner's own words after seeing a live report:
-        * "it also seems a lot of theory that the candidate has to read." Everything above
-        * this line was already true and specific; the change is putting the overall result
-        * and where it came from side by side, wide, before any prose at all. At `lg` and up
-        * there is room for both; below it they stack in the order that matters more first.
-        */}
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
+      <ReportMetricStrip
+        headlineScore={headlineScore}
+        headlineBand={headlineBand?.name ?? null}
+        assessableTurns={assessableTurns}
+        answeredTurns={report.answeredTurns}
+        assistance={report.assistance}
+        strongestCompetency={strongestCompetency}
+      />
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)] lg:items-start">
         {hasReliableOverallScore ? (
-          <OverallScore competencies={competencies} />
+          <section className="flex flex-col gap-7 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8">
+            <div>
+              <p className="eyebrow text-accent">Performance breakdown</p>
+              <h2 className="mt-2 text-title text-ink">How you did</h2>
+            </div>
+            <CompetencyBars competencies={competencies} />
+            <div className="rounded-xl bg-positive-wash px-5 py-4">
+              <p className="font-mono text-micro tracking-widest text-positive uppercase">Interviewer note</p>
+              <p className="mt-2 max-w-prose text-body text-ink">{report.summary}</p>
+            </div>
+          </section>
         ) : (
           <LimitedEvidencePanel
             assessableTurns={assessableTurns}
             hasGroundedCompetency={hasGroundedCompetency}
           />
         )}
-        <CompetencyHighlights competencies={competencies} />
+        <ReportNextAction
+          item={practicePlan[0] ?? null}
+          recommendedNextSession={report.recommendedNextSession}
+          answeredTurns={report.answeredTurns}
+          assessableTurns={assessableTurns}
+          assistedAnswers={report.assistance?.assistedAnswers ?? 0}
+        />
       </div>
 
       {report.assistance?.assistedAnswers > 0 ? <AssistancePanel assistance={report.assistance} /> : null}
 
-      {practicePlan.length > 0 ? <PracticePlanPanel items={practicePlan} /> : null}
+      {practicePlan.length > 1 ? <PracticePlanPanel items={practicePlan.slice(1)} /> : null}
 
       <Section title="Competencies" lead="Each score is anchored to something you actually said.">
         {competencies.length === 0 ? (
@@ -375,6 +400,113 @@ export function ReportDocument({ report }: { report: SessionReport }) {
         </p>
       </footer>
     </article>
+  );
+}
+
+/** The compact, factual strip from the visual reference — no invented hiring signal or benchmark. */
+function ReportMetricStrip({
+  headlineScore,
+  headlineBand,
+  assessableTurns,
+  answeredTurns,
+  assistance,
+  strongestCompetency,
+}: {
+  headlineScore: number | null;
+  headlineBand: string | null;
+  assessableTurns: number;
+  answeredTurns: number;
+  assistance: ReportAssistance | undefined;
+  strongestCompetency: ReportCompetency | null;
+}) {
+  const assisted = assistance?.assistedAnswers ?? 0;
+  const metrics = [
+    {
+      label: "Overall",
+      value: headlineScore === null ? "Not scored" : `${headlineScore}%`,
+      note: headlineBand ?? "The evidence threshold was not met",
+    },
+    {
+      label: "Evidence",
+      value: `${assessableTurns} of ${answeredTurns}`,
+      note: "answers were substantive enough to assess",
+    },
+    {
+      label: "Help used",
+      value: assisted === 0 ? "None recorded" : `${assisted} ${assisted === 1 ? "answer" : "answers"}`,
+      note: assisted === 0 ? "No interviewer nudge is recorded" : "included interviewer assistance",
+    },
+    {
+      label: "Strongest evidence",
+      value: strongestCompetency?.competency ?? "Not established",
+      note: strongestCompetency
+        ? `${strongestCompetency.score}/${strongestCompetency.maxScore} on its anchored rubric`
+        : "No grounded competency was available",
+    },
+  ];
+
+  return (
+    <dl className="grid overflow-hidden rounded-2xl border border-line bg-line shadow-[var(--shadow-sm)] sm:grid-cols-2 xl:grid-cols-4">
+      {metrics.map((metric) => (
+        <div key={metric.label} className="bg-surface-raised px-5 py-4">
+          <dt className="font-mono text-micro tracking-widest text-ink-subtle uppercase">{metric.label}</dt>
+          <dd className="mt-2 text-heading font-semibold text-ink">{metric.value}</dd>
+          <dd className="mt-1 text-micro leading-relaxed text-ink-subtle">{metric.note}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function ReportNextAction({
+  item,
+  recommendedNextSession,
+  answeredTurns,
+  assessableTurns,
+  assistedAnswers,
+}: {
+  item: ReportPracticeItem | null;
+  recommendedNextSession: string;
+  answeredTurns: number;
+  assessableTurns: number;
+  assistedAnswers: number;
+}) {
+  return (
+    <aside className="flex flex-col gap-6 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-7 lg:sticky lg:top-24">
+      <div>
+        <p className="eyebrow text-accent">Next best action</p>
+        <h2 className="mt-2 text-heading text-ink">{item?.focus ?? recommendedNextSession}</h2>
+        <p className="mt-2 text-caption leading-relaxed text-ink-muted">
+          {item?.why ?? "Use the next round to create enough evidence for a clearer comparison."}
+        </p>
+      </div>
+
+      {item?.drill ? (
+        <p className="rounded-xl bg-accent-wash px-4 py-3 text-caption leading-relaxed text-ink">{item.drill}</p>
+      ) : null}
+
+      <Link href="/interview/new" className="action-primary min-h-12 w-full px-5 text-body">
+        Practise this focus
+      </Link>
+
+      <div className="border-t border-line pt-5">
+        <h3 className="text-heading text-ink">Round details</h3>
+        <dl className="mt-4 flex flex-col gap-3 text-caption">
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-ink-subtle">Answers</dt>
+            <dd className="font-mono text-ink">{answeredTurns}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-ink-subtle">Assessable answers</dt>
+            <dd className="font-mono text-ink">{assessableTurns}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-ink-subtle">Answers with help</dt>
+            <dd className="font-mono text-ink">{assistedAnswers}</dd>
+          </div>
+        </dl>
+      </div>
+    </aside>
   );
 }
 

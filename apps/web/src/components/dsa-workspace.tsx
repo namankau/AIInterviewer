@@ -113,10 +113,10 @@ export function DsaWorkspace({
   const extensions = useMemo(() => [language === "java" ? java() : python()], [language]);
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-1 gap-px bg-line lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+    <div className="grid h-full min-h-0 grid-rows-[minmax(18rem,42%)_minmax(22rem,1fr)] gap-px bg-line">
       <ProblemPanel problem={problem} />
 
-      <div className="flex min-h-0 flex-col bg-surface-raised">
+      <div className="flex min-h-0 flex-col bg-navy">
         <EditorBar
           language={language}
           onLanguage={(next) => {
@@ -129,11 +129,12 @@ export function DsaWorkspace({
           pythonReady={pythonReady}
         />
 
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className="min-h-0 flex-1 overflow-auto bg-[#111827]">
           <CodeMirror
             value={source}
             height="100%"
             extensions={extensions}
+            theme="dark"
             onChange={setSource}
             basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: false }}
             aria-label={`Your ${language} solution`}
@@ -155,11 +156,15 @@ export function DsaWorkspace({
 
 function ProblemPanel({ problem }: { problem: CodingProblem }) {
   return (
-    <aside className="min-h-0 overflow-y-auto bg-surface-raised p-6">
-      <h2 className="text-title text-ink">{problem.title}</h2>
-      <p className="mt-2 font-mono text-micro tracking-widest text-ink-subtle uppercase">
-        {problem.difficulty} · {problem.topic}
-      </p>
+    <aside className="min-h-0 overflow-y-auto bg-surface-raised px-6 py-5">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
+        <div>
+          <p className="eyebrow text-accent">Problem</p>
+          <h2 className="mt-2 text-title text-ink">{problem.title}</h2>
+        </div>
+        <span className="pill pill-highlight">{problem.difficulty}</span>
+      </div>
+      <p className="mt-4 font-mono text-micro tracking-widest text-ink-subtle uppercase">{problem.topic}</p>
 
       <Section title="Problem">
         <p className="whitespace-pre-wrap text-body leading-relaxed text-ink-muted">{problem.statement}</p>
@@ -231,7 +236,7 @@ function EditorBar({
   pythonReady: boolean | null;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-2">
+    <div className="flex flex-wrap items-center gap-3 border-b border-white/10 bg-navy px-4 py-2.5 text-on-navy">
       <div className="flex gap-1" role="group" aria-label="Language">
         {(["python", "java"] as const).map((option) => (
           <button
@@ -240,7 +245,7 @@ function EditorBar({
             onClick={() => onLanguage(option)}
             aria-pressed={language === option}
             className={`rounded-md px-2.5 py-1 text-caption capitalize transition ${
-              language === option ? "bg-ink text-surface-raised" : "text-ink-muted hover:bg-surface-sunken"
+              language === option ? "bg-white/10 text-on-navy" : "text-on-navy-muted hover:bg-white/5"
             }`}
           >
             {option}
@@ -252,22 +257,22 @@ function EditorBar({
         type="button"
         onClick={onRun}
         disabled={running || !canRun}
-        className="rounded-lg bg-accent px-3 py-1 text-caption font-medium text-accent-contrast transition hover:bg-accent-strong disabled:opacity-50"
+        className="ml-auto rounded-lg bg-accent px-3 py-1.5 text-caption font-medium text-accent-contrast transition hover:bg-accent-strong disabled:opacity-50"
       >
         {running ? "Running…" : "Run"}
       </button>
 
       {/* Said once, plainly, rather than discovered when Run does nothing. */}
       {language === "python" && pythonReady === null && (
-        <span className="text-caption text-ink-subtle">Loading Python…</span>
+        <span className="text-caption text-on-navy-muted">Loading Python…</span>
       )}
       {language === "python" && pythonReady === true && (
-        <span className="text-caption text-ink-subtle">Runs in your browser — your code stays on this machine.</span>
+        <span className="text-caption text-on-navy-muted">Runs locally — your code stays on this machine.</span>
       )}
       {language === "python" && pythonReady === false && (
-        <span className="text-caption text-ink-subtle">Python could not load. The round runs out loud.</span>
+        <span className="text-caption text-on-navy-muted">Python could not load. The round runs out loud.</span>
       )}
-      {language === "java" && <span className="text-caption text-ink-subtle">Java needs a server runner — not configured.</span>}
+      {language === "java" && <span className="text-caption text-on-navy-muted">Java needs a server runner — not configured.</span>}
     </div>
   );
 }

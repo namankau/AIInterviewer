@@ -142,6 +142,7 @@ describe("InterviewRoom session entry", () => {
     expect(await screen.findByRole("heading", { name: /that.s the end of the round/i })).toBeInTheDocument();
     expect(screen.getByText(/competency breakdown/i)).toBeInTheDocument();
     expect(screen.getByText(/evidence from your answers/i)).toBeInTheDocument();
+    expect(screen.getByText(/analysing your interview/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /read the report/i })).toHaveAttribute(
       "href",
       `/report/${baseSession.id}`,
@@ -174,6 +175,9 @@ describe("InterviewRoom session entry", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Enter the room" }));
 
     expect(await screen.findByRole("button", { name: "Leave (forfeit)" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/untiered dashboard/i)).toHaveAttribute("href", "/dashboard");
+    expect(screen.getByRole("heading", { name: "Tell me about the project." })).toBeInTheDocument();
+    expect(screen.getByLabelText("Question 1")).toBeInTheDocument();
     expect(screen.queryByText(/voice is unavailable/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/round is in writing/i)).not.toBeInTheDocument();
   });

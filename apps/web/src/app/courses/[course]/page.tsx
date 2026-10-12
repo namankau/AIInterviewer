@@ -7,9 +7,12 @@ import { ChapterDoneMark, CourseHeroProgress, ModuleProgress } from "@/component
 import { CourseMotif, getCoursePresentation } from "@/components/courses/course-visuals";
 import { courses, getCourse, totalChapters, totalMinutes } from "@/content/courses";
 import { InlineText } from "@/components/courses/inline-text";
+import { courseEnabled, featureEnabled } from "@/lib/flags";
+import { requireCourse } from "@/lib/require-feature";
 
 export function generateStaticParams() {
-  return courses.map((course) => ({ course: course.slug }));
+  if (!featureEnabled("courses")) return [];
+  return courses.filter((course) => courseEnabled(course.slug)).map((course) => ({ course: course.slug }));
 }
 
 export async function generateMetadata({
@@ -18,6 +21,7 @@ export async function generateMetadata({
   params: Promise<{ course: string }>;
 }): Promise<Metadata> {
   const { course: slug } = await params;
+  if (!featureEnabled("courses") || !courseEnabled(slug)) return {};
   const course = getCourse(slug);
   if (!course) return {};
   return {
@@ -29,6 +33,7 @@ export async function generateMetadata({
 /** A course's home page: hero band, module-by-module chapter list, start CTA. */
 export default async function CoursePage({ params }: { params: Promise<{ course: string }> }) {
   const { course: slug } = await params;
+  requireCourse(slug);
   const course = getCourse(slug);
   if (!course) notFound();
   const presentation = getCoursePresentation(course.slug);

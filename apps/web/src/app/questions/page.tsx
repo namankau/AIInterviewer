@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { QuestionBankIndex } from "@/components/question-bank-index";
-import { questionBankBrowsable } from "@/lib/flags";
+import { featureEnabled, questionBankBrowsable } from "@/lib/flags";
 
 export const metadata: Metadata = {
   title: "Questions employers have asked",
@@ -41,11 +41,10 @@ export default function QuestionsPage() {
           </p>
           <p className="max-w-2xl text-caption text-on-navy-muted">
             Nothing here was written by a model, and nothing was scraped from forums. Looking for how
-            a round runs rather than what it asks?{" "}
-            <Link href="/rounds" className="text-on-navy underline underline-offset-4">
-              The rounds
-            </Link>
-            .
+            a round runs rather than what it asks?
+            {featureEnabled("mockInterviews") ? (
+              <> <Link href="/rounds" className="text-on-navy underline underline-offset-4">The rounds</Link>.</>
+            ) : null}
           </p>
           </div>
         </header>

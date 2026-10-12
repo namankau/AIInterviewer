@@ -36,6 +36,8 @@ export interface ArenaProgressView {
   badges: string[];
   cards: Record<string, ReviewStateView>;
   masteredChallengeIds: string[];
+  /** Recent local calendar dates mapped to the daily challenge solved on that date. */
+  dailyQuestionCompletions: Record<string, string>;
 }
 
 /** `POST /api/v1/me/arena/answers` returns only what the server decides. */
@@ -53,6 +55,8 @@ export interface RecordAnswerRequest {
   correct: boolean;
   /** The learner's own calendar date, so the streak boundary is their midnight. */
   localDate: string;
+  /** Present only for the dashboard daily question; the API records it only when correct. */
+  dailyQuestionDate?: string;
   card: ReviewStateView;
 }
 

@@ -69,6 +69,26 @@ class ArenaProgressRepository(
                 )
             }.list()
 
+    /** Recent solved daily questions. Seven rows bound the progress payload while always
+     * including today's completion, even for a learner who practises every day. */
+    fun dailyQuestionCompletions(userId: UUID): List<DailyQuestionCompletion> =
+        jdbcClient
+            .sql(
+                """
+                select local_date, challenge_id
+                from public.daily_question_completions
+                where user_id = :userId
+                order by local_date desc
+                limit 7
+                """.trimIndent(),
+            ).param("userId", userId)
+            .query { rs, _ ->
+                DailyQuestionCompletion(
+                    localDate = rs.getDate("local_date").toLocalDate(),
+                    challengeId = rs.getString("challenge_id"),
+                )
+            }.list()
+
     /**
      * Records one answered challenge: the new card, and — when it was right — that the
      * challenge is now mastered.
@@ -160,6 +180,25 @@ class ArenaProgressRepository(
             .update()
 
         return counters(userId) ?: Counters(xpGain, 1, 1, localDate)
+    }
+
+    /** A correct daily answer is idempotent for that learner's calendar day. */
+    fun completeDailyQuestion(
+        userId: UUID,
+        localDate: LocalDate,
+        challengeId: String,
+    ) {
+        jdbcClient
+            .sql(
+                """
+                insert into public.daily_question_completions (user_id, local_date, challenge_id)
+                values (:userId, :localDate, :challengeId)
+                on conflict (user_id, local_date) do nothing
+                """.trimIndent(),
+            ).param("userId", userId)
+            .param("localDate", java.sql.Date.valueOf(localDate))
+            .param("challengeId", challengeId)
+            .update()
     }
 
     /** Awards badges, ignoring any already held. */
@@ -268,4 +307,9 @@ data class StoredCard(
     val state: Int,
     val lastReview: Instant?,
     val mastered: Boolean,
+)
+
+data class DailyQuestionCompletion(
+    val localDate: LocalDate,
+    val challengeId: String,
 )

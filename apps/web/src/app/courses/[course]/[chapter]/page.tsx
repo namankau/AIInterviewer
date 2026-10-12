@@ -20,9 +20,12 @@ import { InlineText, plainText } from "@/components/courses/inline-text";
 import { highlightChapterBlocks } from "@/lib/highlight-code";
 import { challengesForChapter } from "@/lib/arena/corpus";
 import { toCourseTocData } from "@/lib/course-toc-data";
+import { courseEnabled, featureEnabled } from "@/lib/flags";
+import { requireCourse } from "@/lib/require-feature";
 
 export function generateStaticParams() {
-  return courses.flatMap((course) =>
+  if (!featureEnabled("courses")) return [];
+  return courses.filter((course) => courseEnabled(course.slug)).flatMap((course) =>
     flattenChapters(course).map((chapter) => ({ course: course.slug, chapter: chapter.slug })),
   );
 }
@@ -33,6 +36,7 @@ export async function generateMetadata({
   params: Promise<{ course: string; chapter: string }>;
 }): Promise<Metadata> {
   const { course: courseSlug, chapter: chapterSlug } = await params;
+  if (!featureEnabled("courses") || !courseEnabled(courseSlug)) return {};
   const chapter = getChapter(courseSlug, chapterSlug);
   if (!chapter) return {};
   return {
@@ -75,6 +79,7 @@ export default async function ChapterPage({
   params: Promise<{ course: string; chapter: string }>;
 }) {
   const { course: courseSlug, chapter: chapterSlug } = await params;
+  requireCourse(courseSlug);
   const course = getCourse(courseSlug);
   if (!course) notFound();
   const chapter = getChapter(courseSlug, chapterSlug);
@@ -83,6 +88,8 @@ export default async function ChapterPage({
   const chapterModule = getModuleForChapter(course, chapterSlug);
   const { prev, next } = getAdjacentChapters(course, chapterSlug);
   const arenaCount = challengesForChapter(course.slug, chapter.slug).length;
+  const mockInterviewsEnabled = featureEnabled("mockInterviews");
+  const arenaEnabled = featureEnabled("arena");
   const courseToc = toCourseTocData(course);
   const interviewTopic = `${plainText(course.title)}: ${plainText(chapter.title)}`;
   const topicInterviewHref = `/interview/new?topic=${encodeURIComponent(interviewTopic)}` as Route;
@@ -118,11 +125,13 @@ export default async function ChapterPage({
                 <h1 className="mt-5 text-display text-balance text-ink"><InlineText text={chapter.title} /></h1>
                 <p className="mt-4 max-w-[65ch] text-body leading-relaxed text-ink-muted">{chapter.summary}</p>
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <Link href={topicInterviewHref} className="action-primary">
-                    <InterviewPracticeIcon />
-                    Practise in an interview
-                  </Link>
-                  {arenaCount > 0 ? (
+                  {mockInterviewsEnabled ? (
+                    <Link href={topicInterviewHref} className="action-primary">
+                      <InterviewPracticeIcon />
+                      Practise in an interview
+                    </Link>
+                  ) : null}
+                  {arenaEnabled && arenaCount > 0 ? (
                     <Link href={`/arena/${course.slug}?chapter=${chapter.slug}`} className="action-secondary">
                       <ArenaPracticeIcon />
                       Open Arena <span className="text-ink-subtle">· {arenaCount}</span>
@@ -164,7 +173,7 @@ export default async function ChapterPage({
               <p className="font-mono text-micro font-semibold tracking-widest text-accent uppercase">Learning progress</p>
               <div className="mt-3"><CourseRailProgress courseSlug={course.slug} chapters={chapterRefs} /></div>
             </section>
-            {arenaCount > 0 ? (
+            {arenaEnabled && arenaCount > 0 ? (
               <section className="rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]">
                 <span className="grid size-9 place-items-center rounded-xl bg-warning-wash text-warning"><ArenaPracticeIcon className="size-5" /></span>
                 <h2 className="mt-3 text-heading font-semibold text-ink">Make it stick</h2>

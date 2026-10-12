@@ -6,6 +6,7 @@ import type { Route } from "next";
 
 import { ArenaVizFrame } from "@/components/arena/arena-viz-frame";
 import type { Challenge } from "@/lib/arena/types";
+import { featureEnabled } from "@/lib/flags";
 
 export const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2";
@@ -32,6 +33,8 @@ export function ChallengeCard({
   onSelect,
   onSubmit,
   onNext,
+  nextLabel = "Next (Enter)",
+  nextDisabled = false,
 }: {
   challenge: Challenge;
   selected: number | null;
@@ -40,6 +43,8 @@ export function ChallengeCard({
   onSelect: (index: number) => void;
   onSubmit: () => void;
   onNext: () => void;
+  nextLabel?: string;
+  nextDisabled?: boolean;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -174,18 +179,21 @@ export function ChallengeCard({
             </p>
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href={`/courses/${challenge.courseSlug}/${challenge.chapterSlug}` as Route}
-              className={`rounded-sm text-caption font-medium text-accent hover:underline ${FOCUS_RING}`}
-            >
-              {challenge.chapterTitle ? `Revisit ${challenge.chapterTitle}` : "Revisit this chapter"}
-            </Link>
+            {featureEnabled("courses") ? (
+              <Link
+                href={`/courses/${challenge.courseSlug}/${challenge.chapterSlug}` as Route}
+                className={`rounded-sm text-caption font-medium text-accent hover:underline ${FOCUS_RING}`}
+              >
+                {challenge.chapterTitle ? `Revisit ${challenge.chapterTitle}` : "Revisit this chapter"}
+              </Link>
+            ) : null}
             <button
               type="button"
               onClick={onNext}
-              className={`ml-auto rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong ${FOCUS_RING}`}
+              disabled={nextDisabled}
+              className={`ml-auto rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:cursor-wait disabled:opacity-60 ${FOCUS_RING}`}
             >
-              Next (Enter)
+              {nextLabel}
             </button>
           </div>
         </div>

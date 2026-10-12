@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { fetchMe } from "@/lib/api";
+import { featureEnabled } from "@/lib/flags";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type State =
@@ -169,11 +170,13 @@ function AccountMenu({ me }: { me: MeResponse }) {
               Profile and resume
             </Link>
           </li>
-          <li>
-            <Link href="/history" className={MENU_ITEM} onClick={() => setOpen(false)}>
-              All your rounds
-            </Link>
-          </li>
+          {featureEnabled("reports") ? (
+            <li>
+              <Link href="/history" className={MENU_ITEM} onClick={() => setOpen(false)}>
+                All your rounds
+              </Link>
+            </li>
+          ) : null}
           <li>
             <button
               type="button"

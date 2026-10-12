@@ -70,6 +70,7 @@ describe("ProfilePanel", () => {
       badges: [],
       cards: {},
       masteredChallengeIds: [],
+      dailyQuestionCompletions: {},
     });
     fetchCourseProgress.mockResolvedValue({ completed: {} });
   });
@@ -141,6 +142,7 @@ describe("ProfilePanel", () => {
       badges: [],
       cards: {},
       masteredChallengeIds: [],
+      dailyQuestionCompletions: {},
     });
 
     render(

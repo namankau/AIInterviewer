@@ -191,6 +191,12 @@ export function dailyQuest(
   return shuffled.slice(0, Math.min(size, shuffled.length));
 }
 
+/** The single product-wide Question of the Day. Keeping its seed in one named function
+ * lets the dashboard and the future daily email select the identical reviewed question. */
+export function questionOfTheDay(allChallenges: Challenge[], dateKey: string): Challenge | undefined {
+  return dailyQuest(allChallenges, `question-of-the-day|${dateKey}`, 1)[0];
+}
+
 /**
  * Builds one independently rotating daily set for every course. Filtering happens before
  * `dailyQuest`, so a course can never borrow a question from another course. The course

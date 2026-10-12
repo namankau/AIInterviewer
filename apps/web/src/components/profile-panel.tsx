@@ -21,6 +21,7 @@ import {
 } from "@/lib/api";
 import type { CourseOutline } from "@/lib/course-outline";
 import { summarizeChapters } from "@/lib/course-progress";
+import { featureEnabled } from "@/lib/flags";
 import { useAccessToken } from "@/lib/use-access-token";
 import { useAllCourseProgress } from "@/lib/use-course-progress";
 
@@ -37,6 +38,10 @@ import { useAllCourseProgress } from "@/lib/use-course-progress";
  * can catch it.
  */
 export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) {
+  const coursesEnabled = featureEnabled("courses");
+  const arenaEnabled = featureEnabled("arena");
+  const mockInterviewsEnabled = featureEnabled("mockInterviews");
+  const reportsEnabled = featureEnabled("reports");
   const accessToken = useAccessToken();
   // Read by async work after it awaits, to drop a result that belongs to a token that is
   // no longer signed in. Synced in an effect: a ref must not be written during render.
@@ -44,7 +49,7 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
   useEffect(() => {
     accessTokenRef.current = accessToken;
   }, [accessToken]);
-  const courseProgress = useAllCourseProgress();
+  const courseProgress = useAllCourseProgress(coursesEnabled);
   const [profile, setProfile] = useState<ProfileState>(() => emptyProfile(null));
   const visible =
     typeof accessToken === "string" && profile.ownerToken === accessToken
@@ -80,8 +85,8 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
     Promise.allSettled([
       fetchProfile({ accessToken }),
       fetchMe({ accessToken }),
-      fetchSessions({ accessToken }),
-      fetchArenaProgress({ accessToken }),
+      mockInterviewsEnabled || reportsEnabled ? fetchSessions({ accessToken }) : Promise.resolve([]),
+      arenaEnabled ? fetchArenaProgress({ accessToken }) : Promise.resolve(null),
     ]).then(([profile, candidate, history, arenaProgress]) => {
       if (!active) return;
       setProfile({
@@ -96,7 +101,7 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
     return () => {
       active = false;
     };
-  }, [accessToken]);
+  }, [accessToken, arenaEnabled, mockInterviewsEnabled, reportsEnabled]);
 
   const run = useCallback(
     async (kind: NonNullable<typeof busy>, work: (operationToken: string) => Promise<void>) => {
@@ -334,6 +339,10 @@ function ProfileOverview({
   disabled: boolean;
   onAvatar: (file: File) => void;
 }) {
+  const coursesEnabled = featureEnabled("courses") && outlines.length > 0;
+  const arenaEnabled = featureEnabled("arena");
+  const mockInterviewsEnabled = featureEnabled("mockInterviews");
+  const reportsEnabled = featureEnabled("reports");
   const courseSummaries = outlines.map((course) => ({
     course,
     summary: summarizeChapters(course.chapters, completed[course.slug] ?? []),
@@ -403,77 +412,85 @@ function ProfileOverview({
           </div>
         </div>
 
-        <Link
-          href="/interview/new"
-          className="w-fit rounded-xl bg-surface-raised px-5 py-3 text-caption font-semibold text-ink shadow-[var(--shadow-sm)] transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
-        >
-          Start a new round
-        </Link>
+        {mockInterviewsEnabled ? (
+          <Link
+            href="/interview/new"
+            className="w-fit rounded-xl bg-surface-raised px-5 py-3 text-caption font-semibold text-ink shadow-[var(--shadow-sm)] transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
+          >
+            Start a new round
+          </Link>
+        ) : null}
       </div>
 
       <div className="grid border-t border-line sm:grid-cols-2 lg:grid-cols-4">
-        <OverviewStat label="Courses complete" value={progressReady ? `${completedCourses} / ${outlines.length}` : "—"} />
-        <OverviewStat label="Chapters complete" value={progressReady ? String(completedChapters) : "—"} />
-        <OverviewStat label="Rounds completed" value={String(finishedRounds.length)} />
-        <OverviewStat label="Arena streak" value={arena ? `${arena.streak.current} day${arena.streak.current === 1 ? "" : "s"}` : "—"} />
+        {coursesEnabled ? <OverviewStat label="Courses complete" value={progressReady ? `${completedCourses} / ${outlines.length}` : "—"} /> : null}
+        {coursesEnabled ? <OverviewStat label="Chapters complete" value={progressReady ? String(completedChapters) : "—"} /> : null}
+        {reportsEnabled ? <OverviewStat label="Rounds completed" value={String(finishedRounds.length)} /> : null}
+        {arenaEnabled ? <OverviewStat label="Arena streak" value={arena ? `${arena.streak.current} day${arena.streak.current === 1 ? "" : "s"}` : "—"} /> : null}
       </div>
 
-      <div className="grid gap-7 border-t border-line p-6 sm:p-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(15rem,0.8fr)]">
-        <div>
-          <div className="flex items-baseline justify-between gap-4">
-            <h3 className="text-heading text-ink">Course progress</h3>
-            <Link href="/courses" className="text-caption font-medium text-accent hover:underline">
-              View courses
-            </Link>
-          </div>
-          <ul className="mt-4 grid gap-3">
-            {courseSummaries.map(({ course, summary }) => (
-              <li key={course.slug} className="rounded-xl border border-line bg-surface-sunken/70 px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <Link href={`/courses/${course.slug}`} className="text-caption font-semibold text-ink hover:text-accent">
-                    {course.title}
+      {coursesEnabled || reportsEnabled ? (
+        <div className={`grid gap-7 border-t border-line p-6 sm:p-8 ${coursesEnabled && reportsEnabled ? "lg:grid-cols-[minmax(0,1.4fr)_minmax(15rem,0.8fr)]" : ""}`}>
+          {coursesEnabled ? (
+            <div>
+              <div className="flex items-baseline justify-between gap-4">
+                <h3 className="text-heading text-ink">Course progress</h3>
+                <Link href="/courses" className="text-caption font-medium text-accent hover:underline">
+                  View courses
+                </Link>
+              </div>
+              <ul className="mt-4 grid gap-3">
+                {courseSummaries.map(({ course, summary }) => (
+                  <li key={course.slug} className="rounded-xl border border-line bg-surface-sunken/70 px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <Link href={`/courses/${course.slug}`} className="text-caption font-semibold text-ink hover:text-accent">
+                        {course.title}
+                      </Link>
+                      {summary.next ? (
+                        <Link
+                          href={`/courses/${course.slug}/${summary.next.slug}`}
+                          className="text-micro font-semibold text-accent hover:underline"
+                        >
+                          {summary.started ? "Continue" : "Start"}
+                        </Link>
+                      ) : (
+                        <span className="text-micro font-semibold text-positive">Complete</span>
+                      )}
+                    </div>
+                    <div className="mt-2">
+                      <ProgressBar done={summary.done} total={summary.total} label={`${course.title} progress`} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {reportsEnabled ? (
+            <div className="rounded-2xl bg-navy p-5 text-on-navy">
+              <p className="font-mono text-micro tracking-widest text-on-navy-muted uppercase">Latest interview</p>
+              {latestRound ? (
+                <div className="mt-3 flex h-[calc(100%-1rem)] flex-col">
+                  <p className="text-heading text-on-navy">{latestRound.companyName}</p>
+                  <p className="mt-1 text-caption text-on-navy-muted">{latestRound.roleTitle}</p>
+                  <p className="mt-3 text-micro text-on-navy-muted">{roundLabel(latestRound.roundType)}</p>
+                  <Link
+                    href="/history"
+                    className="mt-auto pt-6 text-caption font-semibold text-on-navy underline decoration-white/30 underline-offset-4 hover:decoration-white"
+                  >
+                    Open interview history
                   </Link>
-                  {summary.next ? (
-                    <Link
-                      href={`/courses/${course.slug}/${summary.next.slug}`}
-                      className="text-micro font-semibold text-accent hover:underline"
-                    >
-                      {summary.started ? "Continue" : "Start"}
-                    </Link>
-                  ) : (
-                    <span className="text-micro font-semibold text-positive">Complete</span>
-                  )}
                 </div>
-                <div className="mt-2">
-                  <ProgressBar done={summary.done} total={summary.total} label={`${course.title} progress`} />
+              ) : (
+                <div className="mt-3">
+                  <p className="text-body text-on-navy">No completed round yet.</p>
+                  <p className="mt-1 text-caption text-on-navy-muted">Your latest company, role and round type will appear here.</p>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="rounded-2xl bg-navy p-5 text-on-navy">
-          <p className="font-mono text-micro tracking-widest text-on-navy-muted uppercase">Latest interview</p>
-          {latestRound ? (
-            <div className="mt-3 flex h-[calc(100%-1rem)] flex-col">
-              <p className="text-heading text-on-navy">{latestRound.companyName}</p>
-              <p className="mt-1 text-caption text-on-navy-muted">{latestRound.roleTitle}</p>
-              <p className="mt-3 text-micro text-on-navy-muted">{roundLabel(latestRound.roundType)}</p>
-              <Link
-                href="/history"
-                className="mt-auto pt-6 text-caption font-semibold text-on-navy underline decoration-white/30 underline-offset-4 hover:decoration-white"
-              >
-                Open interview history
-              </Link>
+              )}
             </div>
-          ) : (
-            <div className="mt-3">
-              <p className="text-body text-on-navy">No completed round yet.</p>
-              <p className="mt-1 text-caption text-on-navy-muted">Your latest company, role and round type will appear here.</p>
-            </div>
-          )}
+          ) : null}
         </div>
-      </div>
+      ) : null}
     </section>
   );
 }

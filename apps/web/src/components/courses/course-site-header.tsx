@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SignOutButton } from "@/components/sign-out-button";
 import { SiteNavLinks } from "@/components/site-nav-links";
 import { ActionLink } from "@/components/ui/action-link";
+import { featureEnabled } from "@/lib/flags";
 
 /**
  * The top bar for the course and Arena pages.
@@ -34,9 +35,11 @@ export function CourseSiteHeader() {
           </div>
         </nav>
         <div className="flex items-center gap-2">
-          <ActionLink href="/interview/new" size="sm">
-            New interview
-          </ActionLink>
+          {featureEnabled("mockInterviews") ? (
+            <ActionLink href="/interview/new" size="sm">
+              New interview
+            </ActionLink>
+          ) : null}
           <div className="hidden md:block">
             <SignOutButton />
           </div>
@@ -53,12 +56,14 @@ export function CourseSiteFooter() {
         <span className="text-caption text-on-navy-muted">
           Untiered — practice interviews, not interview help.
         </span>
-        <Link
-          href="/interview/new"
-          className="font-mono text-micro tracking-widest text-on-navy-muted uppercase transition-colors hover:text-on-navy"
-        >
-          Ready to practise an interview?
-        </Link>
+        {featureEnabled("mockInterviews") ? (
+          <Link
+            href="/interview/new"
+            className="font-mono text-micro tracking-widest text-on-navy-muted uppercase transition-colors hover:text-on-navy"
+          >
+            Ready to practise an interview?
+          </Link>
+        ) : null}
       </div>
     </footer>
   );

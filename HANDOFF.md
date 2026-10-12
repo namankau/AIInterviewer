@@ -1,39 +1,29 @@
 # Handoff — 2026-10-12
 
 ## Task
-Fix signed-in UI consistency: theme, dashboard salutation, mock-interview setup, profile sections, and upgrade entry. User request; no task file.
+Make account deletion subtle and align the Arena banner with the signed-in site palette; no task file.
 
 ## What I built
-- Aligned the Arena course hero with the shared navy/blue signed-in palette in `apps/web/src/app/arena/[course]/page.tsx`.
-- Added browser-local morning, afternoon, and evening dashboard salutations with the candidate's formatted first name and local date in `apps/web/src/components/dashboard-panel.tsx`.
-- Made a structured company, role, and round selector the primary mock-interview path while retaining the flexible one-line composer in `apps/web/src/components/new-interview-form.tsx`.
-- Split the profile into accessible Overview, Resume & Skills, and Reports tabs backed by real profile and session data in `apps/web/src/components/profile-panel.tsx`.
-- Added a visible Upgrade action on desktop and mobile, an account-menu entry, and the honest `/upgrade` preview in `apps/web/src/app/upgrade/page.tsx`.
-- Added behavioural tests for the new interview hand-off, profile tab/report navigation, account Upgrade entry, identity loading, and salutation formatting.
+- Replaced the always-visible danger panel with a collapsed, muted deletion disclosure in `apps/web/src/components/delete-account-section.tsx`.
+- Kept the typed confirmation and deletion behaviour unchanged, and added visibility coverage in `apps/web/src/components/delete-account-section.test.tsx`.
+- Reworked the Arena introduction from a navy marketing hero to the shared white signed-in surface in `apps/web/src/app/arena/page.tsx`.
 
 ## Assumptions I made
-- No upgrade-screen references were present in the supplied image set or the prior reference-image set, so `/upgrade` does not invent pricing or payment behaviour. It distinguishes today's free access from possible Pro directions.
-- Every interview round and the complete report remain free, per the current product decision; no entitlement limit or checkout was introduced.
-- The existing one-line interview composer remains useful for less common or highly specific rounds, so it stays as a secondary path.
-- Reports in Profile show real completed sessions and link only to available, unexpired reports; no score or employer claim is fabricated.
+- “Subtle” means discoverable but collapsed by default; the irreversible action remains guarded once deliberately opened.
+- The Arena banner should use the same light surface system as the authenticated learning workspace.
 
 ## What I could NOT verify
-- Final visual-design approval remains human-owned.
-- Profile tab behaviour was verified with component fixtures; the local browser session could not load live signed-in API profile data.
-- No live Gemini call, interview, or payment flow was run.
+- Final visual approval remains with the owner.
+- Account deletion itself was not executed during browser QA.
 
 ## Verification status
-- Frontend local: typecheck pass; lint pass; shared typography-token test pass; 71 Vitest files / 3,005 tests pass; production build pass.
-- Backend local: `ktlintCheck test build` pass.
-- Browser QA: desktop and 390px mobile pass on the interview, dashboard, Arena course, and upgrade surfaces; no horizontal overflow on the changed mobile pages.
-- Remote CI: run 38248088389 passed web, API, and Docker image jobs on commit `fcf8f83`.
-- No migration was added.
+- typecheck / lint / tests / build: frontend pass (71 Vitest files, 3,006 tests); backend `ktlintCheck test build` pass; signed-in desktop browser QA pass; PR CI pass for web, API, and Docker image jobs.
 
 ## Merge status
-- PR #63 opened against `develop`: https://github.com/namankau/AIInterviewer/pull/63. The branch is intentionally unmerged because the change requires human visual-design review.
+- PR #65 opened from `fix/subtle-delete-arena-banner` into `develop` and left unmerged because the change touches account deletion and final visual design.
 
 ## Suggested next task
-- Review PR #63 visually with a production-like signed-in profile and approve or annotate the three profile tabs and Pro preview.
+- Apply the supplied Figma direction to the mock interview, completion, and report surfaces without changing interview behaviour.
 
 ## Open questions for you
 - None.

@@ -58,6 +58,11 @@ export function NewInterviewForm({
   const topic = initialTopic.trim();
 
   const [query, setQuery] = useState("");
+  const [structuredCompany, setStructuredCompany] = useState("");
+  const [structuredRole, setStructuredRole] = useState("");
+  const [structuredRound, setStructuredRound] = useState<RoundType>(
+    initialRoundType ?? "coding_practical",
+  );
   const [draft, setDraft] = useState<RoundDraft | null>(() =>
     topic === "" && !initialRoundType ? null : blankDraft(topic, initialRoundType),
   );
@@ -131,6 +136,26 @@ export function NewInterviewForm({
     }
   }
 
+  function continueStructured(event: React.FormEvent) {
+    event.preventDefault();
+    if (structuredRole.trim() === "" && !campus) return;
+    const next = blankDraft("", structuredRound);
+    const companyName = structuredCompany.trim();
+    const roleTitle = structuredRole.trim();
+    setQuery([companyName, roleTitle].filter(Boolean).join(" · "));
+    setDraft({
+      ...next,
+      companyName,
+      roleTitle,
+      understood: roleTitle
+        ? `${roleTitle}${companyName ? ` at ${companyName}` : ""}`
+        : "Campus-placement practice round",
+    });
+    // This path is already an explicit choice of company, role and round; the brief is
+    // optional context, not another gate before the consent screen.
+    setPastBrief(true);
+  }
+
   if (draft) {
     const hasCompany = draft.companyName.trim() !== "";
 
@@ -184,19 +209,157 @@ export function NewInterviewForm({
     );
   }
 
+  const selectedStructuredRound = ROUND_CATALOGUE.find((round) => round.value === structuredRound);
+
   return (
-    <form onSubmit={read} className="flex flex-col gap-6">
-      <header className="hero-band relative overflow-hidden p-7 sm:p-9">
-        <div aria-hidden="true" className="absolute -top-20 -right-14 size-56 rounded-full bg-accent/25 blur-3xl" />
-        <div className="relative flex flex-col gap-3">
-        <p className="pill pill-navy w-fit">New interview</p>
-        <h1 className="text-display text-balance text-on-navy">What are you walking into?</h1>
-        <p className="max-w-prose text-body text-on-navy-muted">
-          Say it in one line — the employer, the round, whatever you are worried about. The round
-          gets set up from that, and you get to correct it before anything starts.
+    <div className="flex flex-col gap-10">
+      <header className="mx-auto flex max-w-4xl flex-col items-center gap-3 text-center">
+        <p className="eyebrow text-accent">AI mock interviews</p>
+        <h1 className="text-display text-balance text-ink">Practise the interview you actually want.</h1>
+        <p className="max-w-2xl text-body text-ink-muted">
+          Choose the company, role and round. We will shape the interview around that context,
+          then let you review the recording settings before it begins.
         </p>
-        </div>
       </header>
+
+      <form onSubmit={continueStructured} className="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.85fr)] lg:items-stretch">
+        <div className="card flex flex-col gap-7 p-6 sm:p-8">
+          <section aria-labelledby="target-context" className="flex flex-col gap-4">
+            <div className="flex items-start gap-3">
+              <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-wash text-caption font-bold text-accent">1</span>
+              <div>
+                <h2 id="target-context" className="text-heading text-ink">Target company and role</h2>
+                <p className="text-caption text-ink-muted">These tune the questions and evaluation criteria for this session.</p>
+              </div>
+            </div>
+
+            <Field label="Company (optional)" hint="Leave this blank for employer-neutral practice.">
+              <input
+                value={structuredCompany}
+                onChange={(event) => setStructuredCompany(event.target.value)}
+                placeholder="Amazon"
+                autoComplete="organization"
+                maxLength={120}
+                className={CONTROL_CLASS}
+              />
+            </Field>
+            <div className="flex flex-wrap gap-2" aria-label="Suggested companies">
+              {["Amazon", "Google", "Microsoft", "Infosys", "Deloitte"].map((company) => (
+                <button
+                  key={company}
+                  type="button"
+                  onClick={() => setStructuredCompany(company)}
+                  className="rounded-full border border-line bg-surface-raised px-3 py-1 text-caption text-ink-muted transition-colors hover:border-accent/40 hover:bg-accent-wash hover:text-ink"
+                >
+                  {company}
+                </button>
+              ))}
+            </div>
+
+            <Field
+              label={campus ? "Role (optional for freshers)" : "Role"}
+              hint={campus ? "It is fine if campus hiring has not named a role yet." : "Use the title you are preparing to interview for."}
+            >
+              <input
+                value={structuredRole}
+                onChange={(event) => setStructuredRole(event.target.value)}
+                placeholder="Software Development Engineer"
+                autoComplete="organization-title"
+                required={!campus}
+                maxLength={120}
+                className={CONTROL_CLASS}
+              />
+            </Field>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-sunken px-4 py-3">
+              <input
+                type="checkbox"
+                checked={campus}
+                onChange={(event) => setStage(event.target.checked ? "student" : "")}
+                className="mt-1 size-4 accent-[var(--color-accent)]"
+              />
+              <span>
+                <span className="block text-caption font-semibold text-ink">I am preparing for campus placement</span>
+                <span className="block text-caption text-ink-muted">Role becomes optional and the interview starts at fresher level.</span>
+              </span>
+            </label>
+          </section>
+
+          <section aria-labelledby="choose-round" className="flex flex-col gap-4 border-t border-line pt-7">
+            <div className="flex items-start gap-3">
+              <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent-wash text-caption font-bold text-accent">2</span>
+              <div>
+                <h2 id="choose-round" className="text-heading text-ink">Choose a round</h2>
+                <p className="text-caption text-ink-muted">Start with the stage you need to practise now.</p>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {STRUCTURED_ROUNDS.map((roundType, index) => {
+                const round = ROUND_CATALOGUE.find((item) => item.value === roundType);
+                if (!round) return null;
+                const selected = structuredRound === round.value;
+                return (
+                  <label
+                    key={round.value}
+                    className={`cursor-pointer rounded-xl border p-4 transition-colors ${selected ? "border-accent bg-accent-wash shadow-[var(--shadow-sm)]" : "border-line bg-surface-raised hover:border-accent/40"}`}
+                  >
+                    <input
+                      type="radio"
+                      name="structuredRound"
+                      value={round.value}
+                      checked={selected}
+                      onChange={() => setStructuredRound(round.value)}
+                      className="sr-only"
+                    />
+                    <span className="block text-micro font-semibold text-ink-subtle">0{index + 1}</span>
+                    <span className="mt-4 block text-heading text-ink">{SHORT_ROUND_LABELS[round.value] ?? round.label}</span>
+                    <span className="mt-1 block text-caption text-ink-muted">{round.eyebrow}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <Link href="/rounds" className="self-start text-caption font-semibold text-accent hover:underline">
+              See every round type <span aria-hidden>→</span>
+            </Link>
+          </section>
+        </div>
+
+        <aside aria-live="polite" className="hero-band flex flex-col p-6 sm:p-8">
+          <span aria-hidden className="grid size-14 place-items-center rounded-2xl bg-highlight text-title font-bold text-navy">
+            {(structuredCompany.trim()[0] ?? structuredRole.trim()[0] ?? "U").toUpperCase()}
+          </span>
+          <p className="mt-7 eyebrow text-accent-on-navy">Your practice session</p>
+          <h2 className="mt-3 text-title text-on-navy">{structuredRole.trim() || (campus ? "Campus placement" : "Choose your target role")}</h2>
+          <p className="mt-1 text-caption text-on-navy-muted">
+            {structuredCompany.trim() || "General practice"} · {selectedStructuredRound ? (SHORT_ROUND_LABELS[selectedStructuredRound.value] ?? selectedStructuredRound.label) : "Interview round"}
+          </p>
+          <ul className="mt-6 grid gap-3 border-y border-white/15 py-6 text-caption text-on-navy-muted">
+            <li><span className="mr-2 text-accent-on-navy" aria-hidden>✓</span>Adaptive follow-up questions</li>
+            <li><span className="mr-2 text-accent-on-navy" aria-hidden>✓</span>Evaluation matched to your selected round</li>
+            <li><span className="mr-2 text-accent-on-navy" aria-hidden>✓</span>Detailed feedback after the round</li>
+          </ul>
+          <div className="mt-5 rounded-xl bg-white/8 p-4">
+            <p className="text-caption font-semibold text-on-navy">Included in your current access</p>
+            <p className="mt-1 text-caption text-on-navy-muted">
+              {entitlement?.message ?? "Your practice availability is checked before the interview begins."}
+            </p>
+          </div>
+          <Button type="submit" size="lg" className="mt-auto w-full translate-y-0">
+            Continue to interview setup <span aria-hidden>→</span>
+          </Button>
+          <p className="mt-3 text-center text-micro text-on-navy-muted">You will confirm recording and camera choices next.</p>
+        </aside>
+      </form>
+
+      <form onSubmit={read} className="flex flex-col gap-6 rounded-[var(--radius-xl)] border border-line bg-surface-sunken/65 p-5 sm:p-7">
+        <div className="flex flex-col gap-1">
+          <p className="eyebrow text-accent">Prefer to describe it?</p>
+          <h2 className="text-title text-ink">Tell us what you are walking into.</h2>
+          <p className="max-w-2xl text-caption text-ink-muted">
+            Use one line when the round is more specific than the choices above. We will read it,
+            show back what we understood, and let you correct every field.
+          </p>
+        </div>
 
       <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-6">
         <label htmlFor="composer" className="sr-only">
@@ -279,7 +442,7 @@ export function NewInterviewForm({
         </p>
       ) : null}
 
-      <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-sunken p-5 sm:p-6">
+      <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5 sm:p-6">
         <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
           Or start from one of these
         </p>
@@ -297,7 +460,8 @@ export function NewInterviewForm({
           ))}
         </ul>
       </section>
-    </form>
+      </form>
+    </div>
   );
 }
 
@@ -707,6 +871,18 @@ const CUSTOM_LENGTHS = [
   { minutes: 20, label: "20 minutes — focused practice" },
   { minutes: 30, label: "30 minutes — a thorough topic round" },
 ];
+
+const STRUCTURED_ROUNDS: RoundType[] = [
+  "coding_practical",
+  "system_design",
+  "behavioural_competency",
+];
+
+const SHORT_ROUND_LABELS: Partial<Record<RoundType, string>> = {
+  coding_practical: "Coding",
+  system_design: "System design",
+  behavioural_competency: "Behavioural",
+};
 
 /** Neutral stored context for a round whose scope is the topic, not an employer or role. */
 const CUSTOM_TOPIC_COMPANY = "General practice";

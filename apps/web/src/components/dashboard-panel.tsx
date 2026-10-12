@@ -1,12 +1,12 @@
 "use client";
 
-import type { EntitlementView, ReadinessGroup, SessionSummary } from "@untiered/shared";
+import type { EntitlementView, MeResponse, ReadinessGroup, SessionSummary } from "@untiered/shared";
 import type { Route } from "next";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { DailyLimitNotice, isDailyLimitReached } from "@/components/daily-limit-notice";
-import { deleteSession, fetchEntitlement, fetchReadiness, fetchSessions } from "@/lib/api";
+import { deleteSession, fetchEntitlement, fetchMe, fetchReadiness, fetchSessions } from "@/lib/api";
 import { featureEnabled } from "@/lib/flags";
 import { useAccessToken } from "@/lib/use-access-token";
 
@@ -30,6 +30,7 @@ export function DashboardPanel() {
   return (
     <DashboardView
       entitlement={visible.entitlement}
+      me={visible.me}
       sessions={visible.sessions}
       readiness={visible.readiness}
       loaded={visible.loaded}
@@ -92,11 +93,13 @@ function useRoundData() {
       mockInterviewsEnabled ? fetchEntitlement({ accessToken }) : Promise.resolve(null),
       mockInterviewsEnabled || reportsEnabled ? fetchSessions({ accessToken }) : Promise.resolve([]),
       reportsEnabled ? fetchReadiness({ accessToken }) : Promise.resolve([]),
-    ]).then(([ent, list, ready]) => {
+      fetchMe({ accessToken }),
+    ]).then(([ent, list, ready, candidate]) => {
       if (!active) return;
       setDashboard({
         ownerToken: accessToken,
         entitlement: ent.status === "fulfilled" ? ent.value : null,
+        me: candidate.status === "fulfilled" ? candidate.value : null,
         sessions: list.status === "fulfilled" ? list.value : [],
         readiness: ready.status === "fulfilled" ? ready.value : [],
         loaded: true,
@@ -146,13 +149,14 @@ function useRoundData() {
 interface DashboardState {
   ownerToken: string | null;
   entitlement: EntitlementView | null;
+  me: MeResponse | null;
   sessions: SessionSummary[];
   readiness: ReadinessGroup[];
   loaded: boolean;
 }
 
 function emptyDashboard(ownerToken: string | null): DashboardState {
-  return { ownerToken, entitlement: null, sessions: [], readiness: [], loaded: false };
+  return { ownerToken, entitlement: null, me: null, sessions: [], readiness: [], loaded: false };
 }
 
 /**
@@ -165,12 +169,14 @@ function emptyDashboard(ownerToken: string | null): DashboardState {
  */
 export function DashboardView({
   entitlement,
+  me = null,
   sessions,
   readiness,
   loaded,
   onDelete,
 }: {
   entitlement: EntitlementView | null;
+  me?: MeResponse | null;
   sessions: SessionSummary[];
   readiness: ReadinessGroup[];
   loaded: boolean;
@@ -186,6 +192,8 @@ export function DashboardView({
   const primaryHref = (openSession ? `/interview/${openSession.id}` : "/interview/new") as Route;
   const primaryLabel = openSession ? "Resume interview" : "Start an interview";
   const disabled = !openSession && entitlement?.allowed === false;
+  const { greeting, dateLabel } = useTimeBoundGreeting();
+  const firstName = formatFirstName(me?.displayName);
 
   return (
     <div className="flex flex-col gap-9 md:gap-11">
@@ -193,12 +201,14 @@ export function DashboardView({
         <>
           <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="eyebrow text-accent">Your practice workspace</p>
+              <p className="eyebrow text-accent">{dateLabel}</p>
               <h1 id="next-interview" className="mt-2 max-w-3xl text-display text-balance text-ink">
-                {sessions.length === 0 ? "Start building interview momentum." : "Keep your momentum going."}
+                {greeting}{firstName ? `, ${firstName}` : ""}.
               </h1>
               <p className="mt-2 max-w-2xl text-body text-ink-muted">
-                One focused round today gets you closer to answering calmly when the real follow-up lands.
+                {sessions.length === 0
+                  ? "Your first focused round is ready when you are."
+                  : "Your dedicated preparation will pay off — keep the momentum going."}
               </p>
             </div>
             <Link
@@ -312,6 +322,45 @@ export function DashboardView({
       ) : null}
     </div>
   );
+}
+
+/** Browser-local greeting, refreshed so a dashboard left open crosses day-parts correctly. */
+function useTimeBoundGreeting(): { greeting: string; dateLabel: string } {
+  const [greeting, setGreeting] = useState("Welcome back");
+  const [dateLabel, setDateLabel] = useState("Your practice workspace");
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      setGreeting(greetingForHour(now.getHours()));
+      setDateLabel(formatLocalDate(now));
+    };
+    update();
+    const timer = window.setInterval(update, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return { greeting, dateLabel };
+}
+
+export function greetingForHour(hour: number): string {
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+export function formatFirstName(displayName?: string | null): string | null {
+  const firstName = displayName?.trim().split(/\s+/)[0];
+  if (!firstName) return null;
+  return firstName.charAt(0).toLocaleUpperCase() + firstName.slice(1);
+}
+
+function formatLocalDate(date: Date): string {
+  return new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(date);
 }
 
 function AllowanceMeters({ entitlement, loaded }: { entitlement: EntitlementView | null; loaded: boolean }) {

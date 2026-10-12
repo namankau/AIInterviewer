@@ -160,8 +160,41 @@ describe("ProfilePanel", () => {
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("4 days")).toBeInTheDocument();
-    expect(screen.getByText("Example Co")).toBeInTheDocument();
+    expect(screen.getAllByText("Example Co")[0]).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Continue" })).toHaveAttribute("href", "/courses/dsa/trees");
+  });
+
+  it("separates overview, resume and skills, and reports into accessible tabs", async () => {
+    fetchProfile.mockResolvedValue(profile());
+    fetchSessions.mockResolvedValue([
+      {
+        id: "round-1",
+        companyName: "Amazon",
+        roleTitle: "Backend Engineer",
+        roundType: "system_design",
+        status: "completed",
+        startedAt: "2026-09-20T10:00:00Z",
+        endedAt: "2026-09-20T10:30:00Z",
+        hasReport: true,
+        reportExpired: false,
+        reportExpiresAt: null,
+        reportRetentionDays: 30,
+      },
+    ]);
+
+    render(<ProfilePanel />);
+    const overview = await screen.findByRole("tab", { name: "Overview" });
+    expect(overview).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Resume & Skills" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Reports" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Resume & Skills" }));
+    expect(screen.getByRole("heading", { name: "Your resume" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "What you know" })).toBeVisible();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Reports" }));
+    expect(screen.getByRole("heading", { name: /complete practice history/i })).toBeVisible();
+    expect(screen.getByRole("link", { name: /read report/i })).toHaveAttribute("href", "/report/round-1");
   });
 
   it("shows back what was saved, rather than an empty form", async () => {

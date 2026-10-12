@@ -25,7 +25,7 @@ Polish the mock-interview, coding-test, completion, and report UI to match the s
 - Frontend local: typecheck pass; lint pass; shared typography-token test pass; 71 Vitest files / 3,006 tests pass; production build pass.
 - Backend local: `ktlintCheck test build` pass.
 - Browser QA: pass for the completion, coding workspace, report hero, factual metric strip, performance breakdown, and next-action panel using a static no-AI fixture.
-- Remote CI: pending on PR #66.
+- Remote CI: run 38284643503 passed web, API, and Docker image jobs on commit `93aa873`.
 - No migration was added.
 
 ## Merge status

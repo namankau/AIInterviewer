@@ -17,10 +17,10 @@ Replace only the browser-tab favicon from the supplied exact-favicon kit; user r
 - Frontend typecheck, lint, all 3,012 tests, and production build pass.
 - Backend `ktlintCheck test build` passes.
 - Local browser exposed the updated `.ico` and 192 px PNG icon links, and the PNG route displayed the supplied U. The Apple icon link remained unchanged.
-- GitHub CI: pending branch push.
+- GitHub Actions branch run `38418106224`: web, API, and Docker image jobs passed on commit `a81aaeb`.
 
 ## Merge status
-- Branch `fix/exact-browser-favicon` is ready to push. Merge into `develop` only after GitHub CI passes. `main` is release-only and was not touched.
+- Branch `fix/exact-browser-favicon` was fast-forwarded into `develop` at `a81aaeb` after green CI. `main` was not touched.
 
 ## Suggested next task
 - Refresh the browser tab after deployment to clear any cached favicon.

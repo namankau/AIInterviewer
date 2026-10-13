@@ -39,13 +39,13 @@ const LANGUAGE_LABELS: Record<string, string> = {
 export function AccountSummary() {
   const accessToken = useAccessToken();
   const [state, setState] = useState<State>({ status: "loading" });
+  const visibleState: State =
+    accessToken === null
+      ? { status: "error", message: "This browser has no active session." }
+      : state;
 
   useEffect(() => {
-    if (accessToken === undefined) return;
-    if (accessToken === null) {
-      setState({ status: "error", message: "This browser has no active session." });
-      return;
-    }
+    if (!accessToken) return;
     const operationToken = accessToken;
     const controller = new AbortController();
 
@@ -72,17 +72,17 @@ export function AccountSummary() {
 
   return (
     <div>
-      {state.status === "loading" ? (
+      {visibleState.status === "loading" ? (
         <span role="status" className="grid size-9 animate-pulse place-items-center rounded-full bg-surface-sunken">
           <span className="sr-only">Loading your profile…</span>
         </span>
-      ) : state.status === "error" ? (
-        <Link href="/profile" role="alert" title={state.message} className="grid size-9 place-items-center rounded-full bg-danger-wash text-caption font-bold text-danger">
+      ) : visibleState.status === "error" ? (
+        <Link href="/profile" role="alert" title={visibleState.message} className="grid size-9 place-items-center rounded-full bg-danger-wash text-caption font-bold text-danger">
           <span aria-hidden>!</span>
-          <span className="sr-only">{state.message}</span>
+          <span className="sr-only">{visibleState.message}</span>
         </Link>
       ) : (
-        <AccountMenu me={state.me} />
+        <AccountMenu me={visibleState.me} />
       )}
     </div>
   );

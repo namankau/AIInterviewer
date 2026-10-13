@@ -22,7 +22,7 @@ Polish the profile, reports, and course lesson UI from the supplied screenshots;
 - Frontend: typecheck, lint, all 3,012 tests, and production build pass.
 - Backend: `ktlintCheck test build` pass.
 - Browser: inspected Profile at desktop and 390 px, inspected the mobile lesson and quiz, confirmed no horizontal page overflow and that inactive Profile tabs are hidden.
-- GitHub CI: pending on PR #70.
+- GitHub Actions PR run `38366938412`: web, API, and Docker image jobs passed on commit `1a3ad89`.
 
 ## Merge status
 - PR #70 is open from branch `feat/profile-learning-polish` into `develop`. It remains unmerged for human review because it changes the account-deletion entry point, as required by `AGENTS.md`.

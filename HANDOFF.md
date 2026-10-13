@@ -1,37 +1,33 @@
 # Handoff — 2026-10-13
 
 ## Task
-Revamp the course catalogue, daily challenge entry, lesson cards, and footer against the supplied screenshots; user request, no task file.
+Apply the supplied Untiered website brand kit across the web app; user request, no task file.
 
 ## What I built
-- Replaced the bulky daily practice banner with a dated question strip that uses the actual daily prompt, source chapter, and course-level label (`apps/web/src/components/courses/daily-challenge-banner.tsx`). Its action opens `/daily-challenge`, a focused version of the existing account-backed Question of the Day (`apps/web/src/app/daily-challenge/page.tsx`).
-- Added live search across course, module, and chapter titles, useful category filters, and compact illustrated course cards (`apps/web/src/components/courses/course-catalogue.tsx`).
-- Restyled challenge choices and guided lesson steps with lighter cards, clearer spacing, and stronger type hierarchy (`apps/web/src/components/arena/challenge-card.tsx`, `apps/web/src/components/courses/guided-lesson-controls.tsx`).
-- Reused one footer across marketing, legal, login, signed-in workspace, and chapter pages (`apps/web/src/components/site-footer.tsx`). The live interview remains intentionally distraction-free.
-- Added tests for course search, filter combinations, and the daily challenge destination. Existing daily-answer persistence tests remain green.
+- Added the supplied light and dark wordmarks and compact mark under `apps/web/public/brand/`, with a shared responsive component in `apps/web/src/components/brand-logo.tsx`.
+- Replaced the temporary text/“U” branding in the public header, signed-in header, course and Arena header, sign-in page, interview room, and shared footer.
+- Added the supplied favicon, browser icon, and Apple touch icon through Next.js App Router icon files.
 
 ## Assumptions I made
-- The screenshot numbering in the written request is offset after the daily-practice examples; I followed the visible content of each reference.
-- Today's challenge reuses the existing one-question daily flow and saved completion. The five-step screenshot guides its focused presentation; it does not authorize changing the challenge format or inventing four extra questions.
-- “Beginner path” describes the source course level. The question bank has no verified question-difficulty or XP fields, so neither is claimed on the banner.
-- Search matches real authored concept titles; filters reflect the four current courses.
+- The light wordmark belongs on light surfaces; the white wordmark belongs on navy surfaces and when the browser prefers a dark theme.
+- The signed-in header uses the supplied compact mark on narrow screens to preserve room for navigation.
+- The footer retains its existing tagline so it remains legible at the displayed size.
 
 ## What I could NOT verify
-- The preview browser had no signed-in Supabase profile, so the focused question's loaded and saved account state could not be visually inspected there. The existing mocked behavior tests pass.
-- The browser tool exposed a desktop viewport only, so mobile and tablet layout received responsive-code review rather than visual viewport inspection.
-- Final visual-design approval is the owner's judgement. No live AI calls were made.
+- The live authenticated interview room was not entered, because that would start an AI-backed session. Its logo link is covered by the existing interview-room test.
+- Final brand approval and the appearance on physical devices remain the owner's judgement. The supplied artwork is raster, so very large displays are limited by its source resolution.
 
 ## Verification status
-- Frontend: typecheck pass; lint pass; 74 test files / 3,012 tests pass; production build pass. The final prompt-copy edit passed an additional typecheck and focused test.
+- Frontend: typecheck, lint, all 3,012 tests, and production build pass.
 - Backend: `ktlintCheck test build` pass.
-- GitHub Actions run `38355919981`: web, API, and Docker image jobs all passed on branch commit `edebf15`.
-- Desktop browser: catalogue, search, cards, daily strip, course page, lesson steps, and footer inspected. No migration or dependency added.
+- GitHub Actions run `38361730522`: web, API, and Docker image jobs all passed on branch commit `3c59b4c`.
+- Desktop and 390px mobile browser: landing header, signed-in dashboard header, and footer inspected. No migration or dependency added.
 
 ## Merge status
-- Feature branch `feat/learning-ui-revamp` merged into `develop` at `7d812e3` after all CI jobs passed. `main` was not touched.
+- Branch `fix/website-brand-logos` merged into `develop` at `0ca0e11` after all CI jobs passed. `main` was not touched.
 
 ## Suggested next task
-- Review the signed-in daily question and mobile layouts on a real device or authenticated browser.
+- Supply original vector artwork if sharper scaling is desired for large displays.
 
 ## Open questions for you
 - None.

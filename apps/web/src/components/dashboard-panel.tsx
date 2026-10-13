@@ -123,22 +123,38 @@ function useRoundData() {
     const mockInterviewsEnabled = featureEnabled("mockInterviews");
     const reportsEnabled = featureEnabled("reports");
 
+    // Readiness can take longer as an account accumulates reports. It enriches the page,
+    // but must not hold the greeting and next-round action behind that work.
     Promise.allSettled([
       mockInterviewsEnabled ? fetchEntitlement({ accessToken }) : Promise.resolve(null),
       mockInterviewsEnabled || reportsEnabled ? fetchSessions({ accessToken }) : Promise.resolve([]),
-      reportsEnabled ? fetchReadiness({ accessToken }) : Promise.resolve([]),
       fetchMe({ accessToken }),
-    ]).then(([ent, list, ready, candidate]) => {
+    ]).then(([ent, list, candidate]) => {
       if (!active) return;
-      setDashboard({
+      setDashboard((current) => ({
         ownerToken: accessToken,
         entitlement: ent.status === "fulfilled" ? ent.value : null,
         me: candidate.status === "fulfilled" ? candidate.value : null,
         sessions: list.status === "fulfilled" ? list.value : [],
-        readiness: ready.status === "fulfilled" ? ready.value : [],
+        readiness: current.ownerToken === accessToken ? current.readiness : [],
         loaded: true,
-      });
+      }));
     });
+
+    if (reportsEnabled) {
+      fetchReadiness({ accessToken })
+        .then((readiness) => {
+          if (!active) return;
+          setDashboard((current) =>
+            current.ownerToken === accessToken
+              ? { ...current, readiness }
+              : { ...emptyDashboard(accessToken), readiness },
+          );
+        })
+        .catch(() => {
+          // A failed readiness request must not hold the next interview action.
+        });
+    }
 
     return () => {
       active = false;

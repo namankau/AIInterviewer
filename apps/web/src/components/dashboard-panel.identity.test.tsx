@@ -73,4 +73,14 @@ describe("DashboardPanel account isolation", () => {
 
     expect(screen.queryByText(/Late private interview/)).not.toBeInTheDocument();
   });
+
+  it("shows the primary action while readiness is still loading", async () => {
+    api.fetchSessions.mockResolvedValue([]);
+    api.fetchReadiness.mockReturnValue(new Promise(() => undefined));
+
+    render(<DashboardPanel />);
+
+    await waitFor(() => expect(api.fetchMe).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole("link", { name: /start an interview/i })).toBeInTheDocument();
+  });
 });

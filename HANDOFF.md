@@ -1,34 +1,31 @@
 # Handoff — 2026-10-13
 
 ## Task
-Polish the profile, reports, and course lesson UI from the supplied screenshots; user request, no task file.
+Apply the updated Untiered brand kit from the supplied local folder; user request, no task file.
 
 ## What I built
-- Removed the direct account-deletion entry from the account dropdown and moved report discovery out of the main navigation. Reports remain in Profile, and account deletion remains in the Profile account section.
-- Reworked Profile into a prominent identity card, a strength indicator based on seven real account fields, and Overview, Resume & Skills, and Reports tabs. No invented readiness or interview metrics were added.
-- Improved quiz question hierarchy and answer cards, broke up a dense Java explanation, refreshed lesson sidebars, and made the completion and next-chapter controls easier to scan.
-- Added restrained color to interview-history cards on the dashboard and Profile. Fixed a mobile overflow discovered during the browser check.
+- Replaced the light and dark site wordmarks with the kit's transparent Untiered assets. The shared logo component now uses their dimensions and accessible name.
+- Replaced the browser favicon, 192 px app icon, and Apple touch icon with the blue icons supplied in the kit.
+- Kept the existing tightly cropped gradient U for narrow signed-in headers because it matches the new wordmark and remains legible at that size.
 
 ## Assumptions I made
-- “Remove delete account directly from here” refers to the account dropdown, not removal of the account-deletion feature itself.
-- “My reports should be hidden from main menu and should only be accessible via Profile” means removing the main-navigation entry and directing the dashboard’s history link to Profile; direct report links remain available inside practice history and Profile.
-- The reference Profile metrics are visual guidance. Strength uses a transparent count of completed profile fields, and the other tiles use existing course, round, and Arena data.
+- The kit's README identifies the transparent navbar variants for light and dark surfaces and the blue favicon as the intended default. The supplied tagline artwork is an optional variant, so the site's existing footer tagline stays as text.
+- The current site does not use a web app manifest; the new browser and Apple icons are integrated through existing Next.js icon routes without adding a new PWA feature.
 
 ## What I could NOT verify
-- Authenticated data for a real profile and its reports was unavailable in the local browser, so the visual check used the empty account state. The report-card behavior is covered by local tests.
-- Final visual approval and physical-device rendering remain the owner's judgement. No live interview or AI call was started.
+- Appearance on physical devices and final brand approval remain the owner's judgement. The kit supplies raster artwork rather than a vector master.
 
 ## Verification status
-- Frontend: typecheck, lint, all 3,012 tests, and production build pass.
-- Backend: `ktlintCheck test build` pass.
-- Browser: inspected Profile at desktop and 390 px, inspected the mobile lesson and quiz, confirmed no horizontal page overflow and that inactive Profile tabs are hidden.
-- GitHub Actions PR run `38366938412`: web, API, and Docker image jobs passed on commit `1a3ad89`.
+- Frontend typecheck, lint, all 3,012 tests, and production build pass.
+- Backend `ktlintCheck test build` passes.
+- Inspected the light desktop header, dark footer, and 390 px mobile header in the local browser. Confirmed favicon and Apple icon links resolve to the new build assets.
+- GitHub CI: pending branch push.
 
 ## Merge status
-- PR #70 is open from branch `feat/profile-learning-polish` into `develop`. It remains unmerged for human review because it changes the account-deletion entry point, as required by `AGENTS.md`.
+- Branch `fix/updated-brand-kit` is ready to push. Merge into `develop` only after GitHub CI passes.
 
 ## Suggested next task
-- Review the Profile and course layouts with a signed-in account containing resume and report data.
+- Supply vector artwork if sharper scaling is desired at large display sizes.
 
 ## Open questions for you
 - None.

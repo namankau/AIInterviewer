@@ -2,7 +2,7 @@
 
 import type { BoardState, HintView, SessionView, TurnView } from "@untiered/shared";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { BrandMark, BrandWordmark } from "@/components/brand-logo";
 import { DesignWorkspace } from "@/components/design-workspace";
@@ -725,18 +725,24 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     return () => clearInterval(timer);
   }, [startedAt]);
 
-  const workspaceNode =
-    workspace === null ? null : workspace.kind === "dsa" ? (
-      <DsaWorkspace problem={workspace.problem} board={session?.board ?? null} onBoardChange={onBoardChange} />
-    ) : (
-      <DesignWorkspace
-        designCase={workspace.case}
-        board={session?.board ?? null}
-        minutesElapsed={minutesElapsed}
-        durationMinutes={session?.durationMinutes ?? 45}
-        onBoardChange={onBoardChange}
-      />
-    );
+  // The microphone level changes on animation frames. Keep the editor/board element
+  // stable across those room renders so typing and drawing do not reconcile with the
+  // speaking indicator; rebuild it only when its own inputs change.
+  const workspaceNode = useMemo(
+    () =>
+      workspace === null ? null : workspace.kind === "dsa" ? (
+        <DsaWorkspace problem={workspace.problem} board={session?.board ?? null} onBoardChange={onBoardChange} />
+      ) : (
+        <DesignWorkspace
+          designCase={workspace.case}
+          board={session?.board ?? null}
+          minutesElapsed={minutesElapsed}
+          durationMinutes={session?.durationMinutes ?? 45}
+          onBoardChange={onBoardChange}
+        />
+      ),
+    [workspace, session?.board, session?.durationMinutes, onBoardChange, minutesElapsed],
+  );
 
   /*
    * Two ways out, and they are not the same thing.

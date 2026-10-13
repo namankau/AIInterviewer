@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { fetchMe } from "@/lib/api";
 import { featureEnabled } from "@/lib/flags";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useAccessToken } from "@/lib/use-access-token";
 
 type State =
   | { status: "loading" }
@@ -36,22 +37,21 @@ const LANGUAGE_LABELS: Record<string, string> = {
  * profile flows must not acquire a server-rendering dependency (PRD 13).
  */
 export function AccountSummary() {
+  const accessToken = useAccessToken();
   const [state, setState] = useState<State>({ status: "loading" });
+  const visibleState: State =
+    accessToken === null
+      ? { status: "error", message: "This browser has no active session." }
+      : state;
 
   useEffect(() => {
+    if (!accessToken) return;
+    const operationToken = accessToken;
     const controller = new AbortController();
 
     async function load() {
       try {
-        const {
-          data: { session },
-        } = await createSupabaseBrowserClient().auth.getSession();
-
-        if (!session) {
-          throw new Error("This browser has no active session.");
-        }
-
-        const me = await fetchMe({ accessToken: session.access_token, signal: controller.signal });
+        const me = await fetchMe({ accessToken: operationToken, signal: controller.signal });
         if (!controller.signal.aborted) {
           setState({ status: "ready", me });
         }
@@ -68,21 +68,21 @@ export function AccountSummary() {
 
     void load();
     return () => controller.abort();
-  }, []);
+  }, [accessToken]);
 
   return (
     <div>
-      {state.status === "loading" ? (
+      {visibleState.status === "loading" ? (
         <span role="status" className="grid size-9 animate-pulse place-items-center rounded-full bg-surface-sunken">
           <span className="sr-only">Loading your profile…</span>
         </span>
-      ) : state.status === "error" ? (
-        <Link href="/profile" role="alert" title={state.message} className="grid size-9 place-items-center rounded-full bg-danger-wash text-caption font-bold text-danger">
+      ) : visibleState.status === "error" ? (
+        <Link href="/profile" role="alert" title={visibleState.message} className="grid size-9 place-items-center rounded-full bg-danger-wash text-caption font-bold text-danger">
           <span aria-hidden>!</span>
-          <span className="sr-only">{state.message}</span>
+          <span className="sr-only">{visibleState.message}</span>
         </Link>
       ) : (
-        <AccountMenu me={state.me} />
+        <AccountMenu me={visibleState.me} />
       )}
     </div>
   );

@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountSummary } from "./account-summary";
 
 const fetchMe = vi.hoisted(() => vi.fn());
-const getSession = vi.hoisted(() => vi.fn());
 const signOut = vi.hoisted(() => vi.fn());
+const auth = vi.hoisted(() => ({ token: "token-abc" as string | null | undefined }));
 
 vi.mock("@/lib/api", () => ({
   fetchMe,
@@ -15,8 +15,9 @@ vi.mock("@/lib/api", () => ({
 }));
 
 vi.mock("@/lib/supabase/client", () => ({
-  createSupabaseBrowserClient: () => ({ auth: { getSession, signOut } }),
+  createSupabaseBrowserClient: () => ({ auth: { signOut } }),
 }));
+vi.mock("@/lib/use-access-token", () => ({ useAccessToken: () => auth.token }));
 
 // The way out now lives inside this block rather than floating at the foot of an empty
 // rail, so this component has a router dependency it did not have before.
@@ -45,7 +46,7 @@ const me: MeResponse = {
 describe("AccountSummary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getSession.mockResolvedValue({ data: { session: { access_token: "token-abc" } } });
+    auth.token = "token-abc";
   });
 
   /**
@@ -140,7 +141,7 @@ describe("AccountSummary", () => {
   });
 
   it("reports the missing session when the browser has no token at all", async () => {
-    getSession.mockResolvedValue({ data: { session: null } });
+    auth.token = null;
 
     render(<AccountSummary />);
 

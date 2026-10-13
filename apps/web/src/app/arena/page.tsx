@@ -46,14 +46,15 @@ export default function ArenaPage() {
   return (
     <AppShell breadcrumb="arena">
       <div className="flex flex-col gap-10">
-        <header className="relative overflow-hidden rounded-[1.75rem] border border-line bg-surface-raised px-7 py-10 shadow-[var(--shadow-sm)] sm:px-10 sm:py-12">
-          <div aria-hidden="true" className="absolute -top-32 right-0 size-80 rounded-full bg-accent-wash blur-3xl" />
+        <header className="hero-band relative overflow-hidden px-7 py-10 sm:px-10 sm:py-12">
+          <div aria-hidden="true" className="absolute -top-28 right-0 size-80 rounded-full bg-accent/25 blur-3xl" />
+          <div aria-hidden="true" className="absolute -bottom-36 left-1/3 size-72 rounded-full bg-positive/15 blur-3xl" />
           <div className="relative flex flex-col gap-5">
-            <p className="pill pill-accent w-fit">Daily practice · {visibleCourses.length} courses</p>
-            <h1 className="max-w-4xl text-display text-balance text-ink">
+            <p className="pill pill-navy w-fit">Daily practice · {visibleCourses.length} courses</p>
+            <h1 className="max-w-4xl text-display text-balance text-on-navy">
               A few sharp questions. A different set tomorrow.
             </h1>
-            <p className="max-w-2xl text-body leading-relaxed text-ink-muted">
+            <p className="max-w-2xl text-body leading-relaxed text-on-navy-muted">
               Choose {courseNames}. Each course gets its own daily set, labelled by topic, with an
               explanation after every answer and a link back to the chapter when something does not click.
             </p>

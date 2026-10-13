@@ -88,6 +88,25 @@ export const SCORE_BANDS = [
  */
 export const ORDINARY_MARK = 40;
 
+export type ScoreTone = "positive" | "warning" | "danger";
+
+/**
+ * A familiar traffic-light read for report scores. Text and anchored band names remain
+ * beside every colour, so colour reinforces meaning without becoming the only signal.
+ */
+export function scoreToneForPercent(percent: number): ScoreTone {
+  if (percent > 70) return "positive";
+  if (percent >= 50) return "warning";
+  return "danger";
+}
+
+function scoreFillClass(percent: number): string {
+  const tone = scoreToneForPercent(percent);
+  if (tone === "positive") return "bg-positive";
+  if (tone === "warning") return "bg-warning";
+  return "bg-danger";
+}
+
 /**
  * The mean of the competency ratios, as a percentage to one decimal place.
  *
@@ -134,6 +153,13 @@ export function OverallScore({ competencies }: { competencies: ReportCompetency[
 
   const band = bandFor(percent);
   const marker = Math.min(100, Math.max(0, percent));
+  const tone = scoreToneForPercent(percent);
+  const toneClasses =
+    tone === "positive"
+      ? { band: "border-positive bg-positive-wash", marker: "bg-positive", arrow: "fill-positive" }
+      : tone === "warning"
+        ? { band: "border-warning bg-warning-wash", marker: "bg-warning", arrow: "fill-warning" }
+        : { band: "border-danger bg-danger-wash", marker: "bg-danger", arrow: "fill-danger" };
 
   return (
     <figure className="flex flex-col gap-7 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-7">
@@ -167,7 +193,7 @@ export function OverallScore({ competencies }: { competencies: ReportCompetency[
           {/* Where they landed. The only band drawn differently, and the only accent here. */}
           <span
             aria-hidden="true"
-            className="absolute inset-y-0 border-x border-accent bg-accent-wash"
+            className={`absolute inset-y-0 border-x ${toneClasses.band}`}
             style={{ left: `${band.from}%`, width: `${band.to - band.from}%` }}
           />
           {/*
@@ -184,13 +210,13 @@ export function OverallScore({ competencies }: { competencies: ReportCompetency[
           ))}
           <span
             aria-hidden="true"
-            className="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-accent"
+            className={`absolute inset-y-0 w-0.5 -translate-x-1/2 ${toneClasses.marker}`}
             style={{ left: `${marker}%` }}
           />
           <svg
             aria-hidden="true"
             viewBox="0 0 10 8"
-            className="absolute -top-2.5 h-2 w-2.5 -translate-x-1/2 fill-accent"
+            className={`absolute -top-2.5 h-2 w-2.5 -translate-x-1/2 ${toneClasses.arrow}`}
             style={{ left: `${marker}%` }}
           >
             <polygon points="0,0 10,0 5,8" />
@@ -356,9 +382,8 @@ function HighlightGroup({
  * without the datum a whole chart of perfectly respectable answers looks like a chart of
  * near-empty bars.
  *
- * One colour throughout. Painting the short bars red would be a second, louder verdict on
- * top of the number, and the development areas below already say which ones cost them
- * something and what to do about it.
+ * The fill follows the report's shared traffic-light thresholds, while the numeric score,
+ * named band and ordinary-answer datum keep colour from carrying meaning by itself.
  */
 export function CompetencyBars({ competencies }: { competencies: ReportCompetency[] | undefined }) {
   const items = (competencies ?? []).filter((item) => item.maxScore > 0);
@@ -390,7 +415,7 @@ export function CompetencyBars({ competencies }: { competencies: ReportCompetenc
               >
                 <span
                   aria-hidden="true"
-                  className="absolute inset-y-0 left-0 bg-accent"
+                  className={`absolute inset-y-0 left-0 ${scoreFillClass(percent)}`}
                   style={{ width: `${percent}%` }}
                 />
                 {/* The datum. Drawn over the fill so a bar that passes it still shows it. */}

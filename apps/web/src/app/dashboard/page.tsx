@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ContinueLearning } from "@/components/continue-learning";
 import { DashboardPanel } from "@/components/dashboard-panel";
 import { DashboardQuestionOfDay } from "@/components/dashboard-question-of-day";
-import { allArenaChallenges } from "@/lib/arena/corpus";
+import { dashboardQuestionPool } from "@/lib/arena/corpus";
 import { possibleDateKeysWorldwide, questionOfTheDay } from "@/lib/arena/progression";
 import { getCourseOutlines } from "@/lib/course-outline";
 import { courseEnabled, featureEnabled } from "@/lib/flags";
@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 export default function DashboardPage() {
   const arenaEnabled = featureEnabled("arena");
   const eligibleChallenges = arenaEnabled
-    ? allArenaChallenges.filter((challenge) => courseEnabled(challenge.courseSlug))
+    ? dashboardQuestionPool.filter((challenge) => courseEnabled(challenge.courseSlug))
     : [];
   const questionsByDate = Object.fromEntries(
     possibleDateKeysWorldwide().flatMap((dateKey) => {

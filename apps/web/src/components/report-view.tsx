@@ -11,7 +11,7 @@ import type {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { CompetencyBars, bandFor, overallScore } from "@/components/report-charts";
+import { CompetencyBars, bandFor, overallScore, scoreToneForPercent } from "@/components/report-charts";
 import { SpokenEnglishPanel } from "@/components/spoken-english-panel";
 import { ApiRequestError, fetchReport } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -25,7 +25,7 @@ import { useAccessToken } from "@/lib/use-access-token";
  * transcript was dropped rather than displayed, because a score without evidence is a
  * badge, and an invented quote destroys the credibility this page exists to build.
  */
-export function ReportView({ sessionId }: { sessionId: string }) {
+export function ReportView({ sessionId, detailed = false }: { sessionId: string; detailed?: boolean }) {
   const accessToken = useAccessToken();
   const [report, setReport] = useState<SessionReport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +99,7 @@ export function ReportView({ sessionId }: { sessionId: string }) {
     return <ReportLoadingState />;
   }
 
-  return <ReportDocument report={report} />;
+  return <ReportDocument report={report} detailed={detailed} />;
 }
 
 /** A useful waiting room for the model-written report, without inventing a score. */
@@ -150,7 +150,7 @@ export function ReportLoadingState() {
  * `.length` on a field that had just been added. The server backfills the shape it knows
  * about (`ReportService.withEveryField`), and this is the belt to that pair of braces.
  */
-export function ReportDocument({ report }: { report: SessionReport }) {
+export function ReportDocument({ report, detailed = true }: { report: SessionReport; detailed?: boolean }) {
   const competencies = report.competencies ?? [];
   const annotations = report.annotations ?? [];
   const practicePlan = report.practicePlan ?? [];
@@ -162,6 +162,7 @@ export function ReportDocument({ report }: { report: SessionReport }) {
   const hasReliableOverallScore = assessableTurns >= 2 && hasGroundedCompetency;
   const headlineScore = hasReliableOverallScore ? overallScore(competencies) : null;
   const headlineBand = headlineScore === null ? null : bandFor(headlineScore);
+  const headlineTone = headlineScore === null ? null : scoreToneForPercent(headlineScore);
   const strongestCompetency = competencies
     .filter((item) => item.maxScore > 0)
     .reduce<ReportCompetency | null>((best, item) => {
@@ -171,6 +172,11 @@ export function ReportDocument({ report }: { report: SessionReport }) {
 
   return (
     <article className="flex flex-col gap-8 md:gap-10">
+      {detailed ? (
+        <Link href={`/report/${report.sessionId}`} className="w-fit text-caption font-semibold text-accent hover:underline">
+          <span aria-hidden>←</span> Back to report summary
+        </Link>
+      ) : null}
       <header className="hero-band relative overflow-hidden p-7 sm:p-10">
         <div aria-hidden="true" className="absolute -top-24 -right-20 size-72 rounded-full bg-accent/20 blur-3xl" />
         <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_10rem] lg:items-center">
@@ -191,7 +197,9 @@ export function ReportDocument({ report }: { report: SessionReport }) {
               role="img"
               aria-label={`Overall score ${headlineScore} percent, ${headlineBand.name}`}
               className="grid size-32 place-items-center rounded-full p-2 lg:justify-self-end"
-              style={{ background: `conic-gradient(#a8e7d7 ${headlineScore}%, rgba(255,255,255,0.16) 0)` }}
+              style={{
+                background: `conic-gradient(var(--${headlineTone}) ${headlineScore}%, rgba(255,255,255,0.16) 0)`,
+              }}
             >
               <div className="grid size-full place-items-center rounded-full bg-[#303b94] text-center">
                 <span>
@@ -241,6 +249,25 @@ export function ReportDocument({ report }: { report: SessionReport }) {
         />
       </div>
 
+      {!detailed ? (
+        <section className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-accent/20 bg-accent-wash px-5 py-5 sm:flex-row sm:items-center sm:px-6">
+          <div>
+            <h2 className="text-heading text-ink">Want the evidence behind every score?</h2>
+            <p className="mt-1 max-w-2xl text-caption text-ink-muted">
+              Open the answer-by-answer view for transcript quotes, rationale, communication feedback, and sources.
+            </p>
+          </div>
+          <Link
+            href={`/report/${report.sessionId}?detail=1`}
+            className="shrink-0 rounded-lg border border-accent bg-surface-raised px-4 py-2 text-caption font-semibold text-accent-strong shadow-[var(--shadow-sm)] transition-colors hover:bg-accent hover:text-accent-contrast"
+          >
+            Read detailed report <span aria-hidden>→</span>
+          </Link>
+        </section>
+      ) : null}
+
+      {detailed ? (
+        <>
       {report.assistance?.assistedAnswers > 0 ? <AssistancePanel assistance={report.assistance} /> : null}
 
       {practicePlan.length > 1 ? <PracticePlanPanel items={practicePlan.slice(1)} /> : null}
@@ -399,6 +426,8 @@ export function ReportDocument({ report }: { report: SessionReport }) {
           Recommended next: {report.recommendedNextSession}
         </p>
       </footer>
+        </>
+      ) : null}
     </article>
   );
 }

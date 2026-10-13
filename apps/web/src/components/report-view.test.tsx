@@ -158,6 +158,19 @@ describe("ReportDocument — the evidence quote", () => {
   });
 });
 
+describe("ReportDocument summary", () => {
+  it("keeps the long evidence report on a dedicated detailed view", () => {
+    render(<ReportDocument report={buildReport()} detailed={false} />);
+
+    expect(screen.getByRole("link", { name: /read detailed report/i })).toHaveAttribute(
+      "href",
+      "/report/session-1?detail=1",
+    );
+    expect(screen.queryByRole("heading", { name: "Competencies" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Answer by answer" })).not.toBeInTheDocument();
+  });
+});
+
 describe("ReportDocument evidence threshold", () => {
   it("does not turn one substantive answer into an overall percentage", () => {
     render(<ReportDocument report={buildReport({ answeredTurns: 1, assessableTurns: 1 })} />);

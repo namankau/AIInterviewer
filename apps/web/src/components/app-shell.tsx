@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { AccountSummary } from "@/components/account-summary";
 import { RailNav } from "@/components/rail-nav";
+import { SiteFooter } from "@/components/site-footer";
 
 /**
  * The frame every signed-in page sits in.
@@ -28,7 +29,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-surface">
+    <div className="flex min-h-dvh flex-col overflow-x-hidden bg-surface">
       <header className="sticky top-0 z-40 border-b border-line bg-surface-raised/95 shadow-[var(--shadow-sm)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-[78rem] flex-wrap items-center gap-x-5 px-4 sm:flex-nowrap sm:px-6 lg:px-8">
           <Link
@@ -72,6 +73,7 @@ export function AppShell({
           {children}
         </main>
       </div>
+      <SiteFooter />
     </div>
   );
 }

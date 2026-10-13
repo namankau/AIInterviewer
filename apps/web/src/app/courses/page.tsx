@@ -1,29 +1,35 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
-import { CourseCardProgress } from "@/components/courses/course-progress";
+import { CourseCatalogue } from "@/components/courses/course-catalogue";
+import { DailyChallengeBanner } from "@/components/courses/daily-challenge-banner";
 import { ImportBrowserProgress } from "@/components/courses/import-browser-progress";
-import { CourseAccentLine, CourseMotif, getCoursePresentation } from "@/components/courses/course-visuals";
-import { courses, totalChapters, totalMinutes } from "@/content/courses";
+import { courses, totalChapters } from "@/content/courses";
+import { dailyQuestionsByDate } from "@/lib/arena/daily-question";
 import { courseEnabled, featureEnabled } from "@/lib/flags";
 import { requireFeature } from "@/lib/require-feature";
 
 export const metadata: Metadata = {
   title: "Courses — Untiered",
-  description:
-    "Free courses that teach the fundamentals from the very start, chapter by chapter — Java " +
-    "programming, data structures & algorithms, AI and agentic AI, and system design with interactive " +
-    "architecture practice.",
+  description: "Free interactive courses in Java, data structures, AI agents, and system design.",
 };
+export const dynamic = "force-dynamic";
 
-/** The signed-in learning catalogue, presented inside the same workspace as the Arena and rounds. */
 export default function CoursesPage() {
   requireFeature("courses");
   const visibleCourses = courses.filter((course) => courseEnabled(course.slug));
   if (visibleCourses.length === 0) notFound();
   const lessonCount = visibleCourses.reduce((total, course) => total + totalChapters(course), 0);
+  const catalogue = visibleCourses.map((course) => ({
+    slug: course.slug,
+    title: course.title,
+    tagline: course.tagline,
+    level: course.level,
+    chapterCount: totalChapters(course),
+    chapters: course.modules.flatMap((module) => module.chapters.map((chapter) => ({ slug: chapter.slug, title: chapter.title }))),
+    searchText: [course.title, course.tagline, ...course.modules.flatMap((module) => [module.title, ...module.chapters.map((chapter) => chapter.title)])].join(" ").toLocaleLowerCase(),
+  }));
 
   return (
     <AppShell breadcrumb="courses">
@@ -33,10 +39,7 @@ export default function CoursesPage() {
           <div className="max-w-3xl">
             <p className="eyebrow text-accent-on-navy">Learn by doing</p>
             <h1 className="mt-4 text-display text-balance text-on-navy">Build skills that stick.</h1>
-            <p className="mt-3 max-w-2xl text-body leading-relaxed text-on-navy-muted">
-              Short, interactive chapters with runnable examples, visual explanations and quick checks.
-              No passive video queue.
-            </p>
+            <p className="mt-3 max-w-2xl text-body leading-relaxed text-on-navy-muted">Short, interactive chapters with runnable examples, visual explanations and quick checks. No passive video queue.</p>
           </div>
           <div className="border-white/15 lg:border-l lg:pl-10">
             <p className="text-display text-on-navy">{lessonCount}</p>
@@ -44,74 +47,8 @@ export default function CoursesPage() {
           </div>
         </div>
       </header>
-
-      {featureEnabled("arena") ? (
-        <section className="mt-7 flex flex-col gap-5 rounded-2xl border border-accent/20 bg-[linear-gradient(100deg,var(--accent-wash),var(--positive-wash))] p-6 shadow-[var(--shadow-sm)] sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="eyebrow text-accent">Daily practice</p>
-            <h2 className="mt-2 text-heading text-ink">Turn today&apos;s chapter into a short recall round.</h2>
-            <p className="mt-1 text-caption text-ink-muted">The Arena pulls its challenges directly from these learning paths.</p>
-          </div>
-          <Link href="/arena" className="action-primary shrink-0">Open today&apos;s challenge <span aria-hidden>→</span></Link>
-        </section>
-      ) : null}
-
-      <section aria-labelledby="learning-paths" className="mt-12">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="font-mono text-micro tracking-widest text-accent uppercase">Choose your focus</p>
-            <h2 id="learning-paths" className="mt-2 text-heading text-ink">Four paths, one interview toolkit</h2>
-          </div>
-          <p className="text-caption text-ink-muted">Continue from exactly where you stopped.</p>
-        </div>
-        <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {visibleCourses.map((course) => (
-            <li key={course.slug} className="min-w-0">
-              <Link
-                href={`/courses/${course.slug}`}
-              className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-1 hover:border-accent/35 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <CourseAccentLine courseSlug={course.slug} />
-                    <p className="mt-4 font-mono text-micro tracking-widest text-ink-subtle uppercase">
-                      {getCoursePresentation(course.slug).shortLabel} learning path
-                    </p>
-                  </div>
-                  <CourseMotif courseSlug={course.slug} />
-                </div>
-                <h3 className="mt-5 text-title text-ink transition-colors group-hover:text-accent">{course.title}</h3>
-                <p className="mt-2 min-h-12 text-caption leading-relaxed text-ink-muted">{course.tagline}</p>
-
-                <dl className="mt-6 space-y-3 border-y border-line py-5 text-caption">
-                  <div>
-                    <dt className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Outcome</dt>
-                    <dd className="mt-1 font-medium leading-snug text-ink">{getCoursePresentation(course.slug).outcome}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Hands-on practice</dt>
-                    <dd className="mt-1 text-ink-muted">{getCoursePresentation(course.slug).practice}</dd>
-                  </div>
-                </dl>
-
-                <div className="mt-auto flex flex-col gap-3 pt-5">
-                  <CourseCardProgress
-                    courseSlug={course.slug}
-                    chapters={course.modules.flatMap((m) => m.chapters.map((c) => ({ slug: c.slug, title: c.title })))}
-                  />
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-                      {course.modules.length} modules · {totalChapters(course)} chapters · {totalMinutes(course)} min
-                    </p>
-                    <span aria-hidden="true" className="text-heading text-accent transition-transform group-hover:translate-x-1">→</span>
-                  </div>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-
+      {featureEnabled("arena") ? <DailyChallengeBanner questionsByDate={dailyQuestionsByDate()} levelsByCourse={Object.fromEntries(visibleCourses.map((course) => [course.slug, course.level.startsWith("Beginner") ? "Beginner" : (course.level.split(" — ")[0] ?? course.level)]))} /> : null}
+      <CourseCatalogue courses={catalogue} />
     </AppShell>
   );
 }

@@ -4,10 +4,9 @@ import { AppShell } from "@/components/app-shell";
 import { ContinueLearning } from "@/components/continue-learning";
 import { DashboardPanel } from "@/components/dashboard-panel";
 import { DashboardQuestionOfDay } from "@/components/dashboard-question-of-day";
-import { dashboardQuestionPool } from "@/lib/arena/corpus";
-import { possibleDateKeysWorldwide, questionOfTheDay } from "@/lib/arena/progression";
+import { dailyQuestionsByDate } from "@/lib/arena/daily-question";
 import { getCourseOutlines } from "@/lib/course-outline";
-import { courseEnabled, featureEnabled } from "@/lib/flags";
+import { featureEnabled } from "@/lib/flags";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -23,15 +22,7 @@ export const dynamic = "force-dynamic";
  */
 export default function DashboardPage() {
   const arenaEnabled = featureEnabled("arena");
-  const eligibleChallenges = arenaEnabled
-    ? dashboardQuestionPool.filter((challenge) => courseEnabled(challenge.courseSlug))
-    : [];
-  const questionsByDate = Object.fromEntries(
-    possibleDateKeysWorldwide().flatMap((dateKey) => {
-      const question = questionOfTheDay(eligibleChallenges, dateKey);
-      return question ? [[dateKey, question] as const] : [];
-    }),
-  );
+  const questionsByDate = arenaEnabled ? dailyQuestionsByDate() : {};
 
   return (
     <AppShell>

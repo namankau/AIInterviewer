@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SignOutButton } from "@/components/sign-out-button";
 import { SiteNavLinks } from "@/components/site-nav-links";
 import { ActionLink } from "@/components/ui/action-link";
+import { SiteFooter } from "@/components/site-footer";
 import { featureEnabled } from "@/lib/flags";
 
 /**
@@ -50,21 +51,5 @@ export function CourseSiteHeader() {
 }
 
 export function CourseSiteFooter() {
-  return (
-    <footer className="border-t border-white/10 bg-navy text-on-navy">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-9">
-        <span className="text-caption text-on-navy-muted">
-          Untiered — practice interviews, not interview help.
-        </span>
-        {featureEnabled("mockInterviews") ? (
-          <Link
-            href="/interview/new"
-            className="font-mono text-micro tracking-widest text-on-navy-muted uppercase transition-colors hover:text-on-navy"
-          >
-            Ready to practise an interview?
-          </Link>
-        ) : null}
-      </div>
-    </footer>
-  );
+  return <SiteFooter />;
 }

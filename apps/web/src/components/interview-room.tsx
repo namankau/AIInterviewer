@@ -370,12 +370,16 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
   const finishAnswer = useCallback(async (endRound = false) => {
     if (!accessToken || !turn) return;
-    const captured = await capture.stop();
-    if (!captured) return;
-
-    liveTranscript.stop();
+    const priorPhase = phase;
     setPhase("submitting");
     setError(null);
+    const captured = await capture.stop();
+    if (!captured) {
+      setPhase(priorPhase);
+      return;
+    }
+
+    liveTranscript.stop();
     const requestId = answerRequestIds.current.get(turn.turnIndex) ?? crypto.randomUUID();
     answerRequestIds.current.set(turn.turnIndex, requestId);
     reportRoomEvent("answer_submission_started", "submitting", turn.turnIndex, requestId);
@@ -436,7 +440,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     } finally {
       window.clearTimeout(slowRequestTimer);
     }
-  }, [accessToken, capture, closeRound, liveTranscript, reportRoomEvent, sessionId, speaksLocally, turn]);
+  }, [accessToken, capture, closeRound, liveTranscript, phase, reportRoomEvent, sessionId, speaksLocally, turn]);
 
   // The meter and the submit callback are read through refs by the tick below. The
   // meter changes on every animation frame, and rebuilding the interval each time would

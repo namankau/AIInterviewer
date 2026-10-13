@@ -311,6 +311,27 @@ describe("InterviewRoom operational telemetry", () => {
     vi.useRealTimers();
   });
 
+  it("shows processing feedback before the recorder finishes stopping", async () => {
+    let completeStop!: (answer: { audio: Blob; timing: null }) => void;
+    captureStop.mockReturnValueOnce(new Promise((resolve) => { completeStop = resolve; }));
+    fetchSession.mockResolvedValue({ ...baseSession, workspace: { kind: "dsa" } });
+    beginSession.mockResolvedValue({
+      startedAt: new Date().toISOString(),
+      scheduledEndAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+    });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<InterviewRoom sessionId={baseSession.id} />);
+
+    await user.click(await screen.findByRole("button", { name: "Enter the room" }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    await user.click(screen.getByRole("button", { name: "Over to you" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent("Listening to your answer…");
+    expect(screen.queryByRole("button", { name: "Over to you" })).not.toBeInTheDocument();
+
+    await act(async () => completeStop({ audio: new Blob(["voice"], { type: "audio/webm" }), timing: null }));
+  });
+
   it("reports phases, heartbeats, submission start and a still-pending request as slow", async () => {
     fetchSession.mockResolvedValue({ ...baseSession, workspace: { kind: "dsa" } });
     beginSession.mockResolvedValue({

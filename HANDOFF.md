@@ -19,10 +19,10 @@ Apply the updated Untiered brand kit from the supplied local folder; user reques
 - Frontend typecheck, lint, all 3,012 tests, and production build pass.
 - Backend `ktlintCheck test build` passes.
 - Inspected the light desktop header, dark footer, and 390 px mobile header in the local browser. Confirmed favicon and Apple icon links resolve to the new build assets.
-- GitHub CI: pending branch push.
+- GitHub Actions run `38394872114`: web, API, and Docker image jobs passed on branch commit `33db775`.
 
 ## Merge status
-- Branch `fix/updated-brand-kit` is ready to push. Merge into `develop` only after GitHub CI passes.
+- Branch `fix/updated-brand-kit` merged into `develop` at `dae2f28` after all CI jobs passed. `main` was not touched.
 
 ## Suggested next task
 - Supply vector artwork if sharper scaling is desired at large display sizes.

@@ -1,41 +1,37 @@
 # Handoff — 2026-10-13
 
 ## Task
-Stabilise signed-in rendering and polish the dashboard, report, Arena, and profile against the supplied references; user request, no task file.
+Revamp the course catalogue, daily challenge entry, lesson cards, and footer against the supplied screenshots; user request, no task file.
 
 ## What I built
-- Prevented signed-in UI flashes by keeping dashboard and profile loading states structurally stable and reusing the resolved access token across client remounts (`apps/web/src/components/dashboard-panel.tsx`, `apps/web/src/lib/use-access-token.ts`, `apps/web/src/components/account-summary.tsx`).
-- Corrected local time-of-day salutations, including midnight and late night, with regression coverage (`apps/web/src/components/dashboard-panel.tsx`, `apps/web/src/components/dashboard-panel.test.tsx`).
-- Replaced arbitrary daily-question selection with a deterministic local-date rotation over more than 50 standalone, authored course questions (`apps/web/src/lib/arena/corpus.ts`, `apps/web/src/lib/arena/corpus.test.ts`).
-- Restyled the Arena introduction and daily quest surfaces to use the product navy/blue theme (`apps/web/src/app/arena/page.tsx`, `apps/web/src/components/arena/arena-client.tsx`).
-- Removed the obsolete breadcrumb strip from signed-in product pages (`apps/web/src/components/app-shell.tsx`).
-- Added semantic report score colours: green above 70, amber from 50 through 70, and red below 50; made the default report concise and moved evidence-heavy content behind “Read detailed report” (`apps/web/src/components/report-view.tsx`, `apps/web/src/components/report-view.test.tsx`, `apps/web/src/app/report/[id]/page.tsx`).
-- Rebuilt the profile overview around the supplied layout using real completion, course, round, resume, employment, lesson, and streak data; no synthetic readiness or resume-match metrics (`apps/web/src/components/profile/profile-view.tsx`, `apps/web/src/components/profile/profile-view.test.tsx`).
+- Replaced the bulky daily practice banner with a dated question strip that uses the actual daily prompt, source chapter, and course-level label (`apps/web/src/components/courses/daily-challenge-banner.tsx`). Its action opens `/daily-challenge`, a focused version of the existing account-backed Question of the Day (`apps/web/src/app/daily-challenge/page.tsx`).
+- Added live search across course, module, and chapter titles, useful category filters, and compact illustrated course cards (`apps/web/src/components/courses/course-catalogue.tsx`).
+- Restyled challenge choices and guided lesson steps with lighter cards, clearer spacing, and stronger type hierarchy (`apps/web/src/components/arena/challenge-card.tsx`, `apps/web/src/components/courses/guided-lesson-controls.tsx`).
+- Reused one footer across marketing, legal, login, signed-in workspace, and chapter pages (`apps/web/src/components/site-footer.tsx`). The live interview remains intentionally distraction-free.
+- Added tests for course search, filter combinations, and the daily challenge destination. Existing daily-answer persistence tests remain green.
 
 ## Assumptions I made
-- 00:00–04:59 and 21:00–23:59 say “Good night”; 05:00–11:59 morning, 12:00–16:59 afternoon, and 17:00–20:59 evening.
-- A query-backed detailed report (`?detail=1`) is clearer and more shareable than expanding the full report inline.
-- Existing course-authored questions are the safest quality source for daily rotation; generating them live would add latency, cost, and inconsistent context.
-- The profile reference is a hierarchy and layout target, not permission to invent metrics that the API does not provide.
+- The screenshot numbering in the written request is offset after the daily-practice examples; I followed the visible content of each reference.
+- Today's challenge reuses the existing one-question daily flow and saved completion. The five-step screenshot guides its focused presentation; it does not authorize changing the challenge format or inventing four extra questions.
+- “Beginner path” describes the source course level. The question bank has no verified question-difficulty or XP fields, so neither is claimed on the banner.
+- Search matches real authored concept titles; filters reflect the four current courses.
 
 ## What I could NOT verify
-- The isolated browser had no Supabase session, so the first OAuth sign-in transition and authenticated API-backed content need one human browser check.
-- Final visual-design approval and perceived production latency remain human judgements.
-- No live Gemini calls were made, per project policy.
+- The preview browser had no signed-in Supabase profile, so the focused question's loaded and saved account state could not be visually inspected there. The existing mocked behavior tests pass.
+- The browser tool exposed a desktop viewport only, so mobile and tablet layout received responsive-code review rather than visual viewport inspection.
+- Final visual-design approval is the owner's judgement. No live AI calls were made.
 
 ## Verification status
-- Frontend: typecheck pass; lint pass; 72 Vitest files / 3,010 tests pass; production build pass.
+- Frontend: typecheck pass; lint pass; 74 test files / 3,012 tests pass; production build pass. The final prompt-copy edit passed an additional typecheck and focused test.
 - Backend: `ktlintCheck test build` pass.
-- Focused post-QA navigation check: typecheck pass; lint pass; relevant tests pass.
-- Remote CI: running for commit `1fe9930` when this handoff was written.
-- No migration was added.
+- GitHub Actions run `38355919981`: web, API, and Docker image jobs all passed on branch commit `edebf15`.
+- Desktop browser: catalogue, search, cards, daily strip, course page, lesson steps, and footer inspected. No migration or dependency added.
 
 ## Merge status
-- PR #68 opened into `develop` and intentionally left unmerged because the change includes shared auth/session handling: https://github.com/namankau/AIInterviewer/pull/68
-- `main` was not touched.
+- Feature branch `feat/learning-ui-revamp` merged into `develop` at `7d812e3` after all CI jobs passed. `main` was not touched.
 
 ## Suggested next task
-- Perform one authenticated sign-in/navigation timing pass, then merge PR #68 after CI and human review are green.
+- Review the signed-in daily question and mobile layouts on a real device or authenticated browser.
 
 ## Open questions for you
 - None.

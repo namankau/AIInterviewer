@@ -12,7 +12,7 @@ import type { Challenge } from "@/lib/arena/types";
  * One reviewed Arena question, stable for the learner's local calendar day. Completion
  * is account-backed, so a solved card stays green after refresh and on another device.
  */
-export function DashboardQuestionOfDay({ questionsByDate }: { questionsByDate: Record<string, Challenge> }) {
+export function DashboardQuestionOfDay({ questionsByDate, focused = false }: { questionsByDate: Record<string, Challenge>; focused?: boolean }) {
   const [dateKey] = useState(() => localDateKey(new Date()));
   const question = questionsByDate[dateKey];
   const { progress, ready, status, recordAnswer } = useArenaProgress();
@@ -55,16 +55,16 @@ export function DashboardQuestionOfDay({ questionsByDate }: { questionsByDate: R
   return (
     <section
       aria-labelledby="question-of-the-day-heading"
-      className="rounded-3xl border border-accent/20 bg-accent-wash p-5 shadow-[var(--shadow-sm)] sm:p-7"
+      className={focused ? "" : "rounded-3xl border border-accent/20 bg-accent-wash p-5 shadow-[var(--shadow-sm)] sm:p-7"}
     >
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+      <div className={`mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6 ${focused ? "text-center sm:text-left" : ""}`}>
         <div>
           <p className="eyebrow text-accent">Daily practice</p>
-          <h2 id="question-of-the-day-heading" className="mt-2 text-title text-ink">
+          <h2 id="question-of-the-day-heading" className={`${focused ? "mt-2 text-display" : "mt-2 text-title"} text-ink`}>
             Question of the day
           </h2>
           <p className="mt-1 max-w-2xl text-caption text-ink-muted">
-            One focused question, fixed for today. Solve it once and your dashboard keeps the win.
+            {focused ? "One focused question from your learning paths. Take your time, then check your reasoning." : "One focused question, fixed for today. Solve it once and your dashboard keeps the win."}
           </p>
         </div>
         <span className="pill w-fit bg-surface-raised text-ink-muted shadow-[var(--shadow-sm)]">Changes tomorrow</span>

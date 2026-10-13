@@ -2,6 +2,7 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 
 import { SignInWithGoogle } from "@/components/sign-in-with-google";
+import { SiteFooter } from "@/components/site-footer";
 import { safeNext } from "@/lib/safe-next";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -14,6 +15,7 @@ export default async function LoginPage({
   const { next } = await searchParams;
 
   return (
+    <>
     <main className="grid min-h-dvh bg-surface lg:grid-cols-[1.08fr_0.92fr]">
       <section className="relative hidden overflow-hidden bg-navy px-12 py-10 text-on-navy lg:flex lg:flex-col lg:justify-between xl:px-20 xl:py-14">
         <div
@@ -99,5 +101,7 @@ export default async function LoginPage({
         </div>
       </section>
     </main>
+    <SiteFooter />
+    </>
   );
 }

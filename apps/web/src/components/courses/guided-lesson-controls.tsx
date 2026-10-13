@@ -79,13 +79,13 @@ export function GuidedLessonControls({
     <GuidedLessonProgressProvider
       progress={{ allBeatsVisited, totalCount: beats.length, visitedCount: visitedBeats.size }}
     >
-      <section aria-labelledby={`${lessonId}-title`} className="overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-[var(--shadow-sm)]">
-        <header className="border-b border-accent/20 bg-[linear-gradient(120deg,var(--accent-wash),var(--positive-wash))] px-4 py-6 sm:px-7 sm:py-7">
+      <section aria-labelledby={`${lessonId}-title`}>
+        <header className="rounded-[1.35rem] border border-line bg-surface-raised px-5 py-6 shadow-[var(--shadow-sm)] sm:px-8 sm:py-7">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="font-mono text-micro tracking-widest text-accent uppercase">Guided lesson</p>
-              <h2 id={`${lessonId}-title`} className="mt-2 text-title text-ink">One clear path from idea to interview answer</h2>
-              <p className="mt-2 max-w-[68ch] text-body leading-relaxed text-ink-muted">Read straight through like a guide: start with the everyday picture, test the idea, try it, then leave with the rule and interview use.</p>
+              <h2 id={`${lessonId}-title`} className="mt-2 text-title text-ink">Learn it. Try it. Make it yours.</h2>
+              <p className="mt-2 max-w-[68ch] text-caption leading-relaxed text-ink-muted">Five short steps take you from the first idea to an answer you can explain.</p>
             </div>
             <p className="rounded-full border border-accent/25 bg-surface-raised px-3 py-1 font-mono text-micro text-accent" aria-live="polite">Section {activeBeat + 1} of {beats.length}</p>
           </div>
@@ -100,7 +100,7 @@ export function GuidedLessonControls({
           </nav>
         </header>
 
-        <div className="px-4 sm:px-7 lg:px-9">
+        <div className="mt-5 space-y-5">
           {beats.map((beat, index) => (
             <section
               key={beat.key}
@@ -110,7 +110,7 @@ export function GuidedLessonControls({
               data-testid={`lesson-beat-${beat.key}`}
               data-visited={visitedBeats.has(index) ? "true" : "false"}
               aria-labelledby={`${lessonId}-${beat.key}-title`}
-              className={`scroll-mt-28 border-b border-line py-9 last:border-b-0 sm:py-12 ${beat.key === "explain" ? "relative before:absolute before:inset-y-5 before:-inset-x-4 before:-z-0 before:rounded-2xl before:bg-surface-sunken sm:before:-inset-x-5" : ""}`}
+              className="scroll-mt-28 rounded-[1.35rem] border border-line bg-surface-raised px-5 py-8 shadow-[var(--shadow-sm)] sm:px-8 sm:py-10"
             >
               <div className="relative flex items-start gap-4">
                 <span className={`mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl border ${visitedBeats.has(index) ? "border-accent bg-accent text-accent-contrast" : "border-accent/25 bg-accent-wash text-accent"}`}><BeatIcon beat={beat.key} /></span>
@@ -131,7 +131,7 @@ export function GuidedLessonControls({
           ))}
 
           {completion ? (
-            <div className={`mb-7 mt-2 flex flex-col items-start gap-2 rounded-xl border px-5 py-5 transition-colors ${allBeatsVisited ? "border-positive/25 bg-positive-wash" : "border-line bg-surface-sunken"}`}>
+            <div className={`flex flex-col items-start gap-2 rounded-xl border px-5 py-5 transition-colors ${allBeatsVisited ? "border-positive/25 bg-positive-wash" : "border-line bg-surface-sunken"}`}>
               <p className="text-caption text-ink-muted" aria-live="polite">
                 {allBeatsVisited
                   ? "You reached every section. Mark the chapter complete when you feel ready."

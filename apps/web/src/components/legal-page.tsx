@@ -1,14 +1,7 @@
-import type { Route } from "next";
 import Link from "next/link";
 
+import { SiteFooter } from "@/components/site-footer";
 import { LEGAL } from "@/lib/legal";
-
-/** The links every public page footer carries, so the legal pages are always one click away. */
-export const LEGAL_LINKS: { href: Route; label: string }[] = [
-  { href: "/privacy" as Route, label: "Privacy policy" },
-  { href: "/terms" as Route, label: "Terms of use" },
-  { href: "/contact" as Route, label: "Contact" },
-];
 
 /**
  * A plain, readable frame for the public legal pages. Not the signed-in app shell: these
@@ -48,15 +41,7 @@ export function LegalPage({
         <div className="legal-prose flex flex-col gap-8 text-body leading-relaxed text-ink-muted">{children}</div>
       </main>
 
-      <footer className="border-t border-line">
-        <nav aria-label="Legal" className="mx-auto flex max-w-3xl flex-wrap gap-x-6 gap-y-2 px-6 py-6">
-          {LEGAL_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="text-caption text-ink-muted hover:text-ink">
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

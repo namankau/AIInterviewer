@@ -6,7 +6,7 @@ import { ActionLink } from "@/components/ui/action-link";
 import { Testimonials } from "@/components/testimonials";
 import { courses, totalChapters, totalMinutes } from "@/content/courses";
 import { LANDING_TESTIMONIALS } from "@/content/landing-testimonials";
-import { LEGAL_LINKS } from "@/components/legal-page";
+import { SiteFooter } from "@/components/site-footer";
 import { fetchUsage } from "@/lib/api";
 import { courseEnabled, featureEnabled } from "@/lib/flags";
 
@@ -59,7 +59,7 @@ export default async function LandingPage() {
         {mockInterviewsEnabled ? <HowItWorks /> : null}
         <CtaBand mockInterviewsEnabled={mockInterviewsEnabled} coursesEnabled={coursesEnabled} arenaEnabled={arenaEnabled} />
       </main>
-      <SiteFooter mockInterviewsEnabled={mockInterviewsEnabled} coursesEnabled={coursesEnabled} />
+      <SiteFooter />
     </div>
   );
 }
@@ -627,46 +627,5 @@ function CtaBand({
         </Link>
       </div>
     </section>
-  );
-}
-
-function SiteFooter({ mockInterviewsEnabled, coursesEnabled }: { mockInterviewsEnabled: boolean; coursesEnabled: boolean }) {
-  return (
-    <footer className="border-t border-white/10 bg-navy text-on-navy">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <span className="flex items-center gap-2.5 text-heading font-bold text-on-navy">
-            <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast">
-              U
-            </span>
-            Untiered
-          </span>
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
-            {mockInterviewsEnabled ? (
-              <Link href="/login" className="text-caption text-on-navy-muted hover:text-on-navy">Mock interviews</Link>
-            ) : null}
-            {coursesEnabled ? (
-              <Link href={"/courses" as Route} className="text-caption text-on-navy-muted hover:text-on-navy">Courses</Link>
-            ) : null}
-            <Link href="/login" className="text-caption text-on-navy-muted hover:text-on-navy">
-              Sign in
-            </Link>
-            {LEGAL_LINKS.map((link) => (
-              <Link key={link.href} href={link.href} className="text-caption text-on-navy-muted hover:text-on-navy">
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-6">
-          <span className="text-caption text-on-navy-muted">
-            Untiered — practice interviews, not interview help.
-          </span>
-          <span className="font-mono text-micro tracking-widest text-on-navy-muted uppercase">
-            Recorded with consent · deletable at any time
-          </span>
-        </div>
-      </div>
-    </footer>
   );
 }

@@ -13,7 +13,9 @@ export default function ContactPage() {
   return (
     <LegalPage
       title="Contact"
-      intro="Questions, problems with a round, or a request about your data: write to us and a person will reply."
+      intro="Get help with your account, learning progress, a mock interview, or a privacy request."
+      eyebrow="Untiered · Support"
+      showUpdated={false}
     >
       <LegalSection id="email" title="Email">
         <p>
@@ -27,7 +29,8 @@ export default function ContactPage() {
         </p>
         <p>
           If something went wrong in an interview, include the date and the company you were
-          practising for. Never send us your password; we never ask for it.
+          practising for. Please do not include a recording, your resume, or your password in
+          your email. We will never ask for your Google password.
         </p>
       </LegalSection>
 

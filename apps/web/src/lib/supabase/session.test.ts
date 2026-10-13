@@ -120,8 +120,8 @@ describe("updateSession", () => {
     await updateSession(requestFor("/dashboard"));
 
     expect(getClaims).toHaveBeenCalledTimes(1);
-    // The whole point of the change: this proxy runs on every navigation and every RSC
-    // prefetch, so a round trip to Supabase here is a round trip on all of them.
+    // The proxy runs on protected navigations and their RSC prefetches, so an auth
+    // round trip here would delay both.
     expect(getUser).not.toHaveBeenCalled();
   });
 
@@ -139,5 +139,11 @@ describe("updateSession", () => {
 
     signedIn();
     expect((await updateSession(requestFor("/"))).headers.get("location")).toBeNull();
+    expect(getClaims).not.toHaveBeenCalled();
+  });
+
+  it.each(["/privacy", "/terms", "/contact"])("opens %s without an auth round trip", async (path) => {
+    expect((await updateSession(requestFor(path))).headers.get("location")).toBeNull();
+    expect(getClaims).not.toHaveBeenCalled();
   });
 });

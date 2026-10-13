@@ -18,13 +18,13 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy policy"
-      intro={`${LEGAL.productName} records your spoken answers and reads your resume so it can run a realistic mock interview and write you a report. This page says exactly what we keep, why, who processes it, how long it lasts, and how to delete it.`}
+      intro={`This policy explains what ${LEGAL.productName} collects when you learn or practise, how it is used, who processes it, and the controls you have over it.`}
     >
       <LegalSection id="who" title="Who we are">
         <p>
-          {LEGAL.productName} is operated by {LEGAL.operatorName}, the Data Fiduciary for your
-          personal data under India&rsquo;s Digital Personal Data Protection Act, 2023. Questions
-          and requests go to {CONTACT_EMAIL_DISPLAY}.
+          {LEGAL.productName} is operated by {LEGAL.operatorName}, which is responsible for
+          deciding how information you share with this service is used. Questions and data
+          requests go to {CONTACT_EMAIL_DISPLAY}.
         </p>
       </LegalSection>
 
@@ -131,15 +131,15 @@ export default function PrivacyPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection id="rights" title="Your rights">
-        <p>Under the Digital Personal Data Protection Act, 2023 you can:</p>
+      <LegalSection id="rights" title="Your choices and requests">
+        <p>You can:</p>
         <ul className="list-disc space-y-2 pl-5">
           <li>ask what personal data we hold about you and how we use it;</li>
           <li>correct or update it (most of it you can change yourself on your profile);</li>
           <li>have it erased: delete an interview, or your whole account, at any time;</li>
           <li>withdraw your consent. Recording stops when you stop an interview, and you can delete what was recorded;</li>
-          <li>nominate someone to exercise these rights for you;</li>
-          <li>complain to us, and then to the Data Protection Board of India if you are not satisfied.</li>
+          <li>ask how to exercise any privacy rights available to you under applicable law;</li>
+          <li>raise a complaint with us about how we handle your data.</li>
         </ul>
         <p>
           Our Grievance Officer is {LEGAL.grievanceOfficer}, reachable at {CONTACT_EMAIL_DISPLAY}. We
@@ -149,9 +149,9 @@ export default function PrivacyPage() {
 
       <LegalSection id="children" title="Age">
         <p>
-          {LEGAL.productName} is for people aged 18 or over. If you are under 18, you may use it only
-          with the verifiable consent of a parent or guardian. Write to us and we will help set that
-          up, or delete an account that was created without it.
+          {LEGAL.productName} is for people aged 18 or over. Anyone under 18 must have verifiable
+          consent from a parent or guardian before using it. If an account was created without
+          that consent, contact us so we can review and delete the account and its data.
         </p>
       </LegalSection>
 

@@ -29,13 +29,22 @@ function isProtected(pathname: string): boolean {
 const SIGNED_OUT_ONLY = ["/login"];
 
 /**
- * Refreshes the Supabase session on every request and enforces the route guard.
+ * Refreshes the Supabase session on guarded routes and the sign-in page, and enforces
+ * the route guard. Public content does not need an auth lookup.
  *
  * The guard here is a redirect, not a security boundary — it keeps signed-out people
  * off pages that would only fail for them. Authorisation is enforced by the API,
  * which verifies the token itself on every call.
  */
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
+  const { pathname } = request.nextUrl;
+
+  // Public marketing and legal pages do not need a verified identity. Let them serve
+  // without a proxy auth round trip, including when the browser prefetches footer links.
+  if (!isProtected(pathname) && !SIGNED_OUT_ONLY.includes(pathname)) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(env.supabaseUrl, env.supabaseAnonKey, {
@@ -57,9 +66,8 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   // `getClaims` verifies the access token's signature locally against the project's JWKS,
   // which it caches, instead of asking the auth server who this is. `getUser` was here
-  // before and cost a network round trip to Supabase on *every* request through this proxy
-  // — and because the matcher covers ordinary navigations, that includes every RSC prefetch
-  // Next fires for a link entering the viewport. The courses index alone has 65 of those.
+  // before and cost a network round trip to Supabase on guarded route requests —
+  // including the RSC prefetches Next fires for links entering the viewport.
   //
   // This is not a weakening: `getSession` would be, because it only decodes the cookie and
   // trusts it. `getClaims` checks the signature and the expiry, and refreshes the session
@@ -75,8 +83,6 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   // asymmetric signing keys is a dashboard action.
   const { data: claims } = await supabase.auth.getClaims();
   const user = claims?.claims.sub ? { id: claims.claims.sub } : null;
-
-  const { pathname } = request.nextUrl;
 
   if (!user && isProtected(pathname)) {
     const redirectUrl = request.nextUrl.clone();

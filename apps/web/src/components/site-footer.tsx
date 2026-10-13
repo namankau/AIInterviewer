@@ -2,6 +2,7 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { BrandWordmark } from "@/components/brand-logo";
+import { SessionLink } from "@/components/session-link";
 import { featureEnabled } from "@/lib/flags";
 
 export const LEGAL_LINKS: { href: Route; label: string }[] = [
@@ -38,7 +39,11 @@ export function SiteFooter() {
         <nav aria-label="Support" className="flex flex-col items-start gap-3">
           <h2 className="text-caption font-semibold text-on-navy">Support</h2>
           <Link href="/contact" className="text-caption text-on-navy-muted transition-colors hover:text-on-navy">Contact us</Link>
-          <Link href="/login" className="text-caption text-on-navy-muted transition-colors hover:text-on-navy">Sign in</Link>
+          <SessionLink
+            signedIn={{ href: "/dashboard", label: "Dashboard" }}
+            signedOut={{ href: "/login", label: "Sign in" }}
+            className="text-caption text-on-navy-muted transition-colors hover:text-on-navy"
+          />
         </nav>
       </div>
       <div className="mx-auto flex max-w-[78rem] flex-wrap justify-between gap-2 border-t border-white/10 px-6 py-5 text-micro text-on-navy-muted lg:px-8">

@@ -82,22 +82,37 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
-    Promise.allSettled([
-      fetchProfile({ accessToken }),
-      fetchMe({ accessToken }),
-      mockInterviewsEnabled || reportsEnabled ? fetchSessions({ accessToken }) : Promise.resolve([]),
-      arenaEnabled ? fetchArenaProgress({ accessToken }) : Promise.resolve(null),
-    ]).then(([profile, candidate, history, arenaProgress]) => {
+    const update = (change: Partial<ProfileState>) => {
       if (!active) return;
-      setProfile({
-        ownerToken: accessToken,
-        details: profile.status === "fulfilled" ? profile.value : null,
-        me: candidate.status === "fulfilled" ? candidate.value : null,
-        sessions: history.status === "fulfilled" ? history.value : [],
-        arena: arenaProgress.status === "fulfilled" ? arenaProgress.value : null,
-        loaded: true,
-      });
-    });
+      setProfile((current) => ({
+        ...(current.ownerToken === accessToken ? current : emptyProfile(accessToken)),
+        ...change,
+      }));
+    };
+    void fetchProfile({ accessToken }).then(
+      (details) => update({ details, loaded: true }),
+      () => update({ details: null, loaded: true }),
+    );
+    void fetchMe({ accessToken }).then(
+      (me) => update({ me }),
+      () => update({ me: null }),
+    );
+    if (mockInterviewsEnabled || reportsEnabled) {
+      void fetchSessions({ accessToken }).then(
+        (sessions) => update({ sessions, sessionsReady: true }),
+        () => update({ sessions: [], sessionsReady: true }),
+      );
+    } else {
+      update({ sessionsReady: true });
+    }
+    if (arenaEnabled) {
+      void fetchArenaProgress({ accessToken }).then(
+        (arena) => update({ arena, arenaReady: true }),
+        () => update({ arena: null, arenaReady: true }),
+      );
+    } else {
+      update({ arenaReady: true });
+    }
     return () => {
       active = false;
     };
@@ -136,7 +151,24 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
 
   const onResume = (file: File) =>
     run("resume", async (operationToken) => {
-      await uploadResume(operationToken, file);
+      const resume = await uploadResume(operationToken, file);
+      setProfile((current) =>
+        current.ownerToken === operationToken
+          ? {
+              ...current,
+              details: {
+                ...(current.details ?? {
+                  skills: [],
+                  avatarUrl: null,
+                  currentLevel: null,
+                  targetLevel: null,
+                  linkedinUrl: null,
+                }),
+                resume,
+              },
+            }
+          : current,
+      );
       // Detected skills land server-side, so the list is re-read rather than guessed at.
       const details = await fetchProfile({ accessToken: operationToken });
       setProfile((current) =>
@@ -201,7 +233,9 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
         <ProfileOverview
           details={visible.details}
           sessions={visible.sessions}
+          sessionsReady={visible.sessionsReady}
           arena={visible.arena}
+          arenaReady={visible.arenaReady}
           outlines={outlines}
           completed={courseProgress.completed}
           progressReady={courseProgress.status === "ready"}
@@ -322,7 +356,7 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
           aria-labelledby="profile-tab-reports"
           hidden={activeTab !== "reports"}
         >
-          <ProfileReports sessions={visible.sessions} />
+          <ProfileReports sessions={visible.sessions} ready={visible.sessionsReady} />
         </div>
       ) : null}
 
@@ -374,11 +408,13 @@ interface ProfileState {
   me: MeResponse | null;
   sessions: SessionSummary[];
   arena: ArenaProgressView | null;
+  sessionsReady: boolean;
+  arenaReady: boolean;
   loaded: boolean;
 }
 
 function emptyProfile(ownerToken: string | null): ProfileState {
-  return { ownerToken, details: null, me: null, sessions: [], arena: null, loaded: false };
+  return { ownerToken, details: null, me: null, sessions: [], arena: null, sessionsReady: false, arenaReady: false, loaded: false };
 }
 
 function ProfileHeader({
@@ -474,14 +510,18 @@ function ProfileHeader({
 function ProfileOverview({
   details,
   sessions,
+  sessionsReady,
   arena,
+  arenaReady,
   outlines,
   completed,
   progressReady,
 }: {
   details: ProfileDetails | null;
   sessions: SessionSummary[];
+  sessionsReady: boolean;
   arena: ArenaProgressView | null;
+  arenaReady: boolean;
   outlines: CourseOutline[];
   completed: Record<string, string[]>;
   progressReady: boolean;
@@ -509,8 +549,8 @@ function ProfileOverview({
       <div className="grid overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] sm:grid-cols-2 lg:grid-cols-4">
         {coursesEnabled ? <OverviewStat label="Courses complete" value={progressReady ? `${completedCourses} / ${outlines.length}` : "—"} /> : null}
         {coursesEnabled ? <OverviewStat label="Chapters complete" value={progressReady ? String(completedChapters) : "—"} /> : null}
-        {reportsEnabled ? <OverviewStat label="Rounds completed" value={String(finishedRounds.length)} /> : null}
-        {arenaEnabled ? <OverviewStat label="Arena streak" value={arena ? `${arena.streak.current} day${arena.streak.current === 1 ? "" : "s"}` : "—"} /> : null}
+        {reportsEnabled ? <OverviewStat label="Rounds completed" value={sessionsReady ? String(finishedRounds.length) : "—"} /> : null}
+        {arenaEnabled ? <OverviewStat label="Arena streak" value={arenaReady && arena ? `${arena.streak.current} day${arena.streak.current === 1 ? "" : "s"}` : "—"} /> : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.65fr)] lg:items-start">
@@ -560,8 +600,8 @@ function ProfileOverview({
           {arenaEnabled ? (
             <div className="rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]">
               <p className="eyebrow text-accent">Practice streak</p>
-              <p className="mt-3 text-title text-ink">{arena?.streak.current ?? 0}-day current streak</p>
-              <p className="mt-1 text-micro text-ink-subtle">Longest streak: {arena?.streak.longest ?? 0} days</p>
+              <p className="mt-3 text-title text-ink">{arenaReady ? `${arena?.streak.current ?? 0}-day current streak` : "—"}</p>
+              <p className="mt-1 text-micro text-ink-subtle">Longest streak: {arenaReady ? `${arena?.streak.longest ?? 0} days` : "—"}</p>
             </div>
           ) : null}
 
@@ -615,7 +655,7 @@ function roundLabel(value: SessionSummary["roundType"]): string {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function ProfileReports({ sessions }: { sessions: SessionSummary[] }) {
+function ProfileReports({ sessions, ready }: { sessions: SessionSummary[]; ready: boolean }) {
   const completed = sessions.filter((session) => session.status === "completed");
   const tones = [
     "border-accent/20 bg-accent-wash/55 text-accent-strong",
@@ -638,7 +678,9 @@ function ProfileReports({ sessions }: { sessions: SessionSummary[] }) {
         ) : null}
       </div>
 
-      {completed.length === 0 ? (
+      {!ready ? (
+        <p role="status" className="py-8 text-body text-ink-muted">Loading practice history…</p>
+      ) : completed.length === 0 ? (
         <div className="flex flex-col items-start gap-4 py-8">
           <p className="text-body text-ink-muted">Your completed interviews and reports will appear here.</p>
           <Link href="/interview/new" className="action-primary">Start an interview</Link>

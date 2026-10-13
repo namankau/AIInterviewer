@@ -12,6 +12,7 @@ const fetchMe = vi.hoisted(() => vi.fn());
 const fetchSessions = vi.hoisted(() => vi.fn());
 const fetchArenaProgress = vi.hoisted(() => vi.fn());
 const fetchCourseProgress = vi.hoisted(() => vi.fn());
+const uploadResume = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ token: "token" as string | null | undefined }));
 
 vi.mock("@/lib/api", () => ({
@@ -21,7 +22,7 @@ vi.mock("@/lib/api", () => ({
   fetchArenaProgress,
   fetchCourseProgress,
   updateProfile,
-  uploadResume: vi.fn(),
+  uploadResume,
   deleteResume: vi.fn(),
   uploadAvatar: vi.fn(),
   upsertSkill: vi.fn(),
@@ -55,6 +56,7 @@ describe("ProfilePanel", () => {
     fetchSessions.mockReset();
     fetchArenaProgress.mockReset();
     fetchCourseProgress.mockReset();
+    uploadResume.mockReset();
     fetchMe.mockResolvedValue({
       id: "candidate-1",
       email: "candidate@example.com",
@@ -73,6 +75,47 @@ describe("ProfilePanel", () => {
       dailyQuestionCompletions: {},
     });
     fetchCourseProgress.mockResolvedValue({ completed: {} });
+  });
+
+  it("shows resume details while interview history and Arena are still loading", async () => {
+    fetchProfile.mockResolvedValue(profile({ targetLevel: "Staff Engineer" }));
+    fetchSessions.mockImplementation(() => new Promise(() => {}));
+    fetchArenaProgress.mockImplementation(() => new Promise(() => {}));
+
+    render(<ProfilePanel />);
+
+    expect(await screen.findByText("Working toward Staff Engineer")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Resume & Skills" })).toBeInTheDocument();
+    expect(screen.getByText("Rounds completed").parentElement).toHaveTextContent("—");
+  });
+
+  it("shows the uploaded resume before the profile reconciliation finishes", async () => {
+    fetchProfile.mockResolvedValueOnce(profile());
+    fetchProfile.mockImplementationOnce(() => new Promise(() => {}));
+    uploadResume.mockResolvedValue({
+      id: "resume-1",
+      filename: "cv.pdf",
+      status: "parsed",
+      error: null,
+      uploadedAt: "2026-10-13T00:00:00Z",
+      headline: "Backend engineer",
+      employments: [],
+      projects: [],
+      detectedSkills: [],
+      lowConfidenceFields: [],
+      totalExperienceMonths: 0,
+      gapCount: 0,
+      shortTenureCount: 0,
+    });
+
+    const { container } = render(<ProfilePanel />);
+    await userEvent.click(await screen.findByRole("tab", { name: "Resume & Skills" }));
+    const input = container.querySelector<HTMLInputElement>('input[type="file"][accept*="pdf"]');
+    expect(input).not.toBeNull();
+    await userEvent.upload(input!, new File(["resume"], "cv.pdf", { type: "application/pdf" }));
+
+    expect((await screen.findAllByText("cv.pdf")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Reading it…" })).toBeDisabled();
   });
 
   it("does not show the previous account while a replacement profile request fails", async () => {

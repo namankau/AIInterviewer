@@ -22,13 +22,13 @@ Fix footer and legal-page navigation, legal copy and branding, and the browser f
 ## Verification status
 - Frontend typecheck, lint, 3,016 tests, and production build: pass. Focused navigation tests and typecheck after final copy edits: pass.
 - Backend ktlintCheck, test, and build: pass.
-- CI: unavailable. The branch could not be pushed, so there is no PR run; local checks do not establish the merge gate.
+- CI: PR #73 is running its web, API, and image jobs. Local checks do not establish the merge gate.
 
 ## Merge status
-- Local branch `fix/footer-legal-favicons` is committed and unpushed. `git push` returned HTTP 403: `codewithnmn` lacks permission to `namankau/AIInterviewer`. The connected GitHub app also has no installation for this repository. No PR was opened and nothing was merged into `develop`; legal/data-protection review is required before any merge.
+- Branch `fix/footer-legal-favicons` was pushed and [PR #73](https://github.com/namankau/Untiered.tech/pull/73) was opened against `develop`. Nothing was merged; owner legal/data-protection review is required before any merge.
 
 ## Suggested next task
-- Restore GitHub write access, push `fix/footer-legal-favicons`, run CI, and review the legal draft before deciding on a merge.
+- Review PR #73 after CI completes, confirm legal details, and decide whether to merge into `develop`.
 
 ## Open questions for you
-- Which legal operator, support email, and grievance officer should be displayed? Should under-18 use with verifiable parental consent remain supported? GitHub write access also needs to be restored for this checkout or connected app.
+- Which legal operator, support email, and grievance officer should be displayed? Should under-18 use with verifiable parental consent remain supported?

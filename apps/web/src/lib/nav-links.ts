@@ -10,6 +10,5 @@ export const NAV_LINKS = [
   { href: "/courses", label: "Courses", feature: "courses" },
   { href: "/interview/new", label: "Mock interviews", feature: "mockInterviews" },
   { href: "/arena", label: "Arena", feature: "arena" },
-  { href: "/history", label: "My reports", feature: "reports" },
   { href: "/questions", label: "Questions", feature: "questions" },
 ] as const satisfies readonly { href: string; label: string; feature?: ProductFeature }[];

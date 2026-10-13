@@ -68,11 +68,8 @@ describe("AccountSummary", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("link", { name: /explore untiered pro/i })).toHaveAttribute("href", "/upgrade");
     expect(screen.getByRole("link", { name: /profile and resume/i })).toHaveAttribute("href", "/profile");
-    expect(screen.getByRole("link", { name: /all your rounds/i })).toHaveAttribute("href", "/history");
-    expect(screen.getByRole("link", { name: /delete account/i })).toHaveAttribute(
-      "href",
-      "/profile#delete-account",
-    );
+    expect(screen.queryByRole("link", { name: /all your rounds/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /delete account/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
   });
 

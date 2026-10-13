@@ -129,7 +129,7 @@ describe("BlockRenderer", () => {
     expect(screen.getByText(/no-such-scenario.*is not installed/i)).toBeInTheDocument();
   });
 
-  it("caps prose blocks at 70ch but lets full-bleed blocks (viz, code, table, compare, steps, playground) use the full width", () => {
+  it("caps prose blocks at 62ch but lets full-bleed blocks (viz, code, table, compare, steps, playground) use the full width", () => {
     const { container } = render(
       <BlockRenderer
         blocks={[
@@ -147,7 +147,7 @@ describe("BlockRenderer", () => {
     );
 
     const wrappers = container.firstElementChild?.children ?? [];
-    expect(wrappers[0]?.className).toContain("max-w-[70ch]");
+    expect(wrappers[0]?.className).toContain("max-w-[62ch]");
     expect(wrappers[1]?.className).toContain("w-full");
     expect(wrappers[2]?.className).toContain("w-full");
   });

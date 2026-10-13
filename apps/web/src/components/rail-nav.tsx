@@ -22,10 +22,7 @@ export function RailNav() {
   return (
     <ul className="flex min-w-max items-stretch gap-1" aria-label="Workspace">
       {NAV_LINKS.filter((link) => !("feature" in link) || featureEnabled(link.feature)).map((link) => {
-        const active =
-          pathname === link.href ||
-          pathname.startsWith(`${link.href}/`) ||
-          (link.href === "/history" && pathname.startsWith("/report/"));
+        const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
         return (
           <li key={link.href}>
             <Link

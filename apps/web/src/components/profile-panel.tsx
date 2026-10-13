@@ -152,17 +152,16 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
 
   return (
     <div className="flex flex-col gap-6">
-      <ProfileOverview
+      <ProfileHeader
         details={visible.details}
         me={visible.me}
-        sessions={visible.sessions}
-        arena={visible.arena}
-        outlines={outlines}
-        completed={courseProgress.completed}
-        progressReady={courseProgress.status === "ready"}
         avatarInput={avatarInput}
         avatarBusy={busy === "avatar"}
         disabled={busy !== null}
+        onEdit={() => {
+          setActiveTab("overview");
+          window.setTimeout(() => document.getElementById("profile-details")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+        }}
         onAvatar={(file) =>
           run("avatar", async (operationToken) => {
             const details = await uploadAvatar(operationToken, file);
@@ -184,7 +183,7 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
               aria-selected={activeTab === tab.id}
               aria-controls={`profile-panel-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
-              className={`shrink-0 border-b-2 px-0.5 pb-3 text-caption font-semibold transition-colors ${activeTab === tab.id ? "border-accent text-ink" : "border-transparent text-ink-muted hover:text-ink"}`}
+              className={`shrink-0 border-b-[3px] px-1 pb-3 text-caption font-semibold transition-colors ${activeTab === tab.id ? "border-accent text-accent-strong" : "border-transparent text-ink-muted hover:text-ink"}`}
             >
               {tab.label}
             </button>
@@ -197,8 +196,18 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
         role="tabpanel"
         aria-labelledby="profile-tab-overview"
         hidden={activeTab !== "overview"}
+        className="space-y-6"
       >
-        <ProfileForm
+        <ProfileOverview
+          details={visible.details}
+          sessions={visible.sessions}
+          arena={visible.arena}
+          outlines={outlines}
+          completed={courseProgress.completed}
+          progressReady={courseProgress.status === "ready"}
+        />
+        <div id="profile-details" className="scroll-mt-28">
+          <ProfileForm
           key={visible.ownerToken ?? "signed-out"}
           details={visible.details}
           disabled={busy !== null}
@@ -210,7 +219,8 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
               );
             })
           }
-        />
+          />
+        </div>
       </div>
 
       <div
@@ -371,54 +381,27 @@ function emptyProfile(ownerToken: string | null): ProfileState {
   return { ownerToken, details: null, me: null, sessions: [], arena: null, loaded: false };
 }
 
-/**
- * The profile's front door: identity plus the useful evidence of practice already held
- * by the account. All numbers are derived from existing APIs; there is no second profile
- * model and no invented "readiness" score.
- */
-function ProfileOverview({
+function ProfileHeader({
   details,
   me,
-  sessions,
-  arena,
-  outlines,
-  completed,
-  progressReady,
   avatarInput,
   avatarBusy,
   disabled,
   onAvatar,
+  onEdit,
 }: {
   details: ProfileDetails | null;
   me: MeResponse | null;
-  sessions: SessionSummary[];
-  arena: ArenaProgressView | null;
-  outlines: CourseOutline[];
-  completed: Record<string, string[]>;
-  progressReady: boolean;
   avatarInput: React.RefObject<HTMLInputElement | null>;
   avatarBusy: boolean;
   disabled: boolean;
   onAvatar: (file: File) => void;
+  onEdit: () => void;
 }) {
-  const coursesEnabled = featureEnabled("courses") && outlines.length > 0;
-  const arenaEnabled = featureEnabled("arena");
-  const mockInterviewsEnabled = featureEnabled("mockInterviews");
-  const reportsEnabled = featureEnabled("reports");
-  const courseSummaries = outlines.map((course) => ({
-    course,
-    summary: summarizeChapters(course.chapters, completed[course.slug] ?? []),
-  }));
-  const completedCourses = courseSummaries.filter(({ summary }) => summary.finished).length;
-  const completedChapters = courseSummaries.reduce((total, { summary }) => total + summary.done, 0);
-  const finishedRounds = sessions.filter((session) => session.status === "completed");
-  const latestRound = [...finishedRounds].sort((a, b) =>
-    (b.endedAt ?? b.startedAt ?? "").localeCompare(a.endedAt ?? a.startedAt ?? ""),
-  )[0];
   const name = me?.displayName ?? me?.email ?? "Your profile";
-  const initials = initialsOf(name);
+  const role = currentRoleFrom(details) ?? details?.currentLevel;
+  const location = me?.profile.location;
   const resume = details?.resume ?? null;
-  const employments = resume?.employments ?? [];
   const profileChecks = [
     Boolean(me?.displayName),
     Boolean(details?.avatarUrl),
@@ -430,92 +413,99 @@ function ProfileOverview({
   ];
   const completedProfileChecks = profileChecks.filter(Boolean).length;
   const profileStrength = Math.round((completedProfileChecks / profileChecks.length) * 100);
+
+  return (
+    <section aria-label="Profile identity" className="space-y-4">
+      <div className="relative overflow-hidden rounded-[1.65rem] bg-[linear-gradient(120deg,#3546b7,var(--navy))] px-6 py-8 text-on-navy shadow-[var(--shadow-md)] sm:px-9 sm:py-10">
+        <div aria-hidden="true" className="absolute -right-20 -top-28 size-72 rounded-full bg-white/8 blur-3xl" />
+        <div className="relative flex flex-wrap items-center justify-between gap-6">
+          <div className="flex min-w-0 items-center gap-5 sm:gap-6">
+            <div className="relative shrink-0">
+              {details?.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- signed, expiring API URL
+                <img src={details.avatarUrl} alt="Profile photo" className="size-20 rounded-[1.4rem] border-2 border-white/40 object-cover shadow-[var(--shadow-md)] sm:size-24" />
+              ) : (
+                <span aria-label="Profile photo placeholder" className="grid size-20 place-items-center rounded-[1.4rem] bg-[#a8e7d7] text-title font-bold text-navy shadow-[var(--shadow-md)] sm:size-24">
+                  {initialsOf(name)}
+                </span>
+              )}
+              <button type="button" onClick={() => avatarInput.current?.click()} disabled={disabled} aria-label={details?.avatarUrl ? "Change profile photo" : "Add profile photo"} className="absolute -bottom-2 -right-2 grid size-9 place-items-center rounded-full border-2 border-navy bg-accent text-heading text-white shadow-[var(--shadow-sm)] transition-transform hover:scale-105 disabled:opacity-50">
+                <span aria-hidden>{avatarBusy ? "…" : "+"}</span>
+              </button>
+              <input ref={avatarInput} type="file" accept="image/*" className="sr-only" onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onAvatar(file);
+                event.target.value = "";
+              }} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-micro font-bold tracking-widest text-accent-on-navy uppercase">Your practice profile</p>
+              <h1 className="mt-2 truncate text-display text-on-navy">{name}</h1>
+              <p className="mt-2 text-caption text-on-navy-muted sm:text-body">
+                {[role, location].filter(Boolean).join(" · ") || "Make this space yours before your next round."}
+              </p>
+              {details?.targetLevel ? <p className="mt-3 inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-micro font-semibold text-on-navy">Working toward {details.targetLevel}</p> : null}
+            </div>
+          </div>
+          <button type="button" onClick={onEdit} className="inline-flex min-h-11 items-center rounded-xl bg-white px-5 py-2.5 text-caption font-bold text-navy shadow-[var(--shadow-sm)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-accent-wash">
+            Edit profile
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 rounded-2xl border border-line bg-surface-raised px-5 py-4 shadow-[var(--shadow-sm)] sm:grid-cols-[minmax(0,1fr)_minmax(12rem,0.65fr)_auto] sm:items-center sm:px-6">
+        <div>
+          <p className="text-caption font-semibold text-ink">Profile strength</p>
+          <p className="mt-0.5 text-micro text-ink-subtle">{completedProfileChecks} of {profileChecks.length} useful details complete</p>
+        </div>
+        <div role="progressbar" aria-label="Profile strength" aria-valuemin={0} aria-valuemax={100} aria-valuenow={profileStrength} className="h-2 overflow-hidden rounded-full bg-surface-sunken">
+          <span className="block h-full rounded-full bg-[linear-gradient(90deg,var(--accent),var(--positive))]" style={{ width: `${profileStrength}%` }} />
+        </div>
+        <span className="text-caption font-bold tabular-nums text-positive">{profileStrength}%</span>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * The overview uses only evidence already held by the account. There is no invented
+ * readiness score or second profile model.
+ */
+function ProfileOverview({
+  details,
+  sessions,
+  arena,
+  outlines,
+  completed,
+  progressReady,
+}: {
+  details: ProfileDetails | null;
+  sessions: SessionSummary[];
+  arena: ArenaProgressView | null;
+  outlines: CourseOutline[];
+  completed: Record<string, string[]>;
+  progressReady: boolean;
+}) {
+  const coursesEnabled = featureEnabled("courses") && outlines.length > 0;
+  const arenaEnabled = featureEnabled("arena");
+  const reportsEnabled = featureEnabled("reports");
+  const courseSummaries = outlines.map((course) => ({
+    course,
+    summary: summarizeChapters(course.chapters, completed[course.slug] ?? []),
+  }));
+  const completedCourses = courseSummaries.filter(({ summary }) => summary.finished).length;
+  const completedChapters = courseSummaries.reduce((total, { summary }) => total + summary.done, 0);
+  const finishedRounds = sessions.filter((session) => session.status === "completed");
+  const latestRound = [...finishedRounds].sort((a, b) =>
+    (b.endedAt ?? b.startedAt ?? "").localeCompare(a.endedAt ?? a.startedAt ?? ""),
+  )[0];
+  const resume = details?.resume ?? null;
+  const employments = resume?.employments ?? [];
   const nextCourse = courseSummaries.find(({ summary }) => summary.next)?.course;
   const nextChapter = courseSummaries.find(({ summary }) => summary.next)?.summary.next;
 
   return (
-    <section aria-labelledby="profile-overview" className="flex flex-col gap-6">
-      <div className="grid gap-8 rounded-[1.5rem] border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-        <div className="flex min-w-0 items-center gap-5">
-          <div className="relative shrink-0">
-            {details?.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- signed, expiring API URL
-              <img
-                src={details.avatarUrl}
-                alt="Profile photo"
-                className="size-20 rounded-2xl border-4 border-white object-cover shadow-[var(--shadow-md)]"
-              />
-            ) : (
-              <span
-                aria-label="Profile photo placeholder"
-                className="grid size-20 place-items-center rounded-2xl bg-positive-wash text-title font-bold text-positive shadow-[var(--shadow-sm)]"
-              >
-                {initials}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => avatarInput.current?.click()}
-              disabled={disabled}
-              aria-label={details?.avatarUrl ? "Change profile photo" : "Add profile photo"}
-              className="absolute -right-2 -bottom-2 grid size-9 place-items-center rounded-full border-2 border-white bg-accent text-heading text-accent-contrast shadow-[var(--shadow-sm)] transition-transform hover:-translate-y-0.5 disabled:opacity-50"
-            >
-              <span aria-hidden>{avatarBusy ? "…" : "+"}</span>
-            </button>
-            <input
-              ref={avatarInput}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) onAvatar(file);
-                event.target.value = "";
-              }}
-            />
-          </div>
-
-          <div className="min-w-0">
-            <p className="eyebrow text-accent">Candidate profile</p>
-            <h2 id="profile-overview" className="mt-2 truncate text-title text-ink">
-              {name}
-            </h2>
-            <p className="mt-1 text-caption text-ink-muted">
-              {details?.targetLevel ? `Working toward ${details.targetLevel}` : "Add a target role to shape future rounds."}
-            </p>
-          </div>
-        </div>
-
-        {mockInterviewsEnabled ? (
-          <Link
-            href="/interview/new"
-            className="action-primary w-fit px-5 py-3 text-caption"
-          >
-            Start a new round
-          </Link>
-        ) : null}
-      </div>
-
-      <div className="grid gap-4 rounded-2xl border border-line bg-surface-raised px-5 py-4 shadow-[var(--shadow-sm)] sm:grid-cols-[minmax(0,1fr)_minmax(14rem,0.7fr)_auto] sm:items-center">
-        <div>
-          <p className="text-caption font-semibold text-ink">Profile strength</p>
-          <p className="mt-0.5 text-micro text-ink-subtle">
-            {completedProfileChecks} of {profileChecks.length} useful details complete
-          </p>
-        </div>
-        <div
-          role="progressbar"
-          aria-label="Profile strength"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={profileStrength}
-          className="h-2 overflow-hidden rounded-full bg-surface-sunken"
-        >
-          <span className="block h-full rounded-full bg-[linear-gradient(90deg,var(--accent),var(--positive))]" style={{ width: `${profileStrength}%` }} />
-        </div>
-        <span className="font-mono text-caption font-bold text-positive">{profileStrength}%</span>
-      </div>
-
+    <section aria-label="Profile overview" className="flex flex-col gap-6">
       <div className="grid overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] sm:grid-cols-2 lg:grid-cols-4">
         {coursesEnabled ? <OverviewStat label="Courses complete" value={progressReady ? `${completedCourses} / ${outlines.length}` : "—"} /> : null}
         {coursesEnabled ? <OverviewStat label="Chapters complete" value={progressReady ? String(completedChapters) : "—"} /> : null}
@@ -627,6 +617,12 @@ function roundLabel(value: SessionSummary["roundType"]): string {
 
 function ProfileReports({ sessions }: { sessions: SessionSummary[] }) {
   const completed = sessions.filter((session) => session.status === "completed");
+  const tones = [
+    "border-accent/20 bg-accent-wash/55 text-accent-strong",
+    "border-positive/20 bg-positive-wash/55 text-positive",
+    "border-warning/20 bg-warning-wash/55 text-warning",
+    "border-info/20 bg-info-wash/55 text-info",
+  ];
 
   return (
     <section aria-labelledby="profile-reports" className="card p-6 sm:p-8">
@@ -648,11 +644,11 @@ function ProfileReports({ sessions }: { sessions: SessionSummary[] }) {
           <Link href="/interview/new" className="action-primary">Start an interview</Link>
         </div>
       ) : (
-        <ul className="divide-y divide-line">
-          {completed.map((session) => (
-            <li key={session.id} className="grid gap-3 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+        <ul className="mt-5 grid gap-3">
+          {completed.map((session, index) => (
+            <li key={session.id} className={`grid gap-3 rounded-xl border p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center ${tones[index % tones.length]}`}>
               <div className="flex min-w-0 items-center gap-3">
-                <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-wash text-caption font-bold text-accent-strong">
+                <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface-raised text-caption font-bold shadow-[var(--shadow-sm)]">
                   {session.companyName.trim()[0]?.toUpperCase() ?? "U"}
                 </span>
                 <div className="min-w-0">

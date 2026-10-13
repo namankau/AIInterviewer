@@ -8,7 +8,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { fetchMe } from "@/lib/api";
-import { featureEnabled } from "@/lib/flags";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useAccessToken } from "@/lib/use-access-token";
 
@@ -29,8 +28,8 @@ const LANGUAGE_LABELS: Record<string, string> = {
  * The actions sit in a menu that opens from the name rather than in the rail itself.
  * Signing out is rare and cannot be undone without signing in again, so a control for it
  * sitting permanently in the furniture would be clutter and something to hit by accident;
- * one click behind the name it is neither. Deleting the account is only linked from here —
- * it happens on the profile page, where everything it removes is listed first.
+ * one click behind the name it is neither. Account deletion remains in the profile's
+ * dedicated account section, where everything it removes is listed first.
  *
  * Deliberately a client-side call to the versioned public API rather than a
  * server-rendered database read: the mobile apps will make exactly this request, and
@@ -180,13 +179,6 @@ function AccountMenu({ me }: { me: MeResponse }) {
               Profile and resume
             </Link>
           </li>
-          {featureEnabled("reports") ? (
-            <li>
-              <Link href="/history" className={MENU_ITEM} onClick={() => setOpen(false)}>
-                All your rounds
-              </Link>
-            </li>
-          ) : null}
           <li>
             <button
               type="button"
@@ -197,15 +189,6 @@ function AccountMenu({ me }: { me: MeResponse }) {
             >
               {signingOut ? "Signing out…" : "Sign out"}
             </button>
-          </li>
-          <li className="mt-1 border-t border-line pt-1">
-            <Link
-              href="/profile#delete-account"
-              className={`${MENU_ITEM} text-ink-subtle hover:text-danger`}
-              onClick={() => setOpen(false)}
-            >
-              Delete account…
-            </Link>
           </li>
         </ul>
       ) : null}

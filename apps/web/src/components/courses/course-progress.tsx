@@ -159,15 +159,15 @@ export function MarkCompleteButton({ courseSlug, chapterSlug }: { courseSlug: st
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-w-0 max-w-full flex-col gap-2">
       <button
         type="button"
         aria-pressed={done}
         disabled={lessonLocked || progressLoading || saving}
         onClick={toggle}
-        className={`inline-flex w-fit items-center gap-2 rounded-md border px-4 py-2.5 text-caption font-medium transition-colors disabled:opacity-60 ${
+        className={`inline-flex min-h-11 max-w-full items-center justify-center gap-2 self-start rounded-xl border px-4 py-2.5 text-center text-caption font-semibold shadow-[var(--shadow-sm)] transition-[background-color,border-color,transform] hover:-translate-y-px disabled:translate-y-0 disabled:opacity-60 ${
           done
-            ? "border-positive/50 bg-positive/10 text-ink hover:bg-positive/15"
+            ? "border-positive/35 bg-surface-raised text-positive hover:bg-positive-wash"
             : "border-accent bg-accent text-accent-contrast hover:bg-accent-strong"
         }`}
       >

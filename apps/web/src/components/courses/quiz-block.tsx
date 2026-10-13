@@ -17,11 +17,19 @@ export function QuizBlock({ block }: { block: Quiz }) {
   const revealed = selected !== null;
 
   return (
-    <div className="rounded-md border border-line-strong bg-surface-raised px-5 py-4">
-      <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">Check yourself</p>
-      <fieldset className="mt-2">
-        <legend className="text-heading text-ink">{block.question}</legend>
-        <div className="mt-3 flex flex-col gap-2" role="radiogroup" aria-labelledby={groupId}>
+    <div className="overflow-hidden rounded-[1.35rem] border border-line bg-surface-raised shadow-[var(--shadow-sm)]">
+      <div className="border-b border-accent/15 bg-[linear-gradient(115deg,var(--accent-wash),var(--surface-raised))] px-5 py-5 sm:px-7 sm:py-6">
+        <p className="inline-flex items-center gap-2 text-micro font-bold tracking-widest text-accent-strong uppercase">
+          <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />
+          Check yourself
+        </p>
+        <h3 id={groupId} className="mt-3 max-w-[52ch] text-title font-semibold leading-snug text-ink">
+          {block.question}
+        </h3>
+      </div>
+      <fieldset className="px-5 py-5 sm:px-7 sm:py-6">
+        <legend className="sr-only">Answer options</legend>
+        <div className="grid gap-2.5" role="radiogroup" aria-labelledby={groupId}>
           {block.options.map((option, i) => {
             const isCorrect = i === block.answer;
             const isChosen = i === selected;
@@ -34,30 +42,34 @@ export function QuizBlock({ block }: { block: Quiz }) {
                 disabled={revealed}
                 onClick={() => setSelected(i)}
                 className={[
-                  "rounded-md border px-3.5 py-2.5 text-left text-body leading-relaxed transition-colors",
+                  "group flex min-h-14 items-center gap-3 rounded-xl border px-4 py-3 text-left text-body leading-relaxed text-ink transition-[border-color,background-color,box-shadow,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
                   !revealed
-                    ? "border-line text-ink hover:border-line-strong hover:bg-surface-sunken"
+                    ? "border-line bg-surface-raised hover:-translate-y-px hover:border-accent/45 hover:bg-accent-wash/40 hover:shadow-[var(--shadow-sm)]"
                     : isCorrect
-                      ? "border-positive/50 bg-positive/10 text-ink"
+                      ? "border-positive/50 bg-positive-wash"
                       : isChosen
-                        ? "border-danger/50 bg-danger/10 text-ink"
-                        : "border-line text-ink-subtle",
+                        ? "border-danger/50 bg-danger-wash"
+                        : "border-line bg-surface-sunken text-ink-subtle",
                 ].join(" ")}
               >
-                {option}
+                <span aria-hidden="true" className={`grid size-8 shrink-0 place-items-center rounded-lg text-caption font-bold ${isChosen && revealed ? isCorrect ? "bg-positive text-white" : "bg-danger text-white" : "bg-surface-sunken text-ink-muted group-hover:bg-surface-raised"}`}>
+                  {String.fromCharCode(65 + i)}
+                </span>
+                <span className="min-w-0 flex-1">{option}</span>
+                {revealed && isCorrect ? <span aria-hidden="true" className="text-positive">✓</span> : null}
               </button>
             );
           })}
         </div>
-      </fieldset>
-      {revealed ? (
-        <p role="status" className="mt-3 text-body leading-relaxed text-ink">
+        {revealed ? (
+        <p role="status" className="mt-4 rounded-xl border border-line bg-surface-sunken px-4 py-3 text-body leading-relaxed text-ink">
           <span className={selected === block.answer ? "font-medium text-positive" : "font-medium text-danger"}>
             {selected === block.answer ? "Correct. " : "Not quite. "}
           </span>
           {block.why}
         </p>
       ) : null}
+      </fieldset>
     </div>
   );
 }

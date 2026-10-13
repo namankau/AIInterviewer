@@ -60,7 +60,7 @@ export function BlockRenderer({
   return (
     <div
       data-layout={layout}
-      className={layout === "expanded" ? "grid gap-6 lg:grid-cols-2" : "flex flex-col gap-10"}
+      className={layout === "expanded" ? "grid gap-6 lg:grid-cols-2" : "flex flex-col gap-8 sm:gap-10"}
     >
       {blocks.map((block, index) => (
         <div
@@ -72,7 +72,7 @@ export function BlockRenderer({
                 : "w-full max-w-full lg:col-span-2"
               : FULL_BLEED_KINDS.has(block.kind)
                 ? "w-full max-w-full"
-                : "max-w-[70ch]"
+                : "max-w-[62ch]"
           }
         >
           <BlockView block={block} highlighted={highlightedCode?.[index] ?? null} />
@@ -108,7 +108,7 @@ function BlockView({
   switch (block.kind) {
     case "p":
       return (
-        <p className="text-heading font-normal leading-relaxed text-ink">
+        <p className="text-heading font-normal leading-[1.85] text-ink">
           <InlineText text={block.text} />
         </p>
       );
@@ -117,7 +117,7 @@ function BlockView({
       return (
         <h2
           id={anchorId(block.text)}
-          className="scroll-mt-24 text-display text-balance text-ink"
+          className="font-editorial scroll-mt-24 max-w-[22ch] text-display text-balance text-ink"
         >
           <InlineText text={block.text} />
         </h2>

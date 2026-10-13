@@ -160,9 +160,12 @@ export default async function ChapterPage({
                 </Link>
               ) : <span />}
               {next ? (
-                <Link href={`/courses/${course.slug}/${next.slug}`} className="group flex min-h-24 flex-col justify-center rounded-2xl border border-accent bg-accent px-5 py-4 text-caption text-accent-contrast shadow-[var(--shadow-md)] transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-accent-strong hover:shadow-[var(--shadow-lg)] sm:text-right">
-                  <span className="font-mono text-micro text-accent-contrast/75 uppercase">Next chapter →</span>
-                  <span className="mt-1 font-semibold"><InlineText text={next.title} /></span>
+                <Link href={`/courses/${course.slug}/${next.slug}`} className="group flex min-h-24 items-center justify-between gap-5 overflow-hidden rounded-2xl border border-accent bg-[linear-gradient(120deg,var(--accent),var(--accent-strong))] px-5 py-5 text-accent-contrast shadow-[var(--shadow-md)] transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)] sm:px-6">
+                  <span className="min-w-0">
+                  <span className="block text-micro font-bold tracking-widest text-accent-contrast/80 uppercase">Up next · keep your momentum</span>
+                    <span className="mt-2 block text-heading font-semibold leading-snug"><InlineText text={next.title} /></span>
+                  </span>
+                  <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full border border-white/25 bg-white/15 text-heading transition-transform group-hover:translate-x-1">→</span>
                 </Link>
               ) : <span />}
             </nav>
@@ -170,13 +173,13 @@ export default async function ChapterPage({
 
           <aside aria-label="Lesson tools" className="hidden space-y-5 xl:sticky xl:top-24 xl:block xl:self-start">
             <section className="rounded-2xl border border-accent/25 bg-[linear-gradient(145deg,var(--accent-wash),var(--surface-raised))] p-5 shadow-[var(--shadow-sm)]">
-              <p className="font-mono text-micro font-semibold tracking-widest text-accent uppercase">Learning progress</p>
+              <p className="text-micro font-bold tracking-widest text-accent uppercase">Learning progress</p>
               <div className="mt-3"><CourseRailProgress courseSlug={course.slug} chapters={chapterRefs} /></div>
             </section>
             {arenaEnabled && arenaCount > 0 ? (
               <section className="rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]">
                 <span className="grid size-9 place-items-center rounded-xl bg-warning-wash text-warning"><ArenaPracticeIcon className="size-5" /></span>
-                <h2 className="mt-3 text-heading font-semibold text-ink">Make it stick</h2>
+              <h2 className="font-editorial mt-3 text-heading leading-tight text-ink">Make it stick</h2>
                 <p className="mt-1 text-caption leading-relaxed text-ink-muted">Solve {arenaCount} focused {arenaCount === 1 ? "challenge" : "challenges"} after the lesson.</p>
                 <Link href={`/arena/${course.slug}?chapter=${chapter.slug}`} className="mt-4 inline-flex text-caption font-semibold text-accent hover:underline">Start practice →</Link>
               </section>

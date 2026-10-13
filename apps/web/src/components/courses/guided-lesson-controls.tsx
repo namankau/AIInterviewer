@@ -131,12 +131,20 @@ export function GuidedLessonControls({
           ))}
 
           {completion ? (
-            <div className={`flex flex-col items-start gap-2 rounded-xl border px-5 py-5 transition-colors ${allBeatsVisited ? "border-positive/25 bg-positive-wash" : "border-line bg-surface-sunken"}`}>
-              <p className="text-caption text-ink-muted" aria-live="polite">
-                {allBeatsVisited
-                  ? "You reached every section. Mark the chapter complete when you feel ready."
-                  : `${visitedBeats.size} of ${beats.length} sections reached. Read or use the lesson map to unlock completion.`}
-              </p>
+            <div className={`flex flex-wrap items-center justify-between gap-5 rounded-2xl border px-5 py-5 shadow-[var(--shadow-sm)] transition-colors sm:px-7 ${allBeatsVisited ? "border-positive/30 bg-[linear-gradient(110deg,var(--positive-wash),var(--surface-raised))]" : "border-line bg-surface-raised"}`}>
+              <div className="flex min-w-0 items-start gap-4">
+                <span aria-hidden="true" className={`grid size-11 shrink-0 place-items-center rounded-xl ${allBeatsVisited ? "bg-positive text-white" : "bg-surface-sunken text-ink-muted"}`}>
+                  <BeatIcon beat="check" />
+                </span>
+                <div>
+                  <p className="text-heading font-semibold text-ink">Your chapter checkpoint</p>
+                  <p className="mt-1 max-w-[52ch] text-caption leading-relaxed text-ink-muted" aria-live="polite">
+                    {allBeatsVisited
+                      ? "You reached every section. Mark the chapter complete when you feel ready."
+                      : `${visitedBeats.size} of ${beats.length} sections reached. Read or use the lesson map to unlock completion.`}
+                  </p>
+                </div>
+              </div>
               {completion}
             </div>
           ) : null}

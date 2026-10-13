@@ -2,6 +2,7 @@ import type { UsageCounts } from "@untiered/shared";
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 
+import { BrandWordmark } from "@/components/brand-logo";
 import { ActionLink } from "@/components/ui/action-link";
 import { Testimonials } from "@/components/testimonials";
 import { courses, totalChapters, totalMinutes } from "@/content/courses";
@@ -68,11 +69,8 @@ function SiteHeader({ mockInterviewsEnabled, coursesEnabled }: { mockInterviewsE
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface-raised/90 shadow-[var(--shadow-sm)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
-        <Link href="/" className="group flex items-center gap-2.5">
-          <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast shadow-[var(--shadow-sm)] transition-transform group-hover:-rotate-3">
-            U
-          </span>
-          <span className="text-heading font-bold tracking-tight text-ink">Untiered</span>
+        <Link href="/" className="flex items-center gap-2.5 focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent" aria-label="Untiered home">
+          <BrandWordmark />
           <span className="hidden font-mono text-micro tracking-widest text-ink-subtle uppercase sm:inline">
             beta
           </span>

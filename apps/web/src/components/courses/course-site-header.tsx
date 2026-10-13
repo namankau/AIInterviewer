@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BrandWordmark } from "@/components/brand-logo";
 import { SignOutButton } from "@/components/sign-out-button";
 import { SiteNavLinks } from "@/components/site-nav-links";
 import { ActionLink } from "@/components/ui/action-link";
@@ -20,12 +21,10 @@ export function CourseSiteHeader() {
       <div className="mx-auto flex max-w-[120rem] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 py-3 md:px-12">
         <Link
           href="/dashboard"
-          className="group flex items-center gap-2.5 text-heading font-bold tracking-tight text-ink"
+          className="flex shrink-0 items-center focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+          aria-label="Untiered dashboard"
         >
-          <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast shadow-[var(--shadow-sm)] transition-transform group-hover:-rotate-3">
-            U
-          </span>
-          <span>Untiered</span>
+          <BrandWordmark />
         </Link>
         <nav aria-label="Main" className="order-3 flex min-w-0 w-full items-center gap-2 md:order-none md:w-auto">
           <div className="min-w-0 flex-1 overflow-x-auto md:overflow-visible">

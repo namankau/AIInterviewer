@@ -1,6 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 
+import { BrandWordmark } from "@/components/brand-logo";
 import { featureEnabled } from "@/lib/flags";
 
 export const LEGAL_LINKS: { href: Route; label: string }[] = [
@@ -21,9 +22,8 @@ export function SiteFooter() {
     <footer className="border-t border-white/10 bg-navy text-on-navy">
       <div className="mx-auto grid max-w-[78rem] gap-10 px-6 py-12 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] lg:px-8">
         <div>
-          <Link href="/" className="inline-flex items-center gap-2.5 text-heading font-bold tracking-tight text-on-navy">
-            <span className="grid size-9 place-items-center rounded-xl bg-accent text-caption font-extrabold text-accent-contrast">U</span>
-            Untiered
+          <Link href="/" className="inline-flex items-center focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-on-navy" aria-label="Untiered home">
+            <BrandWordmark inverse />
           </Link>
           <p className="mt-3 max-w-xs text-caption leading-relaxed text-on-navy-muted">Practice deliberately. Interview confidently.</p>
         </div>

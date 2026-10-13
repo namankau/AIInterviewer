@@ -16,6 +16,24 @@ export const allArenaChallenges: Challenge[] = [...deriveChallenges(courses), ..
   }),
 );
 
+/**
+ * Standalone, course-authored multiple-choice checks for the dashboard. The complete
+ * Arena intentionally includes code, diagrams and chapter-dependent mistake spotting;
+ * those formats are excellent inside a course session but can feel arbitrary when one
+ * appears alone on the dashboard. This bank keeps the large deterministic rotation while
+ * only admitting questions that carry their own context and readable feedback.
+ */
+export const dashboardQuestionPool: Challenge[] = allArenaChallenges.filter(
+  (challenge) =>
+    challenge.kind === "mcq" &&
+    challenge.prompt.trim().length >= 20 &&
+    challenge.prompt.trim().length <= 280 &&
+    challenge.options.length >= 3 &&
+    challenge.options.length <= 5 &&
+    challenge.options.every((option) => option.trim().length > 0 && option.trim().length <= 180) &&
+    challenge.why.trim().length >= 10,
+);
+
 export function challengesForCourse(courseSlug: string): Challenge[] {
   return allArenaChallenges.filter((c) => c.courseSlug === courseSlug);
 }

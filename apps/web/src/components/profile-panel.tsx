@@ -4,7 +4,6 @@ import type { ArenaProgressView, MeResponse, ProfileDetails, ResumeView, Session
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ProgressBar } from "@/components/courses/course-progress";
 import { Button } from "@/components/ui/button";
 import { CONTROL_CLASS } from "@/components/ui/field";
 import {
@@ -146,11 +145,7 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
     });
 
   if (!visible.loaded) {
-    return (
-      <p role="status" className="text-body text-ink-muted">
-        Loading your profile…
-      </p>
-    );
+    return <ProfileLoadingState />;
   }
 
   const resume = visible.details?.resume ?? null;
@@ -340,6 +335,21 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
   );
 }
 
+function ProfileLoadingState() {
+  return (
+    <div role="status" aria-label="Loading your profile" className="flex animate-pulse flex-col gap-6">
+      <div className="h-32 rounded-[1.5rem] border border-line bg-surface-raised shadow-[var(--shadow-sm)]" />
+      <div className="h-16 rounded-2xl border border-line bg-surface-raised" />
+      <div className="h-28 rounded-2xl border border-line bg-surface-raised" />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(17rem,0.7fr)]">
+        <div className="h-80 rounded-2xl border border-line bg-surface-raised" />
+        <div className="h-80 rounded-2xl border border-line bg-surface-raised" />
+      </div>
+      <span className="sr-only">Loading your profile…</span>
+    </div>
+  );
+}
+
 type ProfileTab = "overview" | "resume" | "reports";
 
 const PROFILE_TABS: { id: ProfileTab; label: string }[] = [
@@ -407,13 +417,25 @@ function ProfileOverview({
   )[0];
   const name = me?.displayName ?? me?.email ?? "Your profile";
   const initials = initialsOf(name);
+  const resume = details?.resume ?? null;
+  const employments = resume?.employments ?? [];
+  const profileChecks = [
+    Boolean(me?.displayName),
+    Boolean(details?.avatarUrl),
+    Boolean(resume),
+    Boolean(details?.currentLevel),
+    Boolean(details?.targetLevel),
+    Boolean(details?.linkedinUrl),
+    (details?.skills.length ?? 0) > 0,
+  ];
+  const completedProfileChecks = profileChecks.filter(Boolean).length;
+  const profileStrength = Math.round((completedProfileChecks / profileChecks.length) * 100);
+  const nextCourse = courseSummaries.find(({ summary }) => summary.next)?.course;
+  const nextChapter = courseSummaries.find(({ summary }) => summary.next)?.summary.next;
 
   return (
-    <section
-      aria-labelledby="profile-overview"
-      className="overflow-hidden rounded-[1.5rem] border border-line bg-surface-raised shadow-[var(--shadow-md)]"
-    >
-      <div className="hero-band grid gap-8 rounded-none p-6 shadow-none sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+    <section aria-labelledby="profile-overview" className="flex flex-col gap-6">
+      <div className="grid gap-8 rounded-[1.5rem] border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div className="flex min-w-0 items-center gap-5">
           <div className="relative shrink-0">
             {details?.avatarUrl ? (
@@ -421,12 +443,12 @@ function ProfileOverview({
               <img
                 src={details.avatarUrl}
                 alt="Profile photo"
-                className="size-24 rounded-2xl border-4 border-white object-cover shadow-[var(--shadow-md)]"
+                className="size-20 rounded-2xl border-4 border-white object-cover shadow-[var(--shadow-md)]"
               />
             ) : (
               <span
                 aria-label="Profile photo placeholder"
-                className="grid size-24 place-items-center rounded-2xl bg-[#a8e7d7] text-title font-bold text-accent-strong shadow-[var(--shadow-md)]"
+                className="grid size-20 place-items-center rounded-2xl bg-positive-wash text-title font-bold text-positive shadow-[var(--shadow-sm)]"
               >
                 {initials}
               </span>
@@ -454,11 +476,11 @@ function ProfileOverview({
           </div>
 
           <div className="min-w-0">
-            <p className="eyebrow text-accent-on-navy">Candidate workspace</p>
-            <h2 id="profile-overview" className="mt-2 truncate text-title text-on-navy">
+            <p className="eyebrow text-accent">Candidate profile</p>
+            <h2 id="profile-overview" className="mt-2 truncate text-title text-ink">
               {name}
             </h2>
-            <p className="mt-1 text-caption text-on-navy-muted">
+            <p className="mt-1 text-caption text-ink-muted">
               {details?.targetLevel ? `Working toward ${details.targetLevel}` : "Add a target role to shape future rounds."}
             </p>
           </div>
@@ -467,82 +489,115 @@ function ProfileOverview({
         {mockInterviewsEnabled ? (
           <Link
             href="/interview/new"
-            className="w-fit rounded-xl bg-surface-raised px-5 py-3 text-caption font-semibold text-ink shadow-[var(--shadow-sm)] transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
+            className="action-primary w-fit px-5 py-3 text-caption"
           >
             Start a new round
           </Link>
         ) : null}
       </div>
 
-      <div className="grid border-t border-line sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 rounded-2xl border border-line bg-surface-raised px-5 py-4 shadow-[var(--shadow-sm)] sm:grid-cols-[minmax(0,1fr)_minmax(14rem,0.7fr)_auto] sm:items-center">
+        <div>
+          <p className="text-caption font-semibold text-ink">Profile strength</p>
+          <p className="mt-0.5 text-micro text-ink-subtle">
+            {completedProfileChecks} of {profileChecks.length} useful details complete
+          </p>
+        </div>
+        <div
+          role="progressbar"
+          aria-label="Profile strength"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={profileStrength}
+          className="h-2 overflow-hidden rounded-full bg-surface-sunken"
+        >
+          <span className="block h-full rounded-full bg-[linear-gradient(90deg,var(--accent),var(--positive))]" style={{ width: `${profileStrength}%` }} />
+        </div>
+        <span className="font-mono text-caption font-bold text-positive">{profileStrength}%</span>
+      </div>
+
+      <div className="grid overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] sm:grid-cols-2 lg:grid-cols-4">
         {coursesEnabled ? <OverviewStat label="Courses complete" value={progressReady ? `${completedCourses} / ${outlines.length}` : "—"} /> : null}
         {coursesEnabled ? <OverviewStat label="Chapters complete" value={progressReady ? String(completedChapters) : "—"} /> : null}
         {reportsEnabled ? <OverviewStat label="Rounds completed" value={String(finishedRounds.length)} /> : null}
         {arenaEnabled ? <OverviewStat label="Arena streak" value={arena ? `${arena.streak.current} day${arena.streak.current === 1 ? "" : "s"}` : "—"} /> : null}
       </div>
 
-      {coursesEnabled || reportsEnabled ? (
-        <div className={`grid gap-7 border-t border-line p-6 sm:p-8 ${coursesEnabled && reportsEnabled ? "lg:grid-cols-[minmax(0,1.4fr)_minmax(15rem,0.8fr)]" : ""}`}>
-          {coursesEnabled ? (
-            <div>
-              <div className="flex items-baseline justify-between gap-4">
-                <h3 className="text-heading text-ink">Course progress</h3>
-                <Link href="/courses" className="text-caption font-medium text-accent hover:underline">
-                  View courses
-                </Link>
-              </div>
-              <ul className="mt-4 grid gap-3">
-                {courseSummaries.map(({ course, summary }) => (
-                  <li key={course.slug} className="rounded-xl border border-line bg-surface-sunken/70 px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <Link href={`/courses/${course.slug}`} className="text-caption font-semibold text-ink hover:text-accent">
-                        {course.title}
-                      </Link>
-                      {summary.next ? (
-                        <Link
-                          href={`/courses/${course.slug}/${summary.next.slug}`}
-                          className="text-micro font-semibold text-accent hover:underline"
-                        >
-                          {summary.started ? "Continue" : "Start"}
-                        </Link>
-                      ) : (
-                        <span className="text-micro font-semibold text-positive">Complete</span>
-                      )}
-                    </div>
-                    <div className="mt-2">
-                      <ProgressBar done={summary.done} total={summary.total} label={`${course.title} progress`} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.65fr)] lg:items-start">
+        <article className="rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] sm:p-8">
+          <p className="eyebrow text-accent">About</p>
+          <h3 className="mt-2 text-title text-ink">Your professional story</h3>
+          <p className="mt-5 max-w-3xl text-body leading-relaxed text-ink-muted">
+            {resume?.headline ?? "Upload a resume to turn this space into a concise, evidence-based view of your experience."}
+          </p>
+
+          {employments.length > 0 ? (
+            <ol className="mt-6 divide-y divide-line border-t border-line">
+              {employments.slice(0, 4).map((employment, index) => (
+                <li key={`${employment.employer}-${employment.title}-${index}`} className="grid gap-3 py-5 sm:grid-cols-[2.75rem_minmax(0,1fr)_auto] sm:items-start">
+                  <span className={`grid size-10 place-items-center rounded-xl text-caption font-bold ${index % 2 === 0 ? "bg-accent text-accent-contrast" : "bg-warning-wash text-warning"}`}>
+                    {employment.employer.trim().charAt(0).toUpperCase() || "W"}
+                  </span>
+                  <div>
+                    <p className="text-caption font-semibold text-ink">{employment.title}</p>
+                    <p className="mt-1 text-micro text-ink-muted">{employment.employer}</p>
+                  </div>
+                  <p className="text-micro text-ink-subtle sm:text-right">
+                    {formatEmploymentDates(employment.startDate, employment.endDate, employment.current)}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+        </article>
+
+        <aside className="grid gap-4">
+          <div className="rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]">
+            <p className="eyebrow text-accent">Primary resume</p>
+            {resume ? (
+              <>
+                <p className="mt-3 break-words text-caption font-semibold text-ink">{resume.filename}</p>
+                <p className="mt-1 text-micro text-ink-subtle">Uploaded {formatProfileDate(resume.uploadedAt)}</p>
+                <p className="mt-4 rounded-lg bg-positive-wash px-3 py-2 text-micro font-semibold text-positive">
+                  {resume.status === "parsed" ? "Ready for interview tailoring" : "Resume processing"}
+                </p>
+              </>
+            ) : (
+              <p className="mt-3 text-caption text-ink-muted">No resume uploaded yet.</p>
+            )}
+          </div>
+
+          {arenaEnabled ? (
+            <div className="rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]">
+              <p className="eyebrow text-accent">Practice streak</p>
+              <p className="mt-3 text-title text-ink">{arena?.streak.current ?? 0}-day current streak</p>
+              <p className="mt-1 text-micro text-ink-subtle">Longest streak: {arena?.streak.longest ?? 0} days</p>
             </div>
           ) : null}
 
-          {reportsEnabled ? (
-            <div className="rounded-2xl bg-navy p-5 text-on-navy">
-              <p className="font-mono text-micro tracking-widest text-on-navy-muted uppercase">Latest interview</p>
-              {latestRound ? (
-                <div className="mt-3 flex h-[calc(100%-1rem)] flex-col">
-                  <p className="text-heading text-on-navy">{latestRound.companyName}</p>
-                  <p className="mt-1 text-caption text-on-navy-muted">{latestRound.roleTitle}</p>
-                  <p className="mt-3 text-micro text-on-navy-muted">{roundLabel(latestRound.roundType)}</p>
-                  <Link
-                    href="/history"
-                    className="mt-auto pt-6 text-caption font-semibold text-on-navy underline decoration-white/30 underline-offset-4 hover:decoration-white"
-                  >
-                    Open interview history
-                  </Link>
-                </div>
-              ) : (
-                <div className="mt-3">
-                  <p className="text-body text-on-navy">No completed round yet.</p>
-                  <p className="mt-1 text-caption text-on-navy-muted">Your latest company, role and round type will appear here.</p>
-                </div>
-              )}
+          {coursesEnabled && nextCourse && nextChapter ? (
+            <div className="rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]">
+              <p className="eyebrow text-accent">Next lesson</p>
+              <p className="mt-3 text-caption font-semibold text-ink">{nextChapter.title}</p>
+              <p className="mt-1 text-micro text-ink-subtle">{nextCourse.title}</p>
+              <Link href={`/courses/${nextCourse.slug}/${nextChapter.slug}`} className="mt-4 inline-flex text-caption font-semibold text-accent hover:underline">
+                Continue
+              </Link>
             </div>
           ) : null}
-        </div>
-      ) : null}
+
+          {reportsEnabled && latestRound ? (
+            <div className="rounded-2xl bg-navy p-5 text-on-navy shadow-[var(--shadow-sm)]">
+              <p className="eyebrow text-accent-on-navy">Latest interview</p>
+              <p className="mt-3 text-caption font-semibold text-on-navy">{latestRound.companyName}</p>
+              <p className="mt-1 text-micro text-on-navy-muted">{latestRound.roleTitle}</p>
+              <Link href="/history" className="mt-4 inline-flex text-caption font-semibold text-on-navy underline decoration-white/30 underline-offset-4">
+                Open history
+              </Link>
+            </div>
+          ) : null}
+        </aside>
+      </div>
     </section>
   );
 }
@@ -554,6 +609,11 @@ function OverviewStat({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-micro text-ink-subtle">{label}</p>
     </div>
   );
+}
+
+function formatEmploymentDates(start: string | null, end: string | null, current: boolean): string {
+  const year = (value: string | null) => (value ? new Date(value).getFullYear().toString() : "—");
+  return `${year(start)} – ${current ? "Present" : year(end)}`;
 }
 
 function initialsOf(value: string): string {

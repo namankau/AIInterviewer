@@ -11,11 +11,18 @@ export const metadata: Metadata = { title: "Your report" };
  * reading to the bottom and finding "practise again" — so the only route out of a report
  * was through all of it, which is the opposite of how anybody reads one.
  */
-export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReportPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ detail?: string }>;
+}) {
   requireFeature("reports");
   const { id } = await params;
+  const { detail } = await searchParams;
   return (
-    <AppShell breadcrumb="report" parent={{ label: "reports", href: "/history" }}>
+    <AppShell>
       {/*
         * Task 053: `max-w-3xl` forced the whole report into one narrow column, including
         * the new side-by-side summary at the top. `max-w-6xl` gives that summary room to
@@ -24,7 +31,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
         * actually read at.
         */}
       <div className="w-full max-w-6xl">
-        <ReportView sessionId={id} />
+        <ReportView sessionId={id} detailed={detail === "1"} />
       </div>
     </AppShell>
   );

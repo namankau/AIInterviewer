@@ -16,13 +16,12 @@ import { RailNav } from "@/components/rail-nav";
  * a navigation rail beside a live interview would be an invitation to leave it.
  */
 export function AppShell({
-  breadcrumb,
-  parent,
   wide = false,
   children,
 }: {
+  /** Retained for route compatibility; page-level breadcrumb strips are intentionally hidden. */
   breadcrumb?: string;
-  /** A page this one sits under (a report under rounds); adds a middle crumb and a back link. */
+  /** Retained for route compatibility while nested pages move navigation into their own content. */
   parent?: { label: string; href: Route };
   /** Gives document-like tools (such as the chapter reader) room for their own local navigation. */
   wide?: boolean;
@@ -59,35 +58,6 @@ export function AppShell({
       </header>
 
       <div className="flex min-w-0 flex-1 flex-col bg-[linear-gradient(180deg,var(--surface-tint)_0,transparent_24rem)]">
-        {breadcrumb ? (
-          <div className="border-b border-line bg-surface-raised/75 px-6 py-2.5 backdrop-blur">
-            <p className="mx-auto max-w-[78rem] text-micro text-ink-subtle">
-              <Link href="/dashboard" className="hover:text-ink">
-                home
-              </Link>
-              <span className="px-1.5">/</span>
-              {parent ? (
-                <>
-                  <Link href={parent.href} className="hover:text-ink">
-                    {parent.label}
-                  </Link>
-                  <span className="px-1.5">/</span>
-                </>
-              ) : null}
-              <span aria-current="page" className="text-ink-muted">
-                {breadcrumb}
-              </span>
-            </p>
-            {parent ? (
-              <Link
-                href={parent.href}
-                className="mx-auto mt-1.5 block max-w-[78rem] text-caption font-medium text-accent-strong hover:underline"
-              >
-                <span aria-hidden="true">←</span> Back to {parent.label}
-              </Link>
-            ) : null}
-          </div>
-        ) : null}
         {/*
           * Wide enough to compose in, capped so a line of prose never runs the width of a
           * monitor. The page used to be a 768px column pinned to the left of whatever

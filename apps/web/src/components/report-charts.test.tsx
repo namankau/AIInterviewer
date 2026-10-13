@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { CompetencyBars, CompetencyHighlights, OverallScore, bandFor, overallScore } from "./report-charts";
+import { CompetencyBars, CompetencyHighlights, OverallScore, bandFor, overallScore, scoreToneForPercent } from "./report-charts";
 
 const competency = (name: string, score: number, maxScore = 5): ReportCompetency => ({
   competency: name,
@@ -49,6 +49,15 @@ describe("bandFor", () => {
   it("clamps rather than falling off either end", () => {
     expect(bandFor(-5).name).toBe("Under par");
     expect(bandFor(140).name).toBe(bandFor(100).name);
+  });
+});
+
+describe("scoreToneForPercent", () => {
+  it("uses red below 50, amber from 50 through 70, and green above 70", () => {
+    expect(scoreToneForPercent(49.9)).toBe("danger");
+    expect(scoreToneForPercent(50)).toBe("warning");
+    expect(scoreToneForPercent(70)).toBe("warning");
+    expect(scoreToneForPercent(70.1)).toBe("positive");
   });
 });
 

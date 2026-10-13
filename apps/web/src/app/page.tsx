@@ -8,6 +8,7 @@ import { Testimonials } from "@/components/testimonials";
 import { courses, totalChapters, totalMinutes } from "@/content/courses";
 import { LANDING_TESTIMONIALS } from "@/content/landing-testimonials";
 import { SiteFooter } from "@/components/site-footer";
+import { SessionLink } from "@/components/session-link";
 import { fetchUsage } from "@/lib/api";
 import { courseEnabled, featureEnabled } from "@/lib/flags";
 
@@ -77,20 +78,19 @@ function SiteHeader({ mockInterviewsEnabled, coursesEnabled }: { mockInterviewsE
         </Link>
         <nav aria-label="Site" className="hidden items-center gap-8 md:flex">
           {mockInterviewsEnabled ? (
-            <Link href="/login" className="text-caption font-medium text-ink-muted hover:text-ink">Mock interviews</Link>
+            <Link href="/interview/new" className="text-caption font-medium text-ink-muted hover:text-ink">Mock interviews</Link>
           ) : null}
           {coursesEnabled ? (
             <Link href={"/courses" as Route} className="text-caption font-medium text-ink-muted hover:text-ink">Courses</Link>
           ) : null}
         </nav>
         <div className="flex items-center gap-3">
-          <Link
-            href="/login"
+          <SessionLink
+            signedIn={{ href: "/dashboard", label: "Dashboard" }}
+            signedOut={{ href: "/login", label: "Sign in" }}
             className="hidden rounded-lg px-3 py-2 text-caption font-medium text-ink transition-colors hover:bg-surface-sunken sm:inline-block"
-          >
-            Sign in
-          </Link>
-          <ActionLink href={coursesEnabled && !mockInterviewsEnabled ? "/courses" : "/login"} size="sm">
+          />
+          <ActionLink href={coursesEnabled && !mockInterviewsEnabled ? "/courses" : mockInterviewsEnabled ? "/interview/new" : "/login"} size="sm">
             {mockInterviewsEnabled ? "Start free" : coursesEnabled ? "Start learning" : "Sign in"}
           </ActionLink>
         </div>
@@ -134,7 +134,7 @@ function Hero({
           </p>
           <div className="flex flex-wrap items-center gap-4 pt-1">
             {mockInterviewsEnabled ? (
-              <Link href="/login" className="rounded-lg bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-colors hover:bg-accent-strong">Take a free interview</Link>
+              <Link href="/interview/new" className="rounded-lg bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-colors hover:bg-accent-strong">Take a free interview</Link>
             ) : (
               <Link href={learningHref as Route} className="rounded-lg bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-colors hover:bg-accent-strong">Start learning</Link>
             )}
@@ -605,7 +605,7 @@ function CtaBand({
   coursesEnabled: boolean;
   arenaEnabled: boolean;
 }) {
-  const href = mockInterviewsEnabled ? "/login" : coursesEnabled ? "/courses" : arenaEnabled ? "/arena" : "/login";
+  const href = mockInterviewsEnabled ? "/interview/new" : coursesEnabled ? "/courses" : arenaEnabled ? "/arena" : "/login";
   return (
     <section className="bg-navy text-on-navy">
       <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-6 py-20">

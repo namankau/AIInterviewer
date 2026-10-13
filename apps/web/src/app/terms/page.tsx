@@ -13,17 +13,17 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Terms of use"
-      intro={`These terms cover your use of ${LEGAL.productName}, a practice tool for job interviews. By signing in you agree to them and to our privacy policy.`}
+      intro={`These terms explain how you may use ${LEGAL.productName} for learning and mock interview practice. By signing in or using the service, you agree to these terms. Our privacy policy explains how we handle your data.`}
     >
       <LegalSection id="service" title="What the service is">
         <p>
-          {LEGAL.productName} runs practice interviews with an AI interviewer and writes you a
-          feedback report. It also offers free courses and practice questions. The interviewer is
-          an AI model, not a person, and it is not connected to any employer.
+          {LEGAL.productName} provides self-paced courses, practice questions, AI-led mock
+          interviews and feedback reports. The interviewer is an AI system, not a person. The
+          service does not conduct real hiring assessments or act for any employer.
         </p>
       </LegalSection>
 
-      <LegalSection id="practice" title="Practice, not a promise">
+      <LegalSection id="practice" title="AI feedback and employer references">
         <ul className="list-disc space-y-2 pl-5">
           <li>
             Feedback and scores are written by an AI model. They can be wrong and are meant to help
@@ -34,16 +34,14 @@ export default function TermsPage() {
             source, a reported account, or general patterns for that kind of employer. We are not
             affiliated with any employer named on the site, and their names belong to them.
           </li>
-          <li>Nothing on the service is career, legal or financial advice.</li>
+          <li>Course material and feedback are for learning and practice. Check important information independently before relying on it.</li>
         </ul>
       </LegalSection>
 
       <LegalSection id="account" title="Your account">
         <ul className="list-disc space-y-2 pl-5">
-          <li>You sign in with Google and are responsible for activity on your account.</li>
-          <li>
-            You must be 18 or over, or have the verifiable consent of a parent or guardian.
-          </li>
+          <li>You sign in with Google and are responsible for activity on your account. Keep access to that Google account secure.</li>
+          <li>You must be 18 or over, or have verifiable consent from a parent or guardian.</li>
           <li>You can delete your account at any time from your profile.</li>
         </ul>
       </LegalSection>
@@ -61,7 +59,7 @@ export default function TermsPage() {
         <p>Please do not:</p>
         <ul className="list-disc space-y-2 pl-5">
           <li>use the service to get help during a real interview or assessment;</li>
-          <li>upload a resume or recordings of anyone but yourself;</li>
+          <li>upload a resume or recording of anyone but yourself, or other people&rsquo;s personal information without their permission;</li>
           <li>try to get around the daily limits, for example with automated scripts or many accounts;</li>
           <li>copy or resell the courses, questions or reports, or scrape the service;</li>
           <li>attack, overload or try to access parts of the service or data that are not yours.</li>
@@ -80,6 +78,15 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
+      <LegalSection id="ending" title="Suspension and ending access">
+        <p>
+          You may stop using the service and delete your account from your profile. We may
+          restrict access if an account breaks these terms or threatens the service or other
+          users. If we discontinue the service, we will give notice through the site where
+          reasonably possible.
+        </p>
+      </LegalSection>
+
       <LegalSection id="availability" title="Availability and liability">
         <p>
           The service is provided as it is, and we do not promise it will always be available or
@@ -89,7 +96,7 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="law" title="Changes and governing law">
+      <LegalSection id="law" title="Changes, contact and governing law">
         <p>
           We may update these terms and will change the date above when we do. If a change is
           significant, we will tell you in the app first. These terms are governed by the laws of

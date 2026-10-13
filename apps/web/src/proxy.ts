@@ -13,8 +13,8 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Every path except static assets and image files. The session cookie has to be
-     * refreshed on ordinary navigations, not just on guarded routes.
+     * Every path except static assets and image files. updateSession exits immediately
+     * for public content and refreshes cookies on guarded routes and /login.
      */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],

@@ -12,7 +12,8 @@ describe("DailyChallengeBanner", () => {
         prompt: "Which index is first?", options: ["Zero", "One"], correctIndex: 0, why: "Arrays start at zero.",
       },
     }} />);
-    expect(screen.getByText("Array basics")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Which index is first?" })).toBeInTheDocument();
+    expect(screen.getByText("From Array basics")).toBeInTheDocument();
     expect(screen.getByText("Beginner path")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Solve today's question/i })).toHaveAttribute("href", "/daily-challenge");
   });

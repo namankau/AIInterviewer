@@ -24,8 +24,8 @@ export function DailyChallengeBanner({ questionsByDate, levelsByCourse }: { ques
         </div>
         <div className="min-w-0">
           <p className="eyebrow text-accent">Question of the day · {question.moduleTitle}</p>
-          <h2 className="mt-1 line-clamp-1 text-heading font-bold text-ink">{question.chapterTitle ?? question.prompt}</h2>
-          <p className="mt-1 line-clamp-1 text-caption text-ink-muted">{question.prompt}</p>
+          <h2 className="mt-1 line-clamp-2 text-heading font-bold text-ink">{question.prompt}</h2>
+          {question.chapterTitle ? <p className="mt-1 line-clamp-1 text-caption text-ink-muted">From {question.chapterTitle}</p> : null}
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-3 sm:shrink-0">

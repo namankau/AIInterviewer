@@ -2,7 +2,9 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { AccountSummary } from "@/components/account-summary";
+import { BrandMark, BrandWordmark } from "@/components/brand-logo";
 import { RailNav } from "@/components/rail-nav";
+import { SiteFooter } from "@/components/site-footer";
 
 /**
  * The frame every signed-in page sits in.
@@ -28,17 +30,16 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-surface">
+    <div className="flex min-h-dvh flex-col overflow-x-hidden bg-surface">
       <header className="sticky top-0 z-40 border-b border-line bg-surface-raised/95 shadow-[var(--shadow-sm)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-[78rem] flex-wrap items-center gap-x-5 px-4 sm:flex-nowrap sm:px-6 lg:px-8">
           <Link
             href="/dashboard"
-            className="group flex shrink-0 items-center gap-2.5 py-3.5 text-heading font-bold tracking-tight text-ink"
+            className="flex shrink-0 items-center py-3.5 focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+            aria-label="Untiered dashboard"
           >
-            <span className="grid size-9 place-items-center rounded-[0.7rem] bg-accent text-caption font-extrabold text-accent-contrast shadow-[0_8px_22px_rgba(70,84,220,0.25)] transition-transform group-hover:-rotate-3">
-              U
-            </span>
-            <span className="hidden sm:inline">Untiered</span>
+            <span className="sm:hidden"><BrandMark /></span>
+            <span className="hidden sm:block"><BrandWordmark /></span>
           </Link>
 
           <nav aria-label="Main" className="nav-scroll order-3 w-full min-w-0 overflow-x-auto border-t border-line sm:order-none sm:w-auto sm:flex-1 sm:border-t-0">
@@ -72,6 +73,7 @@ export function AppShell({
           {children}
         </main>
       </div>
+      <SiteFooter />
     </div>
   );
 }

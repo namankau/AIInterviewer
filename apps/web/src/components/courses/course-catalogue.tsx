@@ -1,0 +1,107 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+
+import { CourseCardProgress } from "@/components/courses/course-progress";
+import { CourseMotif } from "@/components/courses/course-visuals";
+
+export type CatalogueCourse = {
+  slug: string;
+  title: string;
+  tagline: string;
+  level: string;
+  chapterCount: number;
+  chapters: { slug: string; title: string }[];
+  searchText: string;
+};
+
+const CATEGORY: Record<string, string> = {
+  java: "Programming",
+  dsa: "DSA",
+  "ai-agents": "AI",
+  "system-design": "System Design",
+};
+
+const ART: Record<string, string> = {
+  java: "from-[#fff0d9] to-[#f7e6d5]",
+  dsa: "from-[#dcf5ef] to-[#e5ecff]",
+  "ai-agents": "from-[#ebe6ff] to-[#e3efff]",
+  "system-design": "from-[#e2ebff] to-[#f1e9ff]",
+};
+
+export function CourseCatalogue({ courses }: { courses: CatalogueCourse[] }) {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("All");
+  const filters = ["All", ...new Set(courses.map((course) => CATEGORY[course.slug] ?? "Other"))];
+  const filtered = useMemo(() => {
+    const term = query.trim().toLocaleLowerCase();
+    return courses.filter((course) =>
+      (filter === "All" || CATEGORY[course.slug] === filter) &&
+      (!term || course.searchText.includes(term)),
+    );
+  }, [courses, filter, query]);
+
+  return (
+    <section aria-labelledby="learning-paths" className="mt-12">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="eyebrow text-accent">Choose your focus</p>
+          <h2 id="learning-paths" className="mt-2 text-title font-bold text-ink">Find your next breakthrough</h2>
+          <p className="mt-1 text-caption text-ink-muted">Pick up where you left off, or learn something new.</p>
+        </div>
+        <span className="text-caption text-ink-muted">{courses.length} learning paths</span>
+      </div>
+
+      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <label className="relative block w-full sm:max-w-md">
+          <span className="sr-only">Search courses and concepts</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-ink-subtle"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 5 5" strokeLinecap="round" /></svg>
+          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search courses and concepts" className="min-h-12 w-full rounded-xl border border-line bg-surface-raised py-3 pl-12 pr-4 text-caption text-ink shadow-[var(--shadow-sm)] outline-none transition-[border-color,box-shadow] placeholder:text-ink-subtle focus:border-accent focus:shadow-[var(--focus-ring)]" />
+        </label>
+        <div aria-label="Filter courses" className="flex min-w-0 gap-2 overflow-x-auto pb-1 sm:pb-0">
+          {filters.map((item) => (
+            <button key={item} type="button" aria-pressed={filter === item} onClick={() => setFilter(item)} className={`min-h-10 shrink-0 rounded-full border px-4 py-2 text-caption font-medium transition-[background-color,color,border-color] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${filter === item ? "border-navy bg-navy text-on-navy" : "border-line bg-surface-raised text-ink-muted hover:border-accent/50 hover:text-ink"}`}>{item}</button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div role="status" className="rounded-2xl border border-line bg-surface-raised px-6 py-12 text-center">
+          <p className="text-heading font-semibold text-ink">No courses found</p>
+          <p className="mt-1 text-caption text-ink-muted">Try a concept like arrays, recursion, or agents.</p>
+          <button type="button" onClick={() => { setQuery(""); setFilter("All"); }} className="mt-4 text-caption font-semibold text-accent hover:underline">Clear search and filters</button>
+        </div>
+      ) : (
+        <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((course) => (
+            <li key={course.slug} className="min-w-0">
+              <Link href={`/courses/${course.slug}`} className="group flex h-full flex-col overflow-hidden rounded-[1.25rem] border border-line bg-surface-raised shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:border-accent/35 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
+                <div className={`relative flex h-28 items-center justify-center overflow-hidden bg-gradient-to-br ${ART[course.slug] ?? ART.dsa}`}>
+                  <span aria-hidden="true" className="absolute -left-5 -top-12 size-36 rotate-12 rounded-[2rem] border-[18px] border-white/35" />
+                  <span aria-hidden="true" className="absolute -bottom-20 -right-8 size-44 -rotate-12 rounded-[2.5rem] border-[20px] border-white/40" />
+                  <div className="relative scale-90 transition-transform duration-200 group-hover:scale-100"><CourseMotif courseSlug={course.slug} large /></div>
+                </div>
+                <div className="flex flex-1 flex-col p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="eyebrow text-accent">{CATEGORY[course.slug] ?? "Learning"}</p>
+                    <span className="shrink-0 text-right text-micro font-semibold text-ink-subtle">{course.level.startsWith("Beginner") ? "Beginner" : course.level}</span>
+                  </div>
+                  <h3 className="mt-3 text-heading font-bold text-ink transition-colors group-hover:text-accent">{course.title}</h3>
+                  <p className="mt-1.5 line-clamp-2 min-h-10 text-caption leading-relaxed text-ink-muted">{course.tagline}</p>
+                  <div className="mt-auto pt-5">
+                    <div className="flex items-end justify-between gap-3 text-caption">
+                      <span className="text-ink-muted">{course.chapterCount} interactive chapters</span>
+                      <span className="font-semibold text-accent">Explore <span aria-hidden="true">→</span></span>
+                    </div>
+                    <div className="mt-3"><CourseCardProgress courseSlug={course.slug} chapters={course.chapters} /></div>
+                  </div>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}

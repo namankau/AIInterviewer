@@ -83,13 +83,17 @@ export function ChallengeCard({
   }, [submitted, selected, challenge.options.length, onSelect, onSubmit, onNext]);
 
   return (
-    <div ref={cardRef} className="flex flex-col gap-6 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-7">
+    <div ref={cardRef} className="flex flex-col gap-6 rounded-[1.35rem] border border-line bg-surface-raised p-6 shadow-[var(--shadow-md)] sm:p-9">
       <div className="flex flex-wrap items-center gap-2.5">
         <span className="rounded-full bg-accent-wash px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase">
           {KIND_LABEL[challenge.kind]}
         </span>
         <span className="font-mono text-micro tracking-widest text-ink-subtle uppercase">{challenge.moduleTitle}</span>
       </div>
+
+      <h2 ref={headingRef} tabIndex={-1} className="text-title text-balance text-ink outline-none whitespace-pre-line">
+        {challenge.prompt}
+      </h2>
 
       {challenge.context ? (
         <p className="rounded-xl border border-line bg-surface-sunken px-4 py-3 text-body leading-relaxed text-ink-muted">
@@ -104,16 +108,12 @@ export function ChallengeCard({
       ) : null}
 
       {challenge.kind === "predict-output" && challenge.code ? (
-        <pre className="overflow-x-auto rounded-xl border border-line-strong bg-surface-sunken px-4 py-3 font-mono text-caption text-ink">
+        <pre className="overflow-x-auto rounded-xl bg-navy px-5 py-5 font-mono text-caption leading-relaxed text-on-navy">
           <code>{challenge.code}</code>
         </pre>
       ) : null}
 
-      <h2 ref={headingRef} tabIndex={-1} className="text-title text-balance text-ink outline-none whitespace-pre-line">
-        {challenge.prompt}
-      </h2>
-
-      <ul className="flex flex-col gap-2.5" role="list">
+      <ul className="grid gap-2.5 sm:grid-cols-2" role="list">
         {challenge.options.map((option, i) => {
           const isSelected = selected === i;
           const isCorrectOption = submitted && i === challenge.correctIndex;
@@ -126,7 +126,7 @@ export function ChallengeCard({
                 aria-pressed={isSelected}
                 onClick={() => onSelect(i)}
                 className={[
-                  `flex w-full items-center gap-3 rounded-xl border bg-surface-raised px-4 py-3 text-left text-body shadow-[var(--shadow-sm)] transition-[border-color,background-color,transform] ${FOCUS_RING}`,
+                  `flex min-h-14 w-full items-center gap-3 rounded-xl border bg-surface-raised px-4 py-3 text-left text-caption transition-[border-color,background-color,transform] ${FOCUS_RING}`,
                   isCorrectOption
                     ? "border-positive/50 bg-positive/10 text-ink"
                     : isWrongPick
@@ -153,7 +153,7 @@ export function ChallengeCard({
           type="button"
           onClick={onSubmit}
           disabled={selected === null}
-          className={`self-start rounded-xl bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40 ${FOCUS_RING}`}
+          className={`self-end rounded-xl bg-accent px-5 py-3 text-caption font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40 ${FOCUS_RING}`}
         >
           Confirm (Enter)
         </button>

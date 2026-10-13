@@ -79,15 +79,16 @@ export const chapterWhatIsJava: Chapter = {
     {
       kind: "p",
       text:
-        "Two commands do the whole journey. `javac Hello.java` reads your source file (plain text you " +
-        "wrote, ending in `.java`) and produces `Hello.class` — the bytecode 'tiffin box'. `java Hello` " +
-        "hands that box to the JVM, which reads the bytecode instruction by instruction and carries it " +
-        "out. Contrast this with a language like Python, which reads your source text and executes it " +
-        "line by line every time, with no separate compiled file left behind; and with a language like C, " +
-        "which compiles all the way down to instructions for one specific kind of processor, so a program " +
-        "compiled on Windows won't run on Linux without recompiling. Java's bytecode step is deliberately " +
-        "in between: compiled once, but into something a JVM interprets rather than something a processor " +
-        "runs directly — which is exactly what buys write-once-run-anywhere.",
+        "Java separates writing the program from running it. `javac Hello.java` compiles the source " +
+        "you wrote into `Hello.class` — portable bytecode, not instructions for one processor. " +
+        "Then `java Hello` hands that file to the JVM on the current machine.",
+    },
+    {
+      kind: "p",
+      text:
+        "That is why a `.class` file can move from Windows to Linux unchanged: each machine has " +
+        "its own JVM to run the same bytecode. Python typically runs from source without this separate " +
+        "bytecode file; C compiles to processor-specific machine code. Java sits between those paths.",
     },
     {
       kind: "steps",

@@ -200,6 +200,13 @@
     font-weight: 700;
   }
 
+  /* An editorial accent for lesson headings; the UI and code stay in their own faces. */
+  .font-editorial {
+    font-family: Georgia, Cambria, "Times New Roman", serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+
   /* Tabular figures everywhere numbers are compared down a column. */
   .font-mono {
     font-variant-numeric: tabular-nums;

@@ -1,7 +1,9 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 
+import { BrandWordmark } from "@/components/brand-logo";
 import { SignInWithGoogle } from "@/components/sign-in-with-google";
+import { SiteFooter } from "@/components/site-footer";
 import { safeNext } from "@/lib/safe-next";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -14,6 +16,7 @@ export default async function LoginPage({
   const { next } = await searchParams;
 
   return (
+    <>
     <main className="grid min-h-dvh bg-surface lg:grid-cols-[1.08fr_0.92fr]">
       <section className="relative hidden overflow-hidden bg-navy px-12 py-10 text-on-navy lg:flex lg:flex-col lg:justify-between xl:px-20 xl:py-14">
         <div
@@ -25,11 +28,8 @@ export default async function LoginPage({
           className="absolute -bottom-40 -left-24 size-[30rem] rounded-full bg-accent-2/10 blur-3xl"
         />
 
-        <Link href="/" className="relative flex w-fit items-center gap-2.5 text-heading font-bold tracking-tight text-on-navy">
-          <span className="grid size-9 place-items-center rounded-xl bg-accent text-micro font-extrabold text-accent-contrast shadow-[0_8px_24px_rgba(26,100,240,0.32)]">
-            U
-          </span>
-          <span>Untiered</span>
+        <Link href="/" className="relative flex w-fit items-center focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-on-navy" aria-label="Untiered home">
+          <BrandWordmark inverse />
         </Link>
 
         <div className="relative max-w-xl">
@@ -64,11 +64,8 @@ export default async function LoginPage({
 
       <section className="flex items-center justify-center bg-surface-tint px-6 py-16 sm:px-10">
         <div className="flex w-full max-w-md flex-col gap-9 rounded-[1.5rem] border border-line bg-surface-raised p-7 shadow-[var(--shadow-lg)] sm:p-10 lg:shadow-[var(--shadow-md)]">
-          <Link href="/" className="flex w-fit items-center gap-2.5 text-heading font-bold tracking-tight text-ink lg:hidden">
-            <span className="grid size-8 place-items-center rounded-lg bg-accent text-micro font-extrabold text-accent-contrast">
-              U
-            </span>
-            <span>Untiered</span>
+          <Link href="/" className="flex w-fit items-center focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent lg:hidden" aria-label="Untiered home">
+            <BrandWordmark />
           </Link>
           <div className="flex flex-col gap-3">
             <span className="pill pill-accent w-fit">Continue your preparation</span>
@@ -99,5 +96,7 @@ export default async function LoginPage({
         </div>
       </section>
     </main>
+    <SiteFooter />
+    </>
   );
 }

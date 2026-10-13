@@ -4,6 +4,7 @@ import type { BoardState, HintView, SessionView, TurnView } from "@untiered/shar
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { BrandMark, BrandWordmark } from "@/components/brand-logo";
 import { DesignWorkspace } from "@/components/design-workspace";
 import { DeviceCheck } from "@/components/device-check";
 import { DsaWorkspace } from "@/components/dsa-workspace";
@@ -892,11 +893,11 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           <a
             href="/dashboard"
             aria-label="Untiered dashboard"
-            className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-body font-bold text-accent-contrast shadow-[var(--shadow-sm)]"
+            className="grid shrink-0 place-items-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            U
+            <span className="sm:hidden"><BrandMark /></span>
+            <span className="hidden sm:block"><BrandWordmark /></span>
           </a>
-          <span className="hidden text-heading font-semibold text-ink sm:inline">Untiered</span>
           <span aria-hidden="true" className="hidden h-6 w-px bg-line sm:block" />
           <div className="min-w-0">
             <p className="truncate text-caption font-semibold text-ink">

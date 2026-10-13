@@ -41,7 +41,11 @@ export function AccountSummary() {
   const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (accessToken === undefined) return;
+    if (accessToken === null) {
+      setState({ status: "error", message: "This browser has no active session." });
+      return;
+    }
     const operationToken = accessToken;
     const controller = new AbortController();
 

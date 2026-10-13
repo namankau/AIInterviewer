@@ -37,28 +37,28 @@ export function CourseToc({ course, currentSlug }: { course: CourseTocData; curr
         <span aria-hidden>{open ? "−" : "+"}</span>
       </button>
       <div className={`${open ? "block" : "hidden"} overflow-hidden rounded-2xl border border-line bg-surface-raised shadow-[var(--shadow-sm)] lg:block`}>
-        <div className="border-b border-line bg-[linear-gradient(145deg,var(--navy),var(--navy-raised))] px-5 py-5 text-on-navy">
-          <Link href={`/courses/${course.slug}`} className="group flex items-center gap-2 font-mono text-micro tracking-widest text-accent-on-navy uppercase hover:text-on-navy">
+        <div className="border-b border-line bg-[linear-gradient(145deg,var(--navy),var(--navy-raised))] px-5 py-6 text-on-navy">
+          <Link href={`/courses/${course.slug}`} className="group flex items-center gap-2 text-micro font-bold tracking-widest text-accent-on-navy uppercase hover:text-on-navy">
             <span aria-hidden="true" className="transition-transform group-hover:-translate-x-0.5">←</span>
             Course overview
           </Link>
-          <p className="mt-3 text-heading font-semibold leading-snug text-on-navy">{course.title}</p>
+          <p className="font-editorial mt-3 text-heading leading-tight text-on-navy">{course.title}</p>
           {ready ? (
             <div className="mt-4">
               <div className="h-1.5 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-label="Course progress" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
                 <div className="h-full rounded-full bg-positive" style={{ width: `${percent}%` }} />
               </div>
-              <p className="mt-2 font-mono text-micro text-on-navy-muted">{done} of {total} chapters complete</p>
+              <p className="mt-2 text-caption text-on-navy-muted">{done} of {total} chapters complete</p>
             </div>
           ) : null}
         </div>
-        <ol className="max-h-[calc(100dvh-16rem)] space-y-1 overflow-y-auto p-3">
+        <ol className="max-h-[calc(100dvh-16rem)] space-y-2 overflow-y-auto p-3">
           {course.modules.map((module, mi) => (
-            <li key={module.title} className="border-b border-line pb-2 last:border-b-0 last:pb-0">
-              <p className="px-2 pb-1 pt-2 font-mono text-micro font-semibold tracking-widest text-ink-subtle uppercase">
+            <li key={module.title} className="border-b border-line pb-3 last:border-b-0 last:pb-0">
+              <p className="px-2 pb-2 pt-3 text-micro font-bold tracking-widest text-ink-subtle uppercase">
                 {String(mi + 1).padStart(2, "0")} · {module.title}
               </p>
-              <ol className="flex flex-col gap-0.5">
+              <ol className="flex flex-col gap-1">
                 {module.chapters.map((chapter) => {
                   const active = chapter.slug === currentSlug;
                   return (
@@ -66,10 +66,10 @@ export function CourseToc({ course, currentSlug }: { course: CourseTocData; curr
                       <Link
                         href={`/courses/${course.slug}/${chapter.slug}`}
                         aria-current={active ? "page" : undefined}
-                        className={`group block rounded-lg px-2 py-2 text-caption transition-colors ${
+                        className={`group block rounded-xl px-2.5 py-2.5 text-caption leading-[1.4] transition-colors ${
                           active
-                            ? "bg-accent-wash font-semibold text-accent-strong"
-                            : "text-ink-muted hover:bg-surface-sunken hover:text-ink"
+                            ? "bg-accent-wash font-semibold text-accent-strong shadow-[inset_3px_0_0_var(--accent)]"
+                            : "font-medium text-ink-muted hover:bg-surface-sunken hover:text-ink"
                         }`}
                       >
                         <span className="flex items-start gap-2.5">
@@ -81,7 +81,7 @@ export function CourseToc({ course, currentSlug }: { course: CourseTocData; curr
                             </span>
                           ) : null}
                           </span>
-                          <span className="min-w-0 flex-1 leading-snug"><InlineText text={chapter.title} /></span>
+                          <span className="min-w-0 flex-1"><InlineText text={chapter.title} /></span>
                         </span>
                       </Link>
                     </li>

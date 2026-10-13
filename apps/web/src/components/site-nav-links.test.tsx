@@ -24,9 +24,10 @@ describe("SiteNavLinks", () => {
     pathname.mockReturnValue("/arena");
     render(<SiteNavLinks />);
 
-    for (const name of ["Dashboard", "Courses", "Mock interviews", "Arena", "My reports"]) {
+    for (const name of ["Dashboard", "Courses", "Mock interviews", "Arena"]) {
       expect(screen.getByRole("link", { name })).toBeInTheDocument();
     }
+    expect(screen.queryByRole("link", { name: "My reports" })).not.toBeInTheDocument();
   });
 
   it("marks the section you are in, including a page nested under it", () => {

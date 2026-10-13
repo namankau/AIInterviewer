@@ -193,7 +193,7 @@ describe("DashboardView history length", () => {
     expect(list.getAllByRole("listitem")).toHaveLength(3);
     expect(list.getByText(/Company 1/)).toBeInTheDocument();
     expect(list.queryByText(/Company 4/)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See all 5 rounds" })).toHaveAttribute("href", "/history");
+    expect(screen.getByRole("link", { name: "See all 5 rounds in your profile" })).toHaveAttribute("href", "/profile");
   });
 
   it("has nothing to link to when every round already fits", () => {

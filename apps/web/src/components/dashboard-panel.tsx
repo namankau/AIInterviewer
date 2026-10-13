@@ -498,16 +498,16 @@ export function PastRoundsSection({
         </p>
       ) : null}
       <ul className="grid gap-3">
-        {shown.map((session) => (
-          <PastRound key={session.id} session={session} onDelete={onDelete} />
+        {shown.map((session, index) => (
+          <PastRound key={session.id} session={session} onDelete={onDelete} toneIndex={index % ROUND_TONES.length} />
         ))}
       </ul>
       {hidden > 0 ? (
         <Link
-          href="/history"
+          href="/profile"
           className="self-start rounded-sm text-caption font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         >
-          See all {sessions.length} rounds
+          See all {sessions.length} rounds in your profile
         </Link>
       ) : null}
     </section>
@@ -529,23 +529,33 @@ export function PastRoundsSection({
  * drop keyboard focus onto the body, stranding anybody who got here by tabbing. The
  * explanation is announced politely instead, and Cancel is one tab away.
  */
+const ROUND_TONES = [
+  { surface: "bg-[linear-gradient(110deg,var(--accent-wash),var(--surface-raised)_65%)]", edge: "border-l-accent", icon: "bg-accent text-white" },
+  { surface: "bg-[linear-gradient(110deg,var(--positive-wash),var(--surface-raised)_65%)]", edge: "border-l-positive", icon: "bg-positive text-white" },
+  { surface: "bg-[linear-gradient(110deg,var(--warning-wash),var(--surface-raised)_65%)]", edge: "border-l-warning", icon: "bg-warning text-white" },
+  { surface: "bg-[linear-gradient(110deg,var(--info-wash),var(--surface-raised)_65%)]", edge: "border-l-info", icon: "bg-info text-white" },
+] as const;
+
 function PastRound({
   session,
   onDelete,
+  toneIndex,
 }: {
   session: SessionSummary;
   onDelete?: (id: string) => Promise<void>;
+  toneIndex: number;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const round = `${session.companyName}, ${session.roleTitle}`;
   const soon = expiringSoon(session);
+  const tone = ROUND_TONES[toneIndex] ?? ROUND_TONES[0];
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-surface px-4 py-4 transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-accent/25 hover:shadow-[var(--shadow-sm)] sm:px-5">
+    <li className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-l-4 border-line px-4 py-4 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] sm:px-5 ${tone.surface} ${tone.edge}`}>
       <div className="flex min-w-0 items-start gap-3.5">
-        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-wash text-accent">
+        <span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-xl shadow-[var(--shadow-sm)] ${tone.icon}`}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5">
             <path d="M8 10.5a4 4 0 1 1 8 0v2a4 4 0 1 1-8 0v-2Z" />
             <path d="M5.5 12.5a6.5 6.5 0 0 0 13 0M12 19v3M9 22h6" />

@@ -1,33 +1,34 @@
 # Handoff — 2026-10-13
 
 ## Task
-Apply the supplied Untiered website brand kit across the web app; user request, no task file.
+Polish the profile, reports, and course lesson UI from the supplied screenshots; user request, no task file.
 
 ## What I built
-- Added the supplied light and dark wordmarks and compact mark under `apps/web/public/brand/`, with a shared responsive component in `apps/web/src/components/brand-logo.tsx`.
-- Replaced the temporary text/“U” branding in the public header, signed-in header, course and Arena header, sign-in page, interview room, and shared footer.
-- Added the supplied favicon, browser icon, and Apple touch icon through Next.js App Router icon files.
+- Removed the direct account-deletion entry from the account dropdown and moved report discovery out of the main navigation. Reports remain in Profile, and account deletion remains in the Profile account section.
+- Reworked Profile into a prominent identity card, a strength indicator based on seven real account fields, and Overview, Resume & Skills, and Reports tabs. No invented readiness or interview metrics were added.
+- Improved quiz question hierarchy and answer cards, broke up a dense Java explanation, refreshed lesson sidebars, and made the completion and next-chapter controls easier to scan.
+- Added restrained color to interview-history cards on the dashboard and Profile. Fixed a mobile overflow discovered during the browser check.
 
 ## Assumptions I made
-- The light wordmark belongs on light surfaces; the white wordmark belongs on navy surfaces and when the browser prefers a dark theme.
-- The signed-in header uses the supplied compact mark on narrow screens to preserve room for navigation.
-- The footer retains its existing tagline so it remains legible at the displayed size.
+- “Remove delete account directly from here” refers to the account dropdown, not removal of the account-deletion feature itself.
+- “My reports should be hidden from main menu and should only be accessible via Profile” means removing the main-navigation entry and directing the dashboard’s history link to Profile; direct report links remain available inside practice history and Profile.
+- The reference Profile metrics are visual guidance. Strength uses a transparent count of completed profile fields, and the other tiles use existing course, round, and Arena data.
 
 ## What I could NOT verify
-- The live authenticated interview room was not entered, because that would start an AI-backed session. Its logo link is covered by the existing interview-room test.
-- Final brand approval and the appearance on physical devices remain the owner's judgement. The supplied artwork is raster, so very large displays are limited by its source resolution.
+- Authenticated data for a real profile and its reports was unavailable in the local browser, so the visual check used the empty account state. The report-card behavior is covered by local tests.
+- Final visual approval and physical-device rendering remain the owner's judgement. No live interview or AI call was started.
 
 ## Verification status
 - Frontend: typecheck, lint, all 3,012 tests, and production build pass.
 - Backend: `ktlintCheck test build` pass.
-- GitHub Actions run `38361730522`: web, API, and Docker image jobs all passed on branch commit `3c59b4c`.
-- Desktop and 390px mobile browser: landing header, signed-in dashboard header, and footer inspected. No migration or dependency added.
+- Browser: inspected Profile at desktop and 390 px, inspected the mobile lesson and quiz, confirmed no horizontal page overflow and that inactive Profile tabs are hidden.
+- GitHub CI: pending branch push and PR.
 
 ## Merge status
-- Branch `fix/website-brand-logos` merged into `develop` at `0ca0e11` after all CI jobs passed. `main` was not touched.
+- Branch `feat/profile-learning-polish` remains unmerged for human review because it changes the account-deletion entry point, as required by `AGENTS.md`.
 
 ## Suggested next task
-- Supply original vector artwork if sharper scaling is desired for large displays.
+- Review the Profile and course layouts with a signed-in account containing resume and report data.
 
 ## Open questions for you
 - None.

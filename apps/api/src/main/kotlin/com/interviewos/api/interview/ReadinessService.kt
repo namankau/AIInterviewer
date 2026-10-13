@@ -44,7 +44,7 @@ class ReadinessService(
         rows: List<ReadinessRow>,
     ): ReadinessGroup {
         val ordered = rows.sortedBy { it.endedAt }
-        val scored = ordered.map { it to averageScore(it.payloadJson) }
+        val evidence = ordered.map { evidenceOf(it.payloadJson) }
 
         return ReadinessGroup(
             companyName = company,
@@ -52,68 +52,63 @@ class ReadinessService(
             sessionsCompleted = ordered.size,
             firstAttemptAt = ordered.firstOrNull()?.endedAt,
             latestAttemptAt = ordered.lastOrNull()?.endedAt,
-            firstAverageScore = scored.firstOrNull { it.second != null }?.second,
-            latestAverageScore = scored.lastOrNull { it.second != null }?.second,
-            recurringWeaknesses = recurringWeaknesses(ordered),
+            firstAverageScore = evidence.firstOrNull { it.averageScore != null }?.averageScore,
+            latestAverageScore = evidence.lastOrNull { it.averageScore != null }?.averageScore,
+            recurringWeaknesses = recurringWeaknesses(evidence),
         )
     }
 
-    /** Mean competency score as a percentage, so rubrics with different maxima compare. */
-    private fun averageScore(payloadJson: String): Double? {
-        if (!hasEnoughEvidence(payloadJson)) return null
-        val competencies = competenciesOf(payloadJson)
-        if (competencies.isEmpty()) return null
+    private fun evidenceOf(payloadJson: String): ReportEvidence {
+        val payload =
+            try {
+                objectMapper.readValue(payloadJson, Map::class.java)
+            } catch (_: Exception) {
+                return ReportEvidence(null, emptyList())
+            }
+        val assessable =
+            (payload["assessableTurns"] as? Number)?.toInt()
+                ?: (payload["answeredTurns"] as? Number)?.toInt()
+                ?: 0
+        if (assessable < MIN_ASSESSABLE_TURNS) return ReportEvidence(null, emptyList())
 
+        val competencies = (payload["competencies"] as? List<*>)?.filterIsInstance<Map<*, *>>().orEmpty()
         val ratios =
             competencies.mapNotNull { competency ->
                 val score = (competency["score"] as? Number)?.toDouble()
                 val max = (competency["maxScore"] as? Number)?.toDouble()
                 if (score != null && max != null && max > 0) score / max * 100 else null
             }
-        return ratios.takeIf { it.isNotEmpty() }?.average()?.let { Math.round(it * 10) / 10.0 }
-    }
-
-    /**
-     * A competency counts as recurring only if it scored below half in **more than one**
-     * completed session. One weak answer is a bad day; twice is a pattern worth naming.
-     */
-    private fun recurringWeaknesses(rows: List<ReadinessRow>): List<String> {
-        if (rows.size < 2) return emptyList()
-
-        val weakCounts = mutableMapOf<String, Int>()
-        rows.filter { hasEnoughEvidence(it.payloadJson) }.forEach { row ->
-            competenciesOf(row.payloadJson)
+        val averageScore = ratios.takeIf { it.isNotEmpty() }?.average()?.let { Math.round(it * 10) / 10.0 }
+        val weakCompetencies =
+            competencies
                 .mapNotNull { competency ->
                     val name = competency["competency"] as? String ?: return@mapNotNull null
                     val score = (competency["score"] as? Number)?.toDouble() ?: return@mapNotNull null
                     val max = (competency["maxScore"] as? Number)?.toDouble() ?: return@mapNotNull null
                     name.takeIf { max > 0 && score / max < WEAK_THRESHOLD }
                 }.distinct()
-                .forEach { weakCounts.merge(it, 1, Int::plus) }
+        return ReportEvidence(averageScore, weakCompetencies)
+    }
+
+    /**
+     * A competency counts as recurring only if it scored below half in **more than one**
+     * completed session. One weak answer is a bad day; twice is a pattern worth naming.
+     */
+    private fun recurringWeaknesses(evidence: List<ReportEvidence>): List<String> {
+        if (evidence.size < 2) return emptyList()
+
+        val weakCounts = mutableMapOf<String, Int>()
+        evidence.forEach { report ->
+            report.weakCompetencies.forEach { weakCounts.merge(it, 1, Int::plus) }
         }
 
         return weakCounts.filterValues { it > 1 }.keys.sorted()
     }
 
-    private fun competenciesOf(payloadJson: String): List<Map<*, *>> =
-        try {
-            val payload = objectMapper.readValue(payloadJson, Map::class.java)
-            (payload["competencies"] as? List<*>)?.filterIsInstance<Map<*, *>>().orEmpty()
-        } catch (_: Exception) {
-            emptyList()
-        }
-
-    private fun hasEnoughEvidence(payloadJson: String): Boolean =
-        try {
-            val payload = objectMapper.readValue(payloadJson, Map::class.java)
-            val assessable =
-                (payload["assessableTurns"] as? Number)?.toInt()
-                    ?: (payload["answeredTurns"] as? Number)?.toInt()
-                    ?: 0
-            assessable >= MIN_ASSESSABLE_TURNS
-        } catch (_: Exception) {
-            false
-        }
+    private data class ReportEvidence(
+        val averageScore: Double?,
+        val weakCompetencies: List<String>,
+    )
 
     private companion object {
         const val WEAK_THRESHOLD = 0.5

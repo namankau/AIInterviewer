@@ -22,6 +22,12 @@ interface InterviewAi {
      */
     val capabilities: Set<AiCapability>
 
+    /** The actual model endpoint for operations shared across configured provider entries. */
+    fun operationIdentity(
+        capability: AiCapability,
+        model: String? = null,
+    ): String? = null
+
     fun parseResume(file: ResumeFile): AiResult<ParsedResume>
 
     /**

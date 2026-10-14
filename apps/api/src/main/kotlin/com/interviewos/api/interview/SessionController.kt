@@ -115,7 +115,7 @@ class SessionController(
         }
         if (audio.size > MAX_ANSWER_AUDIO_BYTES) {
             throw ApiException.badRequest(
-                "That recording is too large to process as one answer. Keep each answer under 25 MB.",
+                "That recording is too large to process as one answer. Keep each answer under 10 MB.",
                 code = "answer_too_large",
             )
         }
@@ -239,7 +239,7 @@ class SessionController(
     ): List<ReadinessGroup> = readinessService.readiness(callerOf(jwt))
 
     private companion object {
-        const val MAX_ANSWER_AUDIO_BYTES = 25L * 1024L * 1024L
+        const val MAX_ANSWER_AUDIO_BYTES = 10L * 1024L * 1024L
         val SUPPORTED_AUDIO_TYPES =
             setOf(
                 // MediaRecorder is allowed to omit its container type. The browser then

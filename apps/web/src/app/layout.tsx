@@ -4,10 +4,8 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
 /*
- * One bold modern grotesque, carrying both headings and body copy — built into Next's
- * font pipeline (self-hosted at build time, no runtime request to Google), not a new
- * dependency. Variable weight so `font-weight: 700` on headings and 400–500 on body
- * copy both come from the same download.
+ * The interface uses this sans for body copy, controls, and card headings. The larger
+ * editorial headlines use a system serif, so no extra font download is needed.
  */
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],

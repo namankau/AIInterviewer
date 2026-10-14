@@ -145,13 +145,8 @@
     "Helvetica Neue", Arial, sans-serif;
   --font-mono:
     ui-monospace, "JetBrains Mono", "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
-  /*
-   * Headings now sit in the same bold sans as the body — one confident modern grotesque
-   * carrying both, set apart by weight and scale rather than by switching families. The
-   * serif read as an editorial trade publication; a product with an audience to win over
-   * reads as one typeface used with conviction.
-   */
-  --font-display: var(--font-jakarta), var(--font-sans);
+  /* Display headlines echo the lesson reader's editorial voice; controls and cards stay sans. */
+  --font-display: Georgia, Cambria, "Times New Roman", serif;
 
   /* A short scale. Anything off it should have to justify itself. */
   --text-hero: clamp(2.75rem, 6vw, 4.5rem);
@@ -194,9 +189,13 @@
   }
 
   .text-hero,
-  .text-display,
-  .text-title {
+  .text-display {
     font-family: var(--font-display);
+    font-weight: 700;
+  }
+
+  .text-title {
+    font-family: var(--font-sans);
     font-weight: 700;
   }
 

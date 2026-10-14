@@ -21,7 +21,8 @@ vi.mock("@/lib/use-access-token", () => ({ useAccessToken: () => auth.token }));
 
 // The way out now lives inside this block rather than floating at the foot of an empty
 // rail, so this component has a router dependency it did not have before.
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
+const route = vi.hoisted(() => ({ pathname: "/dashboard" }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }), usePathname: () => route.pathname }));
 
 const me: MeResponse = {
   id: "6f1b7f4c-2b2a-4c3e-9a51-0a5f4f2f2a11",
@@ -46,7 +47,9 @@ const me: MeResponse = {
 describe("AccountSummary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     auth.token = "token-abc";
+    route.pathname = "/dashboard";
   });
 
   /**
@@ -110,6 +113,26 @@ describe("AccountSummary", () => {
 
     expect(await screen.findByText("Test Candidate")).toBeInTheDocument();
     expect(screen.getByText("Hindi-English")).toBeInTheDocument();
+  });
+
+  it("prompts a new candidate to fill in profile details once", async () => {
+    fetchMe.mockResolvedValue(me);
+    const user = userEvent.setup();
+
+    render(<AccountSummary />);
+
+    expect(await screen.findByRole("heading", { name: "Set up your profile" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Fill in details" })).toHaveAttribute("href", "/profile#profile-details");
+    await user.click(screen.getByRole("button", { name: "Later" }));
+    expect(screen.queryByRole("heading", { name: "Set up your profile" })).not.toBeInTheDocument();
+    expect(window.localStorage.getItem(`untiered:profile-setup:${me.id}`)).toBe("seen");
+  });
+
+  it("does not prompt when profile details already exist", async () => {
+    fetchMe.mockResolvedValue({ ...me, profile: { ...me.profile, currentLevel: "Engineer" } });
+    render(<AccountSummary />);
+    await screen.findByRole("button", { name: /account menu/i });
+    expect(screen.queryByRole("heading", { name: "Set up your profile" })).not.toBeInTheDocument();
   });
 
   it("sends the Supabase access token to the API", async () => {

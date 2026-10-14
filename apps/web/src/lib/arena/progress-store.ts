@@ -102,6 +102,13 @@ function load(accessToken: string) {
     });
 }
 
+function retryLoad(accessToken: string) {
+  if (inFlight) return;
+  loadedFor = null;
+  setState({ status: "loading", progress: state.progress });
+  load(accessToken);
+}
+
 function useLoadedProgress(): StoreState {
   const accessToken = useAccessToken();
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
@@ -132,6 +139,7 @@ export interface ArenaProgressHandle {
     dailyQuestionDate?: string,
   ) => Promise<boolean>;
   awardBadges: (badgeIds: string[]) => Promise<boolean>;
+  retry: () => void;
 }
 
 export function useArenaProgress(): ArenaProgressHandle {
@@ -200,7 +208,14 @@ export function useArenaProgress(): ArenaProgressHandle {
     }
   }
 
-  return { progress, status, ready: status === "ready", recordAnswer, awardBadges };
+  return {
+    progress,
+    status,
+    ready: status === "ready",
+    recordAnswer,
+    awardBadges,
+    retry: () => { if (accessToken) retryLoad(accessToken); },
+  };
 }
 
 /** Folds imported progress into the store without a second round trip. */

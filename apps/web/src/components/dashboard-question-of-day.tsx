@@ -15,7 +15,7 @@ import type { Challenge } from "@/lib/arena/types";
 export function DashboardQuestionOfDay({ questionsByDate, focused = false }: { questionsByDate: Record<string, Challenge>; focused?: boolean }) {
   const [dateKey] = useState(() => localDateKey(new Date()));
   const question = questionsByDate[dateKey];
-  const { progress, ready, status, recordAnswer } = useArenaProgress();
+  const { progress, ready, status, recordAnswer, retry } = useArenaProgress();
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [wasCorrect, setWasCorrect] = useState<boolean | null>(null);
@@ -72,12 +72,13 @@ export function DashboardQuestionOfDay({ questionsByDate, focused = false }: { q
 
       {!ready ? (
         <div className="rounded-2xl border border-line bg-surface-raised px-5 py-8 text-center shadow-[var(--shadow-sm)]">
-          <p className="text-body font-medium text-ink">Loading today&apos;s question…</p>
           {status === "error" ? (
-            <p role="alert" className="mt-2 text-caption text-danger">
-              We couldn&apos;t load your daily progress. Reload the page to try again.
-            </p>
-          ) : null}
+            <div role="alert">
+              <p className="text-body font-semibold text-ink">Your daily progress is temporarily unavailable.</p>
+              <p className="mt-2 text-caption text-ink-muted">Your answers are safe. Check your connection and try again.</p>
+              <button type="button" onClick={retry} className="mt-4 rounded-lg bg-accent px-4 py-2 text-caption font-semibold text-accent-contrast hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">Retry</button>
+            </div>
+          ) : <p role="status" className="text-body font-medium text-ink">Loading today&apos;s question…</p>}
         </div>
       ) : completed ? (
         <div role="status" aria-live="polite" className="flex items-start gap-4 rounded-2xl border border-positive/30 bg-positive/10 p-5 sm:p-6">

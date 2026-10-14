@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { ArenaPlayPanel } from "@/components/arena/arena-play-panel";
+import { CourseArtwork } from "@/components/courses/course-visuals";
 import { localDateKey, type DailyCourseQuest } from "@/lib/arena/progression";
 
 /**
@@ -43,7 +44,7 @@ export function ArenaDailyQuest({ questsByDate }: { questsByDate: Record<string,
               tomorrow.
             </p>
           </div>
-          <div className="grid auto-rows-fr gap-4 md:grid-cols-2 2xl:grid-cols-4">
+          <div className="grid auto-rows-fr gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {quests.map((quest) => {
               const topics = Array.from(
                 new Set(quest.challenges.map((challenge) => challenge.moduleTitle)),
@@ -51,22 +52,24 @@ export function ArenaDailyQuest({ questsByDate }: { questsByDate: Record<string,
               return (
                 <article
                   key={quest.courseSlug}
-                  className="flex min-w-0 flex-col gap-5 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]"
+                  className="group flex min-w-0 flex-col overflow-hidden rounded-[1.25rem] border border-line bg-surface-raised shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:border-accent/35 hover:shadow-[var(--shadow-md)]"
                 >
-                  <div className="flex grow flex-col gap-2">
-                    <p className="font-mono text-micro tracking-widest text-accent-strong uppercase">
-                      Today &middot; {quest.challenges.length} questions
-                    </p>
-                    <h3 className="text-heading text-ink">{quest.courseTitle}</h3>
-                    <p className="text-caption leading-relaxed text-ink-muted">{topics.join(" · ")}</p>
+                  <CourseArtwork courseSlug={quest.courseSlug} />
+                  <div className="flex grow flex-col p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="eyebrow text-accent">Today&apos;s set</p>
+                      <span className="shrink-0 text-micro font-semibold text-ink-subtle">{quest.challenges.length} questions</span>
+                    </div>
+                    <h3 className="mt-3 text-heading font-bold text-ink transition-colors group-hover:text-accent">{quest.courseTitle}</h3>
+                    <p className="mt-1.5 min-h-10 text-caption leading-relaxed text-ink-muted">{topics.join(" · ")}</p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveCourseSlug(quest.courseSlug)}
+                      className="mt-auto flex w-full items-center justify-between gap-3 pt-5 text-left text-caption font-semibold text-accent focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                    >
+                      <span>Play {quest.courseTitle} set</span><span aria-hidden="true">→</span>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveCourseSlug(quest.courseSlug)}
-                    className="mt-auto w-full rounded-xl bg-accent px-5 py-3 text-body font-medium text-accent-contrast shadow-[var(--shadow-sm)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-                  >
-                    Play {quest.courseTitle} set
-                  </button>
                 </article>
               );
             })}

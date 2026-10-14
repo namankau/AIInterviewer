@@ -1,35 +1,32 @@
 # Handoff — 14 October 2026
 
 ## Task
-Add email/password sign-up and password reset (direct request; PRD §05, no task file).
+Polish Arena cards, first-login profile setup, daily-progress recovery, typography, and tagline (direct request; no task file; PRD §05).
 
 ## What I built
-- `apps/web/src/components/email-password-auth.tsx`: email sign-in, sign-up with password confirmation, and reset-link request alongside Google sign-in on `/login`.
-- `apps/web/src/app/auth/update-password/page.tsx` and `apps/web/src/components/password-update-form.tsx`: validate a recovery session and set a new password.
-- `apps/web/src/app/auth/callback/route.ts`: exchange both Google and email-link PKCE codes and report expired recovery links.
-- `supabase/config.toml`: require email confirmation and eight-character passwords locally; allow callback URLs carrying the destination query.
-- Updated privacy/contact copy and added focused auth tests.
+- `apps/web/src/components/courses/course-visuals.tsx`, `course-catalogue.tsx`, `arena-daily-quest.tsx`, and `app/arena/page.tsx`: shared illustrated card artwork and matching Arena layouts.
+- `apps/web/src/components/account-summary.tsx`: a one-time profile setup prompt for accounts without role details, plus an account-load retry and safe account switching.
+- `apps/web/src/lib/arena/progress-store.ts` and `components/dashboard-question-of-day.tsx`: retryable daily-progress fetch failure with clear messaging.
+- `apps/web/src/app/globals.css`, `app/page.tsx`, and `components/site-footer.tsx`: editorial display headlines and “Talent has no tiers.” tagline.
 
 ## Assumptions I made
-- New email accounts should confirm their address before signing in. The local Supabase setting does not update the linked project's dashboard configuration.
-- Existing Google accounts keep using Google; this task does not attach a password to those accounts automatically.
-- Supabase's email templates pass through the requested redirect URL.
+- An account with no function, current level, or target level needs a setup prompt. Dismissing it stores a per-account “seen” flag in this browser; profile details remain optional.
+- The screenshot's failed fetch is not caused by a new account alone: the Arena API returns zero progress when no Arena rows exist. The actual production failure needs request logs to identify.
+- The requested distinctive type applies to large display headlines while card titles and controls stay sans.
 
 ## What I could NOT verify
-- Live email delivery, confirmation, and recovery against the linked Supabase project, including its SMTP limits, email templates, confirmation setting, password policy, and redirect allowlist. These require a disposable account and review of dashboard settings.
-- Final visual judgement and behavior of email links opened in a different browser. No live AI calls were made.
+- The actual production cause of the intermittent fetch error, live sign-in/profile flow, and final visual judgement. No live AI calls were made.
 
 ## Verification status
-- Frontend typecheck, lint, production build: pass.
-- Frontend tests: 77 files and 3,036 tests passed, using a stable workspace temp directory and serial Vitest execution to avoid an intermittent Windows sandbox temp-file error. Focused auth tests: 12 passed.
+- Frontend typecheck, lint, tests (77 files, 3,039 tests), and production build: pass. Vitest used a workspace temp directory to avoid an intermittent Windows sandbox temp-file error.
 - Backend `ktlintCheck test build`: pass.
-- GitHub CI on the implementation commit was in progress when checked; final PR-head CI status still needs observation.
+- GitHub CI: pending at handoff writing; review PR checks before merge.
 
 ## Merge status
-- Branch `feat/email-password-auth` pushed. PR #77 opened into `develop`: https://github.com/namankau/Untiered.tech/pull/77. Unmerged because authentication changes require human review.
+- Branch `feat/arena-onboarding-brand` pushed. PR #81 opened into `develop`: https://github.com/softzenith-projects/Untiered/pull/81. Unmerged because the first-login account flow needs human review under the repository's auth rule.
 
 ## Suggested next task
-- Review PR #77 and the linked Supabase auth settings, then test sign-up and recovery with a disposable email account.
+- Review PR #81 and inspect a failing production request in browser network logs if daily-progress errors continue.
 
 ## Open questions for you
-- None for the code review; linked Supabase email settings need your approval before rollout.
+- None for code review; final visual direction remains yours.

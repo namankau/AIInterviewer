@@ -6,28 +6,34 @@ import org.springframework.core.task.SimpleAsyncTaskExecutor
 import org.springframework.core.task.TaskExecutor
 
 /**
- * The executor for work a candidate is not waiting on.
+ * Separate bounded executors for storage uploads and optional speech.
  *
- * Today that is one thing: synthesising the interviewer's voice after the question text
- * has already been sent. Declared explicitly rather than borrowing Spring's
- * `applicationTaskExecutor`, so that what runs off the request thread is a deliberate,
- * named list rather than whatever happens to autowire.
+ * Speech can be slow without consuming the slots reserved for answer uploads. Rejecting
+ * at capacity keeps both request and after-commit threads from waiting for a permit.
  *
  * Tasks are I/O bound — an HTTP call to Gemini, then one to storage — so they run on
- * virtual threads, and the concurrency limit is about bounding spend on a runaway rather
- * than about platform threads: one in-flight synthesis per turn is the expected load,
- * and anything far above that is a bug worth queueing rather than paying for.
+ * virtual threads. Speech's Gemini calls are bounded separately by QuestionSpeech.
  */
 @Configuration
 class BackgroundWorkConfig {
-    @Bean(name = ["interviewBackgroundExecutor"])
-    fun interviewBackgroundExecutor(): TaskExecutor =
-        SimpleAsyncTaskExecutor("interview-bg-").apply {
+    @Bean(name = ["interviewUploadExecutor"])
+    fun interviewUploadExecutor(): TaskExecutor = boundedExecutor("interview-upload-", MAX_CONCURRENT_UPLOADS)
+
+    @Bean(name = ["interviewSpeechExecutor"])
+    fun interviewSpeechExecutor(): TaskExecutor = boundedExecutor("interview-speech-", MAX_CONCURRENT_SPEECH_TASKS)
+
+    private fun boundedExecutor(
+        prefix: String,
+        limit: Int,
+    ): TaskExecutor =
+        SimpleAsyncTaskExecutor(prefix).apply {
             setVirtualThreads(true)
-            setConcurrencyLimit(MAX_CONCURRENT_BACKGROUND_TASKS)
+            setConcurrencyLimit(limit)
+            setRejectTasksWhenLimitReached(true)
         }
 
     private companion object {
-        const val MAX_CONCURRENT_BACKGROUND_TASKS = 32
+        const val MAX_CONCURRENT_UPLOADS = 32
+        const val MAX_CONCURRENT_SPEECH_TASKS = 32
     }
 }

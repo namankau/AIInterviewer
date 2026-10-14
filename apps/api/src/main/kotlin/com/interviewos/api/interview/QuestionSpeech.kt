@@ -14,7 +14,13 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.util.UUID
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Callable
+import java.util.concurrent.CancellationException
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 
 /** Whether a question's voice is still rendering, ready to play, or never coming. */
 enum class SpeechStatus(
@@ -56,9 +62,10 @@ class QuestionSpeech(
     private val storageProperties: StorageProperties,
     private val repository: SessionRepository,
     private val events: InterviewEventRecorder,
-    @Qualifier("interviewBackgroundExecutor") private val executor: TaskExecutor,
+    @Qualifier("interviewSpeechExecutor") private val executor: TaskExecutor,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
+    private val geminiSpeechPermits = Semaphore(MAX_CONCURRENT_GEMINI_SPEECH_CALLS)
 
     /**
      * Speaks [text] for a turn already written by the calling transaction, once that
@@ -67,14 +74,26 @@ class QuestionSpeech(
      */
     fun render(request: SpeechRequest) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            executor.execute { renderNow(request) }
+            dispatch(request)
             return
         }
         TransactionSynchronizationManager.registerSynchronization(
             object : TransactionSynchronization {
-                override fun afterCommit() = executor.execute { renderNow(request) }
+                override fun afterCommit() = dispatch(request)
             },
         )
+    }
+
+    private fun dispatch(request: SpeechRequest) {
+        try {
+            executor.execute { renderNow(request) }
+        } catch (e: RejectedExecutionException) {
+            log.warn("Speech capacity reached for session {} turn {}; continuing as text", request.sessionId, request.turnIndex)
+            // A rejected task must not leave the browser polling `pending` indefinitely.
+            runCatching {
+                repository.setQuestionSpeech(request.sessionId, request.userId, request.turnIndex, null, SpeechStatus.UNAVAILABLE)
+            }.onFailure { log.error("Could not mark rejected speech unavailable for session {}", request.sessionId, it) }
+        }
     }
 
     private fun renderNow(request: SpeechRequest) {
@@ -225,23 +244,64 @@ class QuestionSpeech(
         // traced to a session is the exact gap this ledger exists to close.
         val attributed = { block: () -> SpokenAudio -> AiSpendContext.of(request.userId, request.sessionId, block) }
 
-        if (chunks.size == 1) return attributed { interviewAi.synthesizeSpeech(text, language).value }
+        if (chunks.size == 1) return withGeminiPermit { attributed { interviewAi.synthesizeSpeech(text, language).value } }
 
         val spoken =
-            chunks
-                .map { chunk ->
-                    CompletableFuture.supplyAsync({ attributed { interviewAi.synthesizeSpeech(chunk, language).value } }, executor)
-                }.map { it.join() }
+            Executors.newVirtualThreadPerTaskExecutor().let { chunkExecutor ->
+                try {
+                    val calls =
+                        chunks.map { chunk ->
+                            Callable { withGeminiPermit { attributed { interviewAi.synthesizeSpeech(chunk, language).value } } }
+                        }
+                    val futures = chunkExecutor.invokeAll(calls, CHUNK_WAIT_SECONDS, TimeUnit.SECONDS)
+                    futures.map { it.get() }
+                } catch (e: ExecutionException) {
+                    throw IllegalStateException("Speech chunk failed", e.cause ?: e)
+                } catch (e: CancellationException) {
+                    throw IllegalStateException("Speech chunks timed out", e)
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    throw IllegalStateException("Speech chunks interrupted", e)
+                } finally {
+                    // `close()` waits for tasks that ignore interruption. A timed-out
+                    // provider must not hold the speech slot until its own long timeout.
+                    chunkExecutor.shutdownNow()
+                }
+            }
 
         // Any chunk arriving as something other than WAV means the assumption behind
         // joining them no longer holds, so the whole question is spoken in one call
         // instead of stitching containers that may not match.
         if (spoken.any { it.mimeType != "audio/wav" }) {
             log.warn("Speech chunks came back as {}; falling back to one call", spoken.map { it.mimeType }.distinct())
-            return attributed { interviewAi.synthesizeSpeech(text, language).value }
+            return withGeminiPermit { attributed { interviewAi.synthesizeSpeech(text, language).value } }
         }
 
         return SpokenAudio(WavAudio.join(spoken.map { it.audio }), "audio/wav")
+    }
+
+    private fun <T> withGeminiPermit(block: () -> T): T {
+        val acquired =
+            try {
+                geminiSpeechPermits.tryAcquire(PERMIT_WAIT_SECONDS, TimeUnit.SECONDS)
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw IllegalStateException("Speech interrupted", e)
+            }
+        if (!acquired) {
+            throw IllegalStateException("Speech capacity reached")
+        }
+        try {
+            return block()
+        } finally {
+            geminiSpeechPermits.release()
+        }
+    }
+
+    private companion object {
+        const val MAX_CONCURRENT_GEMINI_SPEECH_CALLS = 16
+        const val PERMIT_WAIT_SECONDS = 2L
+        const val CHUNK_WAIT_SECONDS = 60L
     }
 }
 

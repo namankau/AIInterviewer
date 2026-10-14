@@ -134,7 +134,7 @@ class BankRoundHarness(
             codeRunner = mock(CodeRunner::class.java),
             interviewEvents = InterviewEventRecorder.NONE,
             transactionManager = transactionManager,
-            backgroundExecutor = backgroundExecutor,
+            uploadExecutor = backgroundExecutor,
         )
 
     val reportService = ReportService(repository, ai, mapper, RetentionProperties(), resumeService)

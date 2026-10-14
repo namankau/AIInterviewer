@@ -5,6 +5,8 @@ import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
+import java.sql.Timestamp
+import java.time.Instant
 
 /**
  * Writes the spend ledger.
@@ -23,7 +25,8 @@ import org.springframework.transaction.annotation.Transactional
 @Repository
 class AiSpendRepository(
     private val jdbcClient: JdbcClient,
-) : AiSpendRecorder {
+) : AiSpendRecorder,
+    AiSpendReadModel {
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -34,11 +37,11 @@ class AiSpendRepository(
                 insert into public.ai_calls
                   (call, provider, model, fell_back_from, prompt_tokens, output_tokens,
                    thought_tokens, audio_tokens, cached_tokens, micro_usd, user_id, session_id,
-                   pool_run_id)
+                   pool_run_id, outcome, usage_estimated)
                 values
                   (:call, :provider, :model, :fellBackFrom, :promptTokens, :outputTokens,
                    :thoughtTokens, :audioTokens, :cachedTokens, :microUsd, :userId, :sessionId,
-                   :poolRunId)
+                   :poolRunId, :outcome, :usageEstimated)
                 """.trimIndent(),
             ).param("call", record.call)
             .param("provider", record.provider)
@@ -53,6 +56,8 @@ class AiSpendRepository(
             .param("userId", record.userId)
             .param("sessionId", record.sessionId)
             .param("poolRunId", record.poolRunId)
+            .param("outcome", record.outcome)
+            .param("usageEstimated", record.usageEstimated)
             .update()
 
         // Loud on purpose, and only on the path that costs money unexpectedly. A round
@@ -79,4 +84,24 @@ class AiSpendRepository(
             )
         }
     }
+
+    override fun spentSince(since: Instant): Long =
+        jdbcClient
+            .sql("select coalesce(sum(micro_usd), 0) from public.ai_calls where occurred_at >= :since")
+            .param("since", Timestamp.from(since))
+            .query(Long::class.java)
+            .single()
+
+    override fun fallbackRateSince(since: Instant): AiFallbackRate =
+        jdbcClient
+            .sql(
+                """
+                select count(*) as total,
+                       count(*) filter (where fell_back_from is not null) as fallbacks
+                  from public.ai_calls
+                 where occurred_at >= :since and outcome = 'succeeded'
+                """.trimIndent(),
+            ).param("since", Timestamp.from(since))
+            .query { rs, _ -> AiFallbackRate(rs.getLong("total"), rs.getLong("fallbacks")) }
+            .single()
 }

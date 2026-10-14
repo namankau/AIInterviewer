@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
+import java.net.SocketTimeoutException
 import java.net.http.HttpTimeoutException
 import java.time.Duration
 import java.util.Base64
@@ -44,6 +45,7 @@ class GeminiInterviewAi(
      * moves on, or null for the shared timeout. See [InRoomDeadline].
      */
     private val inRoomTimeout: Duration? = null,
+    private val recorder: AiSpendRecorder = AiSpendRecorder.NONE,
 ) : InterviewAi {
     private val log = LoggerFactory.getLogger(javaClass)
     private val restClient = restClientBuilder.build()
@@ -91,7 +93,7 @@ class GeminiInterviewAi(
                 inlineDataPart(file.contentType, file.bytes),
             )
         val (node, usage) = generateJson(reasoningModel, parts, prompts.schema("resume-parse"))
-        return AiResult(objectMapper.treeToValue(node, ParsedResume::class.java), usage)
+        return decodedResult(node, usage, ParsedResume::class.java)
     }
 
     override fun synthesizeSpeech(
@@ -124,9 +126,11 @@ class GeminiInterviewAi(
                 .path(0)
                 .path("inlineData")
         val data = inline.path("data").asString()
-        if (data.isNullOrBlank()) throw AiUnavailableException("Gemini returned no audio for the question.")
         val mimeType = inline.path("mimeType").asString()?.takeIf { it.isNotBlank() } ?: "audio/L16;rate=24000"
-        return AiResult(playable(Base64.getDecoder().decode(data), mimeType), usageOf(response, properties.speechModel))
+        return billedResult(response, properties.speechModel) {
+            if (data.isNullOrBlank()) throw AiUnavailableException("Gemini returned no audio for the question.")
+            playable(Base64.getDecoder().decode(data), mimeType)
+        }
     }
 
     /**
@@ -147,7 +151,7 @@ class GeminiInterviewAi(
     override fun composeRound(query: String): AiResult<ComposedRound> {
         val prompt = prompts.composeRound(query)
         val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("compose-round"))
-        return AiResult(objectMapper.treeToValue(node, ComposedRound::class.java), usage)
+        return decodedResult(node, usage, ComposedRound::class.java)
     }
 
     override fun composeProblem(
@@ -156,7 +160,7 @@ class GeminiInterviewAi(
     ): AiResult<ComposedProblem> {
         val prompt = prompts.composeProblem(brief, durationMinutes)
         val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("compose-problem"))
-        return AiResult(objectMapper.treeToValue(node, ComposedProblem::class.java), usage)
+        return decodedResult(node, usage, ComposedProblem::class.java)
     }
 
     override fun composeCase(
@@ -165,7 +169,7 @@ class GeminiInterviewAi(
     ): AiResult<ComposedCase> {
         val prompt = prompts.composeCase(brief, durationMinutes)
         val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("compose-case"))
-        return AiResult(objectMapper.treeToValue(node, ComposedCase::class.java), usage)
+        return decodedResult(node, usage, ComposedCase::class.java)
     }
 
     /**
@@ -210,8 +214,10 @@ class GeminiInterviewAi(
                 .path("parts")
                 .filter { it.has("codeExecutionResult") }
                 .map { it.path("codeExecutionResult").path("output").asString() ?: "" }
-        if (outputs.isEmpty()) throw AiUnavailableException("Gemini did not run the program on $reasoningModel.")
-        return AiResult(SandboxRun(outputs), usageOf(response, reasoningModel))
+        return billedResult(response, reasoningModel) {
+            if (outputs.isEmpty()) throw AiUnavailableException("Gemini did not run the program on $reasoningModel.")
+            SandboxRun(outputs)
+        }
     }
 
     override fun composeOpeningQuestion(
@@ -227,7 +233,7 @@ class GeminiInterviewAi(
                 Thinking.IN_THE_ROOM,
                 inRoomClient,
             )
-        return AiResult(objectMapper.treeToValue(node, AskedQuestion::class.java), usage)
+        return decodedResult(node, usage, AskedQuestion::class.java)
     }
 
     override fun assessAnswer(
@@ -241,7 +247,7 @@ class GeminiInterviewAi(
 
         val parts = listOf(textPart(prompt), inlineDataPart(answer.contentType, answer.bytes))
         val (node, usage) = generateJson(reasoningModel, parts, prompts.schema("assess-answer"), Thinking.IN_THE_ROOM, inRoomClient)
-        return AiResult(objectMapper.treeToValue(node, AnswerAssessment::class.java), usage)
+        return decodedResult(node, usage, AnswerAssessment::class.java)
     }
 
     override fun offerHint(
@@ -253,13 +259,13 @@ class GeminiInterviewAi(
         val prompt = prompts.offerHint(brief, round, priorTurns, currentQuestion)
         val (node, usage) =
             generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("offer-hint"), Thinking.IN_THE_ROOM, inRoomClient)
-        return AiResult(objectMapper.treeToValue(node, OfferedHint::class.java), usage)
+        return decodedResult(node, usage, OfferedHint::class.java)
     }
 
     override fun extractQuestions(source: SourceDocument): AiResult<ExtractedQuestions> {
         val prompt = prompts.extractQuestions(source)
         val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("extract-questions"))
-        return AiResult(objectMapper.treeToValue(node, ExtractedQuestions::class.java), usage)
+        return decodedResult(node, usage, ExtractedQuestions::class.java)
     }
 
     override fun composeLoopPattern(
@@ -269,7 +275,7 @@ class GeminiInterviewAi(
     ): AiResult<GeneralLoopPattern> {
         val prompt = prompts.loopPattern(archetype, roleFamily, level)
         val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("general-loop-pattern"))
-        return AiResult(objectMapper.treeToValue(node, GeneralLoopPattern::class.java), usage)
+        return decodedResult(node, usage, GeneralLoopPattern::class.java)
     }
 
     /**
@@ -298,8 +304,14 @@ class GeminiInterviewAi(
             )
         val response = call(reasoningModel, body)
         val candidate = response.path("candidates").path(0)
-        if (candidate.isMissingNode) throw AiUnavailableException("Gemini returned no answer to the employer search on $reasoningModel.")
-        return AiResult(GroundedAnswer.read(candidate), usageOf(response, reasoningModel))
+        return billedResult(response, reasoningModel) {
+            if (candidate.isMissingNode) {
+                throw AiUnavailableException(
+                    "Gemini returned no answer to the employer search on $reasoningModel.",
+                )
+            }
+            GroundedAnswer.read(candidate)
+        }
     }
 
     override fun composeReport(
@@ -308,7 +320,7 @@ class GeminiInterviewAi(
     ): AiResult<ReportContent> {
         val prompt = prompts.report(brief, transcript)
         val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("report"))
-        return AiResult(objectMapper.treeToValue(node, ReportContent::class.java), usage)
+        return decodedResult(node, usage, ReportContent::class.java)
     }
 
     override fun assessEmployerKnowledge(
@@ -317,13 +329,13 @@ class GeminiInterviewAi(
     ): AiResult<EmployerKnowledge> {
         val prompt = prompts.employerKnowledge(companyName, archetype)
         val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("employer-knowledge"))
-        return AiResult(objectMapper.treeToValue(node, EmployerKnowledge::class.java), usage)
+        return decodedResult(node, usage, EmployerKnowledge::class.java)
     }
 
     override fun generatePoolQuestions(request: PoolQuestionRequest): AiResult<GeneratedQuestions> {
         val prompt = prompts.poolQuestions(request)
         val (node, usage) = generateJson(reasoningModel, listOf(textPart(prompt)), prompts.schema("pool-questions"))
-        return AiResult(objectMapper.treeToValue(node, GeneratedQuestions::class.java), usage)
+        return decodedResult(node, usage, GeneratedQuestions::class.java)
     }
 
     /**
@@ -361,6 +373,15 @@ class GeminiInterviewAi(
                     },
             )
         val response = call(model, body, method = "batchEmbedContents")
+        return billedResult(response, model) { readEmbeddings(response, model, texts.size, dimensions) }
+    }
+
+    private fun readEmbeddings(
+        response: JsonNode,
+        model: String,
+        expectedCount: Int,
+        dimensions: Int,
+    ): TextEmbeddings {
         val embeddings = response.path("embeddings")
         val vectors = ArrayList<FloatArray>(embeddings.size())
         for (index in 0 until embeddings.size()) {
@@ -370,11 +391,11 @@ class GeminiInterviewAi(
             }
             vectors += FloatArray(values.size()) { i -> values.path(i).asDouble(0.0).toFloat() }
         }
-        if (vectors.size != texts.size) {
+        if (vectors.size != expectedCount) {
             // Silently short would mis-pair every vector after the gap with the wrong
             // question, and a deduplicator comparing the wrong things drops real questions
             // and keeps duplicates — so this fails rather than guesses.
-            throw AiUnavailableException("Gemini embedded ${vectors.size} of ${texts.size} texts on $model.")
+            throw AiUnavailableException("Gemini embedded ${vectors.size} of $expectedCount texts on $model.")
         }
         vectors.firstOrNull()?.let {
             if (it.size != dimensions) {
@@ -383,17 +404,43 @@ class GeminiInterviewAi(
                 )
             }
         }
-        return AiResult(TextEmbeddings(vectors, model), usageOf(response, model))
+        return TextEmbeddings(vectors, model)
     }
 
     // ---------------------------------------------------------------------------
     // HTTP + parsing
     // ---------------------------------------------------------------------------
 
+    private fun <T> billedResult(
+        response: JsonNode,
+        model: String,
+        read: () -> T,
+    ): AiResult<T> {
+        val usage = usageOf(response, model)
+        return try {
+            AiResult(read(), usage)
+        } catch (ex: RuntimeException) {
+            recordFailedAiCall(recorder, providerName, usage)
+            throw ex
+        }
+    }
+
     /**
      * @param thinkingBudget tokens the model may spend reasoning before it answers, or
      *   null to leave it unbounded. See [Thinking].
      */
+    private fun <T> decodedResult(
+        node: JsonNode,
+        usage: AiUsage,
+        type: Class<T>,
+    ): AiResult<T> =
+        try {
+            AiResult(objectMapper.treeToValue(node, type), usage)
+        } catch (ex: RuntimeException) {
+            recordFailedAiCall(recorder, providerName, usage)
+            throw AiUnavailableException("Gemini returned an unusable ${type.simpleName} response.", ex)
+        }
+
     private fun generateJson(
         model: String,
         parts: List<Map<String, Any>>,
@@ -424,9 +471,13 @@ class GeminiInterviewAi(
                     .path(0)
                     .path("text")
                     .asString()
-            if (text.isNullOrBlank()) throw AiUnavailableException("Gemini returned an empty response for $model.")
+            if (text.isNullOrBlank()) {
+                recordFailedAiCall(recorder, providerName, usageOf(response, model))
+                throw AiUnavailableException("Gemini returned an empty response for $model.")
+            }
             val parsed = runCatching { objectMapper.readTree(text) }
             if (parsed.isSuccess) return parsed.getOrThrow() to usageOf(response, model)
+            recordFailedAiCall(recorder, providerName, usageOf(response, model))
             if (attempt == 2) {
                 throw AiUnavailableException("Gemini returned malformed JSON for $model twice.", parsed.exceptionOrNull())
             }
@@ -494,7 +545,8 @@ class GeminiInterviewAi(
         } catch (ex: ResourceAccessException) {
             // Told apart so the log says "slow", not "broken": a deadline that fires is the
             // chain doing its job, and the next provider is already being asked.
-            val timedOut = generateSequence<Throwable>(ex) { it.cause }.any { it is HttpTimeoutException }
+            val timedOut = generateSequence<Throwable>(ex) { it.cause }.any { it is HttpTimeoutException || it is SocketTimeoutException }
+            if (timedOut) recordFailedAiCall(recorder, providerName, estimatedInputUsage(model, body), estimated = true)
             throw AiUnavailableException(
                 if (timedOut) "Gemini did not answer on $model in time." else "Gemini request to $model failed.",
                 ex,
@@ -502,6 +554,29 @@ class GeminiInterviewAi(
         } catch (ex: RestClientException) {
             throw AiUnavailableException("Gemini request to $model failed.", ex)
         }
+
+    private fun estimatedInputUsage(
+        model: String,
+        body: Map<String, Any>,
+    ): AiUsage {
+        fun textLength(value: Any?): Int =
+            when (value) {
+                is Map<*, *> -> {
+                    value.entries.sumOf { (key, item) ->
+                        if (key == "text") (item as? String)?.length ?: 0 else textLength(item)
+                    }
+                }
+
+                is Iterable<*> -> {
+                    value.sumOf(::textLength)
+                }
+
+                else -> {
+                    0
+                }
+            }
+        return AiUsage(model, (textLength(body["contents"]) / 4).coerceAtLeast(1), 0)
+    }
 
     /**
      * Everything Gemini reports about what a call cost, not just the two obvious numbers.

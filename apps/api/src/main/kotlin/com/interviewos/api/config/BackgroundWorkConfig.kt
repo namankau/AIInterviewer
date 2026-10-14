@@ -30,6 +30,10 @@ class BackgroundWorkConfig {
             setVirtualThreads(true)
             setConcurrencyLimit(limit)
             setRejectTasksWhenLimitReached(true)
+            // During a deploy, let accepted work finish before the process exits. A
+            // crashed process still stops renewing its database leases immediately.
+            setTaskTerminationTimeout(110_000)
+            setCancelRemainingTasksOnClose(false)
         }
 
     private companion object {

@@ -7,6 +7,8 @@ import com.interviewos.api.common.ApiException
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.Mockito.mockingDetails
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
@@ -25,7 +27,7 @@ class TurnRequestIdempotencyTest {
     @Test
     fun `a completed answer retry returns the original response without touching AI`() {
         val original = SubmitAnswerResponse(true, 3, null, "Thanks - the interview is complete.")
-        given(harness.repository.claimAnswerRequest(sessionId, candidate, 2, requestId, 600))
+        given(harness.repository.claimAnswerRequest(sessionId, candidate, 2, requestId, 60))
             .willReturn(TurnRequestClaim(TurnRequestClaimStatus.COMPLETED, harness.mapper.writeValueAsString(original)))
 
         val replayed =
@@ -51,7 +53,7 @@ class TurnRequestIdempotencyTest {
                 nextQuestionText = "What did you do next?",
             )
         val firstClaim = AtomicBoolean(true)
-        given(harness.repository.claimAnswerRequest(sessionId, candidate, 2, requestId, 600)).willAnswer {
+        given(harness.repository.claimAnswerRequest(sessionId, candidate, 2, requestId, 60)).willAnswer {
             if (firstClaim.getAndSet(false)) {
                 TurnRequestClaim(TurnRequestClaimStatus.ACQUIRED)
             } else {
@@ -79,6 +81,8 @@ class TurnRequestIdempotencyTest {
                     )
                 }
             assertTrue(modelEntered.await(5, TimeUnit.SECONDS))
+            harness.activeLeases.renew()
+            verify(harness.repository).renewAnswerRequests(listOf(requestId), 60)
 
             val duplicate =
                 executor
@@ -98,6 +102,8 @@ class TurnRequestIdempotencyTest {
             assertEquals(1, aiCalls("assessAnswer"))
             releaseModel.countDown()
             val response = accepted.get(5, TimeUnit.SECONDS)
+            harness.activeLeases.renew()
+            verify(harness.repository, times(1)).renewAnswerRequests(listOf(requestId), 60)
             assertEquals(false, response.sessionComplete)
             assertEquals("What did you do next?", response.nextTurn?.questionText)
         } finally {
@@ -111,7 +117,7 @@ class TurnRequestIdempotencyTest {
         givenRunningTurn()
         harness.hint = OfferedHint("Start with the decision you owned.", "hinted")
         val firstClaim = AtomicBoolean(true)
-        given(harness.repository.claimHintRequest(sessionId, candidate, 2, requestId, 600)).willAnswer {
+        given(harness.repository.claimHintRequest(sessionId, candidate, 2, requestId, 60)).willAnswer {
             if (firstClaim.getAndSet(false)) {
                 TurnRequestClaim(TurnRequestClaimStatus.ACQUIRED)
             } else {
@@ -130,6 +136,8 @@ class TurnRequestIdempotencyTest {
         try {
             val accepted = executor.submit<HintView> { harness.service.requestHint(candidate, sessionId, 2, requestId) }
             assertTrue(modelEntered.await(5, TimeUnit.SECONDS))
+            harness.activeLeases.renew()
+            verify(harness.repository).renewHintRequests(listOf(requestId), 60)
 
             val duplicate =
                 executor
@@ -142,6 +150,8 @@ class TurnRequestIdempotencyTest {
             assertEquals(1, aiCalls("offerHint"))
             releaseModel.countDown()
             assertEquals("Start with the decision you owned.", accepted.get(5, TimeUnit.SECONDS).text)
+            harness.activeLeases.renew()
+            verify(harness.repository, times(1)).renewHintRequests(listOf(requestId), 60)
         } finally {
             releaseModel.countDown()
             executor.shutdownNow()

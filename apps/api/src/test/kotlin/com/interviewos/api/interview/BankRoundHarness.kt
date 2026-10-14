@@ -70,6 +70,7 @@ class BankRoundHarness(
                 else -> RETURNS_DEFAULTS.answer(invocation)
             }
         }
+    val activeLeases = ActiveLeaseRenewal(repository)
     val directory: CompanyDirectory = mock(CompanyDirectory::class.java)
     val bank: QuestionBankRepository = mock(QuestionBankRepository::class.java)
     val pool: QuestionPoolRepository = mock(QuestionPoolRepository::class.java)
@@ -133,11 +134,12 @@ class BankRoundHarness(
             roundWorkspaceComposer = RoundWorkspaceComposer(ai, mapper, ProblemVerifier(ai, mapper), poolMaterial),
             codeRunner = mock(CodeRunner::class.java),
             interviewEvents = InterviewEventRecorder.NONE,
+            activeLeases = activeLeases,
             transactionManager = transactionManager,
             uploadExecutor = backgroundExecutor,
         )
 
-    val reportService = ReportService(repository, ai, mapper, RetentionProperties(), resumeService)
+    val reportService = ReportService(repository, ai, mapper, RetentionProperties(), resumeService, activeLeases)
 
     /** The bank holds [questions] for Amazon's [roundType] rounds. */
     fun bankHolds(

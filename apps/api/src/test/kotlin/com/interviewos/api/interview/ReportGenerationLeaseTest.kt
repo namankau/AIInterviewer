@@ -9,6 +9,8 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.Mockito.mockingDetails
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Instant
 import java.util.UUID
@@ -28,7 +30,7 @@ class ReportGenerationLeaseTest {
     fun `a completed claim returns the stored report without calling AI`() {
         givenCompletedRound()
         given(harness.repository.findReportJson(sessionId, candidate)).willReturn(null)
-        given(harness.repository.claimReportGeneration(sessionId, candidate, leaseId, 600))
+        given(harness.repository.claimReportGeneration(sessionId, candidate, leaseId, 60))
             .willReturn(
                 ReportGenerationClaim(
                     ReportGenerationClaimStatus.COMPLETED,
@@ -92,7 +94,7 @@ class ReportGenerationLeaseTest {
         givenCompletedRound()
         given(harness.repository.findReportJson(sessionId, candidate)).willReturn(null)
         val firstClaim = AtomicBoolean(true)
-        given(harness.repository.claimReportGeneration(sessionId, candidate, leaseId, 600))
+        given(harness.repository.claimReportGeneration(sessionId, candidate, leaseId, 60))
             .willAnswer {
                 if (firstClaim.getAndSet(false)) {
                     ReportGenerationClaim(ReportGenerationClaimStatus.ACQUIRED)
@@ -126,6 +128,8 @@ class ReportGenerationLeaseTest {
         Executors.newSingleThreadExecutor().use { executor ->
             val first = executor.submit<SessionReportView> { harness.reportService.report(candidate, sessionId, leaseId) }
             assertThat(modelEntered.await(5, TimeUnit.SECONDS)).isTrue()
+            harness.activeLeases.renew()
+            verify(harness.repository).renewReportGenerations(listOf(leaseId), 60)
 
             assertThatThrownBy { harness.reportService.report(candidate, sessionId, leaseId) }
                 .isInstanceOfSatisfying(ApiException::class.java) {
@@ -134,6 +138,8 @@ class ReportGenerationLeaseTest {
 
             releaseModel.countDown()
             assertThat(first.get(5, TimeUnit.SECONDS).headline).isEqualTo("Evidence-backed feedback")
+            harness.activeLeases.renew()
+            verify(harness.repository, times(1)).renewReportGenerations(listOf(leaseId), 60)
         }
 
         assertThat(aiCalls("composeReport")).isEqualTo(1)

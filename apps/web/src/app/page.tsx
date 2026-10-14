@@ -1,6 +1,7 @@
 import type { UsageCounts } from "@untiered/shared";
 import type { Metadata, Route } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { BrandWordmark } from "@/components/brand-logo";
 import { ActionLink } from "@/components/ui/action-link";
@@ -31,8 +32,7 @@ export const metadata: Metadata = {
  * Server-rendered: organic search on "<employer> interview" is a primary acquisition
  * channel (PRD 11).
  */
-export default async function LandingPage() {
-  const usage = await fetchUsage();
+export default function LandingPage() {
   const mockInterviewsEnabled = featureEnabled("mockInterviews");
   const coursesEnabled = featureEnabled("courses");
   const arenaEnabled = featureEnabled("arena");
@@ -44,7 +44,6 @@ export default async function LandingPage() {
       <SiteHeader mockInterviewsEnabled={mockInterviewsEnabled} coursesEnabled={coursesEnabled} />
       <main>
         <Hero
-          usage={usage}
           mockInterviewsEnabled={mockInterviewsEnabled}
           coursesEnabled={coursesEnabled && visibleCourses.length > 0}
           arenaEnabled={arenaEnabled && visibleCourses.length > 0}
@@ -100,12 +99,10 @@ function SiteHeader({ mockInterviewsEnabled, coursesEnabled }: { mockInterviewsE
 }
 
 function Hero({
-  usage,
   mockInterviewsEnabled,
   coursesEnabled,
   arenaEnabled,
 }: {
-  usage: UsageCounts | null;
   mockInterviewsEnabled: boolean;
   coursesEnabled: boolean;
   arenaEnabled: boolean;
@@ -143,7 +140,11 @@ function Hero({
             ) : null}
           </div>
           <p className="text-caption text-on-navy-muted">{mockInterviewsEnabled ? "Every round free while we build. Full report included, no card." : "Free learning paths. Sign in once and continue where you stopped."}</p>
-          {mockInterviewsEnabled ? <UsageLine usage={usage} /> : null}
+          {mockInterviewsEnabled ? (
+            <Suspense fallback={null}>
+              <UsageLine />
+            </Suspense>
+          ) : null}
         </div>
 
         {mockInterviewsEnabled ? <HeroVisual /> : <LearningVisual coursesEnabled={coursesEnabled} arenaEnabled={arenaEnabled} />}
@@ -178,7 +179,8 @@ function LearningVisual({ coursesEnabled, arenaEnabled }: { coursesEnabled: bool
  * than no number at all — a counter is only social proof above a threshold, and below it
  * an honest silence beats a small brag.
  */
-function UsageLine({ usage }: { usage: UsageCounts | null }) {
+async function UsageLine() {
+  const usage: UsageCounts | null = await fetchUsage();
   const MEANINGFUL = 25;
   if (!usage || usage.interviewsCompleted < MEANINGFUL) return null;
 

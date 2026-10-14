@@ -1,8 +1,13 @@
 package com.interviewos.api.interview
 
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers.anyString
+import org.mockito.ArgumentMatchers.eq
 import org.mockito.BDDMockito.given
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.spy
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.KotlinModule
 import java.time.Instant
@@ -42,6 +47,21 @@ class ReadinessEvidenceThresholdTest {
         assertEquals(40.0, group.firstAverageScore)
         assertEquals(40.0, group.latestAverageScore)
         assertEquals(2, group.sessionsCompleted)
+    }
+
+    @Test
+    fun `each report payload is parsed once when building readiness`() {
+        val countingMapper = spy(mapper)
+        given(repository.listReportsForReadiness(candidate)).willReturn(
+            listOf(
+                row("2026-10-09T10:00:00Z", assessableTurns = 2, score = 2),
+                row("2026-10-09T11:00:00Z", assessableTurns = 2, score = 1),
+            ),
+        )
+
+        ReadinessService(repository, countingMapper).readiness(candidate)
+
+        verify(countingMapper, times(2)).readValue(anyString(), eq(Map::class.java))
     }
 
     private fun row(

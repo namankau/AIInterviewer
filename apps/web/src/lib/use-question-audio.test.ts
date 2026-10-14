@@ -73,6 +73,21 @@ describe("useQuestionAudio", () => {
     expect(result.current.url).toBe("https://audio.test/q1.wav");
   });
 
+  it("keeps only one audio poll in flight on a slow connection", async () => {
+    let resolvePoll!: (latest: TurnView) => void;
+    fetchTurn.mockImplementationOnce(() => new Promise<TurnView>((resolve) => { resolvePoll = resolve; }));
+    fetchTurn.mockResolvedValue(turn());
+
+    renderHook(() => useQuestionAudio({ sessionId: SESSION, turn: turn(), accessToken: "token" }));
+
+    await elapse(1_600);
+    expect(fetchTurn).toHaveBeenCalledTimes(1);
+
+    await act(async () => resolvePoll(turn()));
+    await elapse(400);
+    expect(fetchTurn).toHaveBeenCalledTimes(2);
+  });
+
   /**
    * A round whose speech never renders must still be answerable. The question is on
    * screen in writing, so the only thing that could go wrong here is the room waiting

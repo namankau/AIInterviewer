@@ -99,6 +99,26 @@ describe("LoopBriefStep", () => {
     fetchPrepPlan.mockReset();
   });
 
+  it("lets the candidate continue while the brief is still loading", async () => {
+    fetchLoopBrief.mockReturnValue(new Promise(() => undefined));
+    fetchPrepPlan.mockReturnValue(new Promise(() => undefined));
+    const onSkip = vi.fn();
+
+    render(
+      <LoopBriefStep
+        companyName="Amazon"
+        roleTitle="Backend Engineer"
+        accessToken="token"
+        onChooseRound={vi.fn()}
+        onSkip={onSkip}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /set the round up myself instead/i }));
+    expect(onSkip).toHaveBeenCalledTimes(1);
+  });
+
   it("shows sourced stages, labelled and cited, separately from the general pattern", async () => {
     fetchLoopBrief.mockResolvedValue(sourcedBrief);
     fetchPrepPlan.mockResolvedValue(plan);

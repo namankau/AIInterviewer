@@ -65,20 +65,24 @@ export function useQuestionAudio({
     if (!accessToken || turnIndex === null || initialStatus !== "pending") return;
 
     let active = true;
+    let inFlight = false;
     const startedAt = Date.now();
+    const controller = new AbortController();
 
     const timer = setInterval(async () => {
       if (Date.now() - startedAt > POLL_CEILING_MS) {
         clearInterval(timer);
-        if (active) {
-          onPollTimeoutRef.current?.(turnIndex, Date.now() - startedAt);
-          setResolved({ turnIndex, audio: { url: null, status: "unavailable" } });
-        }
+        active = false;
+        controller.abort();
+        onPollTimeoutRef.current?.(turnIndex, Date.now() - startedAt);
+        setResolved({ turnIndex, audio: { url: null, status: "unavailable" } });
         return;
       }
+      if (inFlight) return;
 
+      inFlight = true;
       try {
-        const latest = await fetchTurn(sessionId, turnIndex, { accessToken });
+        const latest = await fetchTurn(sessionId, turnIndex, { accessToken, signal: controller.signal });
         if (!active || latest.questionAudioStatus === "pending") return;
         clearInterval(timer);
         setResolved({
@@ -88,12 +92,15 @@ export function useQuestionAudio({
       } catch {
         // A failed poll is not worth reporting: the question is on screen either way,
         // and the next tick will try again until the ceiling stops it.
+      } finally {
+        inFlight = false;
       }
     }, POLL_INTERVAL_MS);
 
     return () => {
       active = false;
       clearInterval(timer);
+      controller.abort();
     };
   }, [accessToken, sessionId, turnIndex, initialStatus]);
 

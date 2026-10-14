@@ -2,7 +2,7 @@
 
 import type { BoardState, HintView, SessionView, TurnView } from "@untiered/shared";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { BrandMark, BrandWordmark } from "@/components/brand-logo";
 import { DesignWorkspace } from "@/components/design-workspace";
@@ -370,12 +370,16 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
   const finishAnswer = useCallback(async (endRound = false) => {
     if (!accessToken || !turn) return;
-    const captured = await capture.stop();
-    if (!captured) return;
-
-    liveTranscript.stop();
+    const priorPhase = phase;
     setPhase("submitting");
     setError(null);
+    const captured = await capture.stop();
+    if (!captured) {
+      setPhase(priorPhase);
+      return;
+    }
+
+    liveTranscript.stop();
     const requestId = answerRequestIds.current.get(turn.turnIndex) ?? crypto.randomUUID();
     answerRequestIds.current.set(turn.turnIndex, requestId);
     reportRoomEvent("answer_submission_started", "submitting", turn.turnIndex, requestId);
@@ -436,7 +440,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     } finally {
       window.clearTimeout(slowRequestTimer);
     }
-  }, [accessToken, capture, closeRound, liveTranscript, reportRoomEvent, sessionId, speaksLocally, turn]);
+  }, [accessToken, capture, closeRound, liveTranscript, phase, reportRoomEvent, sessionId, speaksLocally, turn]);
 
   // The meter and the submit callback are read through refs by the tick below. The
   // meter changes on every animation frame, and rebuilding the interval each time would
@@ -725,18 +729,24 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     return () => clearInterval(timer);
   }, [startedAt]);
 
-  const workspaceNode =
-    workspace === null ? null : workspace.kind === "dsa" ? (
-      <DsaWorkspace problem={workspace.problem} board={session?.board ?? null} onBoardChange={onBoardChange} />
-    ) : (
-      <DesignWorkspace
-        designCase={workspace.case}
-        board={session?.board ?? null}
-        minutesElapsed={minutesElapsed}
-        durationMinutes={session?.durationMinutes ?? 45}
-        onBoardChange={onBoardChange}
-      />
-    );
+  // The microphone level changes on animation frames. Keep the editor/board element
+  // stable across those room renders so typing and drawing do not reconcile with the
+  // speaking indicator; rebuild it only when its own inputs change.
+  const workspaceNode = useMemo(
+    () =>
+      workspace === null ? null : workspace.kind === "dsa" ? (
+        <DsaWorkspace problem={workspace.problem} board={session?.board ?? null} onBoardChange={onBoardChange} />
+      ) : (
+        <DesignWorkspace
+          designCase={workspace.case}
+          board={session?.board ?? null}
+          minutesElapsed={minutesElapsed}
+          durationMinutes={session?.durationMinutes ?? 45}
+          onBoardChange={onBoardChange}
+        />
+      ),
+    [workspace, session?.board, session?.durationMinutes, onBoardChange, minutesElapsed],
+  );
 
   /*
    * Two ways out, and they are not the same thing.

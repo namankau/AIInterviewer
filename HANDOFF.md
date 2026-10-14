@@ -1,34 +1,35 @@
-# Handoff — 13 October 2026
+# Handoff — 14 October 2026
 
 ## Task
-Fix footer and legal-page navigation, legal copy and branding, and the browser favicon (direct user request; no task file).
+Performance fixes and agent-led functional check, then PR into `develop` (direct user requests; no task file).
 
 ## What I built
-- `apps/web/src/components/session-link.tsx`, `site-footer.tsx`, `legal-page.tsx`, and `app/page.tsx`: show Dashboard rather than Sign in for a signed-in visitor; direct interview CTAs to the guarded interview route; use the current wordmark on Contact, Privacy and Terms.
-- `apps/web/src/lib/supabase/session.ts`: let public footer destinations serve without an auth lookup. Guarded routes and `/login` still verify the session.
-- `apps/web/src/app/privacy/page.tsx`, `terms/page.tsx`, `contact/page.tsx`: refine the service-specific legal and support copy and remove an assertion that all DPDP Act rights are already in force. India Code records staggered commencement: https://www.indiacode.nic.in/bitstream/123456789/22037/1/a2023-22.pdf.
-- `apps/web/src/app/favicon.ico` and `icon.png`: use the sharper, transparent assets supplied in `C:\Users\naman\Downloads\favicon`.
-- Focused tests cover the public proxy fast path and signed-in, signed-out, and pending navigation states.
+- `E2E_TEST_REPORT.md` records observed route and browser behavior, safe test results, and exact coverage gaps.
+- Performance fixes remain documented in `PERFORMANCE_FIXES.md`, with the original findings in `PERFORMANCE_AUDIT.md`.
+- Opened PR #75 from `feat/performance-audit` into `develop` for all 12 commits.
 
 ## Assumptions I made
-- The reported logout on public footer pages is the misleading Sign in navigation: no sign-out call exists in these routes. The client now reads the existing session before showing a sign-in link.
-- The current adult-or-parental-consent rule remains. The owner should confirm how verifiable parental consent is obtained before publishing the revised legal copy.
-- The supplied ICO and 96px PNG are the browser-tab assets requested; Apple and installable-app icons remain as they were.
+- Used the local `feat/performance-audit` checkout; this is not the deployed `develop` application.
+- Treated API `Failed to fetch` states with the backend intentionally stopped as environment artifacts, not product defects.
+- Kept live model calls, interviews, uploads, account mutations, and the configured backend database out of this read-only test.
 
 ## What I could NOT verify
-- Production navigation latency, authenticated behavior with a real Supabase session, and browser favicon cache behavior.
-- Legal adequacy and the operator, contact email, and grievance officer identity. These remain environment-driven and display an explicit placeholder until configured. Human legal and data-protection review is required.
+- Google OAuth, authenticated API data, course and Arena progress persistence, device permissions, audio capture/playback, a complete interview, and report generation.
+- The live Chromium harness needs real credentials and Gemini spend. It also covers only one turn and not a report.
+- The backend was not started against the configured database because its scheduled storage deletion retry starts after 10 seconds.
 
 ## Verification status
-- Frontend typecheck, lint, 3,016 tests, and production build: pass. Focused navigation tests and typecheck after final copy edits: pass.
-- Backend ktlintCheck, test, and build: pass.
-- CI: PR #73 is running its web, API, and image jobs. Local checks do not establish the merge gate.
+- Public HTTP routes 200; anonymous protected routes redirected to login with `next` preserved; landing, courses, chapter, and Arena navigation rendered in the browser; local course search filtered correctly.
+- Focused no-spend tests passed: auth guard 28/28; Google sign-in, course catalogue, and Arena session 19/19.
+- No confirmed product defect in covered paths. Full end-to-end status remains unknown.
+- Prior branch-wide performance verification remains in `PERFORMANCE_FIXES.md`; no application code changed here.
+- CI for the PR head has not yet been observed green; local checks are not a substitute.
 
 ## Merge status
-- Branch `fix/footer-legal-favicons` was pushed and [PR #73](https://github.com/namankau/Untiered.tech/pull/73) was opened against `develop`. Nothing was merged; owner legal/data-protection review is required before any merge.
+- PR #75: https://github.com/namankau/Untiered.tech/pull/75. Branch `feat/performance-audit` is pushed; PR is open and unmerged. CI on the final handoff commit is pending. `main` was not changed.
 
 ## Suggested next task
-- Review PR #73 after CI completes, confirm legal details, and decide whether to merge into `develop`.
+- Review PR #75 after all CI jobs are green. Provide an isolated staging stack and disposable test account, then run the browser interview harness and extend it through report generation after explicit approval for live Gemini spend.
 
 ## Open questions for you
-- Which legal operator, support email, and grievance officer should be displayed? Should under-18 use with verifiable parental consent remain supported?
+- Is one live Gemini test round approved once an isolated staging environment is available?

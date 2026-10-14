@@ -31,8 +31,9 @@ export default function PrivacyPage() {
       <LegalSection id="collect" title="What we collect">
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            <strong className="text-ink">Your Google sign-in:</strong> your name, email address and
-            Google account identifier. We never see your Google password.
+            <strong className="text-ink">Your sign-in:</strong> your email address, and your name and
+            Google account identifier if you choose Google. Supabase handles email passwords;
+            we never see your password in plain text or your Google password.
           </li>
           <li>
             <strong className="text-ink">Your profile:</strong> anything you add, such as your current
@@ -105,7 +106,8 @@ export default function PrivacyPage() {
             account number, never your recordings, resume, email or name.
           </li>
           <li>
-            <strong className="text-ink">Google sign-in</strong> confirms who you are when you sign in.
+            <strong className="text-ink">Google sign-in</strong> confirms who you are if you choose
+            Google to sign in.
           </li>
         </ul>
         <p>

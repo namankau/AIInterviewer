@@ -2,6 +2,7 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 
 import { BrandWordmark } from "@/components/brand-logo";
+import { EmailPasswordAuth } from "@/components/email-password-auth";
 import { SignInWithGoogle } from "@/components/sign-in-with-google";
 import { SiteFooter } from "@/components/site-footer";
 import { safeNext } from "@/lib/safe-next";
@@ -11,9 +12,9 @@ export const metadata: Metadata = { title: "Sign in" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; error?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, error } = await searchParams;
 
   return (
     <>
@@ -69,17 +70,29 @@ export default async function LoginPage({
           </Link>
           <div className="flex flex-col gap-3">
             <span className="pill pill-accent w-fit">Continue your preparation</span>
-            <h2 className="text-title font-bold text-ink">Sign in to your practice room</h2>
+            <h2 className="text-title font-bold text-ink">Your practice room starts here</h2>
             <p className="text-body text-ink-muted">
-              Google is the only way in for now. No password to remember on the morning of an
-              interview.
+              Sign in or create an account to keep your practice and feedback together.
             </p>
           </div>
 
+          {error ? (
+            <p role="alert" className="text-caption text-danger">
+              {error === "link_expired" || error === "missing_code" || error === "exchange_failed"
+                ? "That email link could not be verified. Request a new link and try again."
+                : "Sign-in could not be completed. Please try again."}
+            </p>
+          ) : null}
+
+          <EmailPasswordAuth next={safeNext(next)} />
+
+          <div className="flex items-center gap-3 text-micro font-semibold uppercase tracking-wider text-ink-subtle" aria-hidden="true">
+            <span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" />
+          </div>
           <SignInWithGoogle next={safeNext(next)} />
 
           <p className="text-caption text-ink-subtle">
-            By signing in you agree to our{" "}
+            By continuing you agree to our{" "}
             <Link href={"/terms" as Route} className="font-medium text-accent hover:underline">
               terms of use
             </Link>{" "}

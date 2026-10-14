@@ -318,7 +318,7 @@ class InterviewService(
         return try {
             composeAndOpen(userId, sessionId, normalisedRequest, roundType, resolution, background, stage, declaredStage)
         } catch (e: RuntimeException) {
-            runCatching { repository.markSessionStatus(sessionId, userId, "failed") }
+            runCatching { repository.failSessionAndRefundUsage(sessionId, userId) }
                 .onSuccess { changed ->
                     if (changed) {
                         recordEvent(userId, sessionId, "session_failed", outcome = "failed", errorType = "unknown")
@@ -490,7 +490,7 @@ class InterviewService(
                         )
                     }.value
             } catch (e: AiUnavailableException) {
-                if (repository.markSessionStatus(sessionId, userId, "failed")) {
+                if (repository.failSessionAndRefundUsage(sessionId, userId)) {
                     recordEvent(userId, sessionId, "session_failed", outcome = "failed", errorType = "ai_unavailable")
                 } else {
                     log.info("Session {} was already terminal when opening-question generation failed", sessionId)
@@ -754,7 +754,7 @@ class InterviewService(
                         errorType = "ai_unavailable",
                         durationMs = elapsedMillis(assessmentStartedAt),
                     )
-                    if (repository.markSessionStatus(sessionId, userId, "failed")) {
+                    if (repository.failSessionAndRefundUsage(sessionId, userId)) {
                         recordEvent(
                             userId,
                             sessionId,

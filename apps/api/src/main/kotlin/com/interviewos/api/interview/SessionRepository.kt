@@ -246,6 +246,37 @@ class SessionRepository(
             .update() == 1
 
     /**
+     * A provider or server failure must not use up the candidate's daily allowance.
+     * The status transition and refund are one statement, so a racing completion cannot
+     * turn a completed round into a free one. A deleted round has no session to update;
+     * its usage row is deliberately left in place.
+     */
+    fun failSessionAndRefundUsage(
+        sessionId: UUID,
+        userId: UUID,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                with failed as (
+                  update public.sessions
+                     set status = 'failed', ended_at = now()
+                   where id = :id and user_id = :u and status = 'in_progress'
+                  returning id
+                ), refunded as (
+                  delete from public.practice_usage p using failed f
+                   where p.session_id = f.id and p.user_id = :u
+                  returning p.id
+                )
+                select exists(select 1 from failed) as changed,
+                       (select count(*) from refunded) as refunded_count
+                """.trimIndent(),
+            ).param("id", sessionId)
+            .param("u", userId)
+            .query { rs, _ -> rs.getBoolean("changed") }
+            .single()
+
+    /**
      * Starts the round's clock, once: the moment the candidate enters the room.
      *
      * `started_at` is written at insert because the existing constraints require it, but

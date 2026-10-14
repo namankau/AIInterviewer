@@ -1,35 +1,35 @@
 # Handoff — 14 October 2026
 
 ## Task
-Performance fixes and agent-led functional check, then PR into `develop` (direct user requests; no task file).
+Add email/password sign-up and password reset (direct request; PRD §05, no task file).
 
 ## What I built
-- `E2E_TEST_REPORT.md` records observed route and browser behavior, safe test results, and exact coverage gaps.
-- Performance fixes remain documented in `PERFORMANCE_FIXES.md`, with the original findings in `PERFORMANCE_AUDIT.md`.
-- Opened PR #75 from `feat/performance-audit` into `develop` for all 12 commits.
+- `apps/web/src/components/email-password-auth.tsx`: email sign-in, sign-up with password confirmation, and reset-link request alongside Google sign-in on `/login`.
+- `apps/web/src/app/auth/update-password/page.tsx` and `apps/web/src/components/password-update-form.tsx`: validate a recovery session and set a new password.
+- `apps/web/src/app/auth/callback/route.ts`: exchange both Google and email-link PKCE codes and report expired recovery links.
+- `supabase/config.toml`: require email confirmation and eight-character passwords locally; allow callback URLs carrying the destination query.
+- Updated privacy/contact copy and added focused auth tests.
 
 ## Assumptions I made
-- Used the local `feat/performance-audit` checkout; this is not the deployed `develop` application.
-- Treated API `Failed to fetch` states with the backend intentionally stopped as environment artifacts, not product defects.
-- Kept live model calls, interviews, uploads, account mutations, and the configured backend database out of this read-only test.
+- New email accounts should confirm their address before signing in. The local Supabase setting does not update the linked project's dashboard configuration.
+- Existing Google accounts keep using Google; this task does not attach a password to those accounts automatically.
+- Supabase's email templates pass through the requested redirect URL.
 
 ## What I could NOT verify
-- Google OAuth, authenticated API data, course and Arena progress persistence, device permissions, audio capture/playback, a complete interview, and report generation.
-- The live Chromium harness needs real credentials and Gemini spend. It also covers only one turn and not a report.
-- The backend was not started against the configured database because its scheduled storage deletion retry starts after 10 seconds.
+- Live email delivery, confirmation, and recovery against the linked Supabase project, including its SMTP limits, email templates, confirmation setting, password policy, and redirect allowlist. These require a disposable account and review of dashboard settings.
+- Final visual judgement and behavior of email links opened in a different browser. No live AI calls were made.
 
 ## Verification status
-- Public HTTP routes 200; anonymous protected routes redirected to login with `next` preserved; landing, courses, chapter, and Arena navigation rendered in the browser; local course search filtered correctly.
-- Focused no-spend tests passed: auth guard 28/28; Google sign-in, course catalogue, and Arena session 19/19.
-- No confirmed product defect in covered paths. Full end-to-end status remains unknown.
-- Prior branch-wide performance verification remains in `PERFORMANCE_FIXES.md`; no application code changed here.
-- CI for the PR head has not yet been observed green; local checks are not a substitute.
+- Frontend typecheck, lint, production build: pass.
+- Frontend tests: 77 files and 3,036 tests passed, using a stable workspace temp directory and serial Vitest execution to avoid an intermittent Windows sandbox temp-file error. Focused auth tests: 12 passed.
+- Backend `ktlintCheck test build`: pass.
+- GitHub CI on the implementation commit was in progress when checked; final PR-head CI status still needs observation.
 
 ## Merge status
-- PR #75: https://github.com/namankau/Untiered.tech/pull/75. Branch `feat/performance-audit` is pushed; PR is open and unmerged. CI on the final handoff commit is pending. `main` was not changed.
+- Branch `feat/email-password-auth` pushed. PR #77 opened into `develop`: https://github.com/namankau/Untiered.tech/pull/77. Unmerged because authentication changes require human review.
 
 ## Suggested next task
-- Review PR #75 after all CI jobs are green. Provide an isolated staging stack and disposable test account, then run the browser interview harness and extend it through report generation after explicit approval for live Gemini spend.
+- Review PR #77 and the linked Supabase auth settings, then test sign-up and recovery with a disposable email account.
 
 ## Open questions for you
-- Is one live Gemini test round approved once an isolated staging environment is available?
+- None for the code review; linked Supabase email settings need your approval before rollout.

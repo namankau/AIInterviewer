@@ -30,7 +30,7 @@ export default function ContactPage() {
         <p>
           If something went wrong in an interview, include the date and the company you were
           practising for. Please do not include a recording, your resume, or your password in
-          your email. We will never ask for your Google password.
+          your email. We will never ask for any password.
         </p>
       </LegalSection>
 

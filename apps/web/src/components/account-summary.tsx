@@ -5,7 +5,7 @@ import type { Route } from "next";
 import { useEffect, useId, useRef, useState } from "react";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { fetchMe } from "@/lib/api";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -13,8 +13,8 @@ import { useAccessToken } from "@/lib/use-access-token";
 
 type State =
   | { status: "loading" }
-  | { status: "ready"; me: MeResponse }
-  | { status: "error"; message: string };
+  | { status: "ready"; ownerToken: string; me: MeResponse }
+  | { status: "error"; ownerToken: string; message: string };
 
 const LANGUAGE_LABELS: Record<string, string> = {
   english: "English",
@@ -37,11 +37,14 @@ const LANGUAGE_LABELS: Record<string, string> = {
  */
 export function AccountSummary() {
   const accessToken = useAccessToken();
+  const pathname = usePathname();
   const [state, setState] = useState<State>({ status: "loading" });
+  const [attempt, setAttempt] = useState(0);
+  const [promptFor, setPromptFor] = useState<string | null>(null);
   const visibleState: State =
     accessToken === null
-      ? { status: "error", message: "This browser has no active session." }
-      : state;
+      ? { status: "error", ownerToken: "", message: "This browser has no active session." }
+      : state.status !== "loading" && state.ownerToken !== accessToken ? { status: "loading" } : state;
 
   useEffect(() => {
     if (!accessToken) return;
@@ -52,7 +55,17 @@ export function AccountSummary() {
       try {
         const me = await fetchMe({ accessToken: operationToken, signal: controller.signal });
         if (!controller.signal.aborted) {
-          setState({ status: "ready", me });
+          setState({ status: "ready", ownerToken: operationToken, me });
+          const isEmpty = !me.profile.function && !me.profile.currentLevel && !me.profile.targetLevel;
+          if (isEmpty) {
+            try {
+              setPromptFor(window.localStorage.getItem(`untiered:profile-setup:${me.id}`) ? null : me.id);
+            } catch {
+              setPromptFor(me.id);
+            }
+          } else {
+            setPromptFor(null);
+          }
         }
       } catch (error) {
         if (controller.signal.aborted) {
@@ -60,6 +73,7 @@ export function AccountSummary() {
         }
         setState({
           status: "error",
+          ownerToken: operationToken,
           message: error instanceof Error ? error.message : "Your profile could not be loaded.",
         });
       }
@@ -67,22 +81,39 @@ export function AccountSummary() {
 
     void load();
     return () => controller.abort();
-  }, [accessToken]);
+  }, [accessToken, attempt]);
+
+  function dismissPrompt(id: string) {
+    try { window.localStorage.setItem(`untiered:profile-setup:${id}`, "seen"); } catch { /* Storage is optional. */ }
+    setPromptFor(null);
+  }
 
   return (
-    <div>
+    <div className="relative">
       {visibleState.status === "loading" ? (
         <span role="status" className="grid size-9 animate-pulse place-items-center rounded-full bg-surface-sunken">
           <span className="sr-only">Loading your profile…</span>
         </span>
       ) : visibleState.status === "error" ? (
-        <Link href="/profile" role="alert" title={visibleState.message} className="grid size-9 place-items-center rounded-full bg-danger-wash text-caption font-bold text-danger">
-          <span aria-hidden>!</span>
+        <div role="alert" className="flex items-center gap-2 text-caption text-danger">
+          <span className="max-w-40 truncate" title={visibleState.message}>{accessToken ? "Account unavailable" : "Sign in needed"}</span>
           <span className="sr-only">{visibleState.message}</span>
-        </Link>
+          {accessToken ? <button type="button" onClick={() => { setState({ status: "loading" }); setAttempt((value) => value + 1); }} className="font-semibold underline underline-offset-2">Retry</button> : <Link href="/login" className="font-semibold underline underline-offset-2">Sign in</Link>}
+        </div>
       ) : (
         <AccountMenu me={visibleState.me} />
       )}
+      {visibleState.status === "ready" && promptFor === visibleState.me.id && pathname !== "/profile" ? (
+        <section aria-labelledby="profile-setup-title" className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-accent/25 bg-surface-raised p-5 shadow-[var(--shadow-lg)]">
+          <p className="eyebrow text-accent">Welcome to Untiered</p>
+          <h2 id="profile-setup-title" className="mt-2 text-heading font-bold text-ink">Set up your profile</h2>
+          <p className="mt-2 text-caption text-ink-muted">Add your current and target level so your interview practice starts with the right context.</p>
+          <div className="mt-4 flex items-center gap-4">
+            <Link href="/profile#profile-details" onClick={() => dismissPrompt(visibleState.me.id)} className="rounded-lg bg-accent px-4 py-2 text-caption font-semibold text-accent-contrast hover:bg-accent-strong">Fill in details</Link>
+            <button type="button" onClick={() => dismissPrompt(visibleState.me.id)} className="text-caption font-medium text-ink-muted hover:text-ink">Later</button>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

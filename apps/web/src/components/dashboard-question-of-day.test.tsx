@@ -7,6 +7,7 @@ import { localDateKey } from "@/lib/arena/progression";
 import type { Challenge } from "@/lib/arena/types";
 
 const recordAnswer = vi.hoisted(() => vi.fn());
+const retry = vi.hoisted(() => vi.fn());
 const arena = vi.hoisted(() => ({
   ready: true,
   status: "ready" as "ready" | "loading" | "error",
@@ -22,7 +23,7 @@ const arena = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/arena/progress-store", () => ({
-  useArenaProgress: () => ({ ...arena, recordAnswer, awardBadges: vi.fn() }),
+  useArenaProgress: () => ({ ...arena, recordAnswer, retry, awardBadges: vi.fn() }),
 }));
 
 const question: Challenge = {
@@ -100,5 +101,16 @@ describe("DashboardQuestionOfDay", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/could not be saved/i);
     expect(screen.queryByText(/Awesome job/i)).not.toBeInTheDocument();
+  });
+
+  it("offers a retry when progress cannot be loaded", async () => {
+    arena.ready = false;
+    arena.status = "error";
+    render(<DashboardQuestionOfDay questionsByDate={todayQuestions()} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/temporarily unavailable/i);
+    expect(screen.queryByText(question.prompt)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 });

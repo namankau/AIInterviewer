@@ -14,7 +14,7 @@ import { fetchUsage } from "@/lib/api";
 import { courseEnabled, featureEnabled } from "@/lib/flags";
 
 export const metadata: Metadata = {
-  title: "Untiered — mock interviews that push back",
+  title: "Untiered — talent has no tiers",
   description:
     "Spoken mock interviews for the loops people actually sit: service-based IT, Big Four, " +
     "European competency rounds, global product. Every score in the report quotes what you said.",
@@ -112,11 +112,7 @@ function Hero({
     <section className="bg-navy text-on-navy">
       <div className={`mx-auto grid max-w-6xl gap-14 px-6 py-20 lg:items-center lg:gap-10 lg:py-28 ${mockInterviewsEnabled ? "lg:grid-cols-[1.1fr_1fr]" : "lg:grid-cols-[1.25fr_.75fr]"}`}>
         <div className="flex flex-col gap-7">
-          <span className="pill pill-navy w-fit">
-            {mockInterviewsEnabled
-              ? "Voice · a face across the table · scored on what you actually said"
-              : "Structured learning · daily practice · interview-ready fundamentals"}
-          </span>
+          <span className="pill pill-navy w-fit">Talent has no tiers.</span>
           <h1 className="text-hero text-balance text-on-navy">
             {mockInterviewsEnabled ? (
               <>A mock interview that <span className="text-accent-on-navy">interrupts you.</span></>

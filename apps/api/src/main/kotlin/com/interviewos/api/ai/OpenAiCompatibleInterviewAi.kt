@@ -6,6 +6,8 @@ import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
+import java.net.SocketTimeoutException
+import java.net.http.HttpTimeoutException
 import java.time.Duration
 
 /**
@@ -29,6 +31,7 @@ class OpenAiCompatibleInterviewAi(
     private val prompts: PromptLibrary,
     private val objectMapper: ObjectMapper,
     restClientBuilder: RestClient.Builder,
+    private val recorder: AiSpendRecorder = AiSpendRecorder.NONE,
 ) : InterviewAi {
     private val restClient = restClientBuilder.build()
 
@@ -129,6 +132,7 @@ class OpenAiCompatibleInterviewAi(
             )
 
         val response = call(body)
+        val usage = usageOf(response)
         val content =
             response
                 .path("choices")
@@ -137,6 +141,7 @@ class OpenAiCompatibleInterviewAi(
                 .path("content")
                 .asString()
         if (content.isNullOrBlank()) {
+            recordFailedAiCall(recorder, providerName, usage)
             throw AiUnavailableException("${config.name} returned an empty completion.")
         }
 
@@ -146,17 +151,19 @@ class OpenAiCompatibleInterviewAi(
             } catch (e: RuntimeException) {
                 // The model answered but not in the shape we need. Another provider might
                 // do better, so this is worth passing down the chain.
+                recordFailedAiCall(recorder, providerName, usage)
                 throw AiUnavailableException("${config.name} returned JSON we could not read.", e)
             }
 
+        return AiResult(parsed, usage)
+    }
+
+    private fun usageOf(response: JsonNode): AiUsage {
         val usage = response.path("usage")
-        return AiResult(
-            parsed,
-            AiUsage(
-                model = config.model,
-                promptTokens = usage.path("prompt_tokens").asInt(0),
-                outputTokens = usage.path("completion_tokens").asInt(0),
-            ),
+        return AiUsage(
+            model = config.model,
+            promptTokens = usage.path("prompt_tokens").asInt(0),
+            outputTokens = usage.path("completion_tokens").asInt(0),
         )
     }
 
@@ -184,6 +191,11 @@ class OpenAiCompatibleInterviewAi(
         } catch (e: HttpServerErrorException) {
             throw AiUnavailableException("${config.name} is having problems: ${e.statusCode}.", e)
         } catch (e: RestClientException) {
+            val timedOut = generateSequence<Throwable>(e) { it.cause }.any { it is HttpTimeoutException || it is SocketTimeoutException }
+            if (timedOut) {
+                val inputTokens = (body.toString().length / 4).coerceAtLeast(1)
+                recordFailedAiCall(recorder, providerName, AiUsage(config.model, inputTokens, 0), estimated = true)
+            }
             throw AiUnavailableException("${config.name} could not be reached.", e)
         }
 

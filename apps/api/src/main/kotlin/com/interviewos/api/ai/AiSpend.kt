@@ -1,5 +1,6 @@
 package com.interviewos.api.ai
 
+import org.slf4j.LoggerFactory
 import java.util.UUID
 
 /**
@@ -30,6 +31,8 @@ data class AiCallRecord(
      * instead of in a second table the job keeps for itself.
      */
     val poolRunId: UUID? = null,
+    val outcome: String = "succeeded",
+    val usageEstimated: Boolean = false,
 )
 
 /**
@@ -57,6 +60,7 @@ object AiSpendContext {
         val poolRunId: UUID? = null,
         val turnIndex: Int? = null,
         val requestId: UUID? = null,
+        val call: String? = null,
     )
 
     /**
@@ -120,6 +124,20 @@ object AiSpendContext {
     }
 
     fun current(): Attribution? = current.get()
+
+    /** Names the provider operation without changing the user/session attribution. */
+    fun <T> withCall(
+        call: String,
+        block: () -> T,
+    ): T {
+        val previous = current.get()
+        current.set((previous ?: Attribution(null, null)).copy(call = call))
+        return try {
+            block()
+        } finally {
+            if (previous == null) current.remove() else current.set(previous)
+        }
+    }
 }
 
 /**
@@ -135,5 +153,35 @@ fun interface AiSpendRecorder {
     companion object {
         /** Records nothing. Used where the chain is constructed without persistence. */
         val NONE = AiSpendRecorder { }
+    }
+}
+
+/** Failed provider responses are billed too; recording must never fail the interview. */
+internal fun recordFailedAiCall(
+    recorder: AiSpendRecorder,
+    providerName: String,
+    usage: AiUsage,
+    estimated: Boolean = false,
+) {
+    val attribution = AiSpendContext.current()
+    try {
+        recorder.record(
+            AiCallRecord(
+                call = attribution?.call ?: "unknown",
+                provider = providerName,
+                usage = usage,
+                fellBackFrom = null,
+                microUsd = AiPrices.microUsd(usage),
+                userId = attribution?.userId,
+                sessionId = attribution?.sessionId,
+                poolRunId = attribution?.poolRunId,
+                outcome = "failed",
+                usageEstimated = estimated,
+            ),
+        )
+    } catch (ex: RuntimeException) {
+        LoggerFactory
+            .getLogger(AiSpendRecorder::class.java)
+            .warn("Could not record failed AI call for {} on {}", attribution?.call, providerName, ex)
     }
 }

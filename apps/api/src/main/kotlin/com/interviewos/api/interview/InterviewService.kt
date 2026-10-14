@@ -35,6 +35,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
@@ -69,7 +70,7 @@ class InterviewService(
     private val codeRunner: CodeRunner,
     private val interviewEvents: InterviewEventRecorder,
     transactionManager: PlatformTransactionManager,
-    @Qualifier("interviewBackgroundExecutor") private val backgroundExecutor: TaskExecutor,
+    @Qualifier("interviewUploadExecutor") private val uploadExecutor: TaskExecutor,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val transactions = TransactionTemplate(transactionManager)
@@ -613,38 +614,52 @@ class InterviewService(
             // two rather than for their sum.
             recordEvent(userId, sessionId, "answer_storage_started", turnIndex, requestId, outcome = "started")
             val storedAudio =
-                CompletableFuture.supplyAsync(
-                    {
-                        val startedAt = System.nanoTime()
-                        try {
-                            val stored = storeOrWarn(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType)
-                            recordEvent(
-                                userId,
-                                sessionId,
-                                "answer_storage_finished",
-                                turnIndex,
-                                requestId,
-                                outcome = if (stored == null) "failed" else "succeeded",
-                                errorType = if (stored == null) "storage_unavailable" else null,
-                                durationMs = elapsedMillis(startedAt),
-                            )
-                            stored
-                        } catch (e: RuntimeException) {
-                            recordEvent(
-                                userId,
-                                sessionId,
-                                "answer_storage_finished",
-                                turnIndex,
-                                requestId,
-                                outcome = "failed",
-                                errorType = "unknown",
-                                durationMs = elapsedMillis(startedAt),
-                            )
-                            throw e
-                        }
-                    },
-                    backgroundExecutor,
-                )
+                try {
+                    CompletableFuture.supplyAsync(
+                        {
+                            val startedAt = System.nanoTime()
+                            try {
+                                val stored = storeOrWarn(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType)
+                                recordEvent(
+                                    userId,
+                                    sessionId,
+                                    "answer_storage_finished",
+                                    turnIndex,
+                                    requestId,
+                                    outcome = if (stored == null) "failed" else "succeeded",
+                                    errorType = if (stored == null) "storage_unavailable" else null,
+                                    durationMs = elapsedMillis(startedAt),
+                                )
+                                stored
+                            } catch (e: RuntimeException) {
+                                recordEvent(
+                                    userId,
+                                    sessionId,
+                                    "answer_storage_finished",
+                                    turnIndex,
+                                    requestId,
+                                    outcome = "failed",
+                                    errorType = "unknown",
+                                    durationMs = elapsedMillis(startedAt),
+                                )
+                                throw e
+                            }
+                        },
+                        uploadExecutor,
+                    )
+                } catch (e: RejectedExecutionException) {
+                    recordEvent(
+                        userId,
+                        sessionId,
+                        "answer_storage_finished",
+                        turnIndex,
+                        requestId,
+                        outcome = "failed",
+                        errorType = "upload_saturated",
+                    )
+                    log.warn("Answer upload capacity reached for session {} turn {}; assessment will continue", sessionId, turnIndex)
+                    CompletableFuture.completedFuture(null)
+                }
 
             val roundType = RoundType.fromDbValue(session.roundType)
             val priorTurns =

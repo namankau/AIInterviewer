@@ -30,10 +30,17 @@ import com.interviewos.api.storage.ObjectStorageException
 import com.interviewos.api.storage.StorageProperties
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
+import org.springframework.core.task.SimpleAsyncTaskExecutor
 import org.springframework.core.task.SyncTaskExecutor
+import org.springframework.core.task.TaskExecutor
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * The interviewer's voice is rendered after the question text has already been sent, so
@@ -109,10 +116,66 @@ class QuestionSpeechTest {
         assertEquals(SpeechStatus.READY, SpeechStatus.fromDbValue("ready"))
     }
 
+    @Test
+    fun `two long renders finish with only two speech slots`() {
+        val repository = mock(SessionRepository::class.java)
+        val executor = boundedSpeechExecutor(2)
+        val longQuestion =
+            "Explain how a JVM loads and verifies a class before execution, including what it checks. " +
+                "Compare heap and stack allocation using a concrete example from a backend application. " +
+                "Describe how garbage collection affects latency when a service is under sustained traffic."
+        assertEquals(
+            3,
+            com.interviewos.api.ai.SpeechChunks
+                .split(longQuestion)
+                .size,
+        )
+        val speech = speech(SpeakingAi(), RecordingStorage(), repository, executor)
+
+        speech.render(SpeechRequest(userId, sessionId, 0, longQuestion, "english"))
+        speech.render(SpeechRequest(userId, sessionId, 1, longQuestion, "english"))
+
+        verify(repository, timeout(3000)).setQuestionSpeech(
+            sessionId,
+            userId,
+            0,
+            "$userId/$sessionId/turn-0-question.wav",
+            SpeechStatus.READY,
+        )
+        verify(repository, timeout(3000)).setQuestionSpeech(
+            sessionId,
+            userId,
+            1,
+            "$userId/$sessionId/turn-1-question.wav",
+            SpeechStatus.READY,
+        )
+    }
+
+    @Test
+    fun `speech rejection marks the turn unavailable without waiting`() {
+        val repository = mock(SessionRepository::class.java)
+        val executor = boundedSpeechExecutor(1)
+        val release = CountDownLatch(1)
+        val occupied = CountDownLatch(1)
+        executor.execute {
+            occupied.countDown()
+            release.await()
+        }
+        try {
+            assertTrue(occupied.await(2, TimeUnit.SECONDS))
+            speech(SpeakingAi(), RecordingStorage(), repository, executor)
+                .render(SpeechRequest(userId, sessionId, 2, "What happened next?", "english"))
+            verify(repository).setQuestionSpeech(sessionId, userId, 2, null, SpeechStatus.UNAVAILABLE)
+        } finally {
+            release.countDown()
+        }
+    }
+
     private fun speech(
         ai: InterviewAi,
         storage: ObjectStorage,
         repository: SessionRepository,
+        executor: TaskExecutor = SyncTaskExecutor(),
     ) = QuestionSpeech(
         interviewAi = ai,
         storage = storage,
@@ -121,8 +184,15 @@ class QuestionSpeechTest {
         events = InterviewEventRecorder.NONE,
         // No transaction is open here, so rendering runs inline and the assertions can
         // read its effects without waiting on a background thread.
-        executor = SyncTaskExecutor(),
+        executor = executor,
     )
+
+    private fun boundedSpeechExecutor(limit: Int): TaskExecutor =
+        SimpleAsyncTaskExecutor("speech-test-").apply {
+            setVirtualThreads(true)
+            setConcurrencyLimit(limit)
+            setRejectTasksWhenLimitReached(true)
+        }
 }
 
 private class RecordingStorage : ObjectStorage {
@@ -257,14 +327,13 @@ private class SilentAi : StubAi() {
 }
 
 private class FailingChunkAi : StubAi() {
-    private var calls = 0
+    private val calls = AtomicInteger()
 
     override fun synthesizeSpeech(
         text: String,
         language: String,
     ): AiResult<SpokenAudio> {
-        calls += 1
-        if (calls == 2) throw AiUnavailableException("later chunk failed")
+        if (calls.incrementAndGet() == 2) throw AiUnavailableException("later chunk failed")
         return AiResult(SpokenAudio(byteArrayOf(1, 2, 3), "audio/wav"), AiUsage("test-tts", 0, 0))
     }
 }

@@ -1,39 +1,35 @@
 # Handoff — 14 October 2026
 
 ## Task
-Phase 2 performance fixes after the user approved work on `PERFORMANCE_AUDIT.md` (direct user request; no task file).
+Agent-led read-only functional end-to-end audit of the current local performance branch (direct user request; no task file).
 
 ## What I built
-- `PERFORMANCE_FIXES.md` records the controlled before/after results and remaining unmeasured work.
-- F01: stabilized the interview workspace across microphone-level renders (`apps/web/src/components/interview-room.tsx`).
-- F03: made the dashboard primary action independent of readiness (`apps/web/src/components/dashboard-panel.tsx`).
-- F06: made self-setup available while a loop brief loads (`apps/web/src/components/loop-brief-step.tsx`).
-- F08 and F09: showed answer processing before recorder finalization and prevented overlapping question-audio polls (`apps/web/src/components/interview-room.tsx`, `apps/web/src/lib/use-question-audio.ts`).
-- F07 and F14: streamed optional landing usage after the hero and revealed profile/resume content before secondary data finishes (`apps/web/src/app/page.tsx`, `apps/web/src/components/profile-panel.tsx`).
-- F04: reduced readiness JSON parsing to once per report row (`apps/api/src/main/kotlin/com/interviewos/api/interview/ReadinessService.kt`).
-- Added focused regression tests for the behavioral and work-count changes. Each fix is in its own commit.
+- `E2E_TEST_REPORT.md` records observed route and browser behavior, safe test results, and exact coverage gaps.
+- No application code, schema, API prompts, or dependencies changed in this run.
+- Prior performance fixes remain documented in `PERFORMANCE_FIXES.md`.
 
 ## Assumptions I made
-- Prioritized changes that remove a proved wait or redundant work while preserving the API and model behavior. I left the larger asynchronous session/report designs for measurement and design review.
-- Kept the profile GET after resume upload because detected skills are assembled server-side; the returned resume appears immediately, then reconciles with that GET.
-- Treated the audit's time estimates as inferred from code. Controlled tests establish response order and work count, not real user-perceived milliseconds.
+- Used the local `feat/performance-audit` checkout; this is not the deployed `develop` application.
+- Treated API `Failed to fetch` states with the backend intentionally stopped as environment artifacts, not product defects.
+- Kept live model calls, interviews, uploads, account mutations, and the configured backend database out of this read-only test.
 
 ## What I could NOT verify
-- Real-device LCP, INP, TBT, click-to-paint, endpoint p50/p95, authenticated flow timings, or database query plans. The original sandbox denied loopback access to the app, and no authenticated browser/API environment or representative data set was available.
-- F02/F05 model-backed critical paths, the remaining F04 full-payload query, F06 duplicate loop resolution, and F10–F13 need profiling or larger design work. No live AI call or model spend was run.
-- GitHub CI for this local branch has not run or been observed. The repository both limits pushes to `develop` and forbids merging into `develop` without observed green CI, so this branch was not pushed or merged.
+- Google OAuth, authenticated API data, course and Arena progress persistence, device permissions, audio capture/playback, a complete interview, and report generation.
+- The live Chromium harness needs real credentials and Gemini spend. It also covers only one turn and not a report.
+- The backend was not started against the configured database because its scheduled storage deletion retry starts after 10 seconds.
 
 ## Verification status
-- Web: typecheck, lint, tests (74 files, 3,024 tests), and production build passed.
-- API: `ktlintCheck test build` passed.
-- Root scripts: 77/77 tests passed when local fixture networking was allowed. The initial sandboxed run failed two localhost fixture requests with `EACCES`, without a code change.
-- `git diff --check` passed. CI status is unknown.
+- Public HTTP routes 200; anonymous protected routes redirected to login with `next` preserved; landing, courses, chapter, and Arena navigation rendered in the browser; local course search filtered correctly.
+- Focused no-spend tests passed: auth guard 28/28; Google sign-in, course catalogue, and Arena session 19/19.
+- No confirmed product defect in covered paths. Full end-to-end status remains unknown.
+- Prior branch-wide performance verification remains in `PERFORMANCE_FIXES.md`; no application code changed here.
 
 ## Merge status
-- Local branch `feat/performance-audit` is unpushed and unmerged. `develop` and `main` were not changed. CI cannot run for these commits under the current push restriction; no merge gate has been met.
+- Local branch `feat/performance-audit` remains unpushed and unmerged. The repository restricts pushes to `develop` but requires observed green CI before merging into `develop`; no CI gate for this branch has been met.
 
 ## Suggested next task
-- Choose a permitted way to trigger CI for this branch, then merge into `develop` only after all CI jobs are green. Collect browser/API traces for F02, F05, and the remaining F04 query work.
+- Provide an isolated staging stack and disposable test account, then run the browser interview harness and extend it through report generation after explicit approval for live Gemini spend.
 
 ## Open questions for you
-- May this feature branch be pushed solely to run CI, or should a different CI path be used while keeping the `develop`-only push rule?
+- Can a feature branch be pushed solely to trigger CI for the existing fixes?
+- Is one live Gemini test round approved once an isolated staging environment is available?

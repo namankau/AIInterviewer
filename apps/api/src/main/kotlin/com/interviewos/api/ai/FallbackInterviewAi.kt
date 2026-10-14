@@ -137,16 +137,21 @@ class FallbackInterviewAi(
         texts: List<String>,
         model: String,
         dimensions: Int,
-    ): AiResult<TextEmbeddings> = attempt(AiCapability.TEXT_EMBEDDING, "embed") { it.embed(texts, model, dimensions) }
+    ): AiResult<TextEmbeddings> = attempt(AiCapability.TEXT_EMBEDDING, "embed", model) { it.embed(texts, model, dimensions) }
 
     private fun <T> attempt(
         capability: AiCapability,
         call: String,
+        model: String? = null,
         work: (InterviewAi) -> AiResult<T>,
     ): AiResult<T> {
+        val capable = providers.filter { capability in it.capabilities }
+        val ordered = if (capability in TRY_STRONGEST_FIRST) capable.reversed() else capable
+        val seen = mutableSetOf<String>()
         val able =
-            providers.filter { capability in it.capabilities }.let {
-                if (capability in TRY_STRONGEST_FIRST) it.reversed() else it
+            ordered.filter { provider ->
+                val identity = provider.operationIdentity(capability, model)
+                identity == null || seen.add(identity)
             }
         if (able.isEmpty()) {
             throw AiUnavailableException(

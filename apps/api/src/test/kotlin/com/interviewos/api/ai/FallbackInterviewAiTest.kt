@@ -161,6 +161,43 @@ class FallbackInterviewAiTest {
     }
 
     @Test
+    fun `speech fallback does not call an identical model endpoint twice`() {
+        val first =
+            FakeAi(
+                "cheap reasoning",
+                MULTIMODAL,
+                fails = AiUnavailableException("speech rate limited"),
+                sharedOperationIdentity = "gemini/speech-model",
+            )
+        val duplicate = FakeAi("strong reasoning", MULTIMODAL, sharedOperationIdentity = "gemini/speech-model")
+
+        assertFailsWith<AiUnavailableException> {
+            FallbackInterviewAi(listOf(first, duplicate)).synthesizeSpeech("Hello.", "english")
+        }
+        assertEquals(1, first.calls)
+        assertEquals(0, duplicate.calls)
+    }
+
+    @Test
+    fun `embedding fallback does not call the same requested model twice`() {
+        val embeddingCapability = setOf(AiCapability.TEXT_EMBEDDING)
+        val first =
+            FakeAi(
+                "cheap reasoning",
+                embeddingCapability,
+                fails = AiUnavailableException("embedding rate limited"),
+                sharedOperationIdentity = "gemini/embedding-model",
+            )
+        val duplicate = FakeAi("strong reasoning", embeddingCapability, sharedOperationIdentity = "gemini/embedding-model")
+
+        assertFailsWith<AiUnavailableException> {
+            FallbackInterviewAi(listOf(first, duplicate)).embed(listOf("hello"), "embedding-model", 768)
+        }
+        assertEquals(1, first.calls)
+        assertEquals(0, duplicate.calls)
+    }
+
+    @Test
     fun `a chain reports the union of what its providers can do`() {
         val chain =
             FallbackInterviewAi(
@@ -281,6 +318,7 @@ class FallbackInterviewAiTest {
         override val providerName: String,
         override val capabilities: Set<AiCapability>,
         private val fails: AiUnavailableException? = null,
+        private val sharedOperationIdentity: String? = null,
     ) : InterviewAi {
         var calls = 0
             private set
@@ -291,12 +329,23 @@ class FallbackInterviewAiTest {
             return AiResult(value, AiUsage(providerName, 0, 0))
         }
 
+        override fun operationIdentity(
+            capability: AiCapability,
+            model: String?,
+        ): String? = sharedOperationIdentity
+
         override fun parseResume(file: ResumeFile) = answer(ParsedResume(null, null))
 
         override fun synthesizeSpeech(
             text: String,
             language: String,
         ) = answer(SpokenAudio(ByteArray(0), "audio/wav"))
+
+        override fun embed(
+            texts: List<String>,
+            model: String,
+            dimensions: Int,
+        ) = answer(TextEmbeddings(emptyList(), model))
 
         override fun composeRound(query: String) =
             answer(ComposedRound("", "", "", "project_deep_dive", null, "english", "", emptyList(), "low"))

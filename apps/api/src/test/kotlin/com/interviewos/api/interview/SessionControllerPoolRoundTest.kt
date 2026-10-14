@@ -208,6 +208,7 @@ class SessionControllerPoolRoundTest {
                 harness.mapper,
                 RetentionProperties(),
                 harness.resumeService,
+                harness.activeLeases,
             )
         val report = reports.report(candidate, sessionId)
         return report.questionSources.entries.single()

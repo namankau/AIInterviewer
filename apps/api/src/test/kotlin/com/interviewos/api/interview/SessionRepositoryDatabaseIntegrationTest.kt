@@ -85,6 +85,7 @@ class SessionRepositoryDatabaseIntegrationTest {
                 requestId,
             ),
         )
+        assertTrue(repository.completeAnswerRequest(sessionId, userId, 0, requestId, "{}"))
         assertEquals(TurnRequestClaimStatus.COMPLETED, repository.claimAnswerRequest(sessionId, userId, 0, otherRequest, 60).status)
         assertEquals(0, repository.renewAnswerRequests(listOf(requestId), 60))
     }

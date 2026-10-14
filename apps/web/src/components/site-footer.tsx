@@ -26,7 +26,7 @@ export function SiteFooter() {
           <Link href="/" className="inline-flex items-center focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-on-navy" aria-label="Untiered home">
             <BrandWordmark inverse />
           </Link>
-          <p className="mt-3 max-w-xs text-caption leading-relaxed text-on-navy-muted">Practice deliberately. Interview confidently.</p>
+          <p className="mt-3 max-w-xs text-caption leading-relaxed text-on-navy-muted">Talent has no tiers.</p>
         </div>
         <nav aria-label="Product" className="flex flex-col items-start gap-3">
           <h2 className="text-caption font-semibold text-on-navy">Product</h2>

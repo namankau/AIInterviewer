@@ -6,6 +6,7 @@ import { ImportBrowserArenaProgress } from "@/components/arena/import-browser-ar
 import { ArenaDailyQuest } from "@/components/arena/arena-daily-quest";
 import { ProgressSummary } from "@/components/arena/progress-summary";
 import { AppShell } from "@/components/app-shell";
+import { CourseArtwork } from "@/components/courses/course-visuals";
 import { courses } from "@/content/courses";
 import { allArenaChallenges, challengesForCourse } from "@/lib/arena/corpus";
 import { dailyCourseQuests, possibleDateKeysWorldwide } from "@/lib/arena/progression";
@@ -76,16 +77,18 @@ export default function ArenaPage() {
                   <li key={course.slug}>
                     <Link
                       href={`/arena/${course.slug}`}
-                      className="group flex h-full flex-col justify-between gap-7 rounded-2xl border border-line bg-surface-raised px-6 py-7 shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-1 hover:border-accent/40 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                      className="group flex h-full flex-col overflow-hidden rounded-[1.25rem] border border-line bg-surface-raised shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] hover:-translate-y-1 hover:border-accent/40 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                     >
-                      <div className="flex flex-col gap-2.5">
-                        <p className="w-fit rounded-full bg-accent-wash px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase">{course.level}</p>
-                        <h3 className="text-title text-ink group-hover:text-accent">{course.title}</h3>
-                        <p className="text-caption text-ink-muted">{course.tagline}</p>
+                      <CourseArtwork courseSlug={course.slug} />
+                      <div className="flex grow flex-col p-5">
+                        <p className="eyebrow text-accent">Practice path <span className="ml-2 font-sans normal-case tracking-normal text-ink-subtle">· {course.level}</span></p>
+                        <h3 className="mt-3 text-heading font-bold text-ink group-hover:text-accent">{course.title}</h3>
+                        <p className="mt-1.5 text-caption leading-relaxed text-ink-muted">{course.tagline}</p>
+                        <div className="mt-auto flex items-end justify-between gap-3 pt-5 text-caption">
+                          <span className="text-ink-muted">{count} questions · {course.modules.length} modules</span>
+                          <span className="shrink-0 font-semibold text-accent">Explore <span aria-hidden="true">→</span></span>
+                        </div>
                       </div>
-                      <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
-                        {count} questions · {course.modules.length} modules
-                      </p>
                     </Link>
                   </li>
                 );

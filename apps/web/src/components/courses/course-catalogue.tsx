@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { CourseCardProgress } from "@/components/courses/course-progress";
-import { CourseMotif } from "@/components/courses/course-visuals";
+import { CourseArtwork } from "@/components/courses/course-visuals";
 
 export type CatalogueCourse = {
   slug: string;
@@ -21,13 +21,6 @@ const CATEGORY: Record<string, string> = {
   dsa: "DSA",
   "ai-agents": "AI",
   "system-design": "System Design",
-};
-
-const ART: Record<string, string> = {
-  java: "from-[#fff0d9] to-[#f7e6d5]",
-  dsa: "from-[#dcf5ef] to-[#e5ecff]",
-  "ai-agents": "from-[#ebe6ff] to-[#e3efff]",
-  "system-design": "from-[#e2ebff] to-[#f1e9ff]",
 };
 
 export function CourseCatalogue({ courses }: { courses: CatalogueCourse[] }) {
@@ -77,11 +70,7 @@ export function CourseCatalogue({ courses }: { courses: CatalogueCourse[] }) {
           {filtered.map((course) => (
             <li key={course.slug} className="min-w-0">
               <Link href={`/courses/${course.slug}`} className="group flex h-full flex-col overflow-hidden rounded-[1.25rem] border border-line bg-surface-raised shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:border-accent/35 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
-                <div className={`relative flex h-28 items-center justify-center overflow-hidden bg-gradient-to-br ${ART[course.slug] ?? ART.dsa}`}>
-                  <span aria-hidden="true" className="absolute -left-5 -top-12 size-36 rotate-12 rounded-[2rem] border-[18px] border-white/35" />
-                  <span aria-hidden="true" className="absolute -bottom-20 -right-8 size-44 -rotate-12 rounded-[2.5rem] border-[20px] border-white/40" />
-                  <div className="relative scale-90 transition-transform duration-200 group-hover:scale-100"><CourseMotif courseSlug={course.slug} large /></div>
-                </div>
+                <CourseArtwork courseSlug={course.slug} />
                 <div className="flex flex-1 flex-col p-5">
                   <div className="flex items-center justify-between gap-3">
                     <p className="eyebrow text-accent">{CATEGORY[course.slug] ?? "Learning"}</p>

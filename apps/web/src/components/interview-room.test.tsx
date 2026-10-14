@@ -10,6 +10,8 @@ const fetchSession = vi.hoisted(() => vi.fn());
 const beginSession = vi.hoisted(() => vi.fn());
 const captureStart = vi.hoisted(() => vi.fn());
 const captureStop = vi.hoisted(() => vi.fn());
+const captureLevel = vi.hoisted(() => ({ current: 0 }));
+const dsaWorkspaceRender = vi.hoisted(() => vi.fn());
 const reportInterviewClientEvent = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const submitAnswer = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ token: "token-abc" }));
@@ -56,7 +58,7 @@ vi.mock("@/components/device-check", () => ({
   ),
 }));
 vi.mock("@/components/design-workspace", () => ({ DesignWorkspace: () => null }));
-vi.mock("@/components/dsa-workspace", () => ({ DsaWorkspace: () => null }));
+vi.mock("@/components/dsa-workspace", () => ({ DsaWorkspace: () => { dsaWorkspaceRender(); return null; } }));
 vi.mock("@/components/round-clock", () => ({
   RoundClock: () => null,
   formatDuration: () => "00:00",
@@ -66,7 +68,7 @@ vi.mock("@/lib/use-interview-capture", () => ({
   useInterviewCapture: () => ({
     state: "ready",
     error: null,
-    level: 0,
+    level: captureLevel.current,
     stream: null,
     requestDevices: vi.fn(),
     start: captureStart,
@@ -116,6 +118,7 @@ describe("InterviewRoom session entry", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     auth.token = "token-abc";
+    captureLevel.current = 0;
     questionAudio.current = { url: null, status: "unavailable" };
   });
 
@@ -180,6 +183,33 @@ describe("InterviewRoom session entry", () => {
     expect(screen.getByLabelText("Question 1")).toBeInTheDocument();
     expect(screen.queryByText(/voice is unavailable/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/round is in writing/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("InterviewRoom workspace isolation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    auth.token = "token-abc";
+    captureLevel.current = 0;
+    questionAudio.current = { url: null, status: "unavailable" };
+  });
+
+  it("does not rerender the code editor when only the microphone level changes", async () => {
+    fetchSession.mockResolvedValue({ ...baseSession, workspace: { kind: "dsa", problem: {} } });
+    beginSession.mockResolvedValue({
+      startedAt: "2026-09-29T09:00:00Z",
+      scheduledEndAt: "2026-09-29T09:45:00Z",
+    });
+    const { rerender } = render(<InterviewRoom sessionId={baseSession.id} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Enter the room" }));
+    expect(await screen.findByRole("button", { name: "Leave (forfeit)" })).toBeInTheDocument();
+    const before = dsaWorkspaceRender.mock.calls.length;
+    expect(before).toBeGreaterThan(0);
+
+    captureLevel.current = 0.7;
+    rerender(<InterviewRoom sessionId={baseSession.id} />);
+
+    expect(dsaWorkspaceRender).toHaveBeenCalledTimes(before);
   });
 });
 
@@ -279,6 +309,27 @@ describe("InterviewRoom operational telemetry", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("shows processing feedback before the recorder finishes stopping", async () => {
+    let completeStop!: (answer: { audio: Blob; timing: null }) => void;
+    captureStop.mockReturnValueOnce(new Promise((resolve) => { completeStop = resolve; }));
+    fetchSession.mockResolvedValue({ ...baseSession, workspace: { kind: "dsa" } });
+    beginSession.mockResolvedValue({
+      startedAt: new Date().toISOString(),
+      scheduledEndAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+    });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<InterviewRoom sessionId={baseSession.id} />);
+
+    await user.click(await screen.findByRole("button", { name: "Enter the room" }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    await user.click(screen.getByRole("button", { name: "Over to you" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent("Listening to your answer…");
+    expect(screen.queryByRole("button", { name: "Over to you" })).not.toBeInTheDocument();
+
+    await act(async () => completeStop({ audio: new Blob(["voice"], { type: "audio/webm" }), timing: null }));
   });
 
   it("reports phases, heartbeats, submission start and a still-pending request as slow", async () => {

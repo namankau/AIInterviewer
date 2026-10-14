@@ -110,9 +110,12 @@ export function LoopBriefStep({
 
   if (!brief) {
     return (
-      <p className="rounded-2xl border border-line bg-surface-raised p-6 text-body text-ink-muted shadow-[var(--shadow-sm)]">
-        Reading how {companyName} interviews…
-      </p>
+      <div className="flex flex-col items-start gap-4 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)]">
+        <p role="status" className="text-body text-ink-muted">Reading how {companyName} interviews…</p>
+        <button type="button" onClick={onSkip} className="text-body text-accent underline-offset-4 hover:underline">
+          Set the round up myself instead
+        </button>
+      </div>
     );
   }
 

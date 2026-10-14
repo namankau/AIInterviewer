@@ -8,16 +8,18 @@
 | Database | Not queried. The Supabase account available to the reviewer does not contain this project (`AIInterviewer`, ap-south-1). Anything that needs the live database is marked **UNKNOWN**, with the SQL to settle it in [Verification queries](#verification-queries-read-only). |
 | Status | All findings **open**. Update the Status column in the register as items ship. |
 | Decisions since | 14 Oct 2026: owner confirmed nothing is hosted yet and the Supabase project is on the Free tier. Target deployment recorded in [§11](#11-target-deployment-decided-14-october-2026). Owner then chose to delete interview audio after the report and to plan for ~1,000 monthly users; see [§12](#12-lean-plan-for-1000-monthly-active-users-14-october-2026). |
+| Reviewed | 14 Oct 2026: a second reviewer (Codex) raised 7 objections. Each was checked against the code; all were accepted in whole or in part. One new defect (ARCH-022), two unsafe or incomplete fixes (ARCH-003/004), and one cost-accounting gap (ARCH-007) followed. Verdicts and evidence are in [§13](#13-review-of-the-second-reviewers-objections-14-october-2026). **[§8](#8-implementation-roadmap) is now the single remediation plan.** |
 
-> **Sensitive.** ARCH-001 describes an exploit path that may be live until its fix ships.
-> If this repository is public, do not commit this file until ARCH-001 and ARCH-011 are fixed.
+> **Sensitive.** ARCH-001 describes an exploit path. This file is already on the public `main` and `develop` branches.
+> Exploiting it needs the API, which isn't deployed yet, so P0 item 1 must ship before the API is reachable from the internet.
 
 ## Resuming after a context reset
 
-1. Read the [Findings register](#2-findings-register) and the [Roadmap](#8-implementation-roadmap). Both carry status.
-2. The first open action is to run [verification query 1](#verification-queries-read-only). Its result decides whether ARCH-001 is Critical (NO-GO until fixed) or a latent High.
-3. Each deep dive lists its evidence (file:line), fix, effort and validation. Re-check that line numbers still match before editing, since the code moves.
-4. Hosting and Supabase tier decisions, with the settings each finding depends on, are in [§11](#11-target-deployment-decided-14-october-2026).
+1. Read the [Findings register](#2-findings-register) and the [Roadmap](#8-implementation-roadmap). Both carry status. [§13](#13-review-of-the-second-reviewers-objections-14-october-2026) explains why some fixes changed after review.
+2. The first open action is to run [verification queries 1 and 7](#verification-queries-read-only). Query 1 decides whether ARCH-001 is Critical (NO-GO until fixed) or a latent High. Query 7 counts resume files that ARCH-022 has already stranded.
+3. Decision D1 in [§8](#8-implementation-roadmap) (keep or stop uploading answer audio) is the owner's to make before the consent copy is changed.
+4. Each deep dive lists its evidence (file:line), fix, effort and validation. Re-check that line numbers still match before editing, since the code moves.
+5. Hosting and Supabase tier decisions, with the settings each finding depends on, are in [§11](#11-target-deployment-decided-14-october-2026).
 
 ---
 
@@ -96,38 +98,41 @@ flowchart LR
 
 ## 1. Executive summary — the three biggest verified risks
 
-1. **Cross-account deletion of stored files (ARCH-001).** A server operation using the service-role key deletes whatever bucket and path are stored in a `resumes` row. Users can edit that row directly through Supabase's Data API. Whether that edit is actually possible today depends on one grants check.
+1. **Resume file deletion is wrong in both directions (ARCH-001, ARCH-022).** The normal delete removes the database row and leaves the file in storage, silently. A forged path does the opposite: the same service-role code deletes a whole folder of another user's files, if users can edit their `resumes` row through Supabase's Data API. One grants check decides whether that edit is possible today.
 2. **The interview loop can stall or permanently deadlock under a burst or a speech-provider slowdown (ARCH-002).** A blocking 32-slot executor is shared by request threads and by tasks that submit more work back into it. Request threads can block while holding one of the 10 database connections.
-3. **Interrupted work isn't recoverable (ARCH-003/004), and the code that guarantees recovery is never run against a real database (ARCH-005).** A deploy or crash locks a candidate's question for 10 minutes. The report page has no retry path.
+3. **Interrupted work isn't recoverable (ARCH-003/004), and the code that guarantees recovery is never run against a real database (ARCH-005).** A deploy or crash locks a candidate's question, or their report, for 10 minutes. The report page has no retry path.
 
-The cost risk sits just behind these: our own request errors are re-sent to a model about 5× pricier, and nothing in the app can stop runaway spend (ARCH-007).
+The cost risk sits just behind these: our own request errors are re-sent to a model about 5× pricier, nothing in the app can stop runaway spend, and the spend ledger misses billed calls that fail, which is exactly when spend runs away (ARCH-007).
 
 ---
 
 ## 2. Findings register
 
+Sorted by priority, in the order of the plan in [§8](#8-implementation-roadmap). "Item n" refers to that plan's numbered items.
+
 | ID | Sev | Category | Finding | Evidence | Priority | Status |
 |---|---|---|---|---|---|---|
-| ARCH-001 | **Critical** (if grants exist) | Security | Service-role storage delete scoped by a column users can edit | VERIFIED code, grants UNKNOWN | P0 | Open |
-| ARCH-002 | High | Reliability | Blocking shared executor; nested submits can deadlock; blocks while holding DB connections | VERIFIED | P0 | Open |
-| ARCH-003 | High | Reliability | 10-minute lease plus 30 s shutdown drain → deploys lock live turns | VERIFIED | P0 | Open |
-| ARCH-004 | High | Reliability/UX | Report built inside one long GET; frontend doesn't retry "still generating" | VERIFIED | P0 | Open |
-| ARCH-007 | High | AI cost | 4xx errors and bad JSON fall back to a ~5× model; speech "fallback" calls the same model again; no spend brake | VERIFIED | P0 (part) / P1 | Open |
-| ARCH-005 | High | Reliability | No database in any test; ~1,400 lines of SQL never run in CI | VERIFIED | P1 | Open |
-| ARCH-006 | Medium | Availability | Public, uncached `/usage` does 2 full-table counts per landing-page view | VERIFIED | P1 | Open |
-| ARCH-008 | Medium | AI cost/latency | Prompt layout defeats Gemini's prefix caching | VERIFIED layout, savings UNKNOWN | P1 | Open |
-| ARCH-009 | Medium | AI quality | Evidence check discards every Devanagari quote, so Hinglish reports can come out empty | INFERRED | P1 | Open |
-| ARCH-011 | Medium | Security | Unused client write policies, including email squatting that locks a person out | VERIFIED code, grants UNKNOWN | P0 (same fix as 001) | Open |
-| ARCH-012 | Medium | Cost/abuse | Free email signup × per-account AI limits, with no CAPTCHA | INFERRED | P1 | Open |
-| ARCH-013 | Medium | Performance | 400 ms polling; whole whiteboard saved every 1 s with no size cap | VERIFIED | P1/P2 | Open |
+| ARCH-001 | **Critical** (if grants exist) | Security | Service-role storage delete scoped by a column users can edit | VERIFIED code, grants UNKNOWN | **P0** · item 1 | Open |
+| ARCH-022 | High | Privacy | Deleting a resume leaves the file in storage, silently, with no retry record | VERIFIED (added after review) | **P0** · item 1 | Open |
+| ARCH-011 | Medium | Security | Unused client write policies, including email squatting that locks a person out | VERIFIED code, grants UNKNOWN | **P0** · item 1 | Open |
+| ARCH-002 | High | Reliability | Blocking shared executor; nested submits can deadlock; blocks while holding DB connections | VERIFIED | **P0** · item 2 | Open |
+| ARCH-003 | High | Reliability | 10-minute lease plus 30 s shutdown drain → deploys lock live turns. Fix revised after review: renewed short leases, not a startup reset | VERIFIED | **P0** · item 3 | Open |
+| ARCH-004 | High | Reliability/UX | Report built inside one long GET; frontend doesn't retry "still generating"; a crash holds the report lease 10 minutes | VERIFIED | **P0** · items 3–4 | Open |
+| ARCH-007 | High | AI cost | 4xx errors and bad JSON fall back to a ~5× model; speech "fallback" calls the same model again; no spend brake; the ledger misses billed calls that fail | VERIFIED | **P0** · items 5–6; ledger and spend guard P1 | Open |
+| ARCH-020 | High | Ops/Reliability | Supabase Free tier: 1 GB storage fills after ~80 rounds (under two days at 100 daily users), no backups, idle projects pause | VERIFIED (owner: Free tier) | **P0** · item 7 | Open |
+| ARCH-016 | Medium (launch) | Ops | Email confirmation is on; built-in Supabase email may be capped at 2 per hour | UNKNOWN | **P0** · item 7 | Open |
+| ARCH-005 | High | Reliability | No database in any test; ~1,400 lines of SQL never run in CI | VERIFIED | P1 · first | Open |
+| ARCH-021 | Medium | Privacy/Cost | Answer recordings are uploaded and kept 28 days but nothing ever reads them; question audio is kept long after it's played | VERIFIED | P1 · after owner decision D1 | Open |
 | ARCH-014 | Medium | Reliability/UX | Rounds that *we* failed still use up the daily allowance, while the message says "Nothing was charged" | VERIFIED | P1 | Open |
-| ARCH-016 | Medium (launch) | Ops | Email confirmation is on; built-in Supabase email may be capped at 2 per hour | UNKNOWN | P0 check | Open |
-| ARCH-020 | High | Ops/Reliability | Supabase Free tier: 1 GB storage fills after ~80 rounds (under two days at 100 daily users), no backups, idle projects pause | VERIFIED (owner: Free tier) | P0 | Open |
-| ARCH-021 | Medium | Privacy/Cost | Answer recordings are uploaded and kept 28 days but nothing ever reads them; question audio is kept long after it's played | VERIFIED | P1 | Open |
+| ARCH-012 | Medium | Cost/abuse | Free email signup × per-account AI limits, with no CAPTCHA | INFERRED | P1 | Open |
+| ARCH-009 | Medium | AI quality | Evidence check discards every Devanagari quote, so Hinglish reports can come out empty | INFERRED | P1 · run query 4 first | Open |
+| ARCH-013 | Medium | Performance | 400 ms polling; whole whiteboard saved every 1 s with no size cap | VERIFIED | P1 (whiteboard) / P2 (polling) | Open |
+| ARCH-008 | Medium | AI cost/latency | Prompt layout defeats Gemini's prefix caching | VERIFIED layout, savings UNKNOWN | P2 · gated on the D2 probe | Open |
 | ARCH-010 | Medium | AI quality | Scoring calls run at temperature 0.7 with no consistency tests | VERIFIED config | P2 | Open |
 | ARCH-015 | Medium | Scale | Assumes one instance; superuser DB role; no statement timeout | INFERRED | P2 | Open |
+| ARCH-006 | Low (was Medium) | Availability | Public `/usage` runs 2 full-table counts per *direct* request. The landing page caches it for 5 minutes, so normal traffic is not the problem | VERIFIED | P2 | Open |
+| ARCH-018 | Low | Security | Defence in depth: admin ids aren't pinned. No escalation path found; the email allow-list already requires a Google sign-in | VERIFIED | P2 (free to set during P0 item 8) | Open |
 | ARCH-017 | Low | Performance | `ai_calls.user_id` foreign key has no index | VERIFIED | P2 | Open |
-| ARCH-018 | Low | Security | Admin access isn't pinned to user ids now that email signup exists | VERIFIED | P1 (one env var) | Open |
 | ARCH-019 | Low | Performance | WAV question audio; CodeMirror loaded for every round type; unbounded lists | VERIFIED/INFERRED | P2 | Open |
 
 ---
@@ -161,6 +166,7 @@ The cost risk sits just behind these: our own request errors are re-sent to a mo
 
 1. One migration that drops every client INSERT/UPDATE/DELETE policy the app doesn't use: `users`, `profiles`, `resumes`, `skills`, `arena_*`, `course_progress`, `daily_question_completions`, and storage insert/delete. Then `revoke insert, update, delete on all tables in schema public from anon, authenticated`.
 2. In code, as a second line of defence: in `ResumeService.delete`, require `bucket == resumeBucket && path.startsWith("$userId/")`. Apply the same check to any service-role helper that takes a path read from the database.
+3. Ship it in the same change as ARCH-022, which rewrites the same delete. Once that delete removes an exact object instead of walking a folder, a forged path can no longer reach a whole folder, but it could still reach any single object whose name is known. The ownership check stays mandatory.
 
 **Alternatives:** Column-level grants still leave unnecessary surface.
 
@@ -172,6 +178,34 @@ The cost risk sits just behind these: our own request errors are re-sent to a mo
 
 - The grants query shows no client write privileges.
 - A unit test confirms deletion is refused when the path isn't under the caller's id.
+
+### ARCH-022 — Deleting a resume leaves its file in storage
+
+**Severity:** High · **Category:** Privacy · *Raised by the second reviewer; missed by this audit, which had marked deletion PASS.*
+
+**Evidence:**
+
+- A resume is stored as a file: `{userId}/{uuid}-{name}` ([ResumeService.kt:71](../../apps/api/src/main/kotlin/com/interviewos/api/resume/ResumeService.kt#L71)).
+- On delete, the row is removed first ([ResumeRepository.kt:122-133](../../apps/api/src/main/kotlin/com/interviewos/api/resume/ResumeRepository.kt#L122-L133)), then that file path is passed to `deleteByPrefix` ([ResumeService.kt:144](../../apps/api/src/main/kotlin/com/interviewos/api/resume/ResumeService.kt#L144)).
+- `deleteByPrefix` lists the path as a folder ([SupabaseObjectStorage.kt:118](../../apps/api/src/main/kotlin/com/interviewos/api/storage/SupabaseObjectStorage.kt#L118), request body at line 142). Supabase's storage server appends `/` to any list prefix unless `exactMatch` is set ([storage `object.ts`, `searchObjects`](https://github.com/supabase/storage/blob/master/src/storage/object.ts): "assuming prefix is always a folder"). The code doesn't set it, so the listing is empty and nothing is removed.
+- Nothing fails, so the `log.error` on [line 146](../../apps/api/src/main/kotlin/com/interviewos/api/resume/ResumeService.kt#L146) never fires. If a real storage error did occur, there'd be no retry: unlike round and account deletion, this path doesn't use `storage_deletion_jobs`.
+- [SupabaseObjectStorageDeleteTest.kt](../../apps/api/src/test/kotlin/com/interviewos/api/storage/SupabaseObjectStorageDeleteTest.kt) mocks Supabase's list responses, so it couldn't catch this (see ARCH-005).
+- The file does go eventually: account deletion purges `{userId}` in the resumes bucket ([AccountDeletion.kt:51-54](../../apps/api/src/main/kotlin/com/interviewos/api/account/AccountDeletion.kt#L51-L54)).
+
+**Impact:** A candidate who deletes their resume still has it stored, and it stays until they delete their whole account. The UI tells them it's gone. CLAUDE.md requires deletion to actually delete.
+
+**Recommended fix (S, 2–3 h, in the same change as ARCH-001):**
+
+1. Make the storage worker delete the exact object at the job's path *and* anything under it as a folder. One `remove([path])` call before the folder walk is enough. A folder path matches no exact object, so round and account jobs are unaffected. No schema change is needed.
+2. In `ResumeService.delete`, delete the row and insert a `storage_deletion_jobs` row for the exact path in one transaction, the same pattern as round deletion. The worker then retries failures.
+3. Apply ARCH-001's ownership check before enqueueing.
+4. Clean up files already stranded: [query 7](#verification-queries-read-only) lists them; enqueue each one.
+
+**Validation:**
+
+- A unit test shows the worker sends `remove` with the exact file path.
+- A test against real storage (`supabase start`, ARCH-005) shows the object is gone after a resume delete.
+- Query 7 returns no rows.
 
 ### ARCH-002 — Shared blocking executor can stall or deadlock the interview loop
 
@@ -237,18 +271,25 @@ flowchart LR
 
 **Reproduction/Verification:** Stub Gemini to sleep 60 s, kill the API mid-answer, restart, and resubmit. You get a 409 for 10 minutes.
 
-**Recommended fix (S, 2–3 h):**
+**What already holds:** the answer write is fenced. It only lands `where answered_at is null and answer_request_id = :request` ([SessionRepository.kt:912-914](../../apps/api/src/main/kotlin/com/interviewos/api/interview/SessionRepository.kt#L912-L914)), so two workers on the same turn can't both record an answer. A duplicate costs a second assessment and its side effects, not corrupted state.
 
-- Derive the lease from the configured timeouts (≈ 4 minutes) instead of hard-coding 10.
-- Set `spring.lifecycle.timeout-per-shutdown-phase` and the hosting platform's termination grace period to at least that.
-- Set the executor's task termination timeout.
-- While there's one instance, clear leftover leases at startup. With more instances, record a boot id on the lease and treat leases from dead boots as expired.
+**Recommended fix (M, 5–6 h; one mechanism for the answer, hint and report leases):**
 
-**Challenge:** A lease shorter than the real worst case brings back double billing on retries. Derive it; don't guess it.
+- **Renew short leases while the work is alive.** Cut the lease to about 60 s. The process holding it keeps a set of its in-flight leases and extends them every ~20 s (`update … set lease_until = now() + 60 s where request_id = any(:held)`).
+  - A crash or kill stops the renewals, so a retry succeeds within about 60 s.
+  - A live worker never loses its lease, however long the model takes. That includes an old instance still draining during a deploy.
+  - This avoids having to measure a worst-case request time, which would have to include database waits and uploads, not just model time.
+- Set `spring.lifecycle.timeout-per-shutdown-phase` and the platform's termination grace period, and the executor's task termination timeout, so in-flight work usually finishes rather than waiting out a lease.
 
-**Hosting note (Fargate, §11):** ECS caps a Fargate task's stop timeout at 120 s, so draining alone can't cover a 200 s assessment. Set `timeout-per-shutdown-phase` to about 110 s, `stopTimeout` to 120 s and the load balancer's deregistration delay to about 120 s. Rely on the boot-id lease check for anything still in flight.
+**Rejected after review:** an earlier version of this audit suggested clearing leftover leases at startup. That's unsafe with §11's rolling deploys: ECS starts the new task before stopping the old one (default minimum healthy 100%, maximum 200%), so the new instance would clear leases the draining one still holds, and both would assess the same answer. Timing a deploy can't make it safe; renewal can.
 
-**Validation:** Repeat the kill-and-restart test; the retry succeeds once the API is back up.
+**Hosting note (Fargate, §11):** ECS caps a Fargate task's stop timeout at 120 s, so draining alone can't cover a 200 s assessment. Set `timeout-per-shutdown-phase` to about 110 s, `stopTimeout` to 120 s and the load balancer's deregistration delay to about 120 s. Anything still in flight when the task stops is recovered by lease expiry within about 60 s.
+
+**Validation:**
+
+- Kill the API mid-answer and restart it; the same request succeeds within about 70 s.
+- Stub a 150 s assessment and confirm the lease never lapses while it runs.
+- With two instances running, a retry during a slow assessment gets 409 "in progress", not a second assessment.
 
 ### ARCH-004 — Report generation has no recovery path in the UI
 
@@ -258,12 +299,18 @@ flowchart LR
 
 - [ReportService.kt:153-247](../../apps/api/src/main/kotlin/com/interviewos/api/interview/ReportService.kt#L153-L247) composes the report inside the GET request, with unlimited thinking and up to 3 minutes per provider.
 - [report-view.tsx:38-51](../../apps/web/src/components/report-view.tsx#L38-L51) fetches once and shows a `report_generating` 409 as an error, with no retry.
+- The report lease is 10 minutes ([ReportService.kt:575](../../apps/api/src/main/kotlin/com/interviewos/api/interview/ReportService.kt#L575)). A failure inside the process releases it ([lines 240-246](../../apps/api/src/main/kotlin/com/interviewos/api/interview/ReportService.kt#L240-L246)), but a crash or kill doesn't, and a new claim waits for expiry ([SessionRepository.kt:1028](../../apps/api/src/main/kotlin/com/interviewos/api/interview/SessionRepository.kt#L1028)).
+- The report save is already fenced on the lease id ([SessionRepository.kt:1090-1110](../../apps/api/src/main/kotlin/com/interviewos/api/interview/SessionRepository.kt#L1090-L1110)), so a shorter lease can't produce two saved reports.
 
-**Impact:** The report is the page the product depends on. It fails visibly on a refresh, or whenever generation takes longer than a proxy or load-balancer timeout.
+**Impact:** The report is the page the product depends on. It fails visibly on a refresh, or whenever generation takes longer than a proxy or load-balancer timeout. If the API dies mid-generation, every request returns `report_generating` for up to 10 minutes.
 
 **Hosting note (§11):** The browser calls the API directly, so Vercel's limits don't apply to this request. The AWS load balancer's idle timeout does: its 60 s default would cut most report generations and every fallback assessment (up to 200 s). Set it to 300 s. That fixes the timeout half; the refresh half still needs the frontend retry.
 
-**Recommended fix (S, 2–4 h):** In the frontend, treat 409 `report_generating` and 502/504 as "still writing" and poll with backoff for about 5 minutes.
+**Recommended fix (S, 3 h in the frontend, plus the server half of ARCH-003):**
+
+- **Server:** the report lease uses ARCH-003's renewed 60 s lease. A crashed generation is then reclaimable within about a minute, and the next poll starts it again.
+- **Frontend:** treat 409 `report_generating` and 502/504 as "still writing". Keep polling with backoff (5 s rising to 30 s) for up to 10 minutes, then show "Try again" instead of an error.
+- *Corrected after review:* the earlier fix (poll for 5 minutes, with the 10-minute lease unchanged) gave up before a crashed lease expired. Either half alone leaves a gap.
 
 **Optional (M):** Start generation as soon as the round completes.
 
@@ -297,15 +344,18 @@ flowchart LR
 - [FallbackInterviewAi.kt:186](../../apps/api/src/main/kotlin/com/interviewos/api/ai/FallbackInterviewAi.kt#L186) then tries the next model. That class's own doc comment says malformed requests "fail fast", but only the Kimi client actually does.
 - Both Gemini entries synthesise speech with the **same** model ([GeminiInterviewAi.kt:107](../../apps/api/src/main/kotlin/com/interviewos/api/ai/GeminiInterviewAi.kt#L107)). A speech 429 or timeout is retried immediately on the identical model, the second time with a 3-minute timeout.
 - Nothing reads `ai_calls` to stop spending. The only brake is Google's project spend cap, which shuts off every AI path at once.
+- **The ledger misses billed calls that fail** (*added after review*). Usage is written only after a provider succeeds ([FallbackInterviewAi.kt:163-168](../../apps/api/src/main/kotlin/com/interviewos/api/ai/FallbackInterviewAi.kt#L163-L168)). A response with malformed JSON throws before its `usageMetadata` is read ([GeminiInterviewAi.kt:417-420](../../apps/api/src/main/kotlin/com/interviewos/api/ai/GeminiInterviewAi.kt#L417-L420)), although Google bills for it. The class's own comment says so ([FallbackInterviewAi.kt:240](../../apps/api/src/main/kotlin/com/interviewos/api/ai/FallbackInterviewAi.kt#L240)). Timeouts can't be measured at all.
 
-**Impact:** A fallback assessment costs about $0.021 against $0.004. Each percentage point of assessments that fall through adds about 4% to assessment spend, and it's only visible in the logs.
+**Impact:** A fallback assessment costs about $0.021 against $0.004, plus up to $0.004 more when the first attempt was billed for bad JSON. Each percentage point of assessments that fall through adds about 4–5% to assessment spend, and it's only visible in the logs. Ledger totals, queries 2–3 and any ledger-based brake read **low**, and they read lowest during the failures the brake exists for.
 
 **Recommended fix (S–M, 6–8 h):**
 
 - 4xx responses other than 408 and 429 don't fall back.
 - Malformed JSON gets one retry on the same model before moving up.
 - Skip providers that would call an identical model for speech and embeddings.
-- Add a global daily spend guard: today's `micro_usd` total, cached 60 s, which first turns off optional spending (loop-brief research, hints, drafts) and sends an alert.
+- **Make the ledger complete before relying on it.** Read `usageMetadata` before parsing the text, carry it on the exception, and write a ledger row for the failed attempt (`outcome = failed`). For timeouts, write a row estimated from the input tokens and mark it as an estimate.
+- Add a global daily spend guard: today's `micro_usd` total, cached 60 s, which first turns off optional spending (loop-brief research, hints, drafts) and sends an alert. Set its threshold with headroom for what the ledger still can't see.
+- **External backstop (P0, configuration only):** a Google Cloud billing budget with alerts at 50/90/100%, and the project spend cap set above the in-app guard. Google's bill is the source of truth; the ledger is the early warning.
 - Alert when more than 5% of calls in an hour fell back.
 - Limit answer uploads to about 10 MB. The current 25 MB limit exceeds Gemini's 20 MB inline cap after base64 encoding, so oversize answers fail on both models and end the round.
 
@@ -325,15 +375,22 @@ flowchart LR
 4. Per-turn values.
 5. Audio.
 
-**Expected benefit:** About $0.0008 per turn, roughly 10–12% of round cost, plus faster first-token time. This only applies if implicit caching works on `gemini-3.1-flash-lite`, which is UNKNOWN; `ai_calls.cached_tokens` will show it.
+**Expected benefit:** About $0.0008 per turn, roughly 10–12% of round cost, plus faster first-token time. This is a hypothesis: it only applies if implicit caching works on `gemini-3.1-flash-lite`, which is UNKNOWN.
+
+**Gate (added after review): measure before rewriting anything.**
+
+1. Run query 2. If any call type shows `avg_cached > 0` on this model, implicit caching works, and the rewrite can be costed from real numbers.
+2. If every call shows 0, that proves nothing. The client sends everything as one user message with no `systemInstruction` (none in `ai/`), and per-turn values come first, so caching would miss today either way. Settle it with a two-request probe: the same ~4K-token fixed prefix twice, then read `cachedContentTokenCount`. The probe costs under $0.01, but it's live AI spend, so it needs the owner's go-ahead (CLAUDE.md rule 7).
+3. Only if the probe shows cache hits, build the evaluation set and reorder.
 
 **Risk of change:** Medium. Reordering a prompt changes model behaviour, so it needs the evaluation set described in §4.
 
 ### Compact findings
 
-- **ARCH-006** (Medium)
-  - **Problem:** `/api/v1/usage` is public ([SecurityConfig.kt:41](../../apps/api/src/main/kotlin/com/interviewos/api/config/SecurityConfig.kt#L41)) and runs two full-table counts with no usable index on every landing-page view ([SessionRepository.kt:74-87](../../apps/api/src/main/kotlin/com/interviewos/api/interview/SessionRepository.kt#L74-L87)). The app has no rate limiting for unauthenticated traffic, so at scale a flood takes connections from signed-in users.
-  - **Fix (<1 h):** cache the result in memory for 60 s.
+- **ARCH-006** (Low; was Medium, corrected after review)
+  - **Problem:** `/api/v1/usage` is public ([SecurityConfig.kt:41](../../apps/api/src/main/kotlin/com/interviewos/api/config/SecurityConfig.kt#L41)) and runs two full-table counts with no usable index on every request it receives ([SessionRepository.kt:74-87](../../apps/api/src/main/kotlin/com/interviewos/api/interview/SessionRepository.kt#L74-L87)). The app has no rate limiting for unauthenticated traffic, so a script calling it in a loop takes connections from signed-in users.
+  - **Correction:** the earlier claim of two counts *per landing-page view* was wrong. The only caller, the server-rendered landing page ([page.tsx:179](../../apps/web/src/app/page.tsx#L179)), fetches with `next: { revalidate: 300 }` ([api.ts:143-155](../../apps/web/src/lib/api.ts#L143-L155)), the same at the audited revision. With no `dynamic` or `fetchCache` override, the API sees about one call per 5 minutes from the web app. What remains is deliberate abuse.
+  - **Fix (<1 h):** cache the result in memory for 60 s; an AWS WAF rate rule if §11's ALB is used.
 - **ARCH-009** (Medium)
   - **Problem:** `normaliseForMatch` removes everything outside `[a-z0-9' ]` ([ReportService.kt:606-611](../../apps/api/src/main/kotlin/com/interviewos/api/interview/ReportService.kt#L606-L611)). A Devanagari quote becomes an empty string and is discarded, which removes every competency, strength or development area quoting it. Whether transcripts actually come back in Devanagari is UNKNOWN (query 4).
   - **Fix (2 h):** Unicode-aware matching (`\p{L}\p{N}`, NFC), with tests.
@@ -360,7 +417,7 @@ flowchart LR
   - **Fix:** check the hosted Auth → SMTP settings and configure a provider if needed.
 - **ARCH-017 / 018 / 019** (Low)
   - **ARCH-017:** add an index on `ai_calls(user_id)` ([ai_spend_ledger.sql:55](../../supabase/migrations/20260909120000_ai_spend_ledger.sql#L55)); without it, account deletion scans the whole ledger.
-  - **ARCH-018:** set `ADMIN_USER_IDS`. With email signup live, `allows()` ([AdminAccess.kt:43](../../apps/api/src/main/kotlin/com/interviewos/api/sources/AdminAccess.kt#L43)) depends on the `google` provider check.
+  - **ARCH-018 (defence in depth; reworded after review):** `allows()` ([AdminAccess.kt:43-50](../../apps/api/src/main/kotlin/com/interviewos/api/sources/AdminAccess.kt#L43-L50)) already requires an allow-listed email **and** a `google` entry in the server-set `app_metadata` providers. No escalation path was found. Abusing it would need email confirmation turned off *and* someone registering the admin's address before the admin first signs in with Google. Set `ADMIN_USER_IDS` anyway, since it costs one environment variable.
   - **ARCH-019:**
     - Question audio is stored as 24 kHz WAV (~48 KB/s; a 15 s opening is ~720 KB, slow on mobile networks); encode it to Opus or MP3 instead.
     - Lazy-load CodeMirror ([interview-room.tsx:10](../../apps/web/src/components/interview-room.tsx#L10)).
@@ -369,9 +426,12 @@ flowchart LR
 - **ARCH-021** (Medium)
   - **Problem:** every answer is uploaded to storage ([InterviewService.kt:615-647](../../apps/api/src/main/kotlin/com/interviewos/api/interview/InterviewService.kt#L615-L647)) and its path saved, but no query reads `answer_audio_path` and the web app has no playback. The report is built from transcripts. Question audio is only read during the round ([use-question-audio.ts](../../apps/web/src/lib/use-question-audio.ts)), yet it's kept until the 28-day sweep.
   - **Impact:** storage and egress spend, background-executor load (ARCH-002), and retained voice recordings that serve no feature.
-  - **Fix (S, 3–4 h):**
-    - Stop uploading answer audio.
-    - When a round ends, queue the existing storage-deletion job for `{userId}/{sessionId}`.
+  - **Needs owner decision D1 first** (*added after review*). The owner's stated direction (§12) is to keep uploading and delete once the report exists. An earlier version of this audit recommended not uploading at all without flagging that this differs.
+    - **Option A (recommended): stop uploading answer audio.** Nothing reads it, the report is built from transcripts, and a retried answer re-sends its audio from the browser. This removes the storage, egress, background-executor load and the retention of anybody's voice.
+    - **Option B (owner's stated direction): upload, then delete when the report is saved.** Recordings are kept for the length of the round plus the time until the report is opened, and the costs above remain. Choose this if you expect to build answer playback or re-assessment from audio.
+  - **Fix (S, 3–4 h after D1):**
+    - Option A: remove the upload. Option B: enqueue deletion of the answer files when `saveReport` succeeds, plus the 28-day sweep for rounds whose report is never opened.
+    - Either way: when a round ends, queue the existing storage-deletion job for its question audio.
     - Update the consent copy in `new-interview-form.tsx` and the privacy page in the same change; CLAUDE.md requires that copy to match what is kept.
 
 ---
@@ -408,6 +468,8 @@ Share of a normal round: assessments about 56%, speech about 29%, report about 1
 | AI per month, normal → if everything falls back | ~$135 → ~$530 | ~$1.3K → ~$5.3K | ~$13K → ~$53K |
 
 Loop-brief search grounding isn't in these numbers; it depends on the grounding price and how many distinct companies people ask about.
+
+The fall-back column is a lower bound. It prices only the call that succeeded, while a first attempt that returned bad JSON was billed too (ARCH-007). For the same reason, ledger-based figures (queries 2–3) under-count whenever calls fail.
 
 **Optimisations, ranked by savings after quality risk:**
 
@@ -463,9 +525,11 @@ Peak concurrency assumes 15% of a day's rounds fall in the busiest hour and an a
 | Gemini goes down mid-round | Falls back to the same vendor and the same key; Kimi can't hear audio. The round is failed honestly, but the allowance is still used | Partial (ARCH-014) |
 | A request is retried 3 times | Answers and hints replay the stored response by request id; starting a round is protected by the one-open-round unique index | PASS |
 | The user refreshes mid-operation | Answers: fine. Reports: 409 shown as an error | Partial (ARCH-004) |
+| The API dies while writing a report | Every request returns `report_generating` for 10 minutes | **FAIL** (ARCH-004) |
+| A user deletes their resume | Row deleted; file stays in storage until the account is deleted; nothing logged | **FAIL** (ARCH-022) |
 | The database is briefly down | 30 s wait then 500s; ledger writes are dropped; the model call may be paid twice | Acceptable |
 | A user tries another person's data | The API scopes every query checked to the caller (404 otherwise). The Data API is a separate question | PASS / **UNKNOWN** |
-| AI spending jumps 10× | No in-app brake; Google's cap shuts all AI off | **FAIL** (ARCH-007) |
+| AI spending jumps 10× | No in-app brake; the ledger under-counts the failures driving it; Google's cap shuts all AI off | **FAIL** (ARCH-007) |
 | A deploy happens during live rounds | 30 s drain, then a 10-minute lock on the interrupted question | **FAIL** (ARCH-003) |
 
 ---
@@ -474,8 +538,8 @@ Peak concurrency assumes 15% of a day's rounds fall in the busiest hour and an a
 
 | Candidate | Key and isolation | TTL | Verdict |
 |---|---|---|---|
-| `/usage` counts | Global, no user data | 60 s; staleness doesn't matter | **Do** (P1) |
-| Gemini prefix caching | Handled by Google per project; each prefix holds only that user's brief | Managed by Google | **Do, with the evaluation set** (P1) |
+| `/usage` counts | Global, no user data. The web app already caches it for 300 s; this protects against direct calls | 60 s; staleness doesn't matter | **Do** (P2) |
+| Gemini prefix caching | Handled by Google per project; each prefix holds only that user's brief | Managed by Google | **Only if the ARCH-008 probe shows cache hits**, then with the evaluation set (P2) |
 | Loop-brief research and knowledge | Already in memory, keyed by company/role/level, with no user data | 12 h / 7 d | Keep; move to the database only with more than one instance |
 | Redis | — | — | Not justified; Postgres tables are enough even with several instances |
 | Semantic caching, or reusing speech across users | — | — | **Don't**: wrong results, or deletion complexity |
@@ -498,7 +562,8 @@ Peak concurrency assumes 15% of a day's rounds fall in the busiest hour and an a
 | Spend circuit breaker | **FAIL** |
 | Database tests and migrations in CI | **FAIL** |
 | Rate limiting for unauthenticated traffic / WAF | **FAIL** / UNKNOWN |
-| Retention, deletion, storage-deletion queue | **PASS** |
+| Retention, round and account deletion, storage-deletion queue | **PASS** |
+| Resume deletion removes the file | **FAIL** (ARCH-022; was wrongly included in the PASS above before review) |
 | Personal data kept out of logs and Sentry | **PASS** |
 | Health probes | **PASS** |
 | Metrics and alerting | **FAIL** (health endpoint only) |
@@ -513,49 +578,68 @@ Peak concurrency assumes 15% of a day's rounds fall in the busiest hour and an a
 
 ## 8. Implementation roadmap
 
-**P0 — launch blockers (mandatory; about 4–5 engineer-days including the first deployment):**
+**This is the single remediation plan**, revised on 14 October 2026 after the second review ([§13](#13-review-of-the-second-reviewers-objections-14-october-2026)). It replaces every earlier version. Within each tier, items are listed in the order to do them.
 
-| # | Item | Effort | Depends on | Status |
-|---|---|---|---|---|
-| 1 | ARCH-001 + ARCH-011: migration plus the server-side path check | 3 h | Run verification query 1 first | Open |
-| 2 | ARCH-002: separate, non-blocking executors | 6 h | — | Open |
-| 3 | ARCH-003: lease derived from timeouts, plus shutdown drain | 3 h | — | Open |
-| 4 | ARCH-004: report page retries while the report is still generating | 3 h | — | Open |
-| 5 | ARCH-007 part 1: 4xx errors don't fall back; speech doesn't retry the identical model | 3 h | — | Open |
-| 6 | ARCH-020: upgrade Supabase to Pro; configure a custom SMTP provider (ARCH-016); do one restore drill from a daily backup | 2–4 h | Billing | Open |
-| 7 | Stand up hosting per §11, with the load-balancer timeout and shutdown settings from ARCH-003/004 | 1–2 days | — | Open |
+**Decisions the owner needs to make:**
 
-**P1 — before production traffic:**
+| ID | Decision | Recommendation | Blocks |
+|---|---|---|---|
+| D1 | Answer audio: stop uploading it (A), or upload and delete once the report is saved (B, the direction given earlier) | **A**: nothing reads it, and it's the only option that keeps no one's voice ([ARCH-021](#compact-findings)) | P1 audio item and the consent copy |
+| D2 | Go-ahead for the ARCH-008 caching probe (live spend, under $0.01) | Yes, after P0 | P2 prompt work |
 
-| Item | Effort | Status |
-|---|---|---|
-| ARCH-005 database tests | 16–24 h | Open |
-| ARCH-007 part 2: spend guard and fall-through alerts | 4–6 h | Open |
-| ARCH-006 cache `/usage` | 1 h | Open |
-| ARCH-009 Unicode-aware evidence matching | 2 h | Open |
-| ARCH-014 don't count rounds we failed | 1 h | Open |
-| ARCH-012 CAPTCHA and lower limits for uncached companies | 3–4 h | Open |
-| ARCH-013 whiteboard cap and state check | 2 h | Open |
-| ARCH-018 set `ADMIN_USER_IDS` | one env var | Open |
-| ARCH-008 prompt reorder, together with the evaluation set | 8–16 h | Open |
-| Sentry DSN plus alerts on 5xx rate, fall-through share and speech-unavailable rate | 4 h | Open |
+**P0 — before the API is reachable from the internet (about 5–6 engineer-days, including the first deployment):**
+
+| # | Item | Findings | Effort | Depends on | Status |
+|---|---|---|---|---|---|
+| 0 | Run verification queries 1 and 7 (read-only) | 001, 022 | 15 min | — | Open |
+| 1 | **Resume and storage deletion, one change.** Drop the unused client write policies and revoke client writes. Check ownership of every service-role path read from the database. Make resume delete enqueue an exact-path storage job in the same transaction as the row delete. Make the worker delete the exact object as well as the folder walk. Enqueue the files query 7 found. Verify once against `supabase start` before merging. | 001, 011, 022 | 5 h | Item 0 | Open |
+| 2 | Separate, non-blocking executors; chunk waits with a timeout | 002 | 6 h | — | Open |
+| 3 | **Renewed 60 s leases for answers, hints and reports** (one mechanism), plus shutdown-drain settings. No startup lease reset. Verify against `supabase start` before merging. | 003, 004 (server) | 6 h | — | Open |
+| 4 | Report page: poll `report_generating` and 502/504 with backoff for up to 10 minutes, then show "Try again" | 004 (client) | 3 h | Item 3 | Open |
+| 5 | Fallback classification: 4xx other than 408/429 don't fall back; bad JSON gets one retry on the same model; speech and embeddings skip providers with an identical model; 10 MB answer-upload cap | 007 part 1 | 3 h | — | Open |
+| 6 | Google Cloud billing budget alerts (50/90/100%) and a project spend cap (configuration only) | 007 | 30 min | — | Open |
+| 7 | Supabase Pro; custom SMTP provider; one restore drill from a daily backup | 020, 016 | 2–4 h | Billing | Open |
+| 8 | Hosting per §12 (one VM in Mumbai), with item 3's shutdown settings. Set `ADMIN_USER_IDS` in its config while there (ARCH-018). | — | 1 day | Items 1–3 | Open |
+
+**P1 — first weeks of real traffic:**
+
+| Item | Findings | Effort | Status |
+|---|---|---|---|
+| Database tests: Postgres in CI with migrations applied; lease, report-lease and deletion tests; one storage test against `supabase start`. First, because every later change touches SQL | 005 | 16–24 h | Open |
+| Complete the ledger (billed failures, estimated timeouts), then the daily spend guard with headroom and a fall-through alert | 007 part 2 | 6–8 h | Open |
+| Sentry DSN plus alerts on 5xx rate, fall-through share and speech-unavailable rate | — | 4 h | Open |
+| Answer audio per D1; question audio deleted when the round ends; consent copy and privacy page in the same change | 021 | 3–4 h | Blocked on D1 |
+| Don't count rounds we failed | 014 | 1 h | Open |
+| CAPTCHA on signup; lower limits for companies not already cached | 012 | 3–4 h | Open |
+| Unicode-aware evidence matching (run query 4 first) | 009 | 2 h | Open |
+| Whiteboard size cap and round-state check | 013 | 2 h | Open |
 
 **P2 — after launch, guided by real data:**
 
+- ARCH-008: query 2, then the probe (D2), then the evaluation set and reorder, **only if the probe shows cache hits**
+- ARCH-006: 60 s cache on `/usage` (the web app already caches it)
 - ARCH-010 temperature evaluation
 - ARCH-015 readiness for multiple instances
-- Polling backoff
-- Opus audio, lazy-loaded CodeMirror, pagination
-- ARCH-017
+- ARCH-017, and ARCH-019's polling backoff, Opus audio, lazy-loaded CodeMirror and pagination
 - Report thinking-budget experiment
 - Speech strategy decision
 - Splitting up the 1,741-line `InterviewService`, only once it starts slowing changes down
+
+**What changed from the previous plan:**
+
+- ARCH-022 added and merged into P0 item 1, because it rewrites the same delete as ARCH-001.
+- ARCH-003: renewed leases replace both the startup lease reset (unsafe with overlapping deploys) and the "≈ 4-minute" derived lease (no measured upper bound).
+- ARCH-004: crash recovery added on the server; the poll window grew from 5 to 10 minutes.
+- ARCH-007: Google billing alerts moved into P0; the ledger is completed before the spend guard depends on it.
+- ARCH-008 moved from P1 to P2, behind a measurement. ARCH-006 and ARCH-018 moved to P2 or into existing items.
+- ARCH-021 waits on owner decision D1.
+- §12's Supabase Free option is for a private beta only, not public launch.
 
 ---
 
 ## 9. Launch verdict: **CONDITIONAL GO**
 
-**Go once the P0 list is done.** If verification query 1 shows that `authenticated` can UPDATE `public.resumes`, the verdict is **NO-GO** until ARCH-001 ships, which is a few hours of work.
+**Go once the P0 list is done.** If verification query 1 shows that `authenticated` can UPDATE `public.resumes`, the verdict is **NO-GO** until P0 item 1 ships, which is a few hours of work. Either way, item 1 ships before the API is reachable from the internet.
 
 The foundations are better than most pre-launch codebases:
 
@@ -563,17 +647,17 @@ The foundations are better than most pre-launch codebases:
 - every query is scoped to the caller;
 - turns are idempotent;
 - failures are reported honestly instead of faked;
-- there's a spend ledger and a retention/deletion queue.
+- there's a spend ledger (a lower bound, until P1 completes it) and a retention/deletion queue for rounds and accounts.
 
 The defects are concentrated, specific and cheap to fix.
 
 ## 10. Top 5 highest-ROI changes
 
-1. Drop the unused client write policies and check storage paths server-side. About 3 h; closes cross-account deletion.
+1. Fix resume and storage deletion together (ARCH-001/011/022). About 5 h; closes cross-account deletion and makes resume deletion real.
 2. Separate, non-blocking executors. About 6 h; removes the outage-and-restart failure mode.
-3. Lease derived from timeouts, plus a shutdown drain. About 3 h; deploys stop breaking live rounds.
-4. Report-page retry. About 3 h; protects the page the product depends on.
-5. Fallback classification and a spend guard. About 6–8 h; stops silent 5× bills and the "Google cap = total outage" failure.
+3. Renewed leases plus report-page polling (ARCH-003/004). About 9 h; deploys and crashes stop locking questions and reports.
+4. Fallback classification plus Google billing alerts. About 3.5 h; stops silent 5× bills and gives a spend signal that doesn't depend on our own ledger.
+5. Complete the ledger, then add the spend guard. About 6–8 h; avoids the "Google cap = total outage" failure.
 
 ---
 
@@ -589,7 +673,7 @@ Nothing is hosted yet. The owner planned Vercel and AWS, and is on the Supabase 
 | API | AWS ECS on Fargate: 1 task (1 vCPU / 2 GB) behind an Application Load Balancer (ALB) with an ACM certificate on `api.<your-domain>` | `ap-south-1` (Mumbai) | Always-on container, so background speech, late uploads and scheduled jobs keep running. Takes 25 MB uploads and ~200 s requests. Rolling deploys with draining. |
 | Database, auth, storage | Supabase Pro, same project | `ap-south-1` | Backups, storage headroom, no pausing (ARCH-020) |
 | Secrets | AWS Secrets Manager or SSM Parameter Store, injected into the task | — | Keeps the service-role and Gemini keys out of images |
-| Deploys | GitHub Actions on `main`: build image → push to ECR → `supabase db push` → ECS rolling deploy, authenticated with GitHub OIDC (no long-lived AWS keys) | — | Migrations land before the code that needs them |
+| Deploys | GitHub Actions on `main`: build image → push to ECR → `supabase db push` → ECS rolling deploy, authenticated with GitHub OIDC (no long-lived AWS keys). A rolling deploy starts the new task before stopping the old one, so it's safe only with ARCH-003's renewed leases. | — | Migrations land before the code that needs them |
 
 ```mermaid
 flowchart LR
@@ -606,7 +690,7 @@ flowchart LR
 
 - **API on Vercel or Lambda:** these don't run a long-lived JVM server. Their request-body limits (4.5 MB on Vercel functions, 6 MB for synchronous Lambda) are below answer uploads. Work started after the response (speech, late uploads) is frozen, and `@Scheduled` jobs never run.
 - **AWS App Runner:** requests are cut at 120 s, which ends fallback assessments (up to 200 s) and long reports.
-- **A single EC2 or Lightsail VM with Docker:** cheapest (~$10–15 a month) and fine at 100 daily users. But every deploy is a restart without draining, which is exactly ARCH-003. Reasonable only if you accept short maintenance windows.
+- **A single EC2 or Lightsail VM with Docker:** cheapest (~$10–15 a month) and fine at 100 daily users. Every deploy is a restart. Once ARCH-003's renewed leases are in, a turn caught by a restart recovers within about a minute. Reasonable if you accept that brief interruption.
 
 **Settings that matter, tied to findings:**
 
@@ -669,7 +753,7 @@ Recommendation:
 
 Owner's direction:
 
-- delete interview audio once the report exists;
+- delete interview audio once the report exists (for answer audio, this audit recommends not uploading it at all; that is owner decision D1 in [§8](#8-implementation-roadmap));
 - plan for about 1,000 monthly active users;
 - the owner's estimate is about ₹7 per 30-minute round (first given as ₹15–20, corrected the same day), which matches the model in §4;
 - reduce AI cost per round as the next phase of work.
@@ -680,7 +764,7 @@ Rupee figures assume ₹88 per US dollar.
 
 | Data | Where | Needed after the round? | Plan |
 |---|---|---|---|
-| Answer recordings | Storage | No. Nothing reads them; the report is built from transcripts. | Stop uploading (ARCH-021) |
+| Answer recordings | Storage | No. Nothing reads them; the report is built from transcripts. | Decision D1: stop uploading (recommended), or delete when the report is saved (ARCH-021) |
 | Question audio (24 kHz WAV, ~4.8 MB per round) | Storage | No. Played once, during the round. | Delete when the round ends |
 | Resume PDF | Storage | No. The parsed JSON in the database is what's used, and the file is never served back. | Optional: delete after a successful parse |
 | Avatar | Storage | Yes | Keep (~100 KB per user) |
@@ -690,7 +774,7 @@ Rupee figures assume ₹88 per US dollar.
 | `interview_events` | Database | Operational only | Largest table: ~300 rows per round, including a heartbeat every 30 s. Cut retention to 7 days, or stop storing heartbeats. |
 | `ai_calls` | Database | Yes, for cost control | Keep (~30 small rows per round) |
 
-**Supabase Free at 1,000 monthly users after these changes** (estimates; check with queries 5–6):
+**Supabase Free at 1,000 monthly users after these changes: it doesn't fit** (estimates; check with queries 5–6):
 
 | Free-tier limit | Expected use | Fits? |
 |---|---|---|
@@ -699,25 +783,26 @@ Rupee figures assume ₹88 per US dollar.
 | 500 MB database | ~200 KB per round × 28-day retention ≈ 0.9 GB; ~0.3–0.4 GB with 7-day event retention | Borderline |
 | Backups | None | Only with your own nightly dump (e.g. a scheduled GitHub Action → private, encrypted S3 bucket) |
 
+**Conclusion (corrected after review):** Free fails on egress, is borderline on database size and has no backups. An earlier version of this section still priced it as a "lean" launch option, which contradicted ARCH-020. Making it fit would take Opus question audio, shorter event retention and a home-made backup job: about 2 days of work to save ~₹2,200 a month against an AI bill of ~₹37,500. **Use Free only for a private beta of a few dozen testers. Move to Pro before public launch (P0 item 7).**
+
 **Hosting at this scale:**
 
-- **API:** one 2 GB AWS Lightsail or EC2 (t4g.small) instance in Mumbai, ~$10–12 a month. Run Docker with Caddy for HTTPS, and deploy at night. Restarts are safe once ARCH-003's startup lease reset is in.
+- **API:** one 2 GB AWS Lightsail or EC2 (t4g.small) instance in Mumbai, ~$10–12 a month. Run Docker with Caddy for HTTPS, and deploy at night. Restarts are safe once ARCH-003's renewed leases are in: a turn caught by a restart recovers within about a minute.
 - **Web:** Vercel Hobby (free) until the product is commercial, then Pro.
 - **Upgrade path:** move to §11's Fargate setup when zero-downtime deploys or a second instance are needed.
 
 **Monthly cost at 1,000 monthly active users (assuming 5 rounds each = 5,000 rounds):**
 
-| Item | Lean (Supabase Free) | Recommended at public launch (Supabase Pro) |
-|---|---|---|
-| API VM | ~₹900–1,100 | ~₹900–1,100 |
-| Web (Vercel Hobby; ~₹1,760 a month on Pro once commercial) | ₹0 | ₹0 |
-| Supabase | ₹0 | ~₹2,200 |
-| Email (provider free tier) | ₹0 | ₹0 |
-| Own backups to S3 | <₹50 | Included |
-| **Infrastructure** | **~₹1,000** | **~₹3,300** |
-| **AI** at ~₹7.5 per round | ₹37,500 | ₹37,500 |
+| Item | Monthly |
+|---|---|
+| API VM | ~₹900–1,100 |
+| Web (Vercel Hobby; ~₹1,760 a month on Pro once commercial) | ₹0 |
+| Supabase Pro (daily backups included) | ~₹2,200 |
+| Email (provider free tier) | ₹0 |
+| **Infrastructure** | **~₹3,300** |
+| **AI** at ~₹7.5 per round | ₹37,500 |
 
-Infrastructure is 1–8% of the bill. AI per round is the number that matters.
+Infrastructure is about 8% of the bill. AI per round is the number that matters. During a private beta on Supabase Free, infrastructure is about ₹1,000 a month.
 
 **AI cost per round.** §4 models about ₹7.5 per round, and the owner's ~₹7 agrees. Query 3 confirms it from the ledger.
 
@@ -733,12 +818,12 @@ Infrastructure is 1–8% of the bill. AI per round is the number that matters.
 | Lever | Saving per round | Quality risk | Notes |
 |---|---|---|---|
 | Keep it from drifting up: 4xx errors don't fall back, a spend guard, fall-through alerts (ARCH-007) | Prevents ₹7.5 → up to ~₹30 if calls fall back to `gemini-3.5-flash` | None | Do first. It protects the baseline rather than lowering it. |
-| Prompt reorder for prefix caching (ARCH-008) | ~₹0.85 (~11%) | Medium | Needs the evaluation set. Only works if implicit caching applies to `gemini-3.1-flash-lite`. |
+| Prompt reorder for prefix caching (ARCH-008) | ~₹0.85 (~11%), unmeasured | Medium | Gated on the caching probe (D2), then the evaluation set. Only works if implicit caching applies to `gemini-3.1-flash-lite`. |
 | Trim or summarise conversation history after ~6 turns | ~₹0.3–0.5 | Medium | The interviewer may forget earlier answers; test against the evaluation set. |
 | Report thinking budget (~2,048 tokens) | ~₹0.3 | High | The report is the product. Blind A/B on ~20 reports. |
 | Interviewer voice: shorter spoken questions, browser voice as an opt-in or low-bandwidth mode, or a cheaper speech model if one appears | Up to ₹2.2 | Product decision | Speech cost scales with seconds spoken, not question difficulty. |
 
-Realistic targets: about **₹5.5–6** per round without touching the voice, or about **₹3.5–4** if the voice moves to the browser for some users.
+Realistic targets: about **₹5.5–6** per round without touching the voice, or about **₹3.5–4** if the voice moves to the browser for some users. Both assume the caching probe succeeds; without it, add about ₹0.85 to each target.
 
 **Usage range at 1,000 monthly users:**
 
@@ -749,6 +834,30 @@ Realistic targets: about **₹5.5–6** per round without touching the voice, or
 | 10 | 10,000 | ₹75,000 | ₹60,000 |
 
 The daily allowance (2 rounds a day) caps any one user at about 60 rounds a month.
+
+---
+
+## 13. Review of the second reviewer's objections (14 October 2026)
+
+A second reviewer (Codex) challenged this audit. Each objection was checked against the code at `f1c5d42`. The cited code is unchanged on the current `develop`; `page.tsx` changed, but not its usage fetch. All seven were accepted in whole or in part. The changes are already applied throughout this document.
+
+| # | Objection | Verdict | Evidence | Change made |
+|---|---|---|---|---|
+| 1 | Resume delete leaves the file in storage; no retry record | **Accepted, and worse than stated** | The path is a file ([ResumeService.kt:71](../../apps/api/src/main/kotlin/com/interviewos/api/resume/ResumeService.kt#L71)) but is listed as a folder, and the storage server appends `/` to list prefixes. The failure is silent, so even the error log never fires. | New ARCH-022; checklist PASS split; P0 item 1 |
+| 2 | Five-minute report polling can't outlast a crashed 10-minute report lease | **Accepted** | `REPORT_LEASE_SECONDS = 600` ([ReportService.kt:575](../../apps/api/src/main/kotlin/com/interviewos/api/interview/ReportService.kt#L575)); released only on in-process failure (240-246). | ARCH-004 gets the renewed lease plus a 10-minute poll |
+| 3a | Clearing leases at startup duplicates work during rolling deploys | **Accepted** | §11's ECS rolling deploy starts the new task first. The damage is bounded: the answer write is fenced (`answered_at is null and answer_request_id = :request`), so a duplicate costs a second assessment, not corrupt state. | Startup reset removed; renewed leases instead |
+| 3b | A "≈ 4-minute" lease needs a measured upper bound for the whole request | **Accepted** | The estimate counted model timeouts only, not database waits or uploads. | Renewal removes the need for an upper bound |
+| 4 | The ledger can't serve as actual spend | **Accepted** | Usage is written only on success ([FallbackInterviewAi.kt:163-168](../../apps/api/src/main/kotlin/com/interviewos/api/ai/FallbackInterviewAi.kt#L163-L168)), and the class's comment at line 240 admits it. Bad JSON throws before usage is read ([GeminiInterviewAi.kt:417-420](../../apps/api/src/main/kotlin/com/interviewos/api/ai/GeminiInterviewAi.kt#L417-L420)). | Ledger completion before the guard; Google billing alerts in P0; §4 figures marked as lower bounds |
+| 5 | `/usage` doesn't run per landing-page view | **Accepted** | `next: { revalidate: 300 }` at the audited revision; the only caller is the server-rendered landing page; no `dynamic` or `fetchCache` override. | ARCH-006 lowered to Low / P2; abuse concern kept |
+| 6a | The Free-tier plan contradicts ARCH-020 and fails its own table | **Accepted** | §12's table showed egress "No" and database "Borderline", yet priced Free as a launch option. | Free limited to private beta; the lean cost column removed |
+| 6b | "Never upload answer audio" differs from the owner's "delete after the report" | **Accepted** | §12 recorded one, ARCH-021 recommended the other, and neither flagged it. | Owner decision D1; this audit still recommends option A |
+| 7a | ARCH-018 is defence in depth, not an escalation | **Accepted** | `allows()` requires an allow-listed email and a `google` provider from server-set `app_metadata` ([AdminAccess.kt:43-50](../../apps/api/src/main/kotlin/com/interviewos/api/sources/AdminAccess.kt#L43-L50)). | Reworded; folded into P0 item 8's config at no cost |
+| 7b | ARCH-008's savings are unmeasured; check `cached_tokens` first | **Partly accepted** | The priority was wrong: an unmeasured saving shouldn't have been in P1. But today's `cached_tokens` can't settle the question. Per-turn values come first and there's no `systemInstruction`, so caching misses whether or not the model supports it. | Moved to P2, gated on query 2 and then a two-request probe (D2) |
+
+**Lessons for the next audit:**
+
+- A PASS was given to deletion from reading code and tests without checking the external API's semantics. The storage test mocks Supabase's responses, so it encodes the same assumption. Boundary behaviour needs a real-service check (ARCH-005).
+- Every proposed fix was reviewed for correctness, but not against the deployment plan in §11. The startup reset was only unsafe under that plan's rolling deploys.
 
 ---
 
@@ -787,6 +896,15 @@ from pg_stat_user_tables order by pg_total_relation_size(relid) desc limit 10;
 -- 6. File storage by bucket (§12, Free-tier 1 GB limit)
 select bucket_id, count(*) objects, pg_size_pretty(sum((metadata->>'size')::bigint)) total_size
 from storage.objects group by 1 order by 1;
+
+-- 7. Resume files left behind by deleted resumes (ARCH-022). Avatars share the bucket and are excluded.
+select o.name, o.created_at
+from storage.objects o
+where o.bucket_id = 'resumes'
+  and o.name not like '%/avatar-%'
+  and not exists (select 1 from public.resumes r
+                  where r.storage_bucket = o.bucket_id and r.storage_path = o.name)
+order by o.created_at;
 ```
 
 ## Open questions that would change the conclusions

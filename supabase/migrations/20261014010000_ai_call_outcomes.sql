@@ -5,4 +5,3 @@ alter table public.ai_calls
   add column outcome text not null default 'succeeded'
     check (outcome in ('succeeded', 'failed')),
   add column usage_estimated boolean not null default false;
-

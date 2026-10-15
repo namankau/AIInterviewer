@@ -147,6 +147,58 @@ class SessionRepositoryDatabaseIntegrationTest {
         openSession()
     }
 
+    @Test
+    fun `server failure refunds daily practice only when the session transitions to failed`() {
+        val failedSession = openSession()
+        repository.recordPracticeUsage(userId, failedSession, 30)
+        assertEquals(
+            1 to 30,
+            repository.practiceUsageSince(
+                userId,
+                java.time.Instant
+                    .now()
+                    .minusSeconds(60),
+            ),
+        )
+
+        assertFalse(repository.failSessionAndRefundUsage(failedSession, otherUserId))
+        assertEquals(
+            1 to 30,
+            repository.practiceUsageSince(
+                userId,
+                java.time.Instant
+                    .now()
+                    .minusSeconds(60),
+            ),
+        )
+        assertTrue(repository.failSessionAndRefundUsage(failedSession, userId))
+        assertFalse(repository.failSessionAndRefundUsage(failedSession, userId))
+        assertEquals(
+            0 to 0,
+            repository.practiceUsageSince(
+                userId,
+                java.time.Instant
+                    .now()
+                    .minusSeconds(60),
+            ),
+        )
+        assertEquals(1, count("public.sessions", "id", failedSession))
+
+        val completedSession = openSession()
+        repository.recordPracticeUsage(userId, completedSession, 30)
+        assertTrue(repository.markSessionStatus(completedSession, userId, "completed"))
+        assertFalse(repository.failSessionAndRefundUsage(completedSession, userId))
+        assertEquals(
+            1 to 30,
+            repository.practiceUsageSince(
+                userId,
+                java.time.Instant
+                    .now()
+                    .minusSeconds(60),
+            ),
+        )
+    }
+
     private fun openSession(): UUID =
         repository.insertSession(
             userId = userId,

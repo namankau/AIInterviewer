@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.sql.Timestamp
 import java.time.Instant
+import java.util.UUID
 
 /**
  * Writes the spend ledger.
@@ -88,6 +89,17 @@ class AiSpendRepository(
     override fun spentSince(since: Instant): Long =
         jdbcClient
             .sql("select coalesce(sum(micro_usd), 0) from public.ai_calls where occurred_at >= :since")
+            .param("since", Timestamp.from(since))
+            .query(Long::class.java)
+            .single()
+
+    override fun spentByUserSince(
+        userId: UUID,
+        since: Instant,
+    ): Long =
+        jdbcClient
+            .sql("select coalesce(sum(micro_usd), 0) from public.ai_calls where user_id = :userId and occurred_at >= :since")
+            .param("userId", userId)
             .param("since", Timestamp.from(since))
             .query(Long::class.java)
             .single()

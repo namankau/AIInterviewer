@@ -1,5 +1,9 @@
 package com.interviewos.api.loopbrief
 
+import com.interviewos.api.ai.AiSpendContext
+import com.interviewos.api.user.SupabaseIdentity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -16,8 +20,12 @@ class LoopBriefController(
 ) {
     @GetMapping
     fun brief(
+        @AuthenticationPrincipal jwt: Jwt,
         @RequestParam company: String,
         @RequestParam(required = false) role: String?,
         @RequestParam(required = false) level: String?,
-    ): LoopBriefView = service.brief(company, role, level)
+    ): LoopBriefView =
+        AiSpendContext.of(SupabaseIdentity.from(jwt).id, null) {
+            service.brief(company, role, level)
+        }
 }

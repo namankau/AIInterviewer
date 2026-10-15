@@ -1,8 +1,10 @@
 package com.interviewos.api.common
 
+import com.interviewos.api.ai.UserAiSpendGuard
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpStatus
@@ -12,6 +14,7 @@ import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 import java.time.Clock
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -80,9 +83,10 @@ internal data class LimitedRoute(
 
 @Configuration
 class AiRateLimitConfig(
+    private val userSpendGuard: ObjectProvider<UserAiSpendGuard>,
     @Value("\${interviewos.rate-limit.enabled:true}") private val enabled: Boolean,
     @Value("\${interviewos.rate-limit.round-drafts-per-hour:30}") roundDrafts: Int,
-    @Value("\${interviewos.rate-limit.loop-briefs-per-hour:40}") loopBriefs: Int,
+    @Value("\${interviewos.rate-limit.loop-briefs-per-hour:10}") loopBriefs: Int,
     @Value("\${interviewos.rate-limit.resume-uploads-per-hour:6}") resumeUploads: Int,
     @Value("\${interviewos.rate-limit.hints-per-hour:40}") hints: Int,
 ) : WebMvcConfigurer {
@@ -99,7 +103,6 @@ class AiRateLimitConfig(
         )
 
     override fun addInterceptors(registry: InterceptorRegistry) {
-        if (!enabled) return
         registry.addInterceptor(
             object : HandlerInterceptor {
                 override fun preHandle(
@@ -108,25 +111,43 @@ class AiRateLimitConfig(
                     handler: Any,
                 ): Boolean {
                     val route =
-                        routes.firstOrNull { it.method == request.method && it.pathPattern.matches(request.requestURI) }
-                            ?: return true
+                        routes.firstOrNull { enabled && it.method == request.method && it.pathPattern.matches(request.requestURI) }
+                    val spendGuarded =
+                        when (request.method) {
+                            "POST" -> request.requestURI in setOf("/api/v1/sessions", "/api/v1/round-drafts", "/api/v1/me/resume")
+                            "GET" -> request.requestURI in setOf("/api/v1/loop-brief", "/api/v1/prep-plan")
+                            else -> false
+                        }
+                    if (route == null && !spendGuarded) return true
                     // Unauthenticated requests never reach a controller; nothing to count.
                     val account =
                         (SecurityContextHolder.getContext().authentication?.principal as? Jwt)?.subject ?: return true
-                    val retryAfter = limiter.acquire("${route.name}:$account", route.perHour) ?: return true
-
-                    log
-                        .atWarn()
-                        .addKeyValue("user_id", account)
-                        .addKeyValue("limit", route.name)
-                        .addKeyValue("per_hour", route.perHour)
-                        .log("Rate limit reached")
-                    response.setHeader("Retry-After", retryAfter.toString())
-                    throw ApiException(
-                        HttpStatus.TOO_MANY_REQUESTS,
-                        "rate_limited",
-                        "That has been asked for a lot in the last hour. Try again in ${minutesOf(retryAfter)}.",
-                    )
+                    if (route != null) {
+                        val retryAfter = limiter.acquire("${route.name}:$account", route.perHour)
+                        if (retryAfter != null) {
+                            log
+                                .atWarn()
+                                .addKeyValue("user_id", account)
+                                .addKeyValue("limit", route.name)
+                                .addKeyValue("per_hour", route.perHour)
+                                .log("Rate limit reached")
+                            response.setHeader("Retry-After", retryAfter.toString())
+                            throw ApiException(
+                                HttpStatus.TOO_MANY_REQUESTS,
+                                "rate_limited",
+                                "That has been asked for a lot in the last hour. Try again in ${minutesOf(retryAfter)}.",
+                            )
+                        }
+                    }
+                    if (spendGuarded && userSpendGuard.ifAvailable?.reached(UUID.fromString(account)) == true) {
+                        log.atWarn().addKeyValue("user_id", account).log("Daily account AI spend cap reached")
+                        throw ApiException(
+                            HttpStatus.TOO_MANY_REQUESTS,
+                            "daily_ai_budget_reached",
+                            "You've reached today's AI practice budget. Try again tomorrow.",
+                        )
+                    }
+                    return true
                 }
             },
         )

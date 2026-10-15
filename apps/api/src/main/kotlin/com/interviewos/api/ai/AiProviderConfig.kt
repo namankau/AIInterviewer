@@ -1,5 +1,6 @@
 package com.interviewos.api.ai
 
+import com.interviewos.api.interview.EntitlementProperties
 import com.interviewos.api.interview.InterviewEventRecorder
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
@@ -50,6 +51,13 @@ class AiProviderConfig {
         properties: AiBudgetProperties,
         spend: AiSpendReadModel,
     ): DailyAiSpendGuard = DailyAiSpendGuard(properties, spend)
+
+    @Bean
+    fun userAiSpendGuard(
+        properties: AiBudgetProperties,
+        spend: AiSpendReadModel,
+        entitlement: EntitlementProperties,
+    ): UserAiSpendGuard = UserAiSpendGuard(properties, spend, entitlement.dayZone)
 
     @Bean
     fun interviewAi(

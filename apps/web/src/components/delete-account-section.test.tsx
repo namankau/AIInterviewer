@@ -38,7 +38,7 @@ describe("DeleteAccountSection", () => {
 
     await userEvent.click(screen.getByText(/^delete account$/i));
 
-    expect(screen.getByText(/report, transcript and voice recordings/i)).toBeInTheDocument();
+    expect(screen.getByText(/report and transcript/i)).toBeInTheDocument();
     const button = screen.getByRole("button", { name: /delete my account/i });
     expect(button).toBeDisabled();
 

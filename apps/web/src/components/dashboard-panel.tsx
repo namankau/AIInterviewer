@@ -3,10 +3,10 @@
 import type { EntitlementView, MeResponse, ReadinessGroup, SessionSummary } from "@untiered/shared";
 import type { Route } from "next";
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { DailyLimitNotice, isDailyLimitReached } from "@/components/daily-limit-notice";
-import { deleteSession, fetchEntitlement, fetchMe, fetchReadiness, fetchSessions } from "@/lib/api";
+import { deleteSession, fetchEntitlement, fetchMe, fetchReadiness, fetchSessions, SESSION_PAGE_SIZE } from "@/lib/api";
 import { featureEnabled } from "@/lib/flags";
 import { useAccessToken } from "@/lib/use-access-token";
 
@@ -79,12 +79,12 @@ export function DashboardLoadingState() {
  * report links and the same delete.
  */
 export function RoundHistoryPanel() {
-  const { visible, handleDelete } = useRoundData();
+  const { visible, handleDelete, loadMore } = useRoundData();
 
   if (!visible.loaded) {
     return <p className="text-body text-ink-muted">Loading your rounds…</p>;
   }
-  if (visible.sessions.length === 0) {
+  if (visible.sessions.length === 0 && !visible.hasMore) {
     const mockInterviewsEnabled = featureEnabled("mockInterviews");
     return (
       <div className="flex flex-col items-start gap-4 rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)]">
@@ -100,13 +100,33 @@ export function RoundHistoryPanel() {
       </div>
     );
   }
-  return <PastRoundsSection sessions={visible.sessions} onDelete={handleDelete} />;
+  return (
+    <div className="flex flex-col gap-5">
+      <PastRoundsSection sessions={visible.sessions} onDelete={handleDelete} />
+      {visible.hasMore ? (
+        <button
+          type="button"
+          onClick={() => void loadMore()}
+          disabled={visible.loadingMore}
+          className="action-secondary self-center disabled:cursor-wait disabled:opacity-60"
+        >
+          {visible.loadingMore ? "Loading more rounds…" : "Load more rounds"}
+        </button>
+      ) : null}
+      {visible.loadError ? (
+        <p role="alert" className="text-center text-caption text-warning">
+          More rounds could not be loaded. Please try again.
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 /** Sessions, entitlement and readiness for the signed-in account, plus round deletion. */
 function useRoundData() {
   const accessToken = useAccessToken();
   const [dashboard, setDashboard] = useState<DashboardState>(() => emptyDashboard(null));
+  const loadingToken = useRef<string | null>(null);
 
   // Identity changes are visible during render, before effects run. Never render data
   // whose owner is the token from a previous render, even for a single frame.
@@ -131,11 +151,16 @@ function useRoundData() {
       fetchMe({ accessToken }),
     ]).then(([ent, list, candidate]) => {
       if (!active) return;
+      const sessions = list.status === "fulfilled" ? list.value : [];
       setDashboard((current) => ({
         ownerToken: accessToken,
         entitlement: ent.status === "fulfilled" ? ent.value : null,
         me: candidate.status === "fulfilled" ? candidate.value : null,
-        sessions: list.status === "fulfilled" ? list.value : [],
+        sessions,
+        nextOffset: sessions.length,
+        hasMore: sessions.length === SESSION_PAGE_SIZE,
+        loadingMore: false,
+        loadError: false,
         readiness: current.ownerToken === accessToken ? current.readiness : [],
         loaded: true,
       }));
@@ -175,7 +200,11 @@ function useRoundData() {
       await deleteSession(operationToken, id);
       setDashboard((current) =>
         current.ownerToken === operationToken
-          ? { ...current, sessions: current.sessions.filter((session) => session.id !== id) }
+          ? {
+              ...current,
+              sessions: current.sessions.filter((session) => session.id !== id),
+              nextOffset: current.nextOffset - Number(current.sessions.some((session) => session.id === id)),
+            }
           : current,
       );
       try {
@@ -193,7 +222,47 @@ function useRoundData() {
     [accessToken],
   );
 
-  return { visible, handleDelete };
+  const loadMore = useCallback(async () => {
+    if (
+      !accessToken ||
+      !visible.loaded ||
+      !visible.hasMore ||
+      visible.loadingMore ||
+      loadingToken.current === accessToken
+    ) return;
+    const operationToken = accessToken;
+    const offset = visible.nextOffset;
+    loadingToken.current = operationToken;
+    setDashboard((current) =>
+      current.ownerToken === operationToken
+        ? { ...current, loadingMore: true, loadError: false }
+        : current,
+    );
+    try {
+      const page = await fetchSessions({ accessToken: operationToken }, { limit: SESSION_PAGE_SIZE, offset });
+      setDashboard((current) => {
+        if (current.ownerToken !== operationToken) return current;
+        const existing = new Set(current.sessions.map((session) => session.id));
+        return {
+          ...current,
+          sessions: [...current.sessions, ...page.filter((session) => !existing.has(session.id))],
+          nextOffset: offset + page.length,
+          hasMore: page.length === SESSION_PAGE_SIZE,
+          loadingMore: false,
+        };
+      });
+    } catch {
+      setDashboard((current) =>
+        current.ownerToken === operationToken
+          ? { ...current, loadingMore: false, loadError: true }
+          : current,
+      );
+    } finally {
+      if (loadingToken.current === operationToken) loadingToken.current = null;
+    }
+  }, [accessToken, visible]);
+
+  return { visible, handleDelete, loadMore };
 }
 
 interface DashboardState {
@@ -201,12 +270,27 @@ interface DashboardState {
   entitlement: EntitlementView | null;
   me: MeResponse | null;
   sessions: SessionSummary[];
+  nextOffset: number;
+  hasMore: boolean;
+  loadingMore: boolean;
+  loadError: boolean;
   readiness: ReadinessGroup[];
   loaded: boolean;
 }
 
 function emptyDashboard(ownerToken: string | null): DashboardState {
-  return { ownerToken, entitlement: null, me: null, sessions: [], readiness: [], loaded: false };
+  return {
+    ownerToken,
+    entitlement: null,
+    me: null,
+    sessions: [],
+    nextOffset: 0,
+    hasMore: false,
+    loadingMore: false,
+    loadError: false,
+    readiness: [],
+    loaded: false,
+  };
 }
 
 /**
@@ -496,9 +580,9 @@ export function PastRoundsSection({
   return (
     <section aria-labelledby="history" className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)] sm:p-6">
       <SectionHead
-        title={limit === undefined ? "All interviews" : "Recent interviews"}
+        title={limit === undefined ? "Interview history" : "Recent interviews"}
         id="history"
-        note={`${sessions.length} total`}
+        note={limit === undefined ? `${sessions.length} shown` : undefined}
       />
       {/*
         * The rule, stated before it bites rather than explained afterwards. A
@@ -508,8 +592,8 @@ export function PastRoundsSection({
         */}
       {retentionDays ? (
         <p className="max-w-prose text-caption text-ink-subtle">
-          Reports are kept for {retentionDays} days after the round. After that the report,
-          the transcript and the recording are deleted, and the round stays here as a line
+          Reports are kept for {retentionDays} days after the round. After that the report
+          and transcript are deleted, and the round stays here as a line
           without one. You can delete any round yourself before then.
         </p>
       ) : null}
@@ -520,10 +604,10 @@ export function PastRoundsSection({
       </ul>
       {hidden > 0 ? (
         <Link
-          href="/profile"
+          href="/history"
           className="self-start rounded-sm text-caption font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         >
-          See all {sessions.length} rounds in your profile
+          See more rounds in your history
         </Link>
       ) : null}
     </section>
@@ -592,8 +676,7 @@ function PastRound({
         <span aria-live="polite" className="empty:hidden">
           {confirming ? (
             <span className="text-caption text-ink-muted">
-              Delete this round for good? The report, the transcript and the recording go with
-              it.
+              Delete this round for good? The report and transcript go with it.
             </span>
           ) : null}
           {error ? <span className="text-caption text-danger">{error}</span> : null}

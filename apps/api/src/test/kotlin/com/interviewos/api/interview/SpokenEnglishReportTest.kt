@@ -234,7 +234,7 @@ class SpokenEnglishReportTest {
     }
 
     private fun storedTimingJson(): String? =
-        mockingDetails(harness.repository).invocations.single { it.method.name == "recordAnswer" }.arguments[12] as String?
+        mockingDetails(harness.repository).invocations.single { it.method.name == "recordAnswer" }.arguments[11] as String?
 
     private fun givenRunningRound() {
         given(harness.repository.findSession(sessionId, candidate)).willReturn(session("english", "in_progress"))

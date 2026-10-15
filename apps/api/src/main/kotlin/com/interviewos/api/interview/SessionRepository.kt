@@ -1,5 +1,6 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.storage.StorageProperties
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
@@ -18,6 +19,7 @@ import java.util.UUID
 @Repository
 class SessionRepository(
     private val jdbcClient: JdbcClient,
+    private val storageProperties: StorageProperties,
 ) {
     // -- entitlement inputs ---------------------------------------------------
 
@@ -183,14 +185,18 @@ class SessionRepository(
             .orElse(null)
 
     /**
-     * A candidate's rounds, newest first.
+     * A bounded page of a candidate's rounds, newest first.
      *
      * Returns rows rather than the API shape because when a round's report expires is
      * policy, not data — it is [RetentionProperties] applied to `retention_from`, and the
      * service does that arithmetic. The database's job here is to say when the round
      * happened and whether it has already been cleared.
      */
-    fun listSessions(userId: UUID): List<SessionListRow> =
+    fun listSessions(
+        userId: UUID,
+        limit: Int,
+        offset: Int,
+    ): List<SessionListRow> =
         jdbcClient
             .sql(
                 """
@@ -201,9 +207,12 @@ class SessionRepository(
                   from public.sessions s
                   left join public.session_reports r on r.session_id = s.id
                  where s.user_id = :u
-                 order by s.created_at desc
+                 order by s.created_at desc, s.id desc
+                 limit :limit offset :offset
                 """.trimIndent(),
             ).param("u", userId)
+            .param("limit", limit)
+            .param("offset", offset)
             .query { rs, _ ->
                 SessionListRow(
                     id = rs.getObject("id", UUID::class.java),
@@ -219,24 +228,89 @@ class SessionRepository(
                 )
             }.list()
 
+    /**
+     * A terminal transition and its media-deletion job are one database statement. The
+     * report only reads transcripts and assessments, so neither answer recordings nor
+     * the interviewer's played questions need to survive the end of the round.
+     */
     fun markSessionStatus(
         sessionId: UUID,
         userId: UUID,
         status: String,
-    ): Boolean =
-        jdbcClient
+    ): Boolean {
+        require(status in setOf("completed", "abandoned", "failed"))
+        return jdbcClient
             .sql(
                 """
-                update public.sessions
-                   set status = cast(:status as public.session_status),
-                       ended_at = case when :status in ('completed', 'abandoned', 'failed') then now() else ended_at end
-                 where id = :id and user_id = :u
-                   and status = 'in_progress'
+                with transitioned as (
+                    update public.sessions
+                       set status = cast(:status as public.session_status), ended_at = now()
+                     where id = :id and user_id = :u and status = 'in_progress'
+                    returning id, user_id
+                ), queued as (
+                    insert into public.storage_deletion_jobs
+                           (user_id, session_id, bucket, object_prefix, reason)
+                    select user_id, id, :bucket, :prefix, 'round_finished'
+                      from transitioned
+                     where true
+                    on conflict (bucket, object_prefix) do update
+                       set completed_at = null,
+                           next_attempt_at = now(),
+                           settle_after = greatest(public.storage_deletion_jobs.settle_after, now() + interval '15 minutes'),
+                           reason = excluded.reason,
+                           updated_at = now()
+                    returning id
+                ), cleared as (
+                    update public.session_turns t
+                       set question_audio_path = null,
+                           question_audio_status = 'unavailable'::public.speech_status,
+                           answer_audio_path = null,
+                           answer_video_path = null
+                      from transitioned
+                     where t.session_id = transitioned.id and t.user_id = transitioned.user_id
+                    returning t.session_id
+                )
+                select count(*) as changed from queued
                 """.trimIndent(),
             ).param("status", status)
             .param("id", sessionId)
             .param("u", userId)
-            .update() == 1
+            .param("bucket", storageProperties.mediaBucket)
+            .param("prefix", "$userId/$sessionId")
+            .query { rs, _ -> rs.getInt("changed") }
+            .single() == 1
+    }
+
+    /**
+     * A provider or server failure must not use up the candidate's daily allowance.
+     * The status transition and refund are one statement, so a racing completion cannot
+     * turn a completed round into a free one. A deleted round has no session to update;
+     * its usage row is deliberately left in place.
+     */
+    fun failSessionAndRefundUsage(
+        sessionId: UUID,
+        userId: UUID,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                with failed as (
+                  update public.sessions
+                     set status = 'failed', ended_at = now()
+                   where id = :id and user_id = :u and status = 'in_progress'
+                  returning id
+                ), refunded as (
+                  delete from public.practice_usage p using failed f
+                   where p.session_id = f.id and p.user_id = :u
+                  returning p.id
+                )
+                select exists(select 1 from failed) as changed,
+                       (select count(*) from refunded) as refunded_count
+                """.trimIndent(),
+            ).param("id", sessionId)
+            .param("u", userId)
+            .query { rs, _ -> rs.getBoolean("changed") }
+            .single()
 
     /**
      * Starts the round's clock, once: the moment the candidate enters the room.
@@ -302,14 +376,13 @@ class SessionRepository(
         sessionId: UUID,
         userId: UUID,
         boardJson: String,
-    ) {
+    ): Boolean =
         jdbcClient
-            .sql("update public.sessions set board = cast(:b as jsonb) where id = :id and user_id = :u")
+            .sql("update public.sessions set board = cast(:b as jsonb) where id = :id and user_id = :u and status = 'in_progress'")
             .param("b", boardJson)
             .param("id", sessionId)
             .param("u", userId)
-            .update()
-    }
+            .update() == 1
 
     // -- deletion and retention -----------------------------------------------
 
@@ -634,34 +707,13 @@ class SessionRepository(
                    set question_audio_path = :audio,
                        question_audio_status = cast(:status as public.speech_status)
                  where session_id = :s and user_id = :u and turn_index = :i
+                   and exists (
+                       select 1 from public.sessions s
+                        where s.id = :s and s.user_id = :u and s.status = 'in_progress'
+                   )
                 """.trimIndent(),
             ).param("audio", audioPath)
             .param("status", status.dbValue)
-            .param("s", sessionId)
-            .param("u", userId)
-            .param("i", turnIndex)
-            .update()
-    }
-
-    /**
-     * Links a recording that finished uploading after its answer was recorded. Only fills
-     * an empty path, so it can never replace one the answer was recorded with.
-     */
-    fun attachAnswerAudio(
-        sessionId: UUID,
-        userId: UUID,
-        turnIndex: Int,
-        audioPath: String,
-    ) {
-        jdbcClient
-            .sql(
-                """
-                update public.session_turns
-                   set answer_audio_path = :audio
-                 where session_id = :s and user_id = :u and turn_index = :i
-                   and answer_audio_path is null
-                """.trimIndent(),
-            ).param("audio", audioPath)
             .param("s", sessionId)
             .param("u", userId)
             .param("i", turnIndex)
@@ -914,7 +966,6 @@ class SessionRepository(
         userId: UUID,
         turnIndex: Int,
         transcript: String,
-        audioPath: String?,
         videoPath: String?,
         assessmentJson: String,
         nextAction: String,
@@ -930,7 +981,7 @@ class SessionRepository(
                 """
                 update public.session_turns
                    set answer_transcript = :t,
-                       answer_audio_path = :audio,
+                       answer_audio_path = null,
                        answer_video_path = :video,
                        answered_at = now(),
                        assessment = cast(:assessment as jsonb),
@@ -949,7 +1000,6 @@ class SessionRepository(
                    )
                 """.trimIndent(),
             ).param("t", transcript)
-            .param("audio", audioPath)
             .param("video", videoPath)
             .param("assessment", assessmentJson)
             .param("action", nextAction)

@@ -1,5 +1,6 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.ai.UserAiSpendGuard
 import com.interviewos.api.common.ApiErrorWriter
 import com.interviewos.api.common.ApiExceptionHandler
 import com.interviewos.api.config.ApiSecurityTestConfiguration
@@ -7,6 +8,7 @@ import com.interviewos.api.config.SecurityConfig
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
@@ -20,6 +22,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.util.UUID
 
 /**
  * The composer calls a model on every request, outside any round's clock, so it is capped
@@ -44,6 +47,9 @@ class RoundDraftRateLimitTest {
     @MockitoBean
     private lateinit var roundDeletion: RoundDeletion
 
+    @MockitoBean
+    private lateinit var userAiSpendGuard: UserAiSpendGuard
+
     @Test
     fun `answers 429 with Retry-After once an account passes its hourly cap`() {
         repeat(2) { draft("6f1b7f4c-2b2a-4c3e-9a51-0a5f4f2f2a11").andExpect(status().isOk) }
@@ -56,6 +62,17 @@ class RoundDraftRateLimitTest {
         // Another account still has its own allowance.
         draft("11111111-2222-3333-4444-555555555555").andExpect(status().isOk)
         verify(interviewService, times(3)).composeRound(ComposeRoundRequest("Infosys MR round"))
+    }
+
+    @Test
+    fun `account daily spend cap blocks a paid draft before the model runs`() {
+        val subject = "72222222-2222-3333-4444-555555555555"
+        `when`(userAiSpendGuard.reached(UUID.fromString(subject))).thenReturn(true)
+
+        draft(subject)
+            .andExpect(status().isTooManyRequests)
+            .andExpect(jsonPath("$.error").value("daily_ai_budget_reached"))
+        verify(interviewService, org.mockito.Mockito.never()).composeRound(ComposeRoundRequest("Infosys MR round"))
     }
 
     private fun draft(subject: String) =

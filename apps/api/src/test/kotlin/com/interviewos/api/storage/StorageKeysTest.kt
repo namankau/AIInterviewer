@@ -35,4 +35,15 @@ class StorageKeysTest {
         assertEquals(80, safe.length)
         assertTrue(safe.endsWith(".pdf"))
     }
+
+    @Test
+    fun `stored object keys must be direct children of the expected folder`() {
+        assertTrue(StorageKeys.isDirectChildOf("u1/resume.pdf", "u1"))
+        assertTrue(StorageKeys.isDirectChildOf("u1/s1/question.wav", "u1/s1"))
+        assertFalse(StorageKeys.isDirectChildOf("u2/resume.pdf", "u1"))
+        assertFalse(StorageKeys.isDirectChildOf("u1/s1/question.wav", "u1"))
+        assertFalse(StorageKeys.isDirectChildOf("u1/../u2/resume.pdf", "u1"))
+        assertFalse(StorageKeys.isDirectChildOf("u1/%2e%2e%2fu2", "u1"))
+        assertFalse(StorageKeys.isDirectChildOf("u1/", "u1"))
+    }
 }

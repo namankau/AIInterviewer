@@ -1,5 +1,6 @@
 package com.interviewos.api.ai
 
+import com.interviewos.api.interview.EntitlementProperties
 import com.interviewos.api.interview.InterviewEventRecorder
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
@@ -46,6 +47,19 @@ class AiProviderConfig {
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Bean
+    fun dailyAiSpendGuard(
+        properties: AiBudgetProperties,
+        spend: AiSpendReadModel,
+    ): DailyAiSpendGuard = DailyAiSpendGuard(properties, spend)
+
+    @Bean
+    fun userAiSpendGuard(
+        properties: AiBudgetProperties,
+        spend: AiSpendReadModel,
+        entitlement: EntitlementProperties,
+    ): UserAiSpendGuard = UserAiSpendGuard(properties, spend, entitlement.dayZone)
+
+    @Bean
     fun interviewAi(
         properties: AiProviderProperties,
         gemini: GeminiProperties,
@@ -54,6 +68,7 @@ class AiProviderConfig {
         restClientBuilder: RestClient.Builder,
         recorder: AiSpendRecorder,
         eventRecorder: InterviewEventRecorder,
+        spendGuard: DailyAiSpendGuard,
     ): InterviewAi {
         val configured =
             properties.providers.mapNotNull { provider ->
@@ -66,12 +81,13 @@ class AiProviderConfig {
                             restClientBuilder = restClientBuilder,
                             reasoningModel = provider.model.ifBlank { gemini.reasoningModel },
                             inRoomTimeout = provider.inRoomTimeout,
+                            recorder = recorder,
                         )
                     }
 
                     "openai", "openai-compatible" -> {
                         if (provider.configured) {
-                            OpenAiCompatibleInterviewAi(provider, prompts, objectMapper, restClientBuilder)
+                            OpenAiCompatibleInterviewAi(provider, prompts, objectMapper, restClientBuilder, recorder)
                         } else {
                             // A provider with no key is not an error worth failing startup
                             // over — it is a slot somebody has not filled in yet. Skipping
@@ -99,11 +115,12 @@ class AiProviderConfig {
                         objectMapper = objectMapper,
                         restClientBuilder = restClientBuilder,
                         reasoningModel = gemini.reasoningModel,
+                        recorder = recorder,
                     ),
                 )
             }
 
-        val ai = FallbackInterviewAi(chain, recorder, eventRecorder)
+        val ai = FallbackInterviewAi(chain, recorder, eventRecorder, spendGuard)
         log.info("Interview AI will try, in order: {}", ai.providerName)
         warnAboutSingleMultimodalProvider(chain)
         return ai

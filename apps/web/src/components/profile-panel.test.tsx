@@ -236,7 +236,7 @@ describe("ProfilePanel", () => {
     expect(screen.getByRole("heading", { name: "What you know" })).toBeVisible();
 
     await userEvent.click(screen.getByRole("tab", { name: "Reports" }));
-    expect(screen.getByRole("heading", { name: /complete practice history/i })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /recent interview reports/i })).toBeVisible();
     expect(screen.getByRole("link", { name: /read report/i })).toHaveAttribute("href", "/report/round-1");
   });
 

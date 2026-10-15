@@ -45,7 +45,7 @@ describe("ProgressPagePrototype", () => {
 
     const privacy = within(privacySection as HTMLElement);
     expect(privacy.getByText("Scores, rankings, and private feedback")).toBeInTheDocument();
-    expect(privacy.getByText("Answers, transcripts, and recordings")).toBeInTheDocument();
+    expect(privacy.getByText("Answers and transcripts")).toBeInTheDocument();
     expect(privacy.getByText("Resume details and employer targets")).toBeInTheDocument();
   });
 

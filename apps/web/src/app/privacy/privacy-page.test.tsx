@@ -15,10 +15,12 @@ vi.mock("@/lib/use-access-token", () => ({ useAccessToken: vi.fn(() => null) }))
 describe("legal pages", () => {
   beforeEach(() => vi.mocked(useAccessToken).mockReturnValue(null));
 
-  it("states the camera is never recorded and recordings go after the retention window", () => {
+  it("states answer audio is not saved, the camera is not recorded, and reports expire", () => {
     render(<PrivacyPage />);
 
     expect(screen.getByText(/your camera is never recorded/i)).toBeInTheDocument();
+    expect(screen.getByText(/we do not save that audio file/i)).toBeInTheDocument();
+    expect(screen.getByText(/spoken interviewer questions are queued for storage deletion/i)).toBeInTheDocument();
     expect(screen.getByText(/deleted 28 days after the interview/i)).toBeInTheDocument();
     expect(screen.getByText(/india \(mumbai, ap-south-1\)/i)).toBeInTheDocument();
     expect(screen.getByText(/never receives recordings of your voice/i)).toBeInTheDocument();

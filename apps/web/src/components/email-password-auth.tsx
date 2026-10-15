@@ -5,11 +5,13 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { TurnstileChallenge } from "@/components/turnstile-challenge";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Mode = "sign-in" | "sign-up" | "forgot";
 
 export function EmailPasswordAuth({ next }: { next: string }) {
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("sign-in");
   const [email, setEmail] = useState("");
@@ -18,6 +20,8 @@ export function EmailPasswordAuth({ next }: { next: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [challengeAttempt, setChallengeAttempt] = useState(0);
 
   function changeMode(value: Mode) {
     setMode(value);
@@ -25,6 +29,8 @@ export function EmailPasswordAuth({ next }: { next: string }) {
     setConfirmPassword("");
     setError(null);
     setSuccess(null);
+    setCaptchaToken(null);
+    setChallengeAttempt((attempt) => attempt + 1);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -37,6 +43,10 @@ export function EmailPasswordAuth({ next }: { next: string }) {
       setError("Passwords do not match.");
       return;
     }
+    if (turnstileSiteKey && !captchaToken) {
+      setError("Complete the security check before continuing.");
+      return;
+    }
 
     setPending(true);
     const supabase = createSupabaseBrowserClient();
@@ -46,6 +56,7 @@ export function EmailPasswordAuth({ next }: { next: string }) {
         callback.searchParams.set("next", "/auth/update-password");
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
           redirectTo: callback.toString(),
+          ...(captchaToken ? { captchaToken } : {}),
         });
         if (resetError) throw resetError;
         setSuccess("If an account exists for this email, a password reset link is on its way.");
@@ -55,7 +66,7 @@ export function EmailPasswordAuth({ next }: { next: string }) {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { emailRedirectTo: callback.toString() },
+          options: { emailRedirectTo: callback.toString(), ...(captchaToken ? { captchaToken } : {}) },
         });
         if (signUpError) throw signUpError;
         if (data.session) {
@@ -68,6 +79,7 @@ export function EmailPasswordAuth({ next }: { next: string }) {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
+          ...(captchaToken ? { options: { captchaToken } } : {}),
         });
         if (signInError) throw signInError;
         router.replace(next as Route);
@@ -83,6 +95,10 @@ export function EmailPasswordAuth({ next }: { next: string }) {
       );
     } finally {
       setPending(false);
+      if (turnstileSiteKey) {
+        setCaptchaToken(null);
+        setChallengeAttempt((attempt) => attempt + 1);
+      }
     }
   }
 
@@ -125,9 +141,10 @@ export function EmailPasswordAuth({ next }: { next: string }) {
             <input id="auth-confirm-password" className={fieldClass} type="password" autoComplete="new-password" required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} disabled={pending} />
           </div>
         ) : null}
+        {turnstileSiteKey ? <TurnstileChallenge key={challengeAttempt} siteKey={turnstileSiteKey} onToken={setCaptchaToken} /> : null}
         {error ? <p role="alert" className="text-caption text-danger">{error}</p> : null}
         {success ? <p role="status" className="text-caption text-positive">{success}</p> : null}
-        <Button type="submit" disabled={pending} aria-busy={pending} className="w-full">
+        <Button type="submit" disabled={pending || (Boolean(turnstileSiteKey) && !captchaToken)} aria-busy={pending} className="w-full">
           {pending ? "Please wait…" : mode === "sign-up" ? "Create account" : mode === "forgot" ? "Send reset link" : "Sign in with email"}
         </Button>
       </form>

@@ -57,6 +57,45 @@ jobs:
         working-directory: apps/api
         run: ./gradlew ktlintCheck test build --no-daemon
 
+  database:
+    name: database (migrations, repository SQL, storage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Start local Supabase and apply every migration
+        run: |
+          npm run db:start
+          npm run db:reset -- --yes
+          service_key="$(node scripts/supabase.mjs status -o env | sed -n 's/^SERVICE_ROLE_KEY=//p' | tr -d '"')"
+          test -n "$service_key"
+          echo "::add-mask::$service_key"
+          echo "TEST_SUPABASE_SERVICE_KEY=$service_key" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Run database integration tests
+        working-directory: apps/api
+        env:
+          TEST_DB_URL: jdbc:postgresql://127.0.0.1:54322/postgres
+          TEST_DB_USER: postgres
+          TEST_DB_PASSWORD: postgres
+          TEST_SUPABASE_URL: http://127.0.0.1:54321
+        run: ./gradlew test --tests '*DatabaseIntegrationTest' --no-daemon
+
   # The deployment images, built (never pushed) so a broken Dockerfile fails here rather
   # than on the day of a deploy. Placeholder public values, as in the web job.
   images:

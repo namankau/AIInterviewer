@@ -8,7 +8,6 @@ import org.mockito.Mockito.mockingDetails
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 class CameraPrivacyTest {
@@ -17,7 +16,7 @@ class CameraPrivacyTest {
     private val sessionId = UUID.fromString("2b0e2f6c-7a1e-4a0f-9c3d-5c1b2f9a8e01")
 
     @Test
-    fun `an accepted answer stores and assesses audio only`() {
+    fun `an accepted answer assesses audio without storing it or video`() {
         given(harness.repository.findSession(sessionId, candidate)).willReturn(
             SessionRow(
                 id = sessionId,
@@ -60,13 +59,12 @@ class CameraPrivacyTest {
         )
 
         val uploads = mockingDetails(harness.storage).invocations.filter { it.method.name == "upload" }
-        assertEquals(1, uploads.size)
-        assertFalse((uploads.single().arguments[1] as String).contains("video"))
+        assertEquals(0, uploads.size)
 
         val modelCall = mockingDetails(harness.ai).invocations.single { it.method.name == "assessAnswer" }
         assertEquals(5, modelCall.arguments.size)
 
         val answerWrite = mockingDetails(harness.repository).invocations.single { it.method.name == "recordAnswer" }
-        assertNull(answerWrite.arguments[5], "the legacy answer_video_path column must stay empty")
+        assertNull(answerWrite.arguments[4], "the legacy answer_video_path column must stay empty")
     }
 }

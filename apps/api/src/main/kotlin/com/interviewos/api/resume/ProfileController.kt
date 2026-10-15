@@ -2,6 +2,7 @@ package com.interviewos.api.resume
 
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.storage.ObjectStorage
+import com.interviewos.api.storage.StorageKeys
 import com.interviewos.api.storage.StorageProperties
 import com.interviewos.api.user.SupabaseIdentity
 import com.interviewos.api.user.UserRepository
@@ -162,8 +163,13 @@ class ProfileController(
     ) = repository.deleteSkill(SupabaseIdentity.from(jwt).id, name)
 
     private fun details(userId: UUID): ProfileDetails {
+        val avatarPath =
+            repository.avatarPath(userId)?.takeIf { path ->
+                StorageKeys.isDirectChildOf(path, userId.toString()) &&
+                    path.substringAfterLast('/').startsWith("avatar-")
+            }
         val avatar =
-            repository.avatarPath(userId)?.let {
+            avatarPath?.let {
                 runCatching { storage.createSignedUrl(storageProperties.resumeBucket, it, AVATAR_URL_SECONDS) }.getOrNull()
             }
         val profile = repository.findProfile(userId)

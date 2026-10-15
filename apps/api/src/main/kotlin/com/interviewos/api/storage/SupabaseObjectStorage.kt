@@ -93,6 +93,10 @@ class SupabaseObjectStorage(
     ) {
         requireConfigured()
         try {
+            // Storage's list endpoint treats every prefix as a folder and appends '/'.
+            // Resume jobs name a single object, so remove that exact key first. Folder
+            // jobs safely get an empty result from this call, then use the walk below.
+            remove(bucket, listOf(prefix))
             deleteFolder(bucket, prefix, depth = 0)
         } catch (ex: RestClientException) {
             throw ObjectStorageException("Failed to delete objects under $bucket/$prefix.", ex)

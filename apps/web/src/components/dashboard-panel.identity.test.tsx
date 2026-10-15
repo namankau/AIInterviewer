@@ -1,11 +1,12 @@
 import type { SessionSummary } from "@untiered/shared";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DashboardPanel } from "./dashboard-panel";
+import { DashboardPanel, RoundHistoryPanel } from "./dashboard-panel";
 
 const auth = vi.hoisted(() => ({ token: "account-a" as string | null | undefined }));
 const api = vi.hoisted(() => ({
+  SESSION_PAGE_SIZE: 20,
   fetchEntitlement: vi.fn(),
   fetchMe: vi.fn(),
   fetchSessions: vi.fn(),
@@ -82,5 +83,58 @@ describe("DashboardPanel account isolation", () => {
 
     await waitFor(() => expect(api.fetchMe).toHaveBeenCalledTimes(1));
     expect(await screen.findByRole("link", { name: /start an interview/i })).toBeInTheDocument();
+  });
+
+  it("loads another bounded page on the history screen", async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => session(`${index}`, `Company ${index}`));
+    api.fetchSessions.mockResolvedValueOnce(firstPage).mockResolvedValueOnce([session("20", "Later company")]);
+
+    render(<RoundHistoryPanel />);
+    const more = await screen.findByRole("button", { name: "Load more rounds" });
+    expect(screen.getAllByRole("listitem")).toHaveLength(20);
+
+    fireEvent.click(more);
+    expect(api.fetchSessions).toHaveBeenLastCalledWith(
+      { accessToken: "account-a" },
+      { limit: 20, offset: 20 },
+    );
+    expect(await screen.findByText(/Later company/)).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(21);
+    expect(screen.queryByRole("button", { name: "Load more rounds" })).not.toBeInTheDocument();
+  });
+
+  it("does not show a late history page after the account changes", async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => session(`${index}`, `Private ${index}`));
+    let resolvePage!: (sessions: SessionSummary[]) => void;
+    api.fetchSessions.mockResolvedValueOnce(firstPage).mockImplementationOnce(
+      () => new Promise<SessionSummary[]>((resolve) => (resolvePage = resolve)),
+    ).mockResolvedValueOnce([]);
+
+    const view = render(<RoundHistoryPanel />);
+    fireEvent.click(await screen.findByRole("button", { name: "Load more rounds" }));
+    auth.token = "account-b";
+    view.rerender(<RoundHistoryPanel />);
+    await act(async () => resolvePage([session("late", "Late private company")]));
+
+    expect(screen.queryByText(/Late private company/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Private 0/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the page available for retry after a load failure", async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => session(`${index}`, `Company ${index}`));
+    api.fetchSessions.mockResolvedValueOnce(firstPage)
+      .mockRejectedValueOnce(new Error("temporary outage"))
+      .mockResolvedValueOnce([session("20", "Recovered company")]);
+
+    render(<RoundHistoryPanel />);
+    fireEvent.click(await screen.findByRole("button", { name: "Load more rounds" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/please try again/i);
+    fireEvent.click(screen.getByRole("button", { name: "Load more rounds" }));
+
+    expect(await screen.findByText(/Recovered company/)).toBeInTheDocument();
+    expect(api.fetchSessions).toHaveBeenLastCalledWith(
+      { accessToken: "account-a" },
+      { limit: 20, offset: 20 },
+    );
   });
 });

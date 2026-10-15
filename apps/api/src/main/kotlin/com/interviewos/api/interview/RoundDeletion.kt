@@ -18,19 +18,15 @@ import java.util.UUID
  *
  * - **The candidate deleting a past round** wants it gone. The session row goes too, so it
  *   leaves their history, because they asked for it to and it is theirs.
- * - **Retention** wants the evidence gone but the fact kept. The report, the transcript
- *   and the recordings are cleared; the session row survives, stamped
+ * - **Retention** wants the evidence gone but the fact kept. The report and transcript
+ *   are cleared; the session row survives, stamped
  *   `report_expired_at`. Progress in this product is derived from completed sessions
  *   rather than declared (CLAUDE.md), so deleting the row would quietly rewrite how much
  *   practice somebody has done — four weeks after a round they would be told they had
  *   never sat it.
  *
- * What both share, and the reason they live in one class, is the part that is easy to get
- * wrong: the recordings. Rows are the visible half of a deletion and the audio is the half
- * that matters. `CLAUDE.md` is unambiguous — "account deletion must actually delete,
- * including storage objects" — and a deletion that clears a candidate's transcript while
- * leaving their voice in a bucket is worse than not offering deletion at all, because it
- * has told them something untrue.
+ * What both share is durable storage cleanup. Rows are the visible half of deletion;
+ * interviewer audio and any legacy answer recordings also have to leave the bucket.
  */
 @Service
 class RoundDeletion(
@@ -42,7 +38,7 @@ class RoundDeletion(
 
     /**
      * Deletes one of the caller's own rounds and atomically records the durable job that
-     * removes its recordings. The HTTP request can finish once that job exists; storage
+     * removes its remaining media. The HTTP request can finish once that job exists; storage
      * cleanup continues independently and is retried until it succeeds.
      *
      * [userId] comes from the verified token and nowhere else. A session belonging to
@@ -153,18 +149,15 @@ class ReportRetentionJob(
 }
 
 /**
- * Twice a day, like the retention sweeps. Deleted rows are gone the moment the user asks;
- * this only clears the files behind them, and the privacy page promises that within a day.
- *
- * A pass drains the queue rather than taking one batch: at this interval a single batch
- * would cap throughput at a few hundred prefixes a day. The loop ends because every claimed
+ * Clear media promptly after a round ends, while also retrying account and retention purges.
+ * A pass drains the queue rather than taking one batch. The loop ends because every claimed
  * job leaves the due set, either completed or rescheduled into the future.
  */
 @Component
 class StorageDeletionRetryJob(
     private val worker: StorageDeletionWorker,
 ) {
-    @Scheduled(initialDelayString = "PT10S", fixedDelayString = "PT12H")
+    @Scheduled(initialDelayString = "PT10S", fixedDelayString = "PT1M")
     fun deleteDuePrefixes() {
         do {
             val claimed = worker.processDue(Instant.now())

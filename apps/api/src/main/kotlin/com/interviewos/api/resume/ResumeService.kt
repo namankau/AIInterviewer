@@ -137,14 +137,16 @@ class ResumeService(
         userId: UUID,
         id: UUID,
     ) {
-        val removed = repository.delete(id, userId) ?: throw ApiException.notFound()
-        // The row is gone either way; a stranded object is a data-protection problem, so
-        // the failure is logged loudly rather than swallowed.
-        try {
-            storage.deleteByPrefix(removed.storageBucket, removed.storagePath)
-        } catch (e: ObjectStorageException) {
-            log.error("Deleted resume {} but its stored file remains at {}", id, removed.storagePath, e)
+        val resume = repository.findLatest(userId)?.takeIf { it.id == id } ?: throw ApiException.notFound()
+        // The service role bypasses storage RLS. A path read from a mutable database row
+        // must never be used to delete an object outside this caller's resume folder.
+        if (resume.storageBucket != storageProperties.resumeBucket ||
+            !StorageKeys.isDirectChildOf(resume.storagePath, userId.toString())
+        ) {
+            log.error("Refusing to delete resume {} for {} with an invalid storage scope", id, userId)
+            throw ApiException.conflict("This resume could not be deleted safely. Please contact support.", "invalid_resume_storage_scope")
         }
+        if (!repository.enqueueAndDelete(id, userId, resume.storageBucket, resume.storagePath)) throw ApiException.notFound()
     }
 
     /**

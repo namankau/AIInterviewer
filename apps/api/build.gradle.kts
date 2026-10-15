@@ -40,6 +40,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("tools.jackson.module:jackson-module-kotlin")
+    // The JDK has no MP3 encoder; keep question-audio compression in-process and platform-independent.
+    implementation("co.ntbl:lame:1.0.0")
     // Error reporting. Inert until SENTRY_DSN is set, so local runs and CI send nothing.
     implementation("io.sentry:sentry-spring-boot-4-starter:8.60.0")
     implementation("io.sentry:sentry-logback:8.60.0")

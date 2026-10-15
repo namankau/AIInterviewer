@@ -153,18 +153,15 @@ class ReportRetentionJob(
 }
 
 /**
- * Twice a day, like the retention sweeps. Deleted rows are gone the moment the user asks;
- * this only clears the files behind them, and the privacy page promises that within a day.
- *
- * A pass drains the queue rather than taking one batch: at this interval a single batch
- * would cap throughput at a few hundred prefixes a day. The loop ends because every claimed
+ * Clear media promptly after a round ends, while also retrying account and retention purges.
+ * A pass drains the queue rather than taking one batch. The loop ends because every claimed
  * job leaves the due set, either completed or rescheduled into the future.
  */
 @Component
 class StorageDeletionRetryJob(
     private val worker: StorageDeletionWorker,
 ) {
-    @Scheduled(initialDelayString = "PT10S", fixedDelayString = "PT12H")
+    @Scheduled(initialDelayString = "PT10S", fixedDelayString = "PT1M")
     fun deleteDuePrefixes() {
         do {
             val claimed = worker.processDue(Instant.now())

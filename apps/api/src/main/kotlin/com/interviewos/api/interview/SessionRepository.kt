@@ -1,5 +1,6 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.storage.StorageProperties
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
@@ -18,6 +19,7 @@ import java.util.UUID
 @Repository
 class SessionRepository(
     private val jdbcClient: JdbcClient,
+    private val storageProperties: StorageProperties,
 ) {
     // -- entitlement inputs ---------------------------------------------------
 
@@ -226,24 +228,57 @@ class SessionRepository(
                 )
             }.list()
 
+    /**
+     * A terminal transition and its media-deletion job are one database statement. The
+     * report only reads transcripts and assessments, so neither answer recordings nor
+     * the interviewer's played questions need to survive the end of the round.
+     */
     fun markSessionStatus(
         sessionId: UUID,
         userId: UUID,
         status: String,
-    ): Boolean =
-        jdbcClient
+    ): Boolean {
+        require(status in setOf("completed", "abandoned", "failed"))
+        return jdbcClient
             .sql(
                 """
-                update public.sessions
-                   set status = cast(:status as public.session_status),
-                       ended_at = case when :status in ('completed', 'abandoned', 'failed') then now() else ended_at end
-                 where id = :id and user_id = :u
-                   and status = 'in_progress'
+                with transitioned as (
+                    update public.sessions
+                       set status = cast(:status as public.session_status), ended_at = now()
+                     where id = :id and user_id = :u and status = 'in_progress'
+                    returning id, user_id
+                ), queued as (
+                    insert into public.storage_deletion_jobs
+                           (user_id, session_id, bucket, object_prefix, reason)
+                    select user_id, id, :bucket, :prefix, 'round_finished'
+                      from transitioned
+                    on conflict (bucket, object_prefix) do update
+                       set completed_at = null,
+                           next_attempt_at = now(),
+                           settle_after = greatest(public.storage_deletion_jobs.settle_after, now() + interval '15 minutes'),
+                           reason = excluded.reason,
+                           updated_at = now()
+                    returning id
+                ), cleared as (
+                    update public.session_turns t
+                       set question_audio_path = null,
+                           question_audio_status = 'unavailable'::public.speech_status,
+                           answer_audio_path = null,
+                           answer_video_path = null
+                      from transitioned
+                     where t.session_id = transitioned.id and t.user_id = transitioned.user_id
+                    returning t.session_id
+                )
+                select count(*) as changed from queued
                 """.trimIndent(),
             ).param("status", status)
             .param("id", sessionId)
             .param("u", userId)
-            .update() == 1
+            .param("bucket", storageProperties.mediaBucket)
+            .param("prefix", "$userId/$sessionId")
+            .query { rs, _ -> rs.getInt("changed") }
+            .single() == 1
+    }
 
     /**
      * Starts the round's clock, once: the moment the candidate enters the room.
@@ -641,6 +676,10 @@ class SessionRepository(
                    set question_audio_path = :audio,
                        question_audio_status = cast(:status as public.speech_status)
                  where session_id = :s and user_id = :u and turn_index = :i
+                   and exists (
+                       select 1 from public.sessions s
+                        where s.id = :s and s.user_id = :u and s.status = 'in_progress'
+                   )
                 """.trimIndent(),
             ).param("audio", audioPath)
             .param("status", status.dbValue)

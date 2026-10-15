@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,10 +16,16 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, refresh }) }));
 vi.mock("@/lib/supabase/client", () => ({
   createSupabaseBrowserClient: () => ({ auth: { signInWithPassword, signUp, resetPasswordForEmail } }),
 }));
+vi.mock("@/components/turnstile-challenge", () => ({
+  TurnstileChallenge: ({ onToken }: { onToken: (token: string) => void }) => (
+    <button type="button" onClick={() => onToken("verified-token")}>Complete security check</button>
+  ),
+}));
 
 describe("EmailPasswordAuth", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
     signInWithPassword.mockResolvedValue({ error: null });
     signUp.mockResolvedValue({ data: { session: null }, error: null });
     resetPasswordForEmail.mockResolvedValue({ error: null });
@@ -91,5 +97,21 @@ describe("EmailPasswordAuth", () => {
     await userEvent.type(screen.getByLabelText("Password"), "wrongpass");
     await userEvent.click(screen.getByRole("button", { name: "Sign in with email" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/did not work/i);
+  });
+
+  it("requires a fresh CAPTCHA token and sends it with sign-up", async () => {
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", "public-site-key");
+    render(<EmailPasswordAuth next="/dashboard" />);
+    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Email address" }), { target: { value: "candidate@example.com" } });
+    fireEvent.change(screen.getByLabelText("Password", { exact: true }), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "password123" } });
+    expect(screen.getAllByRole("button", { name: "Create account" })[1]).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Complete security check" }));
+    await userEvent.click(screen.getAllByRole("button", { name: "Create account" })[1]!);
+    await waitFor(() => expect(signUp).toHaveBeenCalledTimes(1));
+    expect(signUp.mock.calls[0]?.[0].options.captchaToken).toBe("verified-token");
+    await waitFor(() => expect(screen.getAllByRole("button", { name: "Create account" })[1]).toBeDisabled());
   });
 });

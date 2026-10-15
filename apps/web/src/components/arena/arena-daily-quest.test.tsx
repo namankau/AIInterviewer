@@ -13,6 +13,9 @@ vi.mock("@/components/arena/arena-play-panel", () => ({
     return <div data-testid="arena-play-panel">{String(props.startLabel)}</div>;
   },
 }));
+vi.mock("@/components/arena/import-browser-arena", () => ({
+  ImportBrowserArenaProgress: () => <div data-testid="arena-progress-import" />,
+}));
 
 function challenge(courseSlug: string, moduleTitle: string, id: string): Challenge {
   return {
@@ -63,11 +66,14 @@ describe("ArenaDailyQuest", () => {
     expect(screen.getByRole("heading", { name: "AI and Agentic AI" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "System Design" })).toBeInTheDocument();
     expect(capturedPanels).toHaveLength(0);
+    expect(screen.getByTestId("arena-progress-import")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Play Java Programming set" }));
 
     expect(screen.getByRole("heading", { name: "Java Programming" })).toBeInTheDocument();
     expect(screen.getByTestId("arena-play-panel")).toBeInTheDocument();
+    expect(screen.queryByTestId("arena-progress-import")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Play System Design set" })).not.toBeInTheDocument();
     expect(capturedPanels).toHaveLength(1);
     expect(capturedPanels[0]).toEqual(
       expect.objectContaining({
@@ -80,6 +86,7 @@ describe("ArenaDailyQuest", () => {
     await userEvent.click(screen.getByRole("button", { name: /choose another set/i }));
 
     expect(screen.queryByTestId("arena-play-panel")).not.toBeInTheDocument();
+    expect(screen.getByTestId("arena-progress-import")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Play System Design set" })).toBeInTheDocument();
   });
 });

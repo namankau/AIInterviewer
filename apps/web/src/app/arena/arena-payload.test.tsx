@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import ArenaCoursePage from "@/app/arena/[course]/page";
@@ -24,7 +24,7 @@ vi.mock("@/components/arena/arena-daily-quest", () => ({
     return null;
   },
 }));
-vi.mock("@/components/arena/progress-summary", () => ({ ProgressSummary: () => null }));
+vi.mock("@/components/arena/progress-summary", () => ({ ProgressSummary: () => <div>XP total</div> }));
 vi.mock("@/components/arena/import-browser-arena", () => ({ ImportBrowserArenaProgress: () => null }));
 vi.mock("@/components/app-shell", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -48,6 +48,9 @@ vi.mock("@/components/arena/arena-course-practice", () => ({
 describe("/arena — daily quest payload", () => {
   it("hands the client at most one daily quest's worth of challenges per possible date, never the whole corpus", async () => {
     render(<ArenaPage />);
+
+    expect(screen.queryByRole("heading", { name: "Keep practising by course" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/XP total/i)).not.toBeInTheDocument();
 
     const props = capturedDailyQuestProps.current;
     expect(props).not.toBeNull();

@@ -1,32 +1,30 @@
-# Handoff — 14 October 2026
+# Handoff — 15 October 2026
 
 ## Task
-Polish Arena cards, first-login profile setup, daily-progress recovery, typography, and tagline (direct request; no task file; PRD §05).
+Focus `/arena` on its daily questions by removing the lower practice cards and XP panel (direct request; no task file; PRD §08).
 
 ## What I built
-- `apps/web/src/components/courses/course-visuals.tsx`, `course-catalogue.tsx`, `arena-daily-quest.tsx`, and `app/arena/page.tsx`: shared illustrated card artwork and matching Arena layouts.
-- `apps/web/src/components/account-summary.tsx`: a one-time profile setup prompt for accounts without role details, plus an account-load retry and safe account switching.
-- `apps/web/src/lib/arena/progress-store.ts` and `components/dashboard-question-of-day.tsx`: retryable daily-progress fetch failure with clear messaging.
-- `apps/web/src/app/globals.css`, `app/page.tsx`, and `components/site-footer.tsx`: editorial display headlines and “Talent has no tiers.” tagline.
+- `apps/web/src/app/arena/page.tsx`: removed the hero, course practice cards, and progress summary so the daily quest is the Arena page content.
+- `apps/web/src/components/arena/arena-daily-quest.tsx`: kept legacy progress import available while choosing a set and hidden while answering; made the main heading an `h1`.
+- `apps/web/src/app/arena/arena-payload.test.tsx` and `apps/web/src/components/arena/arena-daily-quest.test.tsx`: checked the removed panel stays absent and the active question view hides selection controls.
 
 ## Assumptions I made
-- An account with no function, current level, or target level needs a setup prompt. Dismissing it stores a per-account “seen” flag in this browser; profile details remain optional.
-- The screenshot's failed fetch is not caused by a new account alone: the Arena API returns zero progress when no Arena rows exist. The actual production failure needs request logs to identify.
-- The requested distinctive type applies to large display headlines while card titles and controls stay sans.
+- The screenshot's lower practice cards and XP panel are the content to remove. The daily course choices remain so a learner can pick which question set to answer.
+- The existing `/arena/[course]` routes remain accessible through course chapters; this change only simplifies the Arena landing page.
 
 ## What I could NOT verify
-- The actual production cause of the intermittent fetch error, live sign-in/profile flow, and final visual judgement. No live AI calls were made.
+- Final visual judgement in the owner's running environment. No live AI calls were made.
 
 ## Verification status
-- Frontend typecheck, lint, tests (77 files, 3,039 tests), and production build: pass. Vitest used a workspace temp directory to avoid an intermittent Windows sandbox temp-file error.
+- Frontend typecheck, lint, full tests (79 files, 3,055 tests), and production build: pass. The final targeted tests passed (2 files, 3 tests); a transient Windows sandbox temp-file error required retrying them with a workspace temp directory.
 - Backend `ktlintCheck test build`: pass.
-- GitHub CI: pending at handoff writing; review PR checks before merge.
+- GitHub CI run 38753294276: pass (web, API, database, Docker images).
 
 ## Merge status
-- Branch `feat/arena-onboarding-brand` pushed. PR #81 opened into `develop`: https://github.com/softzenith-projects/Untiered/pull/81. Unmerged because the first-login account flow needs human review under the repository's auth rule.
+- Branch `fix/arena-question-focus` (feature commit `97e0380`) merged into `develop` in this merge commit after green CI.
 
 ## Suggested next task
-- Review PR #81 and inspect a failing production request in browser network logs if daily-progress errors continue.
+- Review the focused Arena layout in the running app.
 
 ## Open questions for you
-- None for code review; final visual direction remains yours.
+- None.

@@ -40,6 +40,7 @@ class FallbackInterviewAi(
      */
     private val recorder: AiSpendRecorder = AiSpendRecorder.NONE,
     private val eventRecorder: InterviewEventRecorder = InterviewEventRecorder.NONE,
+    private val spendGuard: DailyAiSpendGuard? = null,
 ) : InterviewAi {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -145,6 +146,7 @@ class FallbackInterviewAi(
         model: String? = null,
         work: (InterviewAi) -> AiResult<T>,
     ): AiResult<T> {
+        spendGuard?.check(call)
         val capable = providers.filter { capability in it.capabilities }
         val ordered = if (capability in TRY_STRONGEST_FIRST) capable.reversed() else capable
         val seen = mutableSetOf<String>()
@@ -165,7 +167,7 @@ class FallbackInterviewAi(
             val startedAt = System.nanoTime()
             recordProviderEvent(call, provider.providerName, "provider_attempt_started", "started")
             try {
-                val result = work(provider)
+                val result = AiSpendContext.withCall(call) { work(provider) }
                 val fellBackFrom = if (index > 0) able[index - 1].providerName else null
                 if (fellBackFrom != null) {
                     log.info("{} was served by {} after {} failed", call, provider.providerName, fellBackFrom)
@@ -242,11 +244,8 @@ class FallbackInterviewAi(
      * turn because a ledger insert deadlocked, so every failure here is swallowed with a
      * line in the log — the money is already spent whether or not the row lands.
      *
-     * **The recorded figure is a lower bound when [fellBackFrom] is set.** A provider that
-     * refused on quota was not billed and cost nothing, but one that answered with
-     * unusable JSON was billed in full and its usage died with the exception. So a
-     * fall-through costs *at least* what is written here, and the field naming it is the
-     * flag to go and look.
+     * Failed provider responses with usage metadata now have separate ledger rows.
+     * Timeout rows are estimates and can still miss output the provider generated.
      */
     private fun write(
         call: String,

@@ -33,7 +33,6 @@ class InterviewStateTransitionTest {
                 candidate,
                 2,
                 "An answer.",
-                "$candidate/$sessionId/turn-2-answer.webm",
                 null,
                 harness.mapper.writeValueAsString(harness.assessment),
                 "move_on",

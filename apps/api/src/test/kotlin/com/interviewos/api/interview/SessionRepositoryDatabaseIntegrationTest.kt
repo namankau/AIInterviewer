@@ -1,5 +1,6 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.storage.StorageProperties
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -26,7 +27,7 @@ class SessionRepositoryDatabaseIntegrationTest {
                 System.getenv("TEST_DB_PASSWORD") ?: "postgres",
             ),
         )
-    private val repository = SessionRepository(jdbc)
+    private val repository = SessionRepository(jdbc, StorageProperties())
 
     @BeforeEach
     fun createUsers() {
@@ -60,7 +61,6 @@ class SessionRepositoryDatabaseIntegrationTest {
                 0,
                 "stale",
                 null,
-                null,
                 "{}",
                 "move_on",
                 "none",
@@ -75,7 +75,6 @@ class SessionRepositoryDatabaseIntegrationTest {
                 userId,
                 0,
                 "real answer",
-                null,
                 null,
                 "{}",
                 "move_on",
@@ -134,6 +133,59 @@ class SessionRepositoryDatabaseIntegrationTest {
         assertEquals(0, count("public.sessions", "id", sessionId))
         assertEquals(0, count("public.session_turns", "session_id", sessionId))
         assertEquals(1, count("public.storage_deletion_jobs", "session_id", sessionId))
+    }
+
+    @Test
+    fun `ending a round clears media paths and queues one owned storage purge`() {
+        val sessionId = openSession()
+        assertTrue(repository.insertTurn(sessionId, userId, 0, "Question", TurnPhase.MAIN, SpeechStatus.READY, null))
+        jdbc
+            .sql(
+                """
+                update public.session_turns
+                   set question_audio_path = :question, answer_audio_path = :answer
+                 where session_id = :s and user_id = :u
+                """.trimIndent(),
+            ).param("question", "$userId/$sessionId/turn-0-question.wav")
+            .param("answer", "$userId/$sessionId/turn-0-answer.webm")
+            .param("s", sessionId)
+            .param("u", userId)
+            .update()
+
+        assertFalse(repository.markSessionStatus(sessionId, otherUserId, "completed"))
+        assertTrue(repository.markSessionStatus(sessionId, userId, "completed"))
+        assertFalse(repository.markSessionStatus(sessionId, userId, "completed"))
+
+        assertEquals(
+            1,
+            jdbc
+                .sql(
+                    """
+                    select count(*) from public.session_turns
+                     where session_id = :s and user_id = :u
+                       and question_audio_path is null and answer_audio_path is null
+                       and question_audio_status = 'unavailable'
+                    """.trimIndent(),
+                ).param("s", sessionId)
+                .param("u", userId)
+                .query(Int::class.java)
+                .single(),
+        )
+        assertEquals(
+            1,
+            jdbc
+                .sql(
+                    """
+                    select count(*) from public.storage_deletion_jobs
+                     where session_id = :s and user_id = :u and bucket = 'interview-media'
+                       and object_prefix = :prefix and reason = 'round_finished'
+                    """.trimIndent(),
+                ).param("s", sessionId)
+                .param("u", userId)
+                .param("prefix", "$userId/$sessionId")
+                .query(Int::class.java)
+                .single(),
+        )
     }
 
     @Test

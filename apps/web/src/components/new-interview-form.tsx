@@ -827,9 +827,9 @@ function RoundSetup({
       <fieldset className="flex flex-col gap-4 rounded-2xl border border-accent/25 bg-accent-wash p-5 shadow-[var(--shadow-sm)] sm:p-6">
         <legend className="px-2 text-heading text-ink">Before we start</legend>
         <p className="text-caption text-ink-muted">
-          This interview is spoken. Nothing is recorded until you agree, and everything
-          recorded is private to your account — you can delete it at any time. Recordings,
-          transcripts and the report are deleted after 28 days.{" "}
+          This interview is spoken. With your consent, each answer is recorded in your browser
+          and sent to Gemini for assessment. We do not save the answer audio. Your transcript and
+          report are kept for 28 days, and you can delete them earlier.{" "}
           <Link href={"/privacy" as Route} target="_blank" className="font-medium text-accent hover:underline">
             How we handle your data
           </Link>
@@ -838,7 +838,7 @@ function RoundSetup({
           checked={consentAudio}
           onChange={setConsentAudio}
           title="Record my voice"
-          detail="Required. Your answers are assessed from what you say."
+          detail="Required. Each recording is used to assess your answer, then discarded after processing."
         />
         <Consent
           checked={cameraOn}

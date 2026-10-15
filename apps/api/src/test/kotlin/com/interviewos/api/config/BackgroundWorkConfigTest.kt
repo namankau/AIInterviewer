@@ -10,10 +10,9 @@ import kotlin.test.assertTrue
 
 class BackgroundWorkConfigTest {
     @Test
-    fun `speech saturation rejects promptly while uploads still have capacity`() {
+    fun `speech saturation rejects promptly`() {
         val config = BackgroundWorkConfig()
         val speech = config.interviewSpeechExecutor()
-        val uploads = config.interviewUploadExecutor()
         val occupied = CountDownLatch(32)
         val release = CountDownLatch(1)
         try {
@@ -58,10 +57,6 @@ class BackgroundWorkConfigTest {
             } finally {
                 baselineRelease.countDown()
             }
-
-            val uploaded = CountDownLatch(1)
-            uploads.execute { uploaded.countDown() }
-            assertTrue(uploaded.await(2, TimeUnit.SECONDS))
         } finally {
             release.countDown()
         }

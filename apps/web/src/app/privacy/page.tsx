@@ -45,9 +45,10 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong className="text-ink">Your interviews:</strong> the company and role you practise
-            for, recordings of your spoken answers, the transcript, the interviewer&rsquo;s
-            questions, and the report and scores written about your answers. We record only after
-            you agree to it, and we store the time you agreed.
+            for, the spoken answers you submit, their transcripts, the interviewer&rsquo;s
+            questions, and the report and scores written about your answers. We record each
+            answer in your browser only after you agree to it, and we store the time you agreed.
+            The answer audio is sent to Gemini for assessment; we do not save that audio file.
           </li>
           <li>
             <strong className="text-ink">Your learning:</strong> which course chapters you finish
@@ -79,7 +80,7 @@ export default function PrivacyPage() {
           <li>To keep the service secure and working, and to fix errors.</li>
         </ul>
         <p>
-          We do not sell your data, show you advertising, or use your recordings, resume or reports
+          We do not sell your data, show you advertising, or use your answers, resume or reports
           to train AI models.
         </p>
       </LegalSection>
@@ -119,11 +120,14 @@ export default function PrivacyPage() {
       <LegalSection id="retention" title="How long we keep it">
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            <strong className="text-ink">Reports, transcripts and recordings</strong> are deleted{" "}
-            {LEGAL.reportRetentionDays} days after the interview. A short line stays in your history
+            <strong className="text-ink">Answer audio</strong> is used for assessment and is not saved
+            as a recording. Spoken interviewer questions are queued for storage deletion when the
+            round ends; failed deletion attempts are retried. <strong className="text-ink">Reports
+            and transcripts</strong> are deleted {LEGAL.reportRetentionDays} days after the interview.
+            A short line stays in your history
             (company, role, date and whether it finished) so your progress still adds up.
           </li>
-          <li>You can delete any interview yourself at any time, with its report, transcript and recordings.</li>
+          <li>You can delete any interview yourself at any time, with its report and transcript.</li>
           <li>Your resume, profile and learning progress are kept until you delete them or your account.</li>
           <li>
             <strong className="text-ink">Deleting your account</strong> (Profile → Account) deletes
@@ -139,7 +143,7 @@ export default function PrivacyPage() {
           <li>ask what personal data we hold about you and how we use it;</li>
           <li>correct or update it (most of it you can change yourself on your profile);</li>
           <li>have it erased: delete an interview, or your whole account, at any time;</li>
-          <li>withdraw your consent. Recording stops when you stop an interview, and you can delete what was recorded;</li>
+          <li>withdraw your consent. Recording stops when you stop an interview, and you can delete its transcript and report;</li>
           <li>ask how to exercise any privacy rights available to you under applicable law;</li>
           <li>raise a complaint with us about how we handle your data.</li>
         </ul>

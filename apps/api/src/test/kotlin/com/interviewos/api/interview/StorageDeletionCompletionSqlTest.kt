@@ -1,5 +1,6 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.storage.StorageProperties
 import org.junit.jupiter.api.Test
 import org.mockito.Answers
 import org.mockito.ArgumentMatchers.anyString
@@ -60,7 +61,7 @@ class StorageDeletionCompletionSqlTest {
         val statement = mock(JdbcClient.StatementSpec::class.java, Answers.RETURNS_SELF)
         given(client.sql(anyString())).willReturn(statement)
         given(statement.update()).willReturn(1)
-        return RepositoryHarness(SessionRepository(client), client, statement)
+        return RepositoryHarness(SessionRepository(client, StorageProperties()), client, statement)
     }
 
     private data class RepositoryHarness(

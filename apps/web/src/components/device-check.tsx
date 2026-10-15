@@ -256,7 +256,7 @@ export function DeviceCheck({
       label: "Your words on screen",
       detail:
         transcript === "passed"
-          ? "You will see what we are hearing as you talk. It is a mirror — the report is built from the recording, not from this."
+          ? "You will see what we are hearing as you talk. It is a mirror — the report uses the assessed answer and transcript, not this browser preview."
           : transcript === "noted"
             ? "This browser cannot mirror your words back; Chrome and Edge can. Nothing else changes — the round is unaffected."
             : "Whether this browser can show your words back to you as you talk.",

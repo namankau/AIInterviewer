@@ -83,7 +83,7 @@ describe("DashboardView deletion and retention", () => {
     expect(onDelete).not.toHaveBeenCalled();
     // And it says what will go, before it goes.
     expect(
-      screen.getByText(/the report, the transcript and the recording go with it/i),
+      screen.getByText(/the report and transcript go with it/i),
     ).toBeInTheDocument();
   });
 

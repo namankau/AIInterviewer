@@ -112,7 +112,7 @@ class RoundScopeServiceTest {
 
         val recordedAnswer =
             mockingDetails(harness.repository).invocations.single { it.method.name == "recordAnswer" }
-        assertEquals("move_on", recordedAnswer.arguments[7])
+        assertEquals("move_on", recordedAnswer.arguments[6])
     }
 
     @Test
@@ -164,7 +164,7 @@ class RoundScopeServiceTest {
         assertTrue(mockingDetails(harness.repository).invocations.none { it.method.name == "markSessionStatus" })
         val recordedAnswer =
             mockingDetails(harness.repository).invocations.single { it.method.name == "recordAnswer" }
-        assertEquals("move_on", recordedAnswer.arguments[7])
+        assertEquals("move_on", recordedAnswer.arguments[6])
     }
 
     private fun customStart(

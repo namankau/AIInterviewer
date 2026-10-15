@@ -592,8 +592,8 @@ export function PastRoundsSection({
         */}
       {retentionDays ? (
         <p className="max-w-prose text-caption text-ink-subtle">
-          Reports are kept for {retentionDays} days after the round. After that the report,
-          the transcript and the recording are deleted, and the round stays here as a line
+          Reports are kept for {retentionDays} days after the round. After that the report
+          and transcript are deleted, and the round stays here as a line
           without one. You can delete any round yourself before then.
         </p>
       ) : null}
@@ -676,8 +676,7 @@ function PastRound({
         <span aria-live="polite" className="empty:hidden">
           {confirming ? (
             <span className="text-caption text-ink-muted">
-              Delete this round for good? The report, the transcript and the recording go with
-              it.
+              Delete this round for good? The report and transcript go with it.
             </span>
           ) : null}
           {error ? <span className="text-caption text-danger">{error}</span> : null}

@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.task.TaskExecutor
 import org.springframework.dao.DuplicateKeyException
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
@@ -1199,8 +1200,13 @@ class InterviewService(
         sessionId: UUID,
         board: JsonNode,
     ) {
-        repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
-        repository.setBoard(sessionId, userId, objectMapper.writeValueAsString(board))
+        val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
+        if (session.status != "in_progress") throw sessionStateChanged()
+        val encoded = objectMapper.writeValueAsBytes(board)
+        if (encoded.size > MAX_BOARD_BYTES) {
+            throw ApiException(HttpStatus.CONTENT_TOO_LARGE, "board_too_large", "This board is too large to save (5 MB maximum).")
+        }
+        if (!repository.setBoard(sessionId, userId, String(encoded, Charsets.UTF_8))) throw sessionStateChanged()
     }
 
     /**

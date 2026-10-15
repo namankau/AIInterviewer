@@ -4,6 +4,7 @@ import com.interviewos.api.ai.AnswerAudio
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.common.ContentTypes
 import com.interviewos.api.user.SupabaseIdentity
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -19,8 +20,10 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
-import tools.jackson.databind.JsonNode
+import tools.jackson.databind.ObjectMapper
 import java.util.UUID
+
+internal const val MAX_BOARD_BYTES = 5 * 1024 * 1024
 
 /**
  * The interview loop, on the versioned public API. Mobile will consume these unchanged.
@@ -36,6 +39,7 @@ class SessionController(
     private val reportService: ReportService,
     private val readinessService: ReadinessService,
     private val roundDeletion: RoundDeletion,
+    private val objectMapper: ObjectMapper,
 ) {
     @GetMapping("/entitlement")
     fun entitlement(
@@ -224,8 +228,20 @@ class SessionController(
     fun saveBoard(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
-        @RequestBody board: JsonNode,
-    ) = interviewService.saveBoard(callerOf(jwt), id, board)
+        request: HttpServletRequest,
+    ) {
+        if (request.contentLengthLong > MAX_BOARD_BYTES) throw boardTooLarge()
+        val bytes = request.inputStream.readNBytes(MAX_BOARD_BYTES + 1)
+        if (bytes.size > MAX_BOARD_BYTES) throw boardTooLarge()
+        if (bytes.isEmpty()) throw ApiException.badRequest("Board must be valid JSON.", code = "invalid_board")
+        val board =
+            try {
+                objectMapper.readTree(bytes)
+            } catch (_: Exception) {
+                throw ApiException.badRequest("Board must be valid JSON.", code = "invalid_board")
+            }
+        interviewService.saveBoard(callerOf(jwt), id, board)
+    }
 
     @GetMapping("/sessions/{id}/report")
     fun report(
@@ -239,6 +255,9 @@ class SessionController(
     ): List<ReadinessGroup> = readinessService.readiness(callerOf(jwt))
 
     private companion object {
+        fun boardTooLarge() =
+            ApiException(HttpStatus.CONTENT_TOO_LARGE, "board_too_large", "This board is too large to save (5 MB maximum).")
+
         const val MAX_ANSWER_AUDIO_BYTES = 10L * 1024L * 1024L
         val SUPPORTED_AUDIO_TYPES =
             setOf(

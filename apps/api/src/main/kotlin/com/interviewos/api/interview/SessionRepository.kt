@@ -302,14 +302,13 @@ class SessionRepository(
         sessionId: UUID,
         userId: UUID,
         boardJson: String,
-    ) {
+    ): Boolean =
         jdbcClient
-            .sql("update public.sessions set board = cast(:b as jsonb) where id = :id and user_id = :u")
+            .sql("update public.sessions set board = cast(:b as jsonb) where id = :id and user_id = :u and status = 'in_progress'")
             .param("b", boardJson)
             .param("id", sessionId)
             .param("u", userId)
-            .update()
-    }
+            .update() == 1
 
     // -- deletion and retention -----------------------------------------------
 

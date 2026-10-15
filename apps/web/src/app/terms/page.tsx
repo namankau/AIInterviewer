@@ -69,7 +69,7 @@ export default function TermsPage() {
 
       <LegalSection id="content" title="Your content">
         <p>
-          Your resume, recordings and answers remain yours. You let us use them only to provide the
+          Your resume and answers remain yours. You let us use them only to provide the
           service to you, as described in our{" "}
           <Link href="/privacy" className="font-medium text-accent hover:underline">
             privacy policy

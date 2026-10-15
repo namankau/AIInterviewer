@@ -198,6 +198,8 @@ describe("NewInterviewForm", () => {
 
     expect(screen.getByRole("button", { name: /begin interview/i })).toBeDisabled();
     expect(screen.getByText(/voice recording is required to continue/i)).toBeInTheDocument();
+    expect(screen.getByText(/we do not save the answer audio/i)).toBeInTheDocument();
+    expect(screen.getByText(/sent to Gemini for assessment/i)).toBeInTheDocument();
   });
 
   it("asks only for the topic when the catalogue round is a custom topic", async () => {

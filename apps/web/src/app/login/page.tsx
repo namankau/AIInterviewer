@@ -58,8 +58,8 @@ export default async function LoginPage({
         </div>
 
         <p className="relative max-w-lg text-caption text-on-navy-muted">
-          Your camera stays in your browser. Voice recordings and reports stay private to your
-          account and can be deleted by you.
+          Your camera stays in your browser. Answer audio is assessed without being saved;
+          your reports stay private to your account and can be deleted by you.
         </p>
       </section>
 

@@ -16,7 +16,7 @@ const CONFIRM_WORD = "delete";
  * Deleting the account, for good.
  *
  * Says exactly what goes before asking, because the list is the promise: every round,
- * report, transcript and recording, the resume and photo, course and Arena progress, and
+ * report and transcript, the resume and photo, course and Arena progress, and
  * the sign-in. The server does the deleting (`DELETE /api/v1/me`); this page only signs the
  * browser out once the server says it is done, and never claims success it was not told.
  */
@@ -77,7 +77,7 @@ export function DeleteAccountSection() {
           This removes everything we hold for you, and it cannot be undone:
         </p>
         <ul className="flex max-w-prose list-disc flex-col gap-1 pl-5 text-caption text-ink-muted">
-          <li>every round, with its report, transcript and voice recordings</li>
+          <li>every round, with its report and transcript</li>
           <li>your resume, your profile photo and your profile details</li>
           <li>your course and Arena progress</li>
           <li>your sign-in — signing in with Google again starts a new, empty account</li>

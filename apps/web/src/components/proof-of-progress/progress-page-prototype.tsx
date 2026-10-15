@@ -71,7 +71,7 @@ export const SYNTHETIC_PROGRESS_PROFILE: PublicProgressProfile = {
 
 const privateItems = [
   "Scores, rankings, and private feedback",
-  "Answers, transcripts, and recordings",
+  "Answers and transcripts",
   "Resume details and employer targets",
 ];
 

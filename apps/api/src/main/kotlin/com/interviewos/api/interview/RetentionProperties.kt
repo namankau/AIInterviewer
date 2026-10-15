@@ -5,7 +5,7 @@ import java.time.Duration
 import java.time.Instant
 
 /**
- * How long a round's report, transcript and recordings are kept before being cleared.
+ * How long a round's report and transcript are kept before being cleared.
  *
  * **Four weeks, and the number is not arbitrary.** It is the longest window over which
  * the report is still doing the job it was written for. A candidate reads their report in

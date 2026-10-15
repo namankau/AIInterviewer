@@ -7,7 +7,7 @@ import { fetchTurn } from "@/lib/api";
 
 /**
  * How often to ask whether the interviewer's voice has finished rendering, and how long
- * to keep asking.
+ * to keep asking. Early checks stay quick; later checks back off while speech is slow.
  *
  * The interval was loose when the candidate already had the question in writing and this
  * was only catching up. It is not that any more: the room now waits for the voice before
@@ -18,7 +18,12 @@ import { fetchTurn } from "@/lib/api";
  * The ceiling exists so a synthesis that dies without ever writing its state back — a
  * crashed worker, a lost database write — cannot leave a tab polling all evening.
  */
-const POLL_INTERVAL_MS = 400;
+function pollDelay(completedPolls: number): number {
+  if (completedPolls < 5) return 400;
+  if (completedPolls < 10) return 800;
+  return 1_200;
+}
+
 const POLL_CEILING_MS = 45_000;
 
 export interface QuestionAudio {
@@ -65,43 +70,47 @@ export function useQuestionAudio({
     if (!accessToken || turnIndex === null || initialStatus !== "pending") return;
 
     let active = true;
-    let inFlight = false;
+    let completedPolls = 0;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
     const startedAt = Date.now();
     const controller = new AbortController();
 
-    const timer = setInterval(async () => {
-      if (Date.now() - startedAt > POLL_CEILING_MS) {
-        clearInterval(timer);
-        active = false;
-        controller.abort();
-        onPollTimeoutRef.current?.(turnIndex, Date.now() - startedAt);
-        setResolved({ turnIndex, audio: { url: null, status: "unavailable" } });
-        return;
-      }
-      if (inFlight) return;
-
-      inFlight = true;
-      try {
-        const latest = await fetchTurn(sessionId, turnIndex, { accessToken, signal: controller.signal });
-        if (!active || latest.questionAudioStatus === "pending") return;
-        clearInterval(timer);
-        setResolved({
-          turnIndex,
-          audio: { url: latest.questionAudioUrl, status: latest.questionAudioStatus },
-        });
-      } catch {
-        // A failed poll is not worth reporting: the question is on screen either way,
-        // and the next tick will try again until the ceiling stops it.
-      } finally {
-        inFlight = false;
-      }
-    }, POLL_INTERVAL_MS);
-
-    return () => {
+    const stop = () => {
       active = false;
-      clearInterval(timer);
+      if (pollTimer) clearTimeout(pollTimer);
+      if (deadlineTimer) clearTimeout(deadlineTimer);
       controller.abort();
     };
+
+    const poll = async () => {
+      if (!active) return;
+      try {
+        const latest = await fetchTurn(sessionId, turnIndex, { accessToken, signal: controller.signal });
+        if (!active) return;
+        if (latest.questionAudioStatus !== "pending") {
+          stop();
+          setResolved({
+            turnIndex,
+            audio: { url: latest.questionAudioUrl, status: latest.questionAudioStatus },
+          });
+          return;
+        }
+      } catch {
+        // A failed poll is retried on the next tick until the ceiling stops it.
+      }
+      if (active) pollTimer = setTimeout(poll, pollDelay(++completedPolls));
+    };
+
+    pollTimer = setTimeout(poll, pollDelay(0));
+    deadlineTimer = setTimeout(() => {
+      if (!active) return;
+      stop();
+      onPollTimeoutRef.current?.(turnIndex, Date.now() - startedAt);
+      setResolved({ turnIndex, audio: { url: null, status: "unavailable" } });
+    }, POLL_CEILING_MS);
+
+    return stop;
   }, [accessToken, sessionId, turnIndex, initialStatus]);
 
   if (resolved && resolved.turnIndex === turnIndex) return resolved.audio;

@@ -23,7 +23,7 @@ Make the post-interview report handoff and signed-in navigation fast, and explai
 - Frontend typecheck, lint, tests (80 files, 3,064 tests) and production build: pass locally. No backend changes.
 
 ## Merge status
-- Branch `fix/report-handoff-and-nav`.
+- PR #108 opened into `develop` (touches the sign-out path, so not self-merged): https://github.com/softzenith-projects/Untiered/pull/108
 
 ## Suggested next task
 - Start report generation server-side when a round finishes (background job), so the report is written even if the closing screen is never shown.

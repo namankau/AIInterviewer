@@ -12,6 +12,18 @@ object StorageKeys {
     private const val MAX_LENGTH = 80
     private val UNSAFE = Regex("""[^A-Za-z0-9._-]""")
     private val DOT_RUNS = Regex("""\.{2,}""")
+    private val SAFE_SEGMENT = Regex("""[A-Za-z0-9._-]+""")
+
+    /** Guard service-role reads and deletes when an object key came from a database row. */
+    fun isDirectChildOf(
+        path: String,
+        folder: String,
+    ): Boolean {
+        val prefix = "${folder.trimEnd('/')}/"
+        if (!path.startsWith(prefix)) return false
+        val name = path.removePrefix(prefix)
+        return SAFE_SEGMENT.matches(name) && name != "." && ".." !in name
+    }
 
     fun safeFileName(
         original: String?,

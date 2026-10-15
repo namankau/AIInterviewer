@@ -119,18 +119,40 @@ class ResumeRepository(
             .optional()
             .orElse(null)
 
-    fun delete(
+    /** Queue the exact stored object and remove the owned row in one database statement. */
+    fun enqueueAndDelete(
         id: UUID,
         userId: UUID,
-    ): ResumeRow? {
-        val existing = findLatest(userId)?.takeIf { it.id == id } ?: return null
+        bucket: String,
+        path: String,
+    ): Boolean =
         jdbcClient
-            .sql("delete from public.resumes where id = :id and user_id = :u")
-            .param("id", id)
+            .sql(
+                """
+                with owned as (
+                    select id, user_id from public.resumes
+                     where id = :id and user_id = :u
+                       and storage_bucket = :bucket and storage_path = :path
+                ), enqueued as (
+                    insert into public.storage_deletion_jobs
+                           (user_id, session_id, bucket, object_prefix, reason)
+                    select user_id, null, :bucket, :path, 'resume_deleted' from owned
+                    on conflict (bucket, object_prefix) do update
+                       set completed_at = null,
+                           next_attempt_at = now(),
+                           settle_after = greatest(public.storage_deletion_jobs.settle_after, now() + interval '15 minutes'),
+                           reason = excluded.reason,
+                           updated_at = now()
+                    returning object_prefix
+                )
+                delete from public.resumes r using owned
+                 where r.id = owned.id and exists (select 1 from enqueued)
+                """.trimIndent(),
+            ).param("id", id)
             .param("u", userId)
-            .update()
-        return existing
-    }
+            .param("bucket", bucket)
+            .param("path", path)
+            .update() == 1
 
     // -- profile ---------------------------------------------------------------
 

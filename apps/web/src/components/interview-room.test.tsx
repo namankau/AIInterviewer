@@ -1,4 +1,4 @@
-import type { SessionView } from "@untiered/shared";
+import type { BoardState, SessionView } from "@untiered/shared";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +12,8 @@ const captureStart = vi.hoisted(() => vi.fn());
 const captureStop = vi.hoisted(() => vi.fn());
 const captureLevel = vi.hoisted(() => ({ current: 0 }));
 const dsaWorkspaceRender = vi.hoisted(() => vi.fn());
+const dsaBoard = vi.hoisted(() => ({ onChange: null as ((board: BoardState) => void) | null }));
+const saveBoard = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const reportInterviewClientEvent = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const submitAnswer = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ token: "token-abc" }));
@@ -34,7 +36,7 @@ vi.mock("@/lib/api", () => ({
   finishSession: vi.fn(),
   requestHint: vi.fn(),
   reportInterviewClientEvent,
-  saveBoard: vi.fn(),
+  saveBoard,
   submitAnswer,
 }));
 vi.mock("@/lib/use-access-token", () => ({ useAccessToken: () => auth.token }));
@@ -58,7 +60,11 @@ vi.mock("@/components/device-check", () => ({
   ),
 }));
 vi.mock("@/components/design-workspace", () => ({ DesignWorkspace: () => null }));
-vi.mock("@/components/dsa-workspace", () => ({ DsaWorkspace: () => { dsaWorkspaceRender(); return null; } }));
+vi.mock("@/components/dsa-workspace", () => ({ DsaWorkspace: ({ onBoardChange }: { onBoardChange: (board: BoardState) => void }) => {
+  dsaWorkspaceRender();
+  dsaBoard.onChange = onBoardChange;
+  return null;
+} }));
 vi.mock("@/components/round-clock", () => ({
   RoundClock: () => null,
   formatDuration: () => "00:00",
@@ -192,6 +198,61 @@ describe("InterviewRoom workspace isolation", () => {
     auth.token = "token-abc";
     captureLevel.current = 0;
     questionAudio.current = { url: null, status: "unavailable" };
+  });
+
+  it("saves the latest board after five seconds and flushes on window blur", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      fetchSession.mockResolvedValue({ ...baseSession, workspace: { kind: "dsa", problem: {} } });
+      beginSession.mockResolvedValue({ startedAt: "2026-09-29T09:00:00Z", scheduledEndAt: "2026-09-29T09:45:00Z" });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<InterviewRoom sessionId={baseSession.id} />);
+      await user.click(await screen.findByRole("button", { name: "Enter the room" }));
+
+      const first: BoardState = { kind: "dsa", sources: { python: "print(1)" } };
+      const second: BoardState = { kind: "dsa", sources: { python: "print(2)" } };
+      act(() => { dsaBoard.onChange?.(first); dsaBoard.onChange?.(second); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(4_999); });
+      expect(saveBoard).not.toHaveBeenCalled();
+      await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+      expect(saveBoard).toHaveBeenCalledWith("token-abc", baseSession.id, second);
+      act(() => window.dispatchEvent(new Event("blur")));
+      expect(saveBoard).toHaveBeenCalledTimes(1);
+
+      act(() => { dsaBoard.onChange?.(first); window.dispatchEvent(new Event("blur")); });
+      expect(saveBoard).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("warns instead of uploading an oversized board", async () => {
+    fetchSession.mockResolvedValue({ ...baseSession, workspace: { kind: "dsa", problem: {} } });
+    beginSession.mockResolvedValue({ startedAt: "2026-09-29T09:00:00Z", scheduledEndAt: "2026-09-29T09:45:00Z" });
+    render(<InterviewRoom sessionId={baseSession.id} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Enter the room" }));
+
+    act(() => {
+      dsaBoard.onChange?.({ kind: "dsa", sources: { python: "x".repeat(5 * 1024 * 1024) } });
+      window.dispatchEvent(new Event("blur"));
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(/over 5 MB/i);
+    expect(saveBoard).not.toHaveBeenCalled();
+  });
+
+  it("shows a server size rejection so the candidate knows the board was not saved", async () => {
+    fetchSession.mockResolvedValue({ ...baseSession, workspace: { kind: "dsa", problem: {} } });
+    beginSession.mockResolvedValue({ startedAt: "2026-09-29T09:00:00Z", scheduledEndAt: "2026-09-29T09:45:00Z" });
+    saveBoard.mockRejectedValueOnce(new ApiRequestError(413, "board_too_large", "Board too large"));
+    render(<InterviewRoom sessionId={baseSession.id} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Enter the room" }));
+
+    act(() => {
+      dsaBoard.onChange?.({ kind: "dsa", sources: { python: "print(1)" } });
+      window.dispatchEvent(new Event("blur"));
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/cannot be saved/i);
   });
 
   it("does not rerender the code editor when only the microphone level changes", async () => {

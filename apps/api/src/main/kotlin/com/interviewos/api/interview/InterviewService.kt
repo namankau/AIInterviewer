@@ -17,11 +17,13 @@ import com.interviewos.api.resume.ResumeService
 import com.interviewos.api.resume.ResumeUse
 import com.interviewos.api.storage.ObjectStorage
 import com.interviewos.api.storage.ObjectStorageException
+import com.interviewos.api.storage.StorageKeys
 import com.interviewos.api.storage.StorageProperties
 import com.interviewos.api.user.SupabaseIdentity
 import com.interviewos.api.user.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DuplicateKeyException
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
@@ -1104,8 +1106,13 @@ class InterviewService(
         sessionId: UUID,
         board: JsonNode,
     ) {
-        repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
-        repository.setBoard(sessionId, userId, objectMapper.writeValueAsString(board))
+        val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
+        if (session.status != "in_progress") throw sessionStateChanged()
+        val encoded = objectMapper.writeValueAsBytes(board)
+        if (encoded.size > MAX_BOARD_BYTES) {
+            throw ApiException(HttpStatus.CONTENT_TOO_LARGE, "board_too_large", "This board is too large to save (5 MB maximum).")
+        }
+        if (!repository.setBoard(sessionId, userId, String(encoded, Charsets.UTF_8))) throw sessionStateChanged()
     }
 
     /**
@@ -1277,7 +1284,7 @@ class InterviewService(
             currentTurn =
                 latest
                     ?.takeIf { it.answeredAt == null }
-                    ?.let { turnViewOf(it) },
+                    ?.let { turnViewOf(it, userId, sessionId) },
             focusTopic = session.focusTopic,
         )
     }
@@ -1298,7 +1305,7 @@ class InterviewService(
         val turn =
             repository.findTurn(sessionId, userId, turnIndex)
                 ?: throw ApiException.notFound("That question is not part of this interview.")
-        return turnViewOf(turn)
+        return turnViewOf(turn, userId, sessionId)
     }
 
     /**
@@ -1390,12 +1397,16 @@ class InterviewService(
      * The URL is signed only once the speech is actually `ready`. A `pending` turn that
      * happened to carry a stale path would otherwise hand the room a URL to nothing.
      */
-    private fun turnViewOf(turn: TurnRow): TurnView {
+    private fun turnViewOf(
+        turn: TurnRow,
+        userId: UUID,
+        sessionId: UUID,
+    ): TurnView {
         val status = SpeechStatus.fromDbValue(turn.questionAudioStatus)
         return TurnView(
             turnIndex = turn.turnIndex,
             questionText = turn.questionText,
-            questionAudioUrl = if (status == SpeechStatus.READY) signedUrl(turn.questionAudioPath) else null,
+            questionAudioUrl = if (status == SpeechStatus.READY) signedUrl(turn.questionAudioPath, userId, sessionId) else null,
             questionAudioStatus = status.dbValue,
             phase = turn.phase,
             answered = turn.answeredAt != null,
@@ -1547,8 +1558,12 @@ class InterviewService(
             nextAction = nextAction,
         )
 
-    private fun signedUrl(path: String?): String? =
-        path?.let {
+    private fun signedUrl(
+        path: String?,
+        userId: UUID,
+        sessionId: UUID,
+    ): String? =
+        path?.takeIf { StorageKeys.isDirectChildOf(it, "$userId/$sessionId") }?.let {
             try {
                 storage.createSignedUrl(storageProperties.mediaBucket, it, SIGNED_URL_SECONDS)
             } catch (e: ObjectStorageException) {

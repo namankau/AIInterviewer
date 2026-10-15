@@ -28,6 +28,11 @@ class SupabaseObjectStorageDeleteTest {
         val server = MockRestServiceServer.bindTo(builder).build()
         val storage = SupabaseObjectStorage(properties, JsonMapper.builder().build(), builder)
 
+        server
+            .expect(once(), requestTo("$base/object/interview-media"))
+            .andExpect(method(HttpMethod.DELETE))
+            .andExpect(content().json("""{"prefixes":["u1"]}"""))
+            .andRespond(withSuccess())
         // The account folder: one loose file and one round's folder (no id).
         server
             .expect(once(), requestTo("$base/object/list/interview-media"))
@@ -66,16 +71,22 @@ class SupabaseObjectStorageDeleteTest {
     }
 
     @Test
-    fun `sends no delete for an empty folder`() {
+    fun `removes an exact resume object even when folder listing is empty`() {
         val builder = RestClient.builder()
         val server = MockRestServiceServer.bindTo(builder).build()
         val storage = SupabaseObjectStorage(properties, JsonMapper.builder().build(), builder)
 
         server
+            .expect(once(), requestTo("$base/object/resumes"))
+            .andExpect(method(HttpMethod.DELETE))
+            .andExpect(content().json("""{"prefixes":["u1/resume.pdf"]}"""))
+            .andRespond(withSuccess())
+        server
             .expect(once(), requestTo("$base/object/list/resumes"))
+            .andExpect(content().json("""{"prefix":"u1/resume.pdf"}""", JsonCompareMode.LENIENT))
             .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON))
 
-        storage.deleteByPrefix("resumes", "u1")
+        storage.deleteByPrefix("resumes", "u1/resume.pdf")
 
         server.verify()
     }

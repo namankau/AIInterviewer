@@ -193,7 +193,7 @@ describe("DashboardView history length", () => {
     expect(list.getAllByRole("listitem")).toHaveLength(3);
     expect(list.getByText(/Company 1/)).toBeInTheDocument();
     expect(list.queryByText(/Company 4/)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "See all 5 rounds in your profile" })).toHaveAttribute("href", "/profile");
+    expect(screen.getByRole("link", { name: "See more rounds in your history" })).toHaveAttribute("href", "/history");
   });
 
   it("has nothing to link to when every round already fits", () => {
@@ -206,7 +206,7 @@ describe("DashboardView history length", () => {
     render(<PastRoundsSection sessions={many} />);
 
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
-    expect(screen.getByRole("heading", { name: "All interviews" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Interview history" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /see all/i })).not.toBeInTheDocument();
   });
 });

@@ -183,14 +183,18 @@ class SessionRepository(
             .orElse(null)
 
     /**
-     * A candidate's rounds, newest first.
+     * A bounded page of a candidate's rounds, newest first.
      *
      * Returns rows rather than the API shape because when a round's report expires is
      * policy, not data — it is [RetentionProperties] applied to `retention_from`, and the
      * service does that arithmetic. The database's job here is to say when the round
      * happened and whether it has already been cleared.
      */
-    fun listSessions(userId: UUID): List<SessionListRow> =
+    fun listSessions(
+        userId: UUID,
+        limit: Int,
+        offset: Int,
+    ): List<SessionListRow> =
         jdbcClient
             .sql(
                 """
@@ -201,9 +205,12 @@ class SessionRepository(
                   from public.sessions s
                   left join public.session_reports r on r.session_id = s.id
                  where s.user_id = :u
-                 order by s.created_at desc
+                 order by s.created_at desc, s.id desc
+                 limit :limit offset :offset
                 """.trimIndent(),
             ).param("u", userId)
+            .param("limit", limit)
+            .param("offset", offset)
             .query { rs, _ ->
                 SessionListRow(
                     id = rs.getObject("id", UUID::class.java),

@@ -45,7 +45,9 @@ class SessionController(
     @GetMapping("/sessions")
     fun list(
         @AuthenticationPrincipal jwt: Jwt,
-    ): List<SessionSummary> = interviewService.list(callerOf(jwt))
+        @RequestParam(defaultValue = "20") limit: Int,
+        @RequestParam(defaultValue = "0") offset: Int,
+    ): List<SessionSummary> = interviewService.list(callerOf(jwt), limit, offset)
 
     /**
      * Reads one line of intent into a draft round. Creates nothing — the candidate

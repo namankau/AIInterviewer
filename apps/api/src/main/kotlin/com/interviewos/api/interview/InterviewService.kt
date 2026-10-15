@@ -1443,7 +1443,7 @@ class InterviewService(
     }
 
     /**
-     * A candidate's past rounds, with the retention rule already applied to each.
+     * A bounded page of a candidate's past rounds, with the retention rule applied.
      *
      * The expiry date is computed here rather than in the browser, and the window itself
      * is sent along on every row, because how long a report is kept is server policy — one
@@ -1452,8 +1452,12 @@ class InterviewService(
      * matters most is the mobile app that does not exist yet and cannot be edited in the
      * same release.
      */
-    fun list(userId: UUID): List<SessionSummary> =
-        repository.listSessions(userId).map { row ->
+    fun list(
+        userId: UUID,
+        limit: Int,
+        offset: Int,
+    ): List<SessionSummary> =
+        repository.listSessions(userId, limit.coerceIn(1, MAX_SESSION_PAGE), offset.coerceAtLeast(0)).map { row ->
             SessionSummary(
                 id = row.id,
                 companyName = row.companyName,
@@ -1718,6 +1722,7 @@ class InterviewService(
         }
 
     private companion object {
+        const val MAX_SESSION_PAGE = 50
         const val SIGNED_URL_SECONDS = 3600
         const val DEFAULT_ROUND_MINUTES = 40
         const val MIN_ROUND_MINUTES = 10

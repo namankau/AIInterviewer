@@ -68,8 +68,8 @@ class SessionRepository(
      * progress is derived rather than declared (CLAUDE.md): a counter that is incremented
      * somewhere drifts from the thing it counts, and this one is shown to the public.
      *
-     * Cheap enough to run per request at this size; if it stops being, it becomes a
-     * materialised view rather than a number someone remembers to bump.
+     * The public controller caches this derivation for one minute so repeated requests
+     * do not each scan the tables.
      */
     fun usageCounts(): UsageCounts =
         jdbcClient

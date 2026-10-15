@@ -252,6 +252,7 @@ class SessionRepository(
                            (user_id, session_id, bucket, object_prefix, reason)
                     select user_id, id, :bucket, :prefix, 'round_finished'
                       from transitioned
+                     where true
                     on conflict (bucket, object_prefix) do update
                        set completed_at = null,
                            next_attempt_at = now(),

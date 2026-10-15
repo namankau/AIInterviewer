@@ -12,6 +12,7 @@ import com.interviewos.api.resume.ResumeService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import tools.jackson.databind.ObjectMapper
+import java.text.Normalizer
 import java.util.UUID
 
 /**
@@ -598,6 +599,7 @@ class ReportService(
 }
 
 private val WHITESPACE = Regex("\\s+")
+private val NON_MATCH_CHARACTERS = Regex("[^\\p{L}\\p{N}\\p{M}' ]")
 
 /**
  * How a quote is compared with the transcript: loose on whitespace, case and punctuation,
@@ -605,8 +607,10 @@ private val WHITESPACE = Regex("\\s+")
  * a quote is really the candidate's (competencies, strengths, spoken English).
  */
 internal fun String.normaliseForMatch(): String =
-    lowercase()
+    Normalizer
+        .normalize(this, Normalizer.Form.NFC)
+        .lowercase()
         .replace("’", "'")
-        .replace(Regex("[^a-z0-9' ]"), " ")
+        .replace(NON_MATCH_CHARACTERS, " ")
         .replace(WHITESPACE, " ")
         .trim()

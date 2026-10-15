@@ -65,4 +65,19 @@ class AiSpendContextTest {
         assertEquals(user, seen?.userId)
         assertNull(seen?.sessionId)
     }
+
+    @Test
+    fun `provider call name is scoped and restored after a failure`() {
+        AiSpendContext.of(user, session) {
+            assertFailsWith<AiUnavailableException> {
+                AiSpendContext.withCall("composeReport") {
+                    assertEquals("composeReport", AiSpendContext.current()?.call)
+                    assertEquals(session, AiSpendContext.current()?.sessionId)
+                    throw AiUnavailableException("provider failed")
+                }
+            }
+            assertNull(AiSpendContext.current()?.call)
+        }
+        assertNull(AiSpendContext.current())
+    }
 }

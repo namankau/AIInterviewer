@@ -1,5 +1,6 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.ai.AiUnavailableException
 import com.interviewos.api.ai.AnswerAssessment
 import com.interviewos.api.ai.AnswerAudio
 import com.interviewos.api.common.ApiException
@@ -58,6 +59,24 @@ class InterviewStateTransitionTest {
         assertEquals("session_state_changed", failure.code)
         assertFalse(mockingDetails(harness.repository).invocations.any { it.method.name == "insertTurn" })
         verify(harness.repository, never()).markSessionStatus(sessionId, candidate, "completed")
+    }
+
+    @Test
+    fun `provider failure marks the round failed and refunds its daily allowance`() {
+        givenRunningTurn()
+        harness.onAiCall = { if (it == "assessAnswer") throw AiUnavailableException("provider unavailable") }
+
+        assertFailsWith<ApiException> {
+            harness.service.submitAnswer(
+                candidate,
+                sessionId,
+                2,
+                AnswerAudio(byteArrayOf(1), "audio/webm"),
+                speaksLocally = true,
+            )
+        }
+
+        verify(harness.repository).failSessionAndRefundUsage(sessionId, candidate)
     }
 
     @Test

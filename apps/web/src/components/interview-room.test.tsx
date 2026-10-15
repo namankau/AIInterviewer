@@ -63,7 +63,7 @@ vi.mock("@/components/design-workspace", () => ({ DesignWorkspace: () => null })
 vi.mock("@/components/dsa-workspace", () => ({ DsaWorkspace: ({ onBoardChange }: { onBoardChange: (board: BoardState) => void }) => {
   dsaWorkspaceRender();
   dsaBoard.onChange = onBoardChange;
-  return null;
+  return <div data-testid="dsa-workspace" />;
 } }));
 vi.mock("@/components/round-clock", () => ({
   RoundClock: () => null,
@@ -195,6 +195,7 @@ describe("InterviewRoom session entry", () => {
 describe("InterviewRoom workspace isolation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    dsaBoard.onChange = null;
     auth.token = "token-abc";
     captureLevel.current = 0;
     questionAudio.current = { url: null, status: "unavailable" };
@@ -208,6 +209,7 @@ describe("InterviewRoom workspace isolation", () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       render(<InterviewRoom sessionId={baseSession.id} />);
       await user.click(await screen.findByRole("button", { name: "Enter the room" }));
+      await screen.findByTestId("dsa-workspace");
 
       const first: BoardState = { kind: "dsa", sources: { python: "print(1)" } };
       const second: BoardState = { kind: "dsa", sources: { python: "print(2)" } };

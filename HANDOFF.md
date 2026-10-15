@@ -1,32 +1,32 @@
-# Handoff — 14 October 2026
+# Handoff — 15 October 2026
 
 ## Task
-Polish Arena cards, first-login profile setup, daily-progress recovery, typography, and tagline (direct request; no task file; PRD §05).
+Make the post-interview report handoff and signed-in navigation fast, and explain the intermittent "Account unavailable" / "daily progress unavailable" errors (direct request; no task file; PRD §09).
 
 ## What I built
-- `apps/web/src/components/courses/course-visuals.tsx`, `course-catalogue.tsx`, `arena-daily-quest.tsx`, and `app/arena/page.tsx`: shared illustrated card artwork and matching Arena layouts.
-- `apps/web/src/components/account-summary.tsx`: a one-time profile setup prompt for accounts without role details, plus an account-load retry and safe account switching.
-- `apps/web/src/lib/arena/progress-store.ts` and `components/dashboard-question-of-day.tsx`: retryable daily-progress fetch failure with clear messaging.
-- `apps/web/src/app/globals.css`, `app/page.tsx`, and `components/site-footer.tsx`: editorial display headlines and “Talent has no tiers.” tagline.
+- `apps/web/src/components/interview-complete-panel.tsx` (moved out of `interview-room.tsx`): the closing screen now requests the report as soon as the round ends — which is what starts generation, since `ReportService.report` writes the report on its first GET — and shows a live activity panel (rotating status line, elapsed time, four analysis steps). "Read the report" appears only once the report exists, as a client-side `Link`. A non-transient failure offers "Open the report page"; after ten minutes it does the same with "taking longer than usual".
+- `apps/web/src/lib/report-cache.ts`: in-memory, per-tab cache of loaded reports. `report-view.tsx` renders from it, so the report opens instantly from the closing screen. Cleared on sign-out.
+- `apps/web/src/components/route-loading.tsx` + `loading.tsx` in dashboard, courses, interview/new, arena, questions, report/[id], history, profile, rounds, upgrade: Next only prefetches a dynamic route when it has a `loading.tsx`, so top-nav clicks previously did nothing visible until the server finished the page.
+- `apps/web/src/components/account-summary.tsx`: remembers the last loaded profile in memory, so the header no longer shows a loading placeholder and refetches `/me` on every navigation; a failed background refresh no longer replaces a known profile with "Account unavailable". `forgetAccount()` clears it (and the report cache) on sign-out.
+- `apps/web/src/lib/api.ts`: GET requests retry twice (400 ms, 1.2 s) on a network error or 502/503/504. Writes are never retried.
+- Tests: `lib/api-retry.test.ts` (new), plus updates in `interview-room.test.tsx`, `report-view-polling.test.tsx`, `account-summary.test.tsx`.
 
 ## Assumptions I made
-- An account with no function, current level, or target level needs a setup prompt. Dismissing it stores a per-account “seen” flag in this browser; profile details remain optional.
-- The screenshot's failed fetch is not caused by a new account alone: the Arena API returns zero progress when no Arena rows exist. The actual production failure needs request logs to identify.
-- The requested distinctive type applies to large display headlines while card titles and controls stay sans.
+- The analysis steps advance on a clock because the API only reports "generating" or "done". The final step never shows as finished before the report is saved.
+- Leaving the closing screen aborts only the browser request; the server keeps writing the report and stores it.
 
 ## What I could NOT verify
-- The actual production cause of the intermittent fetch error, live sign-in/profile flow, and final visual judgement. No live AI calls were made.
+- Real timing in a browser against the live API (no live rounds or AI spend, per rule 7). In `next dev`, Next never prefetches and compiles each route on first visit, so navigation there will still be slower than a production build.
+- The root cause of the intermittent "unavailable" errors. Both messages mean the browser could not get an answer from the API. Likely causes: the API still booting (`bootRun` takes far longer than `next dev`), the API down after a startup failure such as today's `interviewBackgroundExecutor` crash, or the database pooler refusing connections. Hovering "Account unavailable" shows the actual error message, and the API terminal shows the server side.
 
 ## Verification status
-- Frontend typecheck, lint, tests (77 files, 3,039 tests), and production build: pass. Vitest used a workspace temp directory to avoid an intermittent Windows sandbox temp-file error.
-- Backend `ktlintCheck test build`: pass.
-- GitHub CI: pending at handoff writing; review PR checks before merge.
+- Frontend typecheck, lint, tests (80 files, 3,064 tests) and production build: pass locally. No backend changes.
 
 ## Merge status
-- Branch `feat/arena-onboarding-brand` pushed. PR #81 opened into `develop`: https://github.com/softzenith-projects/Untiered/pull/81. Unmerged because the first-login account flow needs human review under the repository's auth rule.
+- Branch `fix/report-handoff-and-nav`.
 
 ## Suggested next task
-- Review PR #81 and inspect a failing production request in browser network logs if daily-progress errors continue.
+- Start report generation server-side when a round finishes (background job), so the report is written even if the closing screen is never shown.
 
 ## Open questions for you
-- None for code review; final visual direction remains yours.
+- None blocking.

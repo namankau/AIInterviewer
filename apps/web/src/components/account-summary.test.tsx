@@ -1,9 +1,9 @@
 import type { MeResponse } from "@untiered/shared";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AccountSummary } from "./account-summary";
+import { AccountSummary, forgetAccount } from "./account-summary";
 
 const fetchMe = vi.hoisted(() => vi.fn());
 const signOut = vi.hoisted(() => vi.fn());
@@ -47,6 +47,7 @@ const me: MeResponse = {
 describe("AccountSummary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    forgetAccount();
     window.localStorage.clear();
     auth.token = "token-abc";
     route.pathname = "/dashboard";
@@ -74,6 +75,21 @@ describe("AccountSummary", () => {
     expect(screen.queryByRole("link", { name: /all your rounds/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /delete account/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
+  });
+
+  it("keeps the signed-in name on screen when a page change remounts it", async () => {
+    fetchMe.mockResolvedValue(me);
+    const first = render(<AccountSummary />);
+    await screen.findByRole("button", { name: /account menu for test candidate/i });
+    first.unmount();
+
+    fetchMe.mockRejectedValue(new Error("network down"));
+    render(<AccountSummary />);
+
+    expect(screen.getByRole("button", { name: /account menu for test candidate/i })).toBeInTheDocument();
+    await waitFor(() => expect(fetchMe).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("signs out from the menu", async () => {

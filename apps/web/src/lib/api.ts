@@ -205,8 +205,14 @@ export function fetchEntitlement(options: ApiGetOptions): Promise<EntitlementVie
   return apiGet<EntitlementView>("/api/v1/entitlement", options);
 }
 
-export function fetchSessions(options: ApiGetOptions): Promise<SessionSummary[]> {
-  return apiGet<SessionSummary[]>("/api/v1/sessions", options);
+export const SESSION_PAGE_SIZE = 20;
+
+export function fetchSessions(
+  options: ApiGetOptions,
+  page?: { limit: number; offset: number },
+): Promise<SessionSummary[]> {
+  const query = page ? `?limit=${page.limit}&offset=${page.offset}` : "";
+  return apiGet<SessionSummary[]>(`/api/v1/sessions${query}`, options);
 }
 
 export function fetchSession(id: string, options: ApiGetOptions): Promise<SessionView> {

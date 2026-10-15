@@ -669,7 +669,7 @@ function ProfileReports({ sessions, ready }: { sessions: SessionSummary[]; ready
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
         <div>
           <p className="eyebrow text-accent">Interview reports</p>
-          <h2 id="profile-reports" className="mt-2 text-title text-ink">Your complete practice history</h2>
+          <h2 id="profile-reports" className="mt-2 text-title text-ink">Recent interview reports</h2>
         </div>
         {completed.length > 0 ? (
           <Link href="/history" className="text-caption font-semibold text-accent hover:underline">

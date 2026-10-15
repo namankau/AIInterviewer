@@ -66,16 +66,64 @@ interface ApiGetOptions {
   signal?: AbortSignal;
 }
 
-async function apiGet<T>(path: string, { accessToken, signal }: ApiGetOptions): Promise<T> {
-  const response = await fetch(`${env.apiBaseUrl}${path}`, {
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    // The API is the authority on freshness; never serve a cached profile.
-    cache: "no-store",
-    ...(signal ? { signal } : {}),
+/** Pauses before each repeat of a read that failed in transit. */
+const READ_RETRY_DELAYS_MS = [400, 1_200];
+
+/** The API restarting, a dropped connection, or a gateway timing out — not an answer. */
+function isTransient(response: Response): boolean {
+  return response.status === 502 || response.status === 503 || response.status === 504;
+}
+
+function pause(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    function onAbort() {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
+}
+
+/**
+ * A GET, repeated a couple of times if it never reached an answer. Reads are safe to
+ * repeat, and a page that loads several of them at once otherwise showed "unavailable"
+ * banners for a blip that had cleared a second later. Writes are never repeated here.
+ */
+async function fetchRead(url: string, init: RequestInit, signal?: AbortSignal): Promise<Response> {
+  for (let attempt = 0; ; attempt += 1) {
+    const delay = READ_RETRY_DELAYS_MS[attempt];
+    try {
+      const response = await fetch(url, init);
+      if (delay === undefined || !isTransient(response)) return response;
+    } catch (error) {
+      if (delay === undefined || signal?.aborted) throw error;
+    }
+    await pause(delay, signal);
+  }
+}
+
+async function apiGet<T>(path: string, { accessToken, signal }: ApiGetOptions): Promise<T> {
+  const response = await fetchRead(
+    `${env.apiBaseUrl}${path}`,
+    {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      // The API is the authority on freshness; never serve a cached profile.
+      cache: "no-store",
+      ...(signal ? { signal } : {}),
+    },
+    signal,
+  );
 
   if (!response.ok) {
     const envelope = (await response.json().catch(() => null)) as ApiError | null;

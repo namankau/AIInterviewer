@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrandMark, BrandWordmark } from "@/components/brand-logo";
 import { DesignWorkspace } from "@/components/design-workspace";
 import { DeviceCheck } from "@/components/device-check";
+import { InterviewCompletePanel } from "@/components/interview-complete-panel";
 import { RoundClock, formatDuration } from "@/components/round-clock";
 import {
   ApiRequestError,
@@ -1217,72 +1218,6 @@ function TerminalSession({ session }: { session: SessionView }) {
           Back to dashboard
         </a>
       </div>
-    </Centered>
-  );
-}
-
-/**
- * The handoff from interview to feedback. The live room stays deliberately spare; once
- * the round is over, the product should make the value of the report concrete instead
- * of leaving the candidate in a blank screen with one lonely link.
- */
-function InterviewCompletePanel({ sessionId }: { sessionId: string }) {
-  return (
-    <Centered>
-      <section aria-labelledby="interview-complete" className="w-full max-w-4xl text-center">
-        <span
-          aria-hidden="true"
-          className="mx-auto grid size-16 place-items-center rounded-full bg-accent text-accent-contrast shadow-[var(--shadow-md)]"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-7">
-            <path d="m6.5 12 3.5 3.5L17.5 8" />
-          </svg>
-        </span>
-        <p className="eyebrow mt-5 text-accent">Interview complete</p>
-        <h1 id="interview-complete" className="mt-3 text-display text-balance text-ink">
-          That&rsquo;s the end of the round.
-        </h1>
-        <p className="mx-auto mt-3 max-w-2xl text-body leading-relaxed text-ink-muted">
-          Your report turns what you actually said and built into evidence, patterns and a focused next practice plan.
-        </p>
-
-        <ul className="mt-8 grid gap-3 text-left sm:grid-cols-3">
-            {[
-              ["01", "Competency breakdown", "See the signals the round could support."],
-              ["02", "Evidence from your answers", "Feedback stays tied to words you actually used."],
-              ["03", "Your next practice plan", "Leave with specific work, not a generic score."],
-            ].map(([number, title, detail]) => (
-              <li key={number} className="rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]">
-                <span className="font-mono text-micro font-semibold text-accent">{number}</span>
-                <p className="mt-2 text-caption font-semibold text-ink">{title}</p>
-                <p className="mt-1 text-caption leading-relaxed text-ink-muted">{detail}</p>
-              </li>
-            ))}
-        </ul>
-
-        <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-line bg-surface-raised px-5 py-4 text-left shadow-[var(--shadow-sm)]">
-          <div className="flex min-w-0 items-center gap-3">
-            <span aria-hidden="true" className="size-2.5 shrink-0 animate-pulse rounded-full border-2 border-accent/40 border-t-accent" />
-            <div className="min-w-0">
-              <p className="text-caption font-semibold text-ink">Analysing your interview</p>
-              <p className="truncate text-micro text-ink-subtle">Checking the transcript, evidence and competencies.</p>
-            </div>
-          </div>
-          <span className="shrink-0 font-mono text-micro text-ink-subtle">Report page is ready</span>
-        </div>
-
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-            <a href={`/report/${sessionId}`} className="action-primary min-h-12 px-6 text-body">
-              Read the report <span aria-hidden="true">→</span>
-            </a>
-            <a href="/dashboard" className="action-secondary min-h-12 px-5 text-body">
-              Back to dashboard
-            </a>
-        </div>
-        <p className="mx-auto mt-4 max-w-2xl text-caption leading-relaxed text-ink-subtle">
-          Analysis can take a moment. Open the report now — the report page will keep you updated while it finishes.
-        </p>
-      </section>
     </Centered>
   );
 }

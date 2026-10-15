@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiRequestError, fetchReport } from "@/lib/api";
+import { forgetReports, rememberReport } from "@/lib/report-cache";
 
 import { ReportView } from "./report-view";
 
@@ -41,6 +42,7 @@ describe("ReportView generation recovery", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.resetAllMocks();
+    forgetReports();
   });
 
   afterEach(() => {
@@ -121,5 +123,14 @@ describe("ReportView generation recovery", () => {
     view.unmount();
     await advance(60_000);
     expect(fetchReportMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens a report the closing screen already loaded without asking again", async () => {
+    rememberReport("session-1", completedReport);
+    render(<ReportView sessionId="session-1" />);
+
+    await advance(0);
+    expect(screen.getByText("Your technical report is ready.")).toBeInTheDocument();
+    expect(fetchReportMock).not.toHaveBeenCalled();
   });
 });

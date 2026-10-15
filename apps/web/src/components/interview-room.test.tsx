@@ -16,6 +16,7 @@ const dsaBoard = vi.hoisted(() => ({ onChange: null as ((board: BoardState) => v
 const saveBoard = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const reportInterviewClientEvent = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const submitAnswer = vi.hoisted(() => vi.fn());
+const fetchReport = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ token: "token-abc" }));
 const questionAudio = vi.hoisted(() => ({ current: { url: null as string | null, status: "unavailable" } }));
 
@@ -31,6 +32,7 @@ vi.mock("@/lib/api", () => ({
     }
   },
   fetchSession,
+  fetchReport,
   beginSession,
   abandonSession: vi.fn(),
   finishSession: vi.fn(),
@@ -145,6 +147,8 @@ describe("InterviewRoom session entry", () => {
 
   it("turns a completed round into a clear report handoff", async () => {
     fetchSession.mockResolvedValue({ ...baseSession, status: "completed" });
+    let finishReport!: (report: unknown) => void;
+    fetchReport.mockReturnValue(new Promise((resolve) => { finishReport = resolve; }));
 
     render(<InterviewRoom sessionId={baseSession.id} />);
 
@@ -152,11 +156,51 @@ describe("InterviewRoom session entry", () => {
     expect(screen.getByText(/competency breakdown/i)).toBeInTheDocument();
     expect(screen.getByText(/evidence from your answers/i)).toBeInTheDocument();
     expect(screen.getByText(/analysing your interview/i)).toBeInTheDocument();
+    expect(fetchReport).toHaveBeenCalledWith(baseSession.id, expect.objectContaining({ accessToken: "token-abc" }));
+    // The report is offered only once it exists, so the click opens it rather than a wait.
+    expect(screen.queryByRole("link", { name: /read the report/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /back to dashboard/i })).toHaveAttribute("href", "/dashboard");
+
+    await act(async () => finishReport({ sessionId: baseSession.id }));
+
+    expect(screen.getByText(/your report is ready/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /read the report/i })).toHaveAttribute(
       "href",
       `/report/${baseSession.id}`,
     );
-    expect(screen.getByRole("link", { name: /back to dashboard/i })).toHaveAttribute("href", "/dashboard");
+  });
+
+  it("keeps analysing while the report is still being written", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      fetchSession.mockResolvedValue({ ...baseSession, status: "completed" });
+      fetchReport
+        .mockRejectedValueOnce(new ApiRequestError(409, "report_generating", "still writing"))
+        .mockResolvedValueOnce({ sessionId: baseSession.id });
+
+      render(<InterviewRoom sessionId={baseSession.id} />);
+      expect(await screen.findByText(/analysing your interview/i)).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: /read the report/i })).not.toBeInTheDocument();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3_000);
+      });
+
+      expect(await screen.findByRole("link", { name: /read the report/i })).toBeInTheDocument();
+      expect(fetchReport).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("offers the report page when the report cannot be prepared on this screen", async () => {
+    fetchSession.mockResolvedValue({ ...baseSession, status: "completed" });
+    fetchReport.mockRejectedValue(new ApiRequestError(422, "empty_transcript", "This interview has no answers to assess."));
+
+    render(<InterviewRoom sessionId={baseSession.id} />);
+
+    expect(await screen.findByText("This interview has no answers to assess.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /open the report page/i })).toHaveAttribute("href", `/report/${baseSession.id}`);
   });
 
   it("shows the server's begin failure and remains in device check", async () => {

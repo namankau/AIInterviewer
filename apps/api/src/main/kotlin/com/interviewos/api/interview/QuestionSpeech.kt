@@ -60,6 +60,7 @@ class QuestionSpeech(
     private val interviewAi: InterviewAi,
     private val storage: ObjectStorage,
     private val storageProperties: StorageProperties,
+    private val compressor: QuestionAudioCompressor,
     private val repository: SessionRepository,
     private val events: InterviewEventRecorder,
     @Qualifier("interviewSpeechExecutor") private val executor: TaskExecutor,
@@ -119,8 +120,15 @@ class QuestionSpeech(
 
         val path =
             try {
-                val spoken = speak(request)
-                val objectPath = "${request.userId}/${request.sessionId}/turn-${request.turnIndex}-question.wav"
+                val spoken = compressor.compress(speak(request))
+                val extension =
+                    when (spoken.mimeType.substringBefore(';').lowercase()) {
+                        "audio/mpeg" -> "mp3"
+                        "audio/ogg" -> "ogg"
+                        "audio/wav" -> "wav"
+                        else -> "audio"
+                    }
+                val objectPath = "${request.userId}/${request.sessionId}/turn-${request.turnIndex}-question.$extension"
                 storage.upload(storageProperties.mediaBucket, objectPath, spoken.audio, spoken.mimeType)
                 objectPath
             } catch (e: RuntimeException) {

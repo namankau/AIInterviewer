@@ -72,6 +72,19 @@ class QuestionSpeechTest {
     }
 
     @Test
+    fun `stores compressed question speech with an MP3 path and content type`() {
+        val storage = RecordingStorage()
+        val repository = mock(SessionRepository::class.java)
+        val compressed = QuestionAudioCompressor { SpokenAudio(byteArrayOf(1, 2, 3), "audio/mpeg") }
+
+        speech(ai = SpeakingAi(), storage = storage, repository = repository, compressor = compressed)
+            .render(SpeechRequest(userId, sessionId, turnIndex = 4, text = "Why?", language = "english"))
+
+        assertEquals("$userId/$sessionId/turn-4-question.mp3" to "audio/mpeg", storage.uploads.single())
+        verify(repository).setQuestionSpeech(sessionId, userId, 4, storage.uploads.single().first, SpeechStatus.READY)
+    }
+
+    @Test
     fun `marks the turn unavailable when speech cannot be synthesised`() {
         val repository = mock(SessionRepository::class.java)
 
@@ -176,10 +189,12 @@ class QuestionSpeechTest {
         storage: ObjectStorage,
         repository: SessionRepository,
         executor: TaskExecutor = SyncTaskExecutor(),
+        compressor: QuestionAudioCompressor = QuestionAudioCompressor { it },
     ) = QuestionSpeech(
         interviewAi = ai,
         storage = storage,
         storageProperties = StorageProperties(),
+        compressor = compressor,
         repository = repository,
         events = InterviewEventRecorder.NONE,
         // No transaction is open here, so rendering runs inline and the assertions can

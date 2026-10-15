@@ -35,6 +35,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
@@ -68,8 +69,9 @@ class InterviewService(
     private val roundWorkspaceComposer: RoundWorkspaceComposer,
     private val codeRunner: CodeRunner,
     private val interviewEvents: InterviewEventRecorder,
+    private val activeLeases: ActiveLeaseRenewal,
     transactionManager: PlatformTransactionManager,
-    @Qualifier("interviewBackgroundExecutor") private val backgroundExecutor: TaskExecutor,
+    @Qualifier("interviewUploadExecutor") private val uploadExecutor: TaskExecutor,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val transactions = TransactionTemplate(transactionManager)
@@ -572,7 +574,7 @@ class InterviewService(
         /** The browser's measurement of this answer's speech timing, as JSON. See [AnswerTiming]. */
         timing: String? = null,
     ): SubmitAnswerResponse {
-        val claim = repository.claimAnswerRequest(sessionId, userId, turnIndex, requestId, REQUEST_LEASE_SECONDS)
+        val claim = repository.claimAnswerRequest(sessionId, userId, turnIndex, requestId, ActiveLeaseRenewal.LEASE_SECONDS)
         when (claim.status) {
             TurnRequestClaimStatus.COMPLETED -> {
                 return objectMapper.readValue(checkNotNull(claim.responseJson), SubmitAnswerResponse::class.java)
@@ -589,6 +591,7 @@ class InterviewService(
         if (claim.status == TurnRequestClaimStatus.ACQUIRED) {
             recordEvent(userId, sessionId, "answer_request_claimed", turnIndex, requestId, outcome = "succeeded")
         }
+        val heldLease = if (claim.status == TurnRequestClaimStatus.ACQUIRED) activeLeases.holdAnswer(requestId) else null
         var durable = false
         try {
             val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
@@ -613,38 +616,52 @@ class InterviewService(
             // two rather than for their sum.
             recordEvent(userId, sessionId, "answer_storage_started", turnIndex, requestId, outcome = "started")
             val storedAudio =
-                CompletableFuture.supplyAsync(
-                    {
-                        val startedAt = System.nanoTime()
-                        try {
-                            val stored = storeOrWarn(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType)
-                            recordEvent(
-                                userId,
-                                sessionId,
-                                "answer_storage_finished",
-                                turnIndex,
-                                requestId,
-                                outcome = if (stored == null) "failed" else "succeeded",
-                                errorType = if (stored == null) "storage_unavailable" else null,
-                                durationMs = elapsedMillis(startedAt),
-                            )
-                            stored
-                        } catch (e: RuntimeException) {
-                            recordEvent(
-                                userId,
-                                sessionId,
-                                "answer_storage_finished",
-                                turnIndex,
-                                requestId,
-                                outcome = "failed",
-                                errorType = "unknown",
-                                durationMs = elapsedMillis(startedAt),
-                            )
-                            throw e
-                        }
-                    },
-                    backgroundExecutor,
-                )
+                try {
+                    CompletableFuture.supplyAsync(
+                        {
+                            val startedAt = System.nanoTime()
+                            try {
+                                val stored = storeOrWarn(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType)
+                                recordEvent(
+                                    userId,
+                                    sessionId,
+                                    "answer_storage_finished",
+                                    turnIndex,
+                                    requestId,
+                                    outcome = if (stored == null) "failed" else "succeeded",
+                                    errorType = if (stored == null) "storage_unavailable" else null,
+                                    durationMs = elapsedMillis(startedAt),
+                                )
+                                stored
+                            } catch (e: RuntimeException) {
+                                recordEvent(
+                                    userId,
+                                    sessionId,
+                                    "answer_storage_finished",
+                                    turnIndex,
+                                    requestId,
+                                    outcome = "failed",
+                                    errorType = "unknown",
+                                    durationMs = elapsedMillis(startedAt),
+                                )
+                                throw e
+                            }
+                        },
+                        uploadExecutor,
+                    )
+                } catch (e: RejectedExecutionException) {
+                    recordEvent(
+                        userId,
+                        sessionId,
+                        "answer_storage_finished",
+                        turnIndex,
+                        requestId,
+                        outcome = "failed",
+                        errorType = "upload_saturated",
+                    )
+                    log.warn("Answer upload capacity reached for session {} turn {}; assessment will continue", sessionId, turnIndex)
+                    CompletableFuture.completedFuture(null)
+                }
 
             val roundType = RoundType.fromDbValue(session.roundType)
             val priorTurns =
@@ -988,6 +1005,7 @@ class InterviewService(
             }
             return response
         } finally {
+            heldLease?.close()
             if (!durable && claim.status == TurnRequestClaimStatus.ACQUIRED) {
                 runCatching { repository.releaseAnswerRequest(sessionId, userId, turnIndex, requestId) }
                     .onFailure { log.warn("Could not release answer request {} after failure", requestId, it) }
@@ -1018,7 +1036,7 @@ class InterviewService(
         turnIndex: Int,
         requestId: UUID = UUID.randomUUID(),
     ): HintView {
-        val claim = repository.claimHintRequest(sessionId, userId, turnIndex, requestId, REQUEST_LEASE_SECONDS)
+        val claim = repository.claimHintRequest(sessionId, userId, turnIndex, requestId, ActiveLeaseRenewal.LEASE_SECONDS)
         when (claim.status) {
             TurnRequestClaimStatus.COMPLETED -> {
                 return objectMapper.readValue(checkNotNull(claim.responseJson), HintView::class.java)
@@ -1032,6 +1050,7 @@ class InterviewService(
             TurnRequestClaimStatus.UNAVAILABLE,
             -> {}
         }
+        val heldLease = if (claim.status == TurnRequestClaimStatus.ACQUIRED) activeLeases.holdHint(requestId) else null
         var durable = false
         try {
             val session = repository.findSession(sessionId, userId) ?: throw ApiException.notFound()
@@ -1132,6 +1151,7 @@ class InterviewService(
             durable = true
             return response
         } finally {
+            heldLease?.close()
             if (!durable && claim.status == TurnRequestClaimStatus.ACQUIRED) {
                 runCatching { repository.releaseHintRequest(sessionId, userId, turnIndex, requestId) }
                     .onFailure { log.warn("Could not release hint request {} after failure", requestId, it) }
@@ -1707,7 +1727,6 @@ class InterviewService(
         const val GENERAL_PRACTICE_ROLE = "Role not specified"
         const val CUSTOM_TOPIC_COMPANY = "General practice"
         const val CUSTOM_TOPIC_ROLE = "Topic practice"
-        const val REQUEST_LEASE_SECONDS = 10 * 60L
 
         /**
          * How long a turn waits, once the answer has been assessed, for its recording to

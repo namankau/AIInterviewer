@@ -17,6 +17,17 @@ import { ApiRequestError, fetchReport } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useAccessToken } from "@/lib/use-access-token";
 
+const REPORT_RETRY_DELAY_MS = 5_000;
+const REPORT_MAX_RETRY_DELAY_MS = 30_000;
+const REPORT_WAIT_LIMIT_MS = 10 * 60_000;
+
+function reportIsStillGenerating(cause: unknown): boolean {
+  return cause instanceof ApiRequestError && (
+    (cause.status === 409 && cause.code === "report_generating") ||
+    cause.status === 502 || cause.status === 504
+  );
+}
+
 /**
  * The feedback report (PRD 09) — where perceived value concentrates.
  *
@@ -27,31 +38,74 @@ import { useAccessToken } from "@/lib/use-access-token";
  */
 export function ReportView({ sessionId, detailed = false }: { sessionId: string; detailed?: boolean }) {
   const accessToken = useAccessToken();
+  const [attempt, setAttempt] = useState(0);
+
+  return (
+    <ReportLoadAttempt
+      key={`${accessToken ?? "signed-out"}:${sessionId}:${attempt}`}
+      sessionId={sessionId}
+      detailed={detailed}
+      accessToken={accessToken}
+      onRetry={() => setAttempt((current) => current + 1)}
+    />
+  );
+}
+
+function ReportLoadAttempt({
+  sessionId,
+  detailed,
+  accessToken,
+  onRetry,
+}: {
+  sessionId: string;
+  detailed: boolean;
+  accessToken: string | null | undefined;
+  onRetry: () => void;
+}) {
   const [report, setReport] = useState<SessionReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expired, setExpired] = useState<string | null>(null);
+  const [waitTimedOut, setWaitTimedOut] = useState(false);
 
   useEffect(() => {
     if (!accessToken) return;
     let active = true;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    const controller = new AbortController();
+    const startedAt = Date.now();
+    let retryDelay = REPORT_RETRY_DELAY_MS;
 
-    fetchReport(sessionId, { accessToken })
-      .then((loaded) => active && setReport(loaded))
-      .catch((cause) => {
+    const load = async () => {
+      try {
+        const loaded = await fetchReport(sessionId, { accessToken, signal: controller.signal });
+        if (active) setReport(loaded);
+      } catch (cause) {
         if (!active) return;
-        // A report past its retention window is not a failure, and rendering it in red
-        // as one would tell the candidate something had gone wrong at the moment the
-        // product did exactly what it said it would. The API marks it out with its own
-        // code so this page does not have to read the message to know the difference.
+        if (reportIsStillGenerating(cause)) {
+          const remaining = REPORT_WAIT_LIMIT_MS - (Date.now() - startedAt);
+          if (remaining <= 0) {
+            setWaitTimedOut(true);
+            return;
+          }
+          retryTimer = setTimeout(load, Math.min(retryDelay, remaining));
+          retryDelay = Math.min(retryDelay * 2, REPORT_MAX_RETRY_DELAY_MS);
+          return;
+        }
+        // An expired report is a normal retention outcome, not a generation failure.
         if (cause instanceof ApiRequestError && cause.code === "report_expired") {
           setExpired(cause.message);
           return;
         }
         setError(cause instanceof ApiRequestError ? cause.message : "This report could not be loaded.");
-      });
+      }
+    };
+
+    void load();
 
     return () => {
       active = false;
+      controller.abort();
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, [accessToken, sessionId]);
 
@@ -92,6 +146,24 @@ export function ReportView({ sessionId, detailed = false }: { sessionId: string;
       <p role="alert" className="text-body text-danger">
         {error}
       </p>
+    );
+  }
+
+  if (waitTimedOut) {
+    return (
+      <section className="rounded-[1.5rem] border border-line bg-surface-raised p-7 shadow-[var(--shadow-md)] sm:p-10">
+        <h1 className="text-display text-ink">Your report is taking longer than expected.</h1>
+        <p className="mt-3 max-w-prose text-body text-ink-muted">
+          Your interview is saved. We could not finish loading the report yet.
+        </p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-6 rounded-lg bg-accent px-5 py-2.5 text-body font-medium text-accent-contrast hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          Try again
+        </button>
+      </section>
     );
   }
 

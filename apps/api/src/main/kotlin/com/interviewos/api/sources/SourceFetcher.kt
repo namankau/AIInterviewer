@@ -282,7 +282,7 @@ class SourceRefreshJob(
 
     @org.springframework.scheduling.annotation.Scheduled(
         initialDelayString = "PT2M",
-        fixedDelayString = "PT6H",
+        fixedDelayString = "PT12H",
     )
     fun refresh() {
         val due =

@@ -12,9 +12,11 @@ import org.mockito.Mockito.mockingDetails
 import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
 import org.springframework.core.task.SimpleAsyncTaskExecutor
+import org.springframework.core.task.TaskExecutor
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -141,5 +143,48 @@ class AnswerUploadGraceTest {
         val answerWrite = mockingDetails(harness.repository).invocations.single { it.method.name == "recordAnswer" }
         assertEquals("$candidate/$sessionId/turn-0-answer.webm", answerWrite.arguments[4])
         assertTrue(mockingDetails(harness.repository).invocations.none { it.method.name == "attachAnswerAudio" })
+    }
+
+    @Test
+    fun `an upload rejected at capacity does not fail the assessment`() {
+        val rejected = BankRoundHarness(backgroundExecutor = TaskExecutor { throw RejectedExecutionException("full") })
+        given(rejected.repository.findSession(sessionId, candidate)).willReturn(
+            SessionRow(
+                id = sessionId,
+                companyName = "Infosys",
+                archetype = Archetype.SERVICE_BASED_IT.dbValue,
+                archetypeConfidence = Confidence.RECOGNISED.dbValue,
+                roleTitle = "Senior Backend Engineer",
+                roundType = RoundType.BEHAVIOURAL_COMPETENCY.dbValue,
+                language = "english",
+                status = "in_progress",
+                startedAt = Instant.now().minusSeconds(60),
+                endedAt = null,
+                consentVideo = false,
+                durationMinutes = 45,
+            ),
+        )
+        given(rejected.repository.findTurn(sessionId, candidate, 0)).willReturn(
+            TurnRow(
+                turnIndex = 0,
+                questionText = "Tell me about yourself.",
+                questionAudioPath = null,
+                answerTranscript = null,
+                answeredAt = null,
+            ),
+        )
+        given(rejected.repository.countAnsweredTurns(sessionId, candidate)).willReturn(0, 1)
+        rejected.assessment = AnswerAssessment(transcript = "I build systems.", suggestedNextAction = "conclude", nextQuestionText = null)
+
+        rejected.service.submitAnswer(
+            userId = candidate,
+            sessionId = sessionId,
+            turnIndex = 0,
+            audio = AnswerAudio(byteArrayOf(1, 2, 3), "audio/webm"),
+            speaksLocally = true,
+        )
+
+        val answerWrite = mockingDetails(rejected.repository).invocations.single { it.method.name == "recordAnswer" }
+        assertNull(answerWrite.arguments[4])
     }
 }

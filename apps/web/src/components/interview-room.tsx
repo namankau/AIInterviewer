@@ -1,13 +1,13 @@
 "use client";
 
 import type { BoardState, HintView, SessionView, TurnView } from "@untiered/shared";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { BrandMark, BrandWordmark } from "@/components/brand-logo";
 import { DesignWorkspace } from "@/components/design-workspace";
 import { DeviceCheck } from "@/components/device-check";
-import { DsaWorkspace } from "@/components/dsa-workspace";
 import { RoundClock, formatDuration } from "@/components/round-clock";
 import {
   ApiRequestError,
@@ -30,6 +30,13 @@ import { useAccessToken } from "@/lib/use-access-token";
 import { InterviewerPresence, type PresenceState } from "@/components/interviewer-presence";
 import { useInterviewCapture } from "@/lib/use-interview-capture";
 import { useQuestionAudio } from "@/lib/use-question-audio";
+
+// The editor and its language grammars are needed only in coding rounds. Keep them
+// out of the first load for every other interview room.
+const DsaWorkspace = dynamic(() => import("@/components/dsa-workspace").then((module) => module.DsaWorkspace), {
+  ssr: false,
+  loading: () => <div role="status" className="flex h-full items-center justify-center bg-navy text-white/80">Loading the editor…</div>,
+});
 
 /**
  * How long the voice gets to arrive before the question goes up in writing anyway.

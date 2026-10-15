@@ -57,6 +57,16 @@ class GeminiInterviewAi(
 
     override val providerName: String = "gemini ($reasoningModel)"
 
+    override fun operationIdentity(
+        capability: AiCapability,
+        model: String?,
+    ): String? =
+        when (capability) {
+            AiCapability.SPEECH_SYNTHESIS -> "${properties.baseUrl}/models/${properties.speechModel}"
+            AiCapability.TEXT_EMBEDDING -> model?.let { "${properties.baseUrl}/models/$it" }
+            else -> null
+        }
+
     /**
      * Gemini is the only configured provider that can hear a recording or read a PDF, so
      * it is the only possible home for answer assessment and resume parsing. A text-only
@@ -403,21 +413,26 @@ class GeminiInterviewAi(
                         thinkingBudget?.let { put("thinkingConfig", mapOf("thinkingBudget" to it)) }
                     },
             )
-        val response = call(model, body, client = client)
-        val text =
-            response
-                .path("candidates")
-                .path(0)
-                .path("content")
-                .path("parts")
-                .path(0)
-                .path("text")
-                .asString()
-        if (text.isNullOrBlank()) throw AiUnavailableException("Gemini returned an empty response for $model.")
-        val parsed =
-            runCatching { objectMapper.readTree(text) }
-                .getOrElse { throw AiUnavailableException("Gemini returned malformed JSON for $model.", it) }
-        return parsed to usageOf(response, model)
+        for (attempt in 1..2) {
+            val response = call(model, body, client = client)
+            val text =
+                response
+                    .path("candidates")
+                    .path(0)
+                    .path("content")
+                    .path("parts")
+                    .path(0)
+                    .path("text")
+                    .asString()
+            if (text.isNullOrBlank()) throw AiUnavailableException("Gemini returned an empty response for $model.")
+            val parsed = runCatching { objectMapper.readTree(text) }
+            if (parsed.isSuccess) return parsed.getOrThrow() to usageOf(response, model)
+            if (attempt == 2) {
+                throw AiUnavailableException("Gemini returned malformed JSON for $model twice.", parsed.exceptionOrNull())
+            }
+            log.warn("Gemini returned malformed JSON for {}; retrying the same model once", model)
+        }
+        error("The JSON response loop must return or throw")
     }
 
     /**
@@ -469,7 +484,13 @@ class GeminiInterviewAi(
                 model,
                 ex,
             )
-            throw AiUnavailableException("Gemini model $model is not available.", ex)
+            throw AiUnavailableException("Gemini model $model is not available.", ex, worthRetryingElsewhere = false)
+        } catch (ex: HttpClientErrorException) {
+            throw AiUnavailableException(
+                "Gemini rejected the request to $model: ${ex.statusCode}.",
+                ex,
+                worthRetryingElsewhere = ex.statusCode.value() == 408,
+            )
         } catch (ex: ResourceAccessException) {
             // Told apart so the log says "slow", not "broken": a deadline that fires is the
             // chain doing its job, and the next provider is already being asked.

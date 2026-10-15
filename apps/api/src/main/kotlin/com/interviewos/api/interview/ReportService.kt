@@ -12,6 +12,7 @@ import com.interviewos.api.resume.ResumeService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import tools.jackson.databind.ObjectMapper
+import java.text.Normalizer
 import java.util.UUID
 
 /**
@@ -29,6 +30,7 @@ class ReportService(
     private val objectMapper: ObjectMapper,
     private val retention: RetentionProperties,
     private val resumeService: ResumeService,
+    private val activeLeases: ActiveLeaseRenewal,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -150,7 +152,7 @@ class ReportService(
         // judged on, so the model does not get to be generous about it.
         val assistance = AssistanceSummary.of(turns)
 
-        val claim = repository.claimReportGeneration(sessionId, userId, leaseId, REPORT_LEASE_SECONDS)
+        val claim = repository.claimReportGeneration(sessionId, userId, leaseId, ActiveLeaseRenewal.LEASE_SECONDS)
         when (claim.status) {
             ReportGenerationClaimStatus.COMPLETED -> {
                 return storedReport(checkNotNull(claim.payloadJson), session.focusTopic, assessableTurnsOf(turns))
@@ -173,6 +175,7 @@ class ReportService(
             ReportGenerationClaimStatus.ACQUIRED -> {}
         }
 
+        val heldLease = activeLeases.holdReport(leaseId)
         var saved = false
         try {
             val composed =
@@ -240,6 +243,7 @@ class ReportService(
                 "Your interview is saved, but the report could not be generated just now. Try again shortly.",
             )
         } finally {
+            heldLease.close()
             if (!saved) {
                 runCatching { repository.releaseReportGeneration(sessionId, userId, leaseId) }
                     .onFailure { log.warn("Could not release report generation lease {}", leaseId, it) }
@@ -572,8 +576,6 @@ class ReportService(
     }
 
     private companion object {
-        const val REPORT_LEASE_SECONDS = 10 * 60L
-
         /**
          * What an older stored report is missing, and what it should read as instead.
          *
@@ -597,6 +599,7 @@ class ReportService(
 }
 
 private val WHITESPACE = Regex("\\s+")
+private val NON_MATCH_CHARACTERS = Regex("[^\\p{L}\\p{N}\\p{M}' ]")
 
 /**
  * How a quote is compared with the transcript: loose on whitespace, case and punctuation,
@@ -604,8 +607,10 @@ private val WHITESPACE = Regex("\\s+")
  * a quote is really the candidate's (competencies, strengths, spoken English).
  */
 internal fun String.normaliseForMatch(): String =
-    lowercase()
+    Normalizer
+        .normalize(this, Normalizer.Form.NFC)
+        .lowercase()
         .replace("’", "'")
-        .replace(Regex("[^a-z0-9' ]"), " ")
+        .replace(NON_MATCH_CHARACTERS, " ")
         .replace(WHITESPACE, " ")
         .trim()

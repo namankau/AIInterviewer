@@ -68,8 +68,8 @@ class SessionRepository(
      * progress is derived rather than declared (CLAUDE.md): a counter that is incremented
      * somewhere drifts from the thing it counts, and this one is shown to the public.
      *
-     * Cheap enough to run per request at this size; if it stops being, it becomes a
-     * materialised view rather than a number someone remembers to bump.
+     * The public controller caches this derivation for one minute so repeated requests
+     * do not each scan the tables.
      */
     fun usageCounts(): UsageCounts =
         jdbcClient
@@ -731,6 +731,36 @@ class SessionRepository(
         leaseSeconds: Long,
     ): TurnRequestClaim = claimTurnRequest(sessionId, userId, turnIndex, requestId, leaseSeconds, TurnRequestKind.HINT)
 
+    fun renewAnswerRequests(
+        requestIds: List<UUID>,
+        leaseSeconds: Long,
+    ): Int = renewTurnRequests(requestIds, leaseSeconds, TurnRequestKind.ANSWER)
+
+    fun renewHintRequests(
+        requestIds: List<UUID>,
+        leaseSeconds: Long,
+    ): Int = renewTurnRequests(requestIds, leaseSeconds, TurnRequestKind.HINT)
+
+    private fun renewTurnRequests(
+        requestIds: List<UUID>,
+        leaseSeconds: Long,
+        kind: TurnRequestKind,
+    ): Int {
+        if (requestIds.isEmpty()) return 0
+        return jdbcClient
+            .sql(
+                """
+                update public.session_turns
+                   set ${kind.leaseColumn} = now() + (:leaseSeconds * interval '1 second')
+                 where ${kind.requestColumn} in (:requestIds)
+                   and ${kind.completedColumn} is null
+                   and ${kind.responseColumn} is null
+                """.trimIndent(),
+            ).param("leaseSeconds", leaseSeconds)
+            .param("requestIds", requestIds)
+            .update()
+    }
+
     private fun claimTurnRequest(
         sessionId: UUID,
         userId: UUID,
@@ -1067,6 +1097,26 @@ class SessionRepository(
                 }
             }.optional()
             .orElse(ReportGenerationClaim(ReportGenerationClaimStatus.UNAVAILABLE))
+    }
+
+    fun renewReportGenerations(
+        leaseIds: List<UUID>,
+        leaseSeconds: Long,
+    ): Int {
+        if (leaseIds.isEmpty()) return 0
+        return jdbcClient
+            .sql(
+                """
+                update public.sessions s
+                   set report_generation_lease_until = now() + (:leaseSeconds * interval '1 second')
+                 where s.report_generation_lease_id in (:leaseIds)
+                   and s.status = 'completed'
+                   and s.report_expired_at is null
+                   and not exists (select 1 from public.session_reports r where r.session_id = s.id)
+                """.trimIndent(),
+            ).param("leaseSeconds", leaseSeconds)
+            .param("leaseIds", leaseIds)
+            .update()
     }
 
     fun releaseReportGeneration(

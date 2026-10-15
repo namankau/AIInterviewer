@@ -128,7 +128,7 @@ export default function PrivacyPage() {
           <li>
             <strong className="text-ink">Deleting your account</strong> (Profile → Account) deletes
             everything above, including stored files and your sign-in. Files are removed from
-            storage within minutes.
+            storage within a day.
           </li>
         </ul>
       </LegalSection>

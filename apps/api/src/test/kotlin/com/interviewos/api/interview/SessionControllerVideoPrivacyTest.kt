@@ -85,7 +85,7 @@ class SessionControllerVideoPrivacyTest {
                 "audio",
                 "answer.webm",
                 "audio/webm",
-                ByteArray(25 * 1024 * 1024 + 1),
+                ByteArray(10 * 1024 * 1024 + 1),
             )
 
         mockMvc

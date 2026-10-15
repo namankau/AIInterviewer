@@ -128,8 +128,8 @@ class StorageDeletionWorker(
         return (30L * multiplier).coerceAtMost(3600L)
     }
 
-    private companion object {
-        val JOB_LEASE: Duration = Duration.ofMinutes(2)
+    internal companion object {
+        private val JOB_LEASE: Duration = Duration.ofMinutes(2)
         const val JOB_BATCH_SIZE = 100
     }
 }
@@ -152,12 +152,22 @@ class ReportRetentionJob(
     }
 }
 
+/**
+ * Twice a day, like the retention sweeps. Deleted rows are gone the moment the user asks;
+ * this only clears the files behind them, and the privacy page promises that within a day.
+ *
+ * A pass drains the queue rather than taking one batch: at this interval a single batch
+ * would cap throughput at a few hundred prefixes a day. The loop ends because every claimed
+ * job leaves the due set, either completed or rescheduled into the future.
+ */
 @Component
 class StorageDeletionRetryJob(
     private val worker: StorageDeletionWorker,
 ) {
-    @Scheduled(initialDelayString = "PT10S", fixedDelayString = "PT1M")
+    @Scheduled(initialDelayString = "PT10S", fixedDelayString = "PT12H")
     fun deleteDuePrefixes() {
-        worker.processDue(Instant.now())
+        do {
+            val claimed = worker.processDue(Instant.now())
+        } while (claimed == StorageDeletionWorker.JOB_BATCH_SIZE)
     }
 }

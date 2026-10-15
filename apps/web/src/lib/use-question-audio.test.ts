@@ -88,6 +88,19 @@ describe("useQuestionAudio", () => {
     expect(fetchTurn).toHaveBeenCalledTimes(2);
   });
 
+  it("backs off after the first seconds of pending speech", async () => {
+    fetchTurn.mockResolvedValue(turn());
+    renderHook(() => useQuestionAudio({ sessionId: SESSION, turn: turn(), accessToken: "token" }));
+
+    await elapse(2_000);
+    expect(fetchTurn).toHaveBeenCalledTimes(5);
+    await elapse(4_000);
+    expect(fetchTurn).toHaveBeenCalledTimes(10);
+    await elapse(38_999);
+    expect(fetchTurn).toHaveBeenCalledTimes(42);
+    // A fixed 400 ms poll would have made 112 requests by this point.
+  });
+
   /**
    * A round whose speech never renders must still be answerable. The question is on
    * screen in writing, so the only thing that could go wrong here is the room waiting

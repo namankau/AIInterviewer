@@ -54,8 +54,9 @@ import { useQuestionAudio } from "@/lib/use-question-audio";
  */
 const VOICE_GRACE_MS = 25_000;
 
-/** How long the board sits still before it is saved. One second of drawing, at most, is lost. */
-const BOARD_SAVE_MS = 1_000;
+/** Save while drawing at a measured cadence, and flush on window blur. */
+const BOARD_SAVE_MS = 5_000;
+const MAX_BOARD_BYTES = 5 * 1024 * 1024;
 
 /** How often the design rail re-checks which phase the round is in. */
 const ROUND_CLOCK_TICK_MS = 10_000;
@@ -685,26 +686,51 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   /*
    * The board, saved as they work.
    *
-   * Debounced because Excalidraw fires on every pointer move and a PUT per stroke would
-   * be absurd. Failures are swallowed on purpose: a save that missed is replaced by the
-   * next one a second later, and interrupting somebody mid-design to tell them about a
-   * transient network blip would cost far more than it saved.
+   * Excalidraw fires on every pointer move; a five-second timer bounds the writes while
+   * drawing. Transient failures retry after a later change or blur. A size rejection is
+   * shown because the candidate must reduce the board before it can be saved.
    */
   const boardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestBoard = useRef<BoardState | null>(null);
-  useEffect(() => () => { if (boardTimer.current) clearTimeout(boardTimer.current); }, []);
+  const boardDirty = useRef(false);
+  const [boardSaveError, setBoardSaveError] = useState<string | null>(null);
+
+  const flushBoard = useCallback(() => {
+    if (boardTimer.current) clearTimeout(boardTimer.current);
+    boardTimer.current = null;
+    const board = latestBoard.current;
+    if (!accessToken || !board || !boardDirty.current) return;
+    if (new TextEncoder().encode(JSON.stringify(board)).length > MAX_BOARD_BYTES) {
+      setBoardSaveError("Your board is over 5 MB and cannot be saved. Remove some content before leaving.");
+      return;
+    }
+    setBoardSaveError(null);
+    boardDirty.current = false;
+    void saveBoard(accessToken, sessionId, board).catch((error: unknown) => {
+      boardDirty.current = true;
+      if (error instanceof ApiRequestError && error.status === 413) {
+        boardDirty.current = false;
+        setBoardSaveError("Your board is over 5 MB and cannot be saved. Remove some content before leaving.");
+      }
+    });
+  }, [accessToken, sessionId]);
+
+  useEffect(() => {
+    window.addEventListener("blur", flushBoard);
+    return () => {
+      window.removeEventListener("blur", flushBoard);
+      if (boardTimer.current) clearTimeout(boardTimer.current);
+    };
+  }, [flushBoard]);
 
   const onBoardChange = useCallback(
     (next: BoardState) => {
       latestBoard.current = next;
+      boardDirty.current = true;
       if (!accessToken || boardTimer.current) return;
-      boardTimer.current = setTimeout(() => {
-        boardTimer.current = null;
-        const board = latestBoard.current;
-        if (board) void saveBoard(accessToken, sessionId, board).catch(() => undefined);
-      }, BOARD_SAVE_MS);
+      boardTimer.current = setTimeout(flushBoard, BOARD_SAVE_MS);
     },
-    [accessToken, sessionId],
+    [accessToken, flushBoard],
   );
 
   const workspace = session?.workspace ?? null;
@@ -952,6 +978,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
       <div className={workspace ? "flex min-h-0 flex-1 flex-col lg:flex-row" : "contents"}>
         {workspace ? (
           <div className="order-2 min-h-[34rem] flex-1 border-t border-line lg:min-h-0 lg:w-[58%] lg:border-t-0 lg:border-l">
+            {boardSaveError ? <p role="alert" className="border-b border-danger/30 bg-danger/5 px-4 py-2 text-caption text-danger">{boardSaveError}</p> : null}
             {workspaceNode}
           </div>
         ) : null}

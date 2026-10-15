@@ -1,5 +1,6 @@
 package com.interviewos.api.loopbrief
 
+import com.interviewos.api.ai.AiSpendContext
 import com.interviewos.api.common.ApiErrorWriter
 import com.interviewos.api.common.ApiExceptionHandler
 import com.interviewos.api.config.ApiSecurityTestConfiguration
@@ -17,6 +18,9 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /** `GET /api/v1/loop-brief` -- how the company interviews, before the round. */
 @WebMvcTest(LoopBriefController::class)
@@ -30,7 +34,10 @@ class LoopBriefControllerTest {
 
     @Test
     fun `returns the brief for a signed-in candidate`() {
-        given(service.brief("Amazon", "Backend Engineer", "L5")).willReturn(sampleBrief())
+        given(service.brief("Amazon", "Backend Engineer", "L5")).willAnswer {
+            assertEquals(UUID.fromString("6f1b7f4c-2b2a-4c3e-9a51-0a5f4f2f2a11"), AiSpendContext.current()?.userId)
+            sampleBrief()
+        }
 
         mockMvc
             .perform(
@@ -44,6 +51,7 @@ class LoopBriefControllerTest {
             .andExpect(jsonPath("$.hasSources").value(true))
             .andExpect(jsonPath("$.sourcedStages[0].stageName").value("Online assessment"))
             .andExpect(jsonPath("$.bankCoverage.bankUrl").value("/questions/amazon"))
+        assertNull(AiSpendContext.current())
     }
 
     @Test

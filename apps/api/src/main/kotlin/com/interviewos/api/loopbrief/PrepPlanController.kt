@@ -1,5 +1,6 @@
 package com.interviewos.api.loopbrief
 
+import com.interviewos.api.ai.AiSpendContext
 import com.interviewos.api.user.SupabaseIdentity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
@@ -26,5 +27,8 @@ class PrepPlanController(
         @RequestParam company: String,
         @RequestParam(required = false) role: String?,
         @RequestParam(required = false) level: String?,
-    ): PrepPlanView = service.plan(SupabaseIdentity.from(jwt).id, company, role, level)
+    ): PrepPlanView {
+        val userId = SupabaseIdentity.from(jwt).id
+        return AiSpendContext.of(userId, null) { service.plan(userId, company, role, level) }
+    }
 }

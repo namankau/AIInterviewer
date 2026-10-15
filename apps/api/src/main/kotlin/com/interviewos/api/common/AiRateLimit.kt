@@ -38,7 +38,13 @@ class AiRateLimiter(
         val count: Int,
     )
 
+    private data class DistinctWindow(
+        val startedAtMillis: Long,
+        val values: Set<String>,
+    )
+
     private val windows = ConcurrentHashMap<String, Window>()
+    private val distinctWindows = ConcurrentHashMap<String, DistinctWindow>()
 
     /** Returns null when the call may proceed, or the seconds until it may. */
     fun acquire(
@@ -56,6 +62,40 @@ class AiRateLimiter(
 
                 current.count < limitPerHour -> {
                     current.copy(count = current.count + 1)
+                }
+
+                else -> {
+                    refusedFor = ((current.startedAtMillis + HOUR_MILLIS - now) / 1000).coerceAtLeast(1)
+                    current
+                }
+            }
+        }
+        return refusedFor
+    }
+
+    /** Repeated briefs for the same company, role, and level do not consume another slot. */
+    fun acquireDistinct(
+        key: String,
+        value: String,
+        limitPerHour: Int,
+    ): Long? {
+        val now = clock.millis()
+        if (distinctWindows.size > MAX_TRACKED_KEYS) {
+            distinctWindows.entries.removeIf { now - it.value.startedAtMillis >= HOUR_MILLIS }
+        }
+        var refusedFor: Long? = null
+        distinctWindows.compute(key) { _, current ->
+            when {
+                current == null || now - current.startedAtMillis >= HOUR_MILLIS -> {
+                    DistinctWindow(now, setOf(value))
+                }
+
+                value in current.values -> {
+                    current
+                }
+
+                current.values.size < limitPerHour -> {
+                    current.copy(values = current.values + value)
                 }
 
                 else -> {
@@ -123,7 +163,31 @@ class AiRateLimitConfig(
                     val account =
                         (SecurityContextHolder.getContext().authentication?.principal as? Jwt)?.subject ?: return true
                     if (route != null) {
-                        val retryAfter = limiter.acquire("${route.name}:$account", route.perHour)
+                        val key = "${route.name}:$account"
+                        val retryAfter =
+                            if (route.name == "loop_briefs") {
+                                val company =
+                                    request
+                                        .getParameter("company")
+                                        .orEmpty()
+                                        .trim()
+                                        .lowercase()
+                                val role =
+                                    request
+                                        .getParameter("role")
+                                        .orEmpty()
+                                        .trim()
+                                        .lowercase()
+                                val level =
+                                    request
+                                        .getParameter("level")
+                                        .orEmpty()
+                                        .trim()
+                                        .lowercase()
+                                limiter.acquireDistinct(key, "$company\u0000$role\u0000$level", route.perHour)
+                            } else {
+                                limiter.acquire(key, route.perHour)
+                            }
                         if (retryAfter != null) {
                             log
                                 .atWarn()

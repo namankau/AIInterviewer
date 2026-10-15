@@ -21,8 +21,6 @@ import com.interviewos.api.storage.StorageProperties
 import com.interviewos.api.user.SupabaseIdentity
 import com.interviewos.api.user.UserRepository
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.core.task.TaskExecutor
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
@@ -33,11 +31,6 @@ import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.RejectedExecutionException
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 /**
  * Conducts an interview.
@@ -71,7 +64,6 @@ class InterviewService(
     private val interviewEvents: InterviewEventRecorder,
     private val activeLeases: ActiveLeaseRenewal,
     transactionManager: PlatformTransactionManager,
-    @Qualifier("interviewUploadExecutor") private val uploadExecutor: TaskExecutor,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val transactions = TransactionTemplate(transactionManager)
@@ -607,62 +599,6 @@ class InterviewService(
             }
             if (claim.status != TurnRequestClaimStatus.ACQUIRED) throw sessionStateChanged()
 
-            // Keeping the recording is worth doing but not worth ending the round for: the
-            // candidate has already spoken, the transcript is what the report is built from,
-            // and losing the interview over a storage blip would be the worse failure.
-            //
-            // It also has no bearing on what gets asked next, so it uploads alongside the
-            // assessment rather than ahead of it: the candidate waits for the longer of the
-            // two rather than for their sum.
-            recordEvent(userId, sessionId, "answer_storage_started", turnIndex, requestId, outcome = "started")
-            val storedAudio =
-                try {
-                    CompletableFuture.supplyAsync(
-                        {
-                            val startedAt = System.nanoTime()
-                            try {
-                                val stored = storeOrWarn(userId, sessionId, "turn-$turnIndex-answer", audio.bytes, audio.contentType)
-                                recordEvent(
-                                    userId,
-                                    sessionId,
-                                    "answer_storage_finished",
-                                    turnIndex,
-                                    requestId,
-                                    outcome = if (stored == null) "failed" else "succeeded",
-                                    errorType = if (stored == null) "storage_unavailable" else null,
-                                    durationMs = elapsedMillis(startedAt),
-                                )
-                                stored
-                            } catch (e: RuntimeException) {
-                                recordEvent(
-                                    userId,
-                                    sessionId,
-                                    "answer_storage_finished",
-                                    turnIndex,
-                                    requestId,
-                                    outcome = "failed",
-                                    errorType = "unknown",
-                                    durationMs = elapsedMillis(startedAt),
-                                )
-                                throw e
-                            }
-                        },
-                        uploadExecutor,
-                    )
-                } catch (e: RejectedExecutionException) {
-                    recordEvent(
-                        userId,
-                        sessionId,
-                        "answer_storage_finished",
-                        turnIndex,
-                        requestId,
-                        outcome = "failed",
-                        errorType = "upload_saturated",
-                    )
-                    log.warn("Answer upload capacity reached for session {} turn {}; assessment will continue", sessionId, turnIndex)
-                    CompletableFuture.completedFuture(null)
-                }
-
             val roundType = RoundType.fromDbValue(session.roundType)
             val priorTurns =
                 repository
@@ -815,25 +751,6 @@ class InterviewService(
                     intervention = intervention.wireValue,
                 ),
             )
-            // The upload has almost always finished under the assessment by now. Waiting for it
-            // cannot fail the turn: storeOrWarn has already turned its own errors into nulls.
-            //
-            // It must not hold the turn either. A storage request that hangs has the same
-            // three-minute timeout as everything else, and an unbounded join made the next
-            // question wait for the recording of the last answer — which it has no use for.
-            // So the turn waits a short grace for it, and a recording still uploading after
-            // that is attached to its answer when it lands (see the end of this method).
-            var uploadStillRunning = false
-            val audioPath =
-                try {
-                    storedAudio.get(ANSWER_UPLOAD_GRACE.toMillis(), TimeUnit.MILLISECONDS)
-                } catch (e: TimeoutException) {
-                    uploadStillRunning = true
-                    null
-                } catch (e: ExecutionException) {
-                    throw e.cause ?: e
-                }
-
             // Everything from here down writes to the database, and has to land together: the
             // answer record, then whichever of "mark the session completed" or "insert the
             // next turn" follows it. One `inTransaction` block, opened only now that the model
@@ -850,7 +767,6 @@ class InterviewService(
                                 userId = userId,
                                 turnIndex = turnIndex,
                                 transcript = assessment.value.transcript,
-                                audioPath = audioPath,
                                 videoPath = null,
                                 assessmentJson = objectMapper.writeValueAsString(assessment.value),
                                 nextAction = nextAction,
@@ -988,17 +904,6 @@ class InterviewService(
                 durationMs = elapsedMillis(persistStartedAt),
             )
             durable = true
-            // Registered only now that the answer has committed: `recordAnswer` writes the
-            // audio path too, and attaching before it would be overwritten with the null above.
-            if (uploadStillRunning) {
-                log.warn("Answer audio for session {} turn {} was still uploading; attaching it when it lands", sessionId, turnIndex)
-                storedAudio.thenAccept { late ->
-                    if (late != null) {
-                        runCatching { repository.attachAnswerAudio(sessionId, userId, turnIndex, late) }
-                            .onFailure { log.warn("Could not attach late answer audio for session {} turn {}", sessionId, turnIndex, it) }
-                    }
-                }
-            }
             recordEvent(userId, sessionId, "answer_response_ready", turnIndex, requestId, outcome = "ready")
             if (response.sessionComplete) {
                 recordEvent(userId, sessionId, "session_completed", turnIndex, requestId, outcome = "succeeded")
@@ -1642,34 +1547,6 @@ class InterviewService(
             nextAction = nextAction,
         )
 
-    /** Media is evidence, not a precondition. A failure is logged and the round goes on. */
-    private fun storeOrWarn(
-        userId: UUID,
-        sessionId: UUID,
-        name: String,
-        bytes: ByteArray,
-        contentType: String,
-    ): String? =
-        try {
-            store(userId, sessionId, name, bytes, contentType)
-        } catch (e: ObjectStorageException) {
-            log.warn("Could not store {} for session {}", name, sessionId, e)
-            null
-        }
-
-    private fun store(
-        userId: UUID,
-        sessionId: UUID,
-        name: String,
-        bytes: ByteArray,
-        contentType: String,
-    ): String {
-        // Ownership is the first path segment, matching the storage RLS policies.
-        val path = "$userId/$sessionId/$name.${extensionFor(contentType)}"
-        storage.upload(storageProperties.mediaBucket, path, bytes, contentType)
-        return path
-    }
-
     private fun signedUrl(path: String?): String? =
         path?.let {
             try {
@@ -1711,16 +1588,6 @@ class InterviewService(
         return questions[answeredTurns % questions.size]
     }
 
-    private fun extensionFor(contentType: String): String =
-        when {
-            contentType.contains("webm") -> "webm"
-            contentType.contains("mp4") -> "mp4"
-            contentType.contains("ogg") -> "ogg"
-            contentType.contains("wav") || contentType.contains("L16") -> "wav"
-            contentType.contains("mpeg") || contentType.contains("mp3") -> "mp3"
-            else -> "bin"
-        }
-
     private companion object {
         const val MAX_SESSION_PAGE = 50
         const val SIGNED_URL_SECONDS = 3600
@@ -1733,12 +1600,6 @@ class InterviewService(
         const val CUSTOM_TOPIC_COMPANY = "General practice"
         const val CUSTOM_TOPIC_ROLE = "Topic practice"
 
-        /**
-         * How long a turn waits, once the answer has been assessed, for its recording to
-         * finish uploading. The upload starts with the assessment and normally ends well
-         * inside it; this is only the allowance for the one that has not.
-         */
-        val ANSWER_UPLOAD_GRACE: Duration = Duration.ofSeconds(2)
         val DRAFT_CONFIDENCES = setOf("high", "medium", "low")
         val CUSTOM_ROUND_MINUTES = setOf(10, 20, 30)
         val FOLLOW_UP_ACTIONS = setOf("follow_up", "probe", "challenge")

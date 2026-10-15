@@ -650,31 +650,6 @@ class SessionRepository(
             .update()
     }
 
-    /**
-     * Links a recording that finished uploading after its answer was recorded. Only fills
-     * an empty path, so it can never replace one the answer was recorded with.
-     */
-    fun attachAnswerAudio(
-        sessionId: UUID,
-        userId: UUID,
-        turnIndex: Int,
-        audioPath: String,
-    ) {
-        jdbcClient
-            .sql(
-                """
-                update public.session_turns
-                   set answer_audio_path = :audio
-                 where session_id = :s and user_id = :u and turn_index = :i
-                   and answer_audio_path is null
-                """.trimIndent(),
-            ).param("audio", audioPath)
-            .param("s", sessionId)
-            .param("u", userId)
-            .param("i", turnIndex)
-            .update()
-    }
-
     fun findTurn(
         sessionId: UUID,
         userId: UUID,
@@ -921,7 +896,6 @@ class SessionRepository(
         userId: UUID,
         turnIndex: Int,
         transcript: String,
-        audioPath: String?,
         videoPath: String?,
         assessmentJson: String,
         nextAction: String,
@@ -937,7 +911,7 @@ class SessionRepository(
                 """
                 update public.session_turns
                    set answer_transcript = :t,
-                       answer_audio_path = :audio,
+                       answer_audio_path = null,
                        answer_video_path = :video,
                        answered_at = now(),
                        assessment = cast(:assessment as jsonb),
@@ -956,7 +930,6 @@ class SessionRepository(
                    )
                 """.trimIndent(),
             ).param("t", transcript)
-            .param("audio", audioPath)
             .param("video", videoPath)
             .param("assessment", assessmentJson)
             .param("action", nextAction)

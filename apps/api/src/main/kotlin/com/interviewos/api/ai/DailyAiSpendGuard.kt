@@ -6,11 +6,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.scheduling.annotation.Scheduled
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.UUID
 
 @ConfigurationProperties(prefix = "interviewos.ai.budget")
 data class AiBudgetProperties(
     /** Zero leaves the in-app guard inactive until the owner sets a daily dollar limit. */
     val dailyCapMicroUsd: Long = 0,
+    /** Two dollars per candidate per India-time day, independently of the project-wide cap. */
+    val perUserDailyCapMicroUsd: Long = 2_000_000,
 )
 
 data class AiFallbackRate(
@@ -22,6 +25,11 @@ data class AiFallbackRate(
 
 interface AiSpendReadModel {
     fun spentSince(since: Instant): Long
+
+    fun spentByUserSince(
+        userId: UUID,
+        since: Instant,
+    ): Long
 
     fun fallbackRateSince(since: Instant): AiFallbackRate
 }

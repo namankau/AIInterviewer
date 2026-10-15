@@ -1,8 +1,10 @@
 package com.interviewos.api.common
 
+import com.interviewos.api.ai.UserAiSpendGuard
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpStatus
@@ -12,6 +14,7 @@ import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 import java.time.Clock
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -35,7 +38,13 @@ class AiRateLimiter(
         val count: Int,
     )
 
+    private data class DistinctWindow(
+        val startedAtMillis: Long,
+        val values: Set<String>,
+    )
+
     private val windows = ConcurrentHashMap<String, Window>()
+    private val distinctWindows = ConcurrentHashMap<String, DistinctWindow>()
 
     /** Returns null when the call may proceed, or the seconds until it may. */
     fun acquire(
@@ -64,6 +73,40 @@ class AiRateLimiter(
         return refusedFor
     }
 
+    /** Repeated briefs for the same company, role, and level do not consume another slot. */
+    fun acquireDistinct(
+        key: String,
+        value: String,
+        limitPerHour: Int,
+    ): Long? {
+        val now = clock.millis()
+        if (distinctWindows.size > MAX_TRACKED_KEYS) {
+            distinctWindows.entries.removeIf { now - it.value.startedAtMillis >= HOUR_MILLIS }
+        }
+        var refusedFor: Long? = null
+        distinctWindows.compute(key) { _, current ->
+            when {
+                current == null || now - current.startedAtMillis >= HOUR_MILLIS -> {
+                    DistinctWindow(now, setOf(value))
+                }
+
+                value in current.values -> {
+                    current
+                }
+
+                current.values.size < limitPerHour -> {
+                    current.copy(values = current.values + value)
+                }
+
+                else -> {
+                    refusedFor = ((current.startedAtMillis + HOUR_MILLIS - now) / 1000).coerceAtLeast(1)
+                    current
+                }
+            }
+        }
+        return refusedFor
+    }
+
     private companion object {
         const val HOUR_MILLIS = 3_600_000L
         const val MAX_TRACKED_KEYS = 50_000
@@ -80,9 +123,10 @@ internal data class LimitedRoute(
 
 @Configuration
 class AiRateLimitConfig(
+    private val userSpendGuard: ObjectProvider<UserAiSpendGuard>,
     @Value("\${interviewos.rate-limit.enabled:true}") private val enabled: Boolean,
     @Value("\${interviewos.rate-limit.round-drafts-per-hour:30}") roundDrafts: Int,
-    @Value("\${interviewos.rate-limit.loop-briefs-per-hour:40}") loopBriefs: Int,
+    @Value("\${interviewos.rate-limit.loop-briefs-per-hour:10}") loopBriefs: Int,
     @Value("\${interviewos.rate-limit.resume-uploads-per-hour:6}") resumeUploads: Int,
     @Value("\${interviewos.rate-limit.hints-per-hour:40}") hints: Int,
 ) : WebMvcConfigurer {
@@ -99,7 +143,6 @@ class AiRateLimitConfig(
         )
 
     override fun addInterceptors(registry: InterceptorRegistry) {
-        if (!enabled) return
         registry.addInterceptor(
             object : HandlerInterceptor {
                 override fun preHandle(
@@ -108,25 +151,67 @@ class AiRateLimitConfig(
                     handler: Any,
                 ): Boolean {
                     val route =
-                        routes.firstOrNull { it.method == request.method && it.pathPattern.matches(request.requestURI) }
-                            ?: return true
+                        routes.firstOrNull { enabled && it.method == request.method && it.pathPattern.matches(request.requestURI) }
+                    val spendGuarded =
+                        when (request.method) {
+                            "POST" -> request.requestURI in setOf("/api/v1/sessions", "/api/v1/round-drafts", "/api/v1/me/resume")
+                            "GET" -> request.requestURI in setOf("/api/v1/loop-brief", "/api/v1/prep-plan")
+                            else -> false
+                        }
+                    if (route == null && !spendGuarded) return true
                     // Unauthenticated requests never reach a controller; nothing to count.
                     val account =
                         (SecurityContextHolder.getContext().authentication?.principal as? Jwt)?.subject ?: return true
-                    val retryAfter = limiter.acquire("${route.name}:$account", route.perHour) ?: return true
-
-                    log
-                        .atWarn()
-                        .addKeyValue("user_id", account)
-                        .addKeyValue("limit", route.name)
-                        .addKeyValue("per_hour", route.perHour)
-                        .log("Rate limit reached")
-                    response.setHeader("Retry-After", retryAfter.toString())
-                    throw ApiException(
-                        HttpStatus.TOO_MANY_REQUESTS,
-                        "rate_limited",
-                        "That has been asked for a lot in the last hour. Try again in ${minutesOf(retryAfter)}.",
-                    )
+                    if (route != null) {
+                        val key = "${route.name}:$account"
+                        val retryAfter =
+                            if (route.name == "loop_briefs") {
+                                val company =
+                                    request
+                                        .getParameter("company")
+                                        .orEmpty()
+                                        .trim()
+                                        .lowercase()
+                                val role =
+                                    request
+                                        .getParameter("role")
+                                        .orEmpty()
+                                        .trim()
+                                        .lowercase()
+                                val level =
+                                    request
+                                        .getParameter("level")
+                                        .orEmpty()
+                                        .trim()
+                                        .lowercase()
+                                limiter.acquireDistinct(key, "$company\u0000$role\u0000$level", route.perHour)
+                            } else {
+                                limiter.acquire(key, route.perHour)
+                            }
+                        if (retryAfter != null) {
+                            log
+                                .atWarn()
+                                .addKeyValue("user_id", account)
+                                .addKeyValue("limit", route.name)
+                                .addKeyValue("per_hour", route.perHour)
+                                .log("Rate limit reached")
+                            response.setHeader("Retry-After", retryAfter.toString())
+                            throw ApiException(
+                                HttpStatus.TOO_MANY_REQUESTS,
+                                "rate_limited",
+                                "That has been asked for a lot in the last hour. Try again in ${minutesOf(retryAfter)}.",
+                            )
+                        }
+                    }
+                    if (spendGuarded && userSpendGuard.ifAvailable?.reached(UUID.fromString(account)) == true) {
+                        log.atWarn().addKeyValue("user_id", account).log("Daily account AI spend cap reached")
+                        throw ApiException(
+                            HttpStatus.TOO_MANY_REQUESTS,
+                            "daily_ai_budget_reached",
+                            "You've reached today's AI practice budget. Try again tomorrow.",
+                        )
+                    }
+                    return true
                 }
             },
         )

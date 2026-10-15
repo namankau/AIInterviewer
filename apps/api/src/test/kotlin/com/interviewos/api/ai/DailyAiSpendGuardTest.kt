@@ -2,6 +2,7 @@ package com.interviewos.api.ai
 
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -18,6 +19,11 @@ class DailyAiSpendGuardTest {
             this.since = since
             return total
         }
+
+        override fun spentByUserSince(
+            userId: UUID,
+            since: Instant,
+        ): Long = total
 
         override fun fallbackRateSince(since: Instant): AiFallbackRate = rate
     }

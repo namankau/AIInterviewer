@@ -50,4 +50,16 @@ class AiRateLimiterTest {
         assertNull(limiter.acquire("briefs:a", limitPerHour = 1))
         assertNotNull(limiter.acquire("drafts:a", limitPerHour = 1))
     }
+
+    @Test
+    fun `reopening a brief does not spend another company slot`() {
+        assertNull(limiter.acquireDistinct("briefs:a", "tcs\u0000software\u0000junior", limitPerHour = 2))
+        assertNull(limiter.acquireDistinct("briefs:a", "tcs\u0000software\u0000junior", limitPerHour = 2))
+        assertNull(limiter.acquireDistinct("briefs:a", "infosys\u0000software\u0000junior", limitPerHour = 2))
+        assertNotNull(limiter.acquireDistinct("briefs:a", "deloitte\u0000software\u0000junior", limitPerHour = 2))
+        assertNull(limiter.acquireDistinct("briefs:b", "deloitte\u0000software\u0000junior", limitPerHour = 2))
+
+        clock.now = clock.now.plusSeconds(3600)
+        assertNull(limiter.acquireDistinct("briefs:a", "deloitte\u0000software\u0000junior", limitPerHour = 2))
+    }
 }

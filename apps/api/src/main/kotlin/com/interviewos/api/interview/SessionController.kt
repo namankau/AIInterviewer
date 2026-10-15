@@ -1,5 +1,6 @@
 package com.interviewos.api.interview
 
+import com.interviewos.api.ai.AiSpendContext
 import com.interviewos.api.ai.AnswerAudio
 import com.interviewos.api.common.ApiException
 import com.interviewos.api.common.ContentTypes
@@ -55,10 +56,7 @@ class SessionController(
     fun composeRound(
         @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: ComposeRoundRequest,
-    ): RoundDraft {
-        callerOf(jwt)
-        return interviewService.composeRound(request)
-    }
+    ): RoundDraft = AiSpendContext.of(callerOf(jwt), null) { interviewService.composeRound(request) }
 
     @PostMapping("/sessions")
     @ResponseStatus(HttpStatus.CREATED)

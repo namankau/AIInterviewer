@@ -15,6 +15,7 @@ import { CompetencyBars, bandFor, overallScore, scoreToneForPercent } from "@/co
 import { SpokenEnglishPanel } from "@/components/spoken-english-panel";
 import { ApiRequestError, fetchReport } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { cachedReport, rememberReport } from "@/lib/report-cache";
 import { useAccessToken } from "@/lib/use-access-token";
 
 const REPORT_RETRY_DELAY_MS = 5_000;
@@ -62,13 +63,15 @@ function ReportLoadAttempt({
   accessToken: string | null | undefined;
   onRetry: () => void;
 }) {
-  const [report, setReport] = useState<SessionReport | null>(null);
+  // Already in hand when the candidate arrives from the interview's closing screen, which
+  // waited for it; the page then renders at once instead of asking for it again.
+  const [report, setReport] = useState<SessionReport | null>(() => cachedReport(sessionId));
   const [error, setError] = useState<string | null>(null);
   const [expired, setExpired] = useState<string | null>(null);
   const [waitTimedOut, setWaitTimedOut] = useState(false);
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken || cachedReport(sessionId)) return;
     let active = true;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     const controller = new AbortController();
@@ -78,6 +81,7 @@ function ReportLoadAttempt({
     const load = async () => {
       try {
         const loaded = await fetchReport(sessionId, { accessToken, signal: controller.signal });
+        rememberReport(sessionId, loaded);
         if (active) setReport(loaded);
       } catch (cause) {
         if (!active) return;

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { fetchMe } from "@/lib/api";
+import { forgetReports } from "@/lib/report-cache";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useAccessToken } from "@/lib/use-access-token";
 
@@ -15,6 +16,20 @@ type State =
   | { status: "loading" }
   | { status: "ready"; ownerToken: string; me: MeResponse }
   | { status: "error"; ownerToken: string; message: string };
+
+/**
+ * The last profile this tab loaded. The account block sits inside every page's shell, so
+ * it mounts afresh on each navigation; without this it showed a loading placeholder and
+ * asked the API again every time the top navigation was used. Memory only, and cleared on
+ * sign-out, so it never outlives the session it belongs to.
+ */
+let lastMe: MeResponse | null = null;
+
+/** Drops what this tab remembers about the signed-in account. */
+export function forgetAccount(): void {
+  lastMe = null;
+  forgetReports();
+}
 
 const LANGUAGE_LABELS: Record<string, string> = {
   english: "English",
@@ -38,15 +53,18 @@ const LANGUAGE_LABELS: Record<string, string> = {
 export function AccountSummary() {
   const accessToken = useAccessToken();
   const pathname = usePathname();
-  const [state, setState] = useState<State>({ status: "loading" });
+  const [state, setState] = useState<State>(() =>
+    accessToken && lastMe ? { status: "ready", ownerToken: accessToken, me: lastMe } : { status: "loading" },
+  );
   const [attempt, setAttempt] = useState(0);
   const [promptFor, setPromptFor] = useState<string | null>(null);
   const visibleState: State =
     accessToken === null
       ? { status: "error", ownerToken: "", message: "This browser has no active session." }
-      : state.status !== "loading" && state.ownerToken !== accessToken ? { status: "loading" } : state;
+      : state.status === "error" && state.ownerToken !== accessToken ? { status: "loading" } : state;
 
   useEffect(() => {
+    if (accessToken === null) lastMe = null;
     if (!accessToken) return;
     const operationToken = accessToken;
     const controller = new AbortController();
@@ -55,6 +73,7 @@ export function AccountSummary() {
       try {
         const me = await fetchMe({ accessToken: operationToken, signal: controller.signal });
         if (!controller.signal.aborted) {
+          lastMe = me;
           setState({ status: "ready", ownerToken: operationToken, me });
           const isEmpty = !me.profile.function && !me.profile.currentLevel && !me.profile.targetLevel;
           if (isEmpty) {
@@ -69,6 +88,12 @@ export function AccountSummary() {
         }
       } catch (error) {
         if (controller.signal.aborted) {
+          return;
+        }
+        // A refresh that fails behind a profile already on screen changes nothing the
+        // candidate can see; only a first load with nothing to show is an error.
+        if (lastMe) {
+          setState({ status: "ready", ownerToken: operationToken, me: lastMe });
           return;
         }
         setState({
@@ -157,6 +182,7 @@ function AccountMenu({ me }: { me: MeResponse }) {
 
   async function signOut() {
     setSigningOut(true);
+    forgetAccount();
     await createSupabaseBrowserClient().auth.signOut();
     router.replace("/login");
     router.refresh();

@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { ArenaPlayPanel } from "@/components/arena/arena-play-panel";
+import { ImportBrowserArenaProgress } from "@/components/arena/import-browser-arena";
 import { CourseArtwork } from "@/components/courses/course-visuals";
 import { localDateKey, type DailyCourseQuest } from "@/lib/arena/progression";
 
@@ -36,9 +37,9 @@ export function ArenaDailyQuest({ questsByDate }: { questsByDate: Record<string,
             <p className="w-fit rounded-full bg-surface-raised px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase shadow-[var(--shadow-sm)]">
               Today&rsquo;s quest
             </p>
-            <h2 id="daily-arena-heading" className="text-heading text-ink">
+            <h1 id="daily-arena-heading" className="text-heading text-ink">
               A fresh set for every course
-            </h2>
+            </h1>
             <p className="max-w-2xl text-body text-ink-muted">
               Pick a course. Its three questions stay fixed for your local day, then rotate
               tomorrow.
@@ -74,6 +75,7 @@ export function ArenaDailyQuest({ questsByDate }: { questsByDate: Record<string,
               );
             })}
           </div>
+          <ImportBrowserArenaProgress />
         </>
       )}
     </section>
@@ -98,9 +100,9 @@ function DailyQuestWorkspace({
           <p className="font-mono text-micro tracking-widest text-accent-strong uppercase">
             Today&rsquo;s quest · {quest.challenges.length} questions
           </p>
-          <h2 id="daily-arena-heading" className="text-heading text-ink">
+          <h1 id="daily-arena-heading" className="text-heading text-ink">
             {quest.courseTitle}
-          </h2>
+          </h1>
           <p className="text-caption leading-relaxed text-ink-muted">{topics.join(" · ")}</p>
         </div>
         <button

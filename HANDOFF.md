@@ -1,36 +1,33 @@
 # Handoff — 16 October 2026
 
 ## Task
-Add authored Arena campaigns from the supplied `arena-scenarios` folder, `Campaign scripts.pdf`, and pasted brief (ad hoc request; PRD §08).
+Audit and redesign the Untiered web UI consistently across screens (user brief; PRD design direction).
 
 ## What I built
-- Added 12 five-step System Design campaigns in `content/scenarios/system-design/`, their concepts in `content/scenarios/concepts.json`, and the generated seed migration `supabase/migrations/20261016030000_system_design_campaigns.sql`.
-- Made 10 campaigns live. Kept `result-day` and `follow-the-sun` as drafts for human review of private student-result access and legal/data-residency claims. Draft-only concepts no longer appear as practice suggestions.
-- Preserved the supplied per-step system maps through the database and public API, displayed them in the course Arena, and shuffled answer options while keeping option IDs stable for server grading.
-- Tightened the scenario validator and added web, controller, and database integration coverage. Corrected misleading claims about payment/SMS/push retries, duplicate sends, and cached stock availability.
+- Audited all web routes, shared components, style inconsistencies, accessibility risks, and static performance risks in `docs/ui-audit.md`.
+- Proposed a cobalt/navy/teal palette and unified Plus Jakarta Sans typography in that document.
 
 ## Assumptions I made
-- The twelve complete campaigns were the immediate content request. The 18 proposed campaigns in the pasted brief have premises but no authored steps, so they remain a later writing task.
-- The supplied authored content was suitable to play after technical corrections, except for the two draft campaigns requiring a person's review.
-- The roughly 4,190 changed lines are justified as one library import because the twelve campaigns and their generated seed migration must stay in sync. Runtime changes are small.
+- The attached Untiered brief refines the earlier generic prompt; the existing `AGENTS.md` bright learning-platform direction remains authoritative.
+- "Show me the audit and proposed palette/typography direction before making large changes" is a review checkpoint. No visual system or screen changes were made yet.
+- Mentor booking, mentor-facing screens, and leaderboards are absent from the current app, so no new routes or features were scaffolded.
 
 ## What I could NOT verify
-- A signed-in deployed browser session or human judgment of the learning flow and visual quality.
-- Live AI behavior; no model calls, interviews, or paid data-generation jobs were run.
-- Human approval for the two draft campaigns. They are stored but excluded from the playable pool.
+- Final visual preference and real-device appearance await the owner's review of the proposed direction.
+- No live interviews or model calls were run.
 
 ## Verification status
-- Web typecheck, lint, 3,068 tests, and production build: pass locally.
-- Backend `ktlintCheck test build`: pass locally.
-- Scenario validation and generated migration check: pass.
-- GitHub Actions run 38932144587: all four jobs green, including database migration application and integration tests.
-- Linked Supabase migration `20261016030000`: applied; local and remote versions match.
+- Frontend typecheck: pass.
+- Frontend lint: pass.
+- Frontend tests: pass (82 files, 3,068 tests).
+- Frontend production build: pass.
+- Backend checks: not run; no backend files changed.
 
 ## Merge status
-- Merged into `develop` by the merge commit containing this handoff, from feature commit `e092648cb22b9ab74d5f01b2a1ad4fa7515bd03e`. GitHub's connected app denied PR creation (403), so the repository's CI-gated direct-merge path was used.
+- Branch `feat/ui-consistency` remains unmerged at the requested visual review checkpoint. CI for UI implementation has not run.
 
 ## Suggested next task
-- Have a human review `result-day` and `follow-the-sun`, then write the five proposed first-batch campaigns as a separate content task.
+- Consolidate tokens and primitives, then apply them across route groups in small commits after the audit review.
 
 ## Open questions for you
-- Are the private-results and multi-region legal claims in the two drafts accurate enough to publish after your review?
+- Does the proposed cobalt/navy/teal palette and Plus Jakarta Sans heading direction fit Untiered?

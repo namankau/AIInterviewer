@@ -2,7 +2,7 @@
 
 ## Scope and product direction
 
-Untiered is a voice-first mock interview and learning platform for candidates preparing for company and role-specific interviews. The repository uses Next.js 16 App Router, React 19, Tailwind CSS 4, and a small set of local UI primitives. This audit covers the web application at `apps/web`; it does not change interview, account, or course behavior.
+Untiered is a voice-first mock interview and learning platform for engineering students preparing for company and role-specific interviews. Many candidates use mid-range Android phones and slow networks. The repository uses Next.js 16 App Router, React 19, Tailwind CSS 4, and a small set of local UI primitives. This audit covers the web application at `apps/web`; it does not change interview, account, or course behavior.
 
 The established design direction in `AGENTS.md` is a bright learning platform: white and soft-blue surfaces, navy hero bands, saturated blue actions, restrained green and amber accents, and a sparse live interview room. The existing `globals.css` already implements much of this direction, so the redesign should consolidate it instead of replacing it with a different aesthetic.
 
@@ -33,6 +33,8 @@ The established design direction in `AGENTS.md` is a bright learning platform: w
 | App, global, interview errors; not-found | Failure and missing-page recovery |
 | Dashboard, new interview, questions, history, rounds, report, profile, courses, Arena, upgrade loading boundaries | Route skeletons (mostly via `RouteLoading`) |
 
+There are no mentor-facing screens, mentor profiles, booking or scheduling routes, or leaderboard route in the current web app. The redesign must not invent them. The existing mock interview is an AI voice session, not a scheduled human mentoring session.
+
 ## Shared component inventory
 
 **Existing primitives:** `ui/button`, `ui/action-link`, `ui/field` (label, hint, input, select, textarea), `ui/card`, `ui/badge`, and `ui/page-header`. `errors/error-panel` and `route-loading` are shared feedback patterns.
@@ -57,6 +59,13 @@ The established design direction in `AGENTS.md` is a bright learning platform: w
 6. **Navigation differs by context.** `AppShell` provides a sticky horizontal navigation while the chapter reader uses `course-site-header`; the landing and login pages use separate headers. This is reasonable for context, but their heights, content widths, active states, and tap targets need shared layout roles.
 7. **Accessibility risks are concrete.** Several visible interactive controls use `min-h-10` (40px) or `size-9` (36px), below the requested 44px target (`email-password-auth`, course filter buttons, profile avatar control, shared small Button). The course catalogue search uses placeholder text without a visible label. Icon-only and custom control flows need a label/focus audit. The global focus rule is a good base, but one-off `focus-visible:outline-none` declarations and low-contrast subtle text require review. `animate-pulse` skeletons need the existing reduced-motion rule verified against them.
 8. **Dark mode is token-based but fragile where values are literal.** The root switches tokens on `prefers-color-scheme: dark`, while literal white/navy/blue values in profile, Arena, and visual decorations do not switch. These can produce inconsistent dark surfaces and contrast.
+9. **Performance risks are concentrated in rich surfaces.** The chapter reader and Arena include code editors, diagrams, and interactive labs; preserving their existing lazy boundaries matters on mid-range phones. Brand assets are PNGs, and the profile renders a user-provided image with a plain `<img>`; dimensions and lazy behavior should be checked to avoid layout shift or unnecessary data. The visual pass should not add an icon library or animation package solely for polish.
+
+## Proposed visual direction for review
+
+Keep the existing open, bright learning-platform identity while moving its action color away from violet toward **clear cobalt blue**. Suggested light palette: navy `#142449` for hero/footer, primary `#2456D3` with a deeper hover `#1948B7`, soft-blue canvas `#F6F9FF`, white cards, mint/teal `#087F68` for achievement, and warm amber `#9A5B08` for highlights. A neutral slate ramp supplies readable text and borders. Dark mode uses deep blue-black surfaces with brighter blue and teal tokens; no pure black or neon accents. These are proposed token values, not yet applied.
+
+Use the already loaded, self-hosted **Plus Jakarta Sans** for display, headings, body, and controls with clear size/weight steps. Keep the system monospace stack for code and numbers. Remove the current Georgia display face to make marketing, dashboard, Arena, and lessons feel like one product. Course code blocks retain their distinct mono surface. Use existing SVG illustration patterns and one restrained icon vocabulary; avoid adding a package for icons until a specific missing need is demonstrated.
 
 ## Consolidation plan
 

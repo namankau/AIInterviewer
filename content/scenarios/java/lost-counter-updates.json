@@ -1,0 +1,151 @@
+{
+  "course_slug": "java",
+  "slug": "lost-counter-updates",
+  "title": "A counter loses increments",
+  "hook": "A Java service counts accepted requests. With eight worker threads, the displayed count is lower than the number of accepted requests.",
+  "context": "Single JVM request handler with a shared metric counter",
+  "tier": "intermediate",
+  "concept_ids": [
+    "concurrency",
+    "atomicity"
+  ],
+  "estimated_minutes": 7,
+  "status": "live",
+  "solution_brief": "counter++ is read-modify-write, so concurrent increments are lost. AtomicLong.incrementAndGet provides atomic updates and visibility for this single-JVM metric. LongAdder often scales better for high contention with a non-atomic aggregate read; neither coordinates across hosts.",
+  "steps": [
+    {
+      "kind": "initial",
+      "step_type": "debug",
+      "prompt": "What race exists in the code?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Two threads can read the same value and overwrite one another\u2019s increment"
+        },
+        {
+          "id": "b",
+          "text": "The JVM always serializes ++ on shared fields"
+        },
+        {
+          "id": "c",
+          "text": "The counter overflows after eight requests"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A is the lost-update race. B is false: ++ is read, add, write. C is unrelated to this small workload.",
+      "bottleneck_note": "volatile alone gives visibility, not atomic read-modify-write.",
+      "concept_ids": [
+        "concurrency"
+      ],
+      "code_snippet": "static long count;\nvoid accepted() { count++; }",
+      "language": "java"
+    },
+    {
+      "kind": "probe",
+      "step_type": "predict_output",
+      "prompt": "If both threads read 7 before either writes, what value can the field hold after both increments?",
+      "options": [
+        {
+          "id": "a",
+          "text": "8"
+        },
+        {
+          "id": "b",
+          "text": "9"
+        },
+        {
+          "id": "c",
+          "text": "14"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A occurs when both write 8. B needs serialized increments. C would require adding the old values rather than one each.",
+      "bottleneck_note": "The lost update is observable despite both handlers completing.",
+      "concept_ids": [
+        "atomicity"
+      ],
+      "context_note": "Both workers have already read the old value.",
+      "code_snippet": "long count = 7;\n// Thread A reads 7; Thread B reads 7\n// Each computes old + 1 and writes it.",
+      "language": "java"
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "Which replacement gives atomic increments and a consistent value on this JVM?",
+      "options": [
+        {
+          "id": "a",
+          "text": "AtomicLong.incrementAndGet()"
+        },
+        {
+          "id": "b",
+          "text": "volatile long with count++"
+        },
+        {
+          "id": "c",
+          "text": "A plain long renamed total"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A performs an atomic update. B exposes writes but still loses simultaneous increments. C changes no behavior.",
+      "bottleneck_note": "Choose the primitive based on the required consistency of reads.",
+      "concept_ids": [
+        "atomicity"
+      ],
+      "context_note": "The product needs an exact count at read time."
+    },
+    {
+      "kind": "probe",
+      "step_type": "tradeoff",
+      "prompt": "Contention grows to hundreds of threads, and the dashboard tolerates a non-atomic aggregate snapshot. What may improve throughput?",
+      "options": [
+        {
+          "id": "a",
+          "text": "LongAdder, whose cells reduce contention"
+        },
+        {
+          "id": "b",
+          "text": "Synchronize every unrelated request method"
+        },
+        {
+          "id": "c",
+          "text": "Use a new AtomicLong in each request"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A spreads increments across cells; sum is not an atomic snapshot. B broadens contention. C loses the shared total.",
+      "bottleneck_note": "LongAdder trades exact point-in-time reads for scalable updates.",
+      "concept_ids": [
+        "concurrency",
+        "atomicity"
+      ],
+      "context_note": "The exact-read requirement has been relaxed."
+    },
+    {
+      "kind": "probe",
+      "step_type": "tradeoff",
+      "prompt": "The service now runs on three hosts. What does AtomicLong count?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Only increments in its own JVM; combine durable events or a shared counter for a global total"
+        },
+        {
+          "id": "b",
+          "text": "All hosts automatically because the class is static"
+        },
+        {
+          "id": "c",
+          "text": "Only requests from the first thread"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A recognizes process boundaries. B confuses static per JVM with global state. C is unrelated to AtomicLong.",
+      "bottleneck_note": "Thread safety does not provide distributed coordination.",
+      "concept_ids": [
+        "concurrency"
+      ],
+      "context_note": "Traffic is load-balanced across three processes."
+    }
+  ]
+}

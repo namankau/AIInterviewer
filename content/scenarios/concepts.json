@@ -1,0 +1,22 @@
+{
+  "courses": [
+    {"slug":"system-design","title":"System Design","concepts":[
+      {"id":"session-revocation","name":"Session revocation","tier":"foundations","prerequisite_concept_ids":[]},
+      {"id":"token-validation","name":"Token validation and caching","tier":"intermediate","prerequisite_concept_ids":["session-revocation"]},
+      {"id":"inventory-reservation","name":"Inventory reservation","tier":"foundations","prerequisite_concept_ids":[]},
+      {"id":"atomic-stock","name":"Atomic stock updates","tier":"intermediate","prerequisite_concept_ids":["inventory-reservation"]}
+    ]},
+    {"slug":"dsa","title":"Data Structures and Algorithms","concepts":[
+      {"id":"trie","name":"Trie lookup","tier":"foundations","prerequisite_concept_ids":[]},
+      {"id":"top-k","name":"Top K maintenance","tier":"intermediate","prerequisite_concept_ids":["trie"]},
+      {"id":"sliding-window","name":"Sliding window","tier":"foundations","prerequisite_concept_ids":[]},
+      {"id":"amortized-analysis","name":"Amortized analysis","tier":"intermediate","prerequisite_concept_ids":["sliding-window"]}
+    ]},
+    {"slug":"java","title":"Java","concepts":[
+      {"id":"gc-leaks","name":"GC and memory leaks","tier":"foundations","prerequisite_concept_ids":[]},
+      {"id":"cache-bounds","name":"Bounded caches","tier":"intermediate","prerequisite_concept_ids":["gc-leaks"]},
+      {"id":"concurrency","name":"Concurrency primitives","tier":"foundations","prerequisite_concept_ids":[]},
+      {"id":"atomicity","name":"Atomicity and visibility","tier":"intermediate","prerequisite_concept_ids":["concurrency"]}
+    ]}
+  ]
+}

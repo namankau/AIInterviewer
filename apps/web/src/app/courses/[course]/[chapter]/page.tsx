@@ -18,7 +18,6 @@ import {
 } from "@/content/courses";
 import { InlineText, plainText } from "@/components/courses/inline-text";
 import { highlightChapterBlocks } from "@/lib/highlight-code";
-import { challengesForChapter } from "@/lib/arena/corpus";
 import { toCourseTocData } from "@/lib/course-toc-data";
 import { courseEnabled, featureEnabled } from "@/lib/flags";
 import { requireCourse } from "@/lib/require-feature";
@@ -87,7 +86,6 @@ export default async function ChapterPage({
 
   const chapterModule = getModuleForChapter(course, chapterSlug);
   const { prev, next } = getAdjacentChapters(course, chapterSlug);
-  const arenaCount = challengesForChapter(course.slug, chapter.slug).length;
   const mockInterviewsEnabled = featureEnabled("mockInterviews");
   const arenaEnabled = featureEnabled("arena");
   const courseToc = toCourseTocData(course);
@@ -131,10 +129,10 @@ export default async function ChapterPage({
                       Practise in an interview
                     </Link>
                   ) : null}
-                  {arenaEnabled && arenaCount > 0 ? (
-                    <Link href={`/arena/${course.slug}?chapter=${chapter.slug}`} className="action-secondary">
+                  {arenaEnabled ? (
+                    <Link href={`/arena/${course.slug}`} className="action-secondary">
                       <ArenaPracticeIcon />
-                      Open Arena <span className="text-ink-subtle">· {arenaCount}</span>
+                      Open course Arena
                     </Link>
                   ) : null}
                 </div>
@@ -176,12 +174,12 @@ export default async function ChapterPage({
               <p className="text-micro font-bold tracking-widest text-accent uppercase">Learning progress</p>
               <div className="mt-3"><CourseRailProgress courseSlug={course.slug} chapters={chapterRefs} /></div>
             </section>
-            {arenaEnabled && arenaCount > 0 ? (
+            {arenaEnabled ? (
               <section className="rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]">
                 <span className="grid size-9 place-items-center rounded-xl bg-warning-wash text-warning"><ArenaPracticeIcon className="size-5" /></span>
               <h2 className="font-editorial mt-3 text-heading leading-tight text-ink">Make it stick</h2>
-                <p className="mt-1 text-caption leading-relaxed text-ink-muted">Solve {arenaCount} focused {arenaCount === 1 ? "challenge" : "challenges"} after the lesson.</p>
-                <Link href={`/arena/${course.slug}?chapter=${chapter.slug}`} className="mt-4 inline-flex text-caption font-semibold text-accent hover:underline">Start practice →</Link>
+                <p className="mt-1 text-caption leading-relaxed text-ink-muted">Work through a course scenario and its follow-up decisions.</p>
+                <Link href={`/arena/${course.slug}`} className="mt-4 inline-flex text-caption font-semibold text-accent hover:underline">Open course Arena →</Link>
               </section>
             ) : null}
             <section className="rounded-2xl border border-line bg-surface-raised p-5 shadow-[var(--shadow-sm)]">

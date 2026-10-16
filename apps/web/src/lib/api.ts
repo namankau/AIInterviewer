@@ -22,6 +22,9 @@ import type {
   ImportArenaProgressRequest,
   ImportCourseProgressRequest,
   RecordAnswerRequest,
+  ScenarioAnswerView,
+  ScenarioCourseProgressView,
+  ScenarioPlayView,
   ReadinessGroup,
   RoundDraft,
   RunCodeRequest,
@@ -537,6 +540,20 @@ export function importCourseProgress(
 /** `GET /api/v1/me/arena` — XP, streak, badges and the review schedule. */
 export function fetchArenaProgress(options: ApiGetOptions): Promise<ArenaProgressView> {
   return apiGet<ArenaProgressView>("/api/v1/me/arena", options);
+}
+
+export function fetchScenarioCourseProgress(course: string, options: ApiGetOptions): Promise<ScenarioCourseProgressView> {
+  return apiGet<ScenarioCourseProgressView>(`/api/v1/me/arena/scenarios/${encodeURIComponent(course)}`, options);
+}
+
+export function startScenario(course: string, accessToken: string): Promise<ScenarioPlayView> {
+  return apiSend<ScenarioPlayView>(`/api/v1/me/arena/scenarios/${encodeURIComponent(course)}/start`, "POST", accessToken);
+}
+
+export function answerScenarioStep(
+  course: string, accessToken: string, stepId: string, chosenOptionId: string,
+): Promise<ScenarioAnswerView> {
+  return apiSend<ScenarioAnswerView>(`/api/v1/me/arena/scenarios/${encodeURIComponent(course)}/answers`, "POST", accessToken, { stepId, chosenOptionId });
 }
 
 /** Records one answered challenge. The server decides the XP and the streak. */

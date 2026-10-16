@@ -53,6 +53,16 @@
   --neutral-700: #3a4a62;
   --neutral-800: #24344b;
   --neutral-900: #142238;
+  --avatar-fill: #d5f3e9;
+  --avatar-ink: #113c34;
+  --course-java-start: #fff0d9;
+  --course-java-end: #f7e6d5;
+  --course-dsa-start: #dcf5ef;
+  --course-dsa-end: #e5ecff;
+  --course-ai-start: #ebe6ff;
+  --course-ai-end: #e3efff;
+  --course-design-start: #e2ebff;
+  --course-design-end: #f1e9ff;
 
   --danger: #b3261e;
   --positive: #087f68;
@@ -75,6 +85,7 @@
   --control-height: 2.75rem;
   --layout-content: 78rem;
   --layout-wide: 100rem;
+  --layout-reader: 120rem;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -133,6 +144,16 @@
     --neutral-700: #344c6d;
     --neutral-800: #213956;
     --neutral-900: #13253e;
+    --avatar-fill: #164735;
+    --avatar-ink: #e8fff5;
+    --course-java-start: #493515;
+    --course-java-end: #3e2d1c;
+    --course-dsa-start: #123e37;
+    --course-dsa-end: #1b3153;
+    --course-ai-start: #34244f;
+    --course-ai-end: #233d5e;
+    --course-design-start: #1f3657;
+    --course-design-end: #382b54;
 
     --accent-2: #3fc383;
     --highlight: #f7bb55;
@@ -192,6 +213,16 @@
   --color-neutral-700: var(--neutral-700);
   --color-neutral-800: var(--neutral-800);
   --color-neutral-900: var(--neutral-900);
+  --color-avatar-fill: var(--avatar-fill);
+  --color-avatar-ink: var(--avatar-ink);
+  --color-course-java-start: var(--course-java-start);
+  --color-course-java-end: var(--course-java-end);
+  --color-course-dsa-start: var(--course-dsa-start);
+  --color-course-dsa-end: var(--course-dsa-end);
+  --color-course-ai-start: var(--course-ai-start);
+  --color-course-ai-end: var(--course-ai-end);
+  --color-course-design-start: var(--course-design-start);
+  --color-course-design-end: var(--course-design-end);
   --breakpoint-sm: 40rem;
   --breakpoint-md: 48rem;
   --breakpoint-lg: 64rem;
@@ -292,6 +323,17 @@
 }
 
 @layer utilities {
+  .layout-content { max-width: var(--layout-content); }
+  .layout-wide { max-width: var(--layout-wide); }
+  .layout-reader { max-width: var(--layout-reader); }
+  .rounded-surface { border-radius: var(--radius-xl); }
+  .chapter-page-bg { background: linear-gradient(180deg, var(--surface-tint), transparent 22rem); }
+  .chapter-layout-grid { display: grid; align-items: start; gap: var(--space-6); }
+  .course-hero-grid { display: grid; align-items: center; gap: var(--space-10); }
+  .courses-hero-grid { display: grid; gap: var(--space-8); }
+  .z-sticky { z-index: var(--z-sticky); }
+  .z-overlay { z-index: var(--z-overlay); }
+  .z-toast { z-index: var(--z-toast); }
   /*
    * Engineering-drawing grid. Structural, not decorative — it sits behind content to
    * give the page a measured feel, and is faint enough to read as paper texture.
@@ -441,6 +483,14 @@
     background-color: color-mix(in srgb, var(--on-navy) 14%, transparent);
     color: var(--on-navy);
   }
+  .pill-danger {
+    background-color: var(--danger-wash);
+    color: var(--danger);
+  }
+  .pill-info {
+    background-color: var(--info-wash);
+    color: var(--info);
+  }
 
   .eyebrow {
     font-size: var(--text-micro);
@@ -455,7 +505,7 @@
       radial-gradient(circle at 84% 0%, rgba(255, 255, 255, 0.11), transparent 28%),
       linear-gradient(135deg, var(--accent-strong), var(--navy-raised) 58%, var(--navy));
     color: var(--on-navy);
-    border-radius: 1.5rem;
+    border-radius: var(--radius-xl);
     box-shadow: var(--shadow-md);
   }
 
@@ -529,6 +579,35 @@
 
 .presence-thinking .presence-eyes {
   animation: presence-consider 3.2s ease-in-out infinite;
+}
+
+.dialog-surface {
+  width: min(100% - 2rem, 34rem);
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  overflow: auto;
+  border: var(--border-width) solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+}
+.dialog-surface::backdrop { background: color-mix(in srgb, var(--navy) 65%, transparent); }
+.drawer-surface {
+  width: min(100%, 28rem);
+  min-height: 100dvh;
+  max-height: 100dvh;
+  margin: 0 0 0 auto;
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+}
+
+@media (min-width: 64rem) {
+  .chapter-layout-grid { grid-template-columns: 17rem minmax(0, 1fr); }
+  .course-hero-grid { grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr); }
+  .courses-hero-grid { grid-template-columns: minmax(0, 1fr) 14rem; align-items: center; }
+}
+@media (min-width: 80rem) {
+  .chapter-layout-grid { grid-template-columns: 17rem minmax(0, 1fr) 15rem; gap: var(--space-8); }
 }
 
 /*

@@ -26,10 +26,10 @@ Replace standalone Arena practice with course-specific authored scenario chains 
 - Frontend typecheck, lint, 81 test files / 3,066 tests, and production build: pass.
 - Backend `ktlintCheck test build`: pass.
 - Scenario validator and committed-seed check: pass (four tests; six scenarios).
-- GitHub CI: pending after branch push.
+- GitHub CI run 38870500452: all four jobs passed on implementation commit `6119157`, including fresh local migration application and database integration tests.
 
 ## Merge status
-- Branch `feat/course-scenario-arena` remains unmerged. The new RLS setup needs human review, and both migrations must be applied before merging into `develop`.
+- PR #113 (`feat/course-scenario-arena`) is open and unmerged. The new RLS setup needs human review, and both migrations must be applied to the linked database before merging into `develop`.
 
 ## Suggested next task
 - Author and review AI Agents scenarios, then expand the live library into advanced and expert tiers.

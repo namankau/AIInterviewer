@@ -12,7 +12,7 @@ export const LEGAL = {
   productName: "Untiered",
   /** The person or company responsible for the data (the "Data Fiduciary"). */
   operatorName: process.env.NEXT_PUBLIC_LEGAL_OPERATOR_NAME || UNCONFIRMED,
-  contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "",
+  contactEmail: "help@untiered.tech",
   /** The person designated to handle privacy complaints, supplied by the operator. */
   grievanceOfficer: process.env.NEXT_PUBLIC_GRIEVANCE_OFFICER_NAME || UNCONFIRMED,
   /** Where the database and stored files live (the linked Supabase project's region). */
@@ -21,7 +21,7 @@ export const LEGAL = {
   reportRetentionDays: 28,
   dailyRounds: 2,
   dailyMinutes: 60,
-  lastUpdated: "13 October 2026",
+  lastUpdated: "16 October 2026",
 } as const;
 
-export const CONTACT_EMAIL_DISPLAY = LEGAL.contactEmail || UNCONFIRMED;
+export const CONTACT_EMAIL_DISPLAY = LEGAL.contactEmail;

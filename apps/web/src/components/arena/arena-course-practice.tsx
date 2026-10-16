@@ -15,15 +15,17 @@ export function ArenaCoursePractice({ courseSlug }: { courseSlug: string }) {
   const [feedback, setFeedback] = useState<ScenarioAnswerView | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadStatus, setLoadStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!token) return;
     let active = true;
     fetchScenarioCourseProgress(courseSlug, { accessToken: token })
-      .then((value) => { if (active) setProgress(value); })
-      .catch(() => { if (active) setError("We couldn't load your Arena progress. Try reloading."); });
+      .then((value) => { if (active) { setProgress(value); setLoadStatus("ready"); } })
+      .catch(() => { if (active) { setLoadStatus("error"); setError("We couldn't load your Arena progress. Please try again."); } });
     return () => { active = false; };
-  }, [courseSlug, token]);
+  }, [courseSlug, token, retryCount]);
 
   async function start() {
     if (!token || busy) return;
@@ -67,8 +69,12 @@ export function ArenaCoursePractice({ courseSlug }: { courseSlug: string }) {
               <div className="rounded-xl border border-line bg-surface-sunken p-4"><p className="text-caption text-ink-muted">Scenarios completed</p><p className="text-title font-bold text-ink">{progress.scenariosDone}</p></div>
               <div className="rounded-xl border border-line bg-surface-sunken p-4"><p className="text-caption text-ink-muted">Concepts to practise</p><p className="mt-1 text-caption font-medium text-ink">{progress.weakestConcepts.map((c) => c.name).join(" · ") || "Start a scenario to see these"}</p></div>
             </div>
-          ) : <p className="text-caption text-ink-muted">Loading your progress…</p>}
-          <button type="button" disabled={!token || !progress || busy} onClick={start} className="rounded-xl bg-accent px-6 py-3 font-semibold text-accent-contrast hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:opacity-60">{busy ? "Opening…" : progress?.activeScenarioId ? "Resume scenario" : "Start scenario"}</button>
+          ) : loadStatus === "loading" ? <p className="text-caption text-ink-muted">Loading your progress…</p> : null}
+          {loadStatus === "error" ? (
+            <button type="button" onClick={() => { setLoadStatus("loading"); setError(null); setRetryCount((count) => count + 1); }} className="rounded-xl bg-accent px-6 py-3 font-semibold text-accent-contrast hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">Try again</button>
+          ) : (
+            <button type="button" disabled={!token || !progress || busy} onClick={start} className="rounded-xl bg-accent px-6 py-3 font-semibold text-accent-contrast hover:bg-accent-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:opacity-60">{busy ? "Opening…" : progress?.activeScenarioId ? "Resume scenario" : "Start scenario"}</button>
+          )}
         </>
       ) : play.scenario === null || step === null ? (
         <div className="space-y-4"><p className="text-body text-ink-muted">No more live scenarios are unlocked for this course yet. More are on the way.</p><button type="button" onClick={() => setPlay(null)} className="font-semibold text-accent underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">Back to course Arena</button></div>

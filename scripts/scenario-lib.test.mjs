@@ -8,7 +8,8 @@ const base = scenarios.find((s) => s.course_slug === "dsa");
 const copy = () => structuredClone(base);
 
 test("all authored scenarios validate and have 5 ordered steps", () => {
-  assert.equal(scenarios.length, 6);
+  assert.equal(scenarios.length, 8);
+  assert.equal(scenarios.filter((scenario) => scenario.course_slug === "ai-agents").length, 2);
   for (const scenario of scenarios) {
     assert.equal(scenario.steps.length, 5);
     assert.deepEqual(validateScenario(scenario, catalogue), []);

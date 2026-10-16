@@ -12,6 +12,13 @@
       {"id":"sliding-window","name":"Sliding window","tier":"foundations","prerequisite_concept_ids":[]},
       {"id":"amortized-analysis","name":"Amortized analysis","tier":"intermediate","prerequisite_concept_ids":["sliding-window"]}
     ]},
+    {"slug":"ai-agents","title":"AI and Agentic AI","concepts":[
+      {"id":"tool-boundaries","name":"Tool boundaries and trust","tier":"foundations","prerequisite_concept_ids":[]},
+      {"id":"prompt-injection","name":"Prompt injection defenses","tier":"foundations","prerequisite_concept_ids":["tool-boundaries"]},
+      {"id":"stopping-conditions","name":"Stopping conditions and recovery","tier":"intermediate","prerequisite_concept_ids":["tool-boundaries"]},
+      {"id":"tool-idempotency","name":"Tool idempotency","tier":"intermediate","prerequisite_concept_ids":["tool-boundaries"]},
+      {"id":"agent-evaluation","name":"Evaluating agent outcomes","tier":"intermediate","prerequisite_concept_ids":["stopping-conditions"]}
+    ]},
     {"slug":"java","title":"Java","concepts":[
       {"id":"gc-leaks","name":"GC and memory leaks","tier":"foundations","prerequisite_concept_ids":[]},
       {"id":"cache-bounds","name":"Bounded caches","tier":"intermediate","prerequisite_concept_ids":["gc-leaks"]},

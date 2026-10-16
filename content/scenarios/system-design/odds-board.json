@@ -1,0 +1,272 @@
+{
+  "course_slug": "system-design",
+  "slug": "odds-board",
+  "title": "The Odds Board",
+  "hook": "It is the IPL final. Your live score page shows the score 30 seconds late, and fans in the group chat are posting spoilers before your page updates.",
+  "context": "Live cricket score page for a fantasy app with up to 500,000 simultaneous viewers.",
+  "tier": "intermediate",
+  "concept_ids": [
+    "polling-vs-push",
+    "server-sent-events",
+    "pub-sub",
+    "fan-out",
+    "hot-keys",
+    "reconnect-storms"
+  ],
+  "estimated_minutes": 12,
+  "status": "live",
+  "solution_brief": "Replace polling with push, use SSE for one-way updates, publish once and fan out at the gateway tier, serve the hot score from cache, and make reconnects polite with backoff and jitter. Polling cost is viewers times frequency, push cost is changes. SSE for one-way streams. Pub/sub into a horizontally scaled gateway fleet. 1-second TTL cache for the hot score key. Exponential backoff with jitter on reconnect.",
+  "steps": [
+    {
+      "kind": "initial",
+      "step_type": "design_choice",
+      "prompt": "Today every browser polls /score every 30 seconds. Fans want updates within about a second. Someone suggests polling every second. With 500,000 viewers, what is the problem, and what is the better approach?",
+      "context_note": "Score updates are rare events, but polling asks constantly.",
+      "system_state": {
+        "nodes": [
+          "viewers",
+          "web",
+          "score-store"
+        ],
+        "links": [
+          [
+            "viewers",
+            "web"
+          ],
+          [
+            "web",
+            "score-store"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Polling every second creates roughly 500,000 requests per second. Switch to server push, where the server sends a message only when the score changes."
+        },
+        {
+          "id": "b",
+          "text": "Polling every second is fine. The server can handle it."
+        },
+        {
+          "id": "c",
+          "text": "Poll every 5 minutes to save load."
+        },
+        {
+          "id": "d",
+          "text": "Ask users to refresh manually."
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "500,000 viewers polling once per second means about 500,000 requests per second, nearly all of which return 'nothing changed'. Push inverts the cost: one message per actual change per connected viewer. Longer polling intervals just make the score staler.",
+      "bottleneck_note": "Polling cost scales with viewers times frequency, not with how often anything actually changes.",
+      "concept_ids": [
+        "polling-vs-push"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "You choose push. The browser only needs to receive updates (the score, the over, the wicket). It never sends anything back on this channel. WebSocket or Server-Sent Events (SSE)?",
+      "context_note": "Push it is. Which transport?",
+      "system_state": {
+        "nodes": [
+          "viewers",
+          "push-gateway",
+          "score-store"
+        ],
+        "links": [
+          [
+            "viewers",
+            "push-gateway"
+          ],
+          [
+            "push-gateway",
+            "score-store"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "SSE: one-way server-to-client over plain HTTP, with built-in reconnection, which matches the need."
+        },
+        {
+          "id": "b",
+          "text": "WebSocket is the only way to push, so use it."
+        },
+        {
+          "id": "c",
+          "text": "Polling with a very short interval."
+        },
+        {
+          "id": "d",
+          "text": "Email each update."
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "SSE is purpose-built for one-way streams, works through standard HTTP infrastructure, and reconnects automatically. WebSockets are the right call for two-way, low-latency interaction such as chat or games, but add complexity you do not need here. WebSocket is not the only push mechanism.",
+      "bottleneck_note": "Choose the simplest transport that fits the data direction.",
+      "concept_ids": [
+        "server-sent-events"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "A single machine can hold maybe 50,000 open connections, but you have 500,000 viewers. When the score changes, how do you reach all of them?",
+      "context_note": "One gateway cannot hold everyone. Messages must reach every gateway.",
+      "system_state": {
+        "nodes": [
+          "score-updater",
+          "pub-sub",
+          "gateway x10",
+          "viewers"
+        ],
+        "links": [
+          [
+            "score-updater",
+            "pub-sub"
+          ],
+          [
+            "pub-sub",
+            "gateway x10"
+          ],
+          [
+            "gateway x10",
+            "viewers"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Run a fleet of gateway nodes, each holding a share of connections and subscribed to a pub/sub channel for the match. One score update is published once and each gateway forwards it to its own connections."
+        },
+        {
+          "id": "b",
+          "text": "Have the score updater open a connection to each of the 500,000 viewers."
+        },
+        {
+          "id": "c",
+          "text": "Use one huge machine and hope."
+        },
+        {
+          "id": "d",
+          "text": "Store the score in a cookie."
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "Publishing once to a pub/sub backbone and letting each gateway fan the message out to its local connections decouples the producer from the number of viewers. The updater stays simple and the gateway tier scales horizontally. Connecting the updater to every viewer would make it the bottleneck.",
+      "bottleneck_note": "Fan-out belongs at the edge of the system, not at the source.",
+      "concept_ids": [
+        "pub-sub",
+        "fan-out"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "Everyone who opens the page also needs the current score immediately, and a million people are doing it around the same wicket. The score of one match is the single hottest key in your system. How do you serve it?",
+      "context_note": "One key, read by everyone.",
+      "system_state": {
+        "nodes": [
+          "viewers",
+          "cdn",
+          "in-memory-cache",
+          "score-store"
+        ],
+        "links": [
+          [
+            "viewers",
+            "cdn"
+          ],
+          [
+            "cdn",
+            "in-memory-cache"
+          ],
+          [
+            "in-memory-cache",
+            "score-store"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Serve the latest score from an in-memory cache and CDN with a very short TTL (about a second) so the database is read once per interval instead of once per viewer."
+        },
+        {
+          "id": "b",
+          "text": "Read the database for every viewer."
+        },
+        {
+          "id": "c",
+          "text": "Cache it for an hour."
+        },
+        {
+          "id": "d",
+          "text": "Remove the score from the page on load."
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A hot key read by millions is the ideal case for caching with a tiny TTL: the staleness is below what a viewer can notice, and the origin sees one read per TTL window. An hour-long cache would show wrong scores, and a database read per viewer reproduces the original problem.",
+      "bottleneck_note": "Hot keys should be absorbed by caches, with a TTL matched to how fresh the data must be.",
+      "concept_ids": [
+        "hot-keys"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "During the final over, one gateway restarts and its 50,000 clients all reconnect within the same second, and the retry loops in their apps hammer the system. How do you prevent this reconnect storm from becoming an outage?",
+      "context_note": "Push connections are stateful. When they drop, they all come back at once.",
+      "system_state": {
+        "nodes": [
+          "viewers",
+          "load-balancer",
+          "gateway x10",
+          "cache"
+        ],
+        "links": [
+          [
+            "viewers",
+            "load-balancer"
+          ],
+          [
+            "load-balancer",
+            "gateway x10"
+          ],
+          [
+            "gateway x10",
+            "cache"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Have clients reconnect with exponential backoff plus random jitter, and let the server shed excess connection attempts gracefully."
+        },
+        {
+          "id": "b",
+          "text": "Make clients retry every 10 milliseconds until connected."
+        },
+        {
+          "id": "c",
+          "text": "Never restart a gateway."
+        },
+        {
+          "id": "d",
+          "text": "Ask users to wait."
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "Backoff spaces out retries, and jitter breaks the synchronisation so that 50,000 clients do not all retry at the same instants. Tight retry loops multiply load on a system that is already struggling. Never restarting is not realistic: deploys and failures happen.",
+      "bottleneck_note": "Synchronised retries turn a blip into an outage. Randomise client behaviour.",
+      "concept_ids": [
+        "reconnect-storms"
+      ]
+    }
+  ]
+}

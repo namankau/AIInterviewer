@@ -72,7 +72,14 @@ class ScenarioArenaControllerTest {
                 null,
                 null,
             )
-        val next = first.copy(id = "dsa:autocomplete:2", position = 2, kind = "probe", contextNote = "Now scale the reads.")
+        val next =
+            first.copy(
+                id = "dsa:autocomplete:2",
+                position = 2,
+                kind = "probe",
+                contextNote = "Now scale the reads.",
+                systemState = ScenarioSystemState(listOf("browser", "trie"), listOf(listOf("browser", "trie"))),
+            )
         given(repository.active(USER, "dsa", true)).willReturn(ScenarioProgressRow("dsa:autocomplete", first.id))
         given(repository.step(first.id)).willReturn(first)
         given(repository.nextStep(first)).willReturn(next)
@@ -100,6 +107,7 @@ class ScenarioArenaControllerTest {
             .andExpect(jsonPath("$.correct").value(false))
             .andExpect(jsonPath("$.correctOptionId").value("a"))
             .andExpect(jsonPath("$.nextStep.id").value(next.id))
+            .andExpect(jsonPath("$.nextStep.systemState.nodes[0]").value("browser"))
         verify(repository).saveAnswer(USER, first.id, "b", false)
         verify(repository).advance(USER, first.scenarioId, next.id)
     }

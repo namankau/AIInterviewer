@@ -1,0 +1,280 @@
+{
+  "course_slug": "system-design",
+  "slug": "midnight-notifications",
+  "title": "12 AM Notification",
+  "hook": "Marketing wants to send a push notification to 10 million users at exactly 12:00 AM for the sale launch. Last time, the notification worked, and then your own servers went down.",
+  "context": "Shopping app with 10M push-enabled users and a push provider with rate limits.",
+  "tier": "advanced",
+  "concept_ids": [
+    "queues-and-workers",
+    "provider-rate-limits",
+    "priority-lanes",
+    "dedupe",
+    "load-shaping"
+  ],
+  "estimated_minutes": 14,
+  "status": "live",
+  "solution_brief": "Batch and queue the audience, throttle to the provider's limit with backoff, isolate critical traffic in priority lanes, dedupe by deterministic ids, and stagger the blast so you do not DDoS yourself. Batches on a queue, progress per batch. Shared rate limiter, backoff with jitter on 429. Separate transactional and promotional lanes. Deterministic notification ids and collapse keys. Stagger sends and pre-warm for the response spike.",
+  "steps": [
+    {
+      "kind": "initial",
+      "step_type": "design_choice",
+      "prompt": "A cron job loops over 10 million users and calls the push provider one by one from a single process. It will take hours and any crash loses progress. How do you restructure it?",
+      "context_note": "A single loop is neither fast nor resumable.",
+      "system_state": {
+        "nodes": [
+          "campaign-service",
+          "cron-loop",
+          "push-provider"
+        ],
+        "links": [
+          [
+            "campaign-service",
+            "cron-loop"
+          ],
+          [
+            "cron-loop",
+            "push-provider"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Split the audience into batches, put the batches on a queue, and let many workers process them in parallel, recording progress per batch."
+        },
+        {
+          "id": "b",
+          "text": "Run the same loop on a faster machine."
+        },
+        {
+          "id": "c",
+          "text": "Send email instead."
+        },
+        {
+          "id": "d",
+          "text": "Start the loop at 9 PM and hope it finishes."
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "Batches on a queue turn one fragile long job into many small resumable ones that scale with the number of workers. Recording progress per batch means a crash re-does only the unfinished batches, not all 10 million.",
+      "bottleneck_note": "Parallelise by splitting the audience, and make each unit of work resumable.",
+      "concept_ids": [
+        "queues-and-workers"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "With 200 workers you start sending as fast as possible. The push provider starts returning rate-limit errors (HTTP 429) and your workers immediately retry in a loop, making it worse. What should the workers do?",
+      "context_note": "The provider has its own capacity limits.",
+      "system_state": {
+        "nodes": [
+          "queue",
+          "workers",
+          "rate-limiter",
+          "push-provider"
+        ],
+        "links": [
+          [
+            "queue",
+            "workers"
+          ],
+          [
+            "workers",
+            "rate-limiter"
+          ],
+          [
+            "rate-limiter",
+            "push-provider"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Retry immediately until it works."
+        },
+        {
+          "id": "b",
+          "text": "Throttle sending to the provider's allowed rate with a shared limiter, back off on 429s with jitter, and let the queue absorb the backlog."
+        },
+        {
+          "id": "c",
+          "text": "Drop all notifications that hit a 429."
+        },
+        {
+          "id": "d",
+          "text": "Add more workers."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "The provider's limit is a hard external constraint. A shared rate limiter keeps total throughput under it, backoff with jitter prevents retry storms, and the queue holds the rest. More workers would just hit the limit harder.",
+      "bottleneck_note": "Your slowest dependency sets your real throughput. Respect it with backpressure.",
+      "concept_ids": [
+        "provider-rate-limits"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "During the blast, a user requests a login OTP push and a payment alert. Both are stuck behind millions of promotional messages. How do you fix that?",
+      "context_note": "Not all notifications are equal.",
+      "system_state": {
+        "nodes": [
+          "transactional-queue",
+          "promo-queue",
+          "workers",
+          "push-provider"
+        ],
+        "links": [
+          [
+            "transactional-queue",
+            "workers"
+          ],
+          [
+            "promo-queue",
+            "workers"
+          ],
+          [
+            "workers",
+            "push-provider"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Use one queue and send everything first-come, first-served."
+        },
+        {
+          "id": "b",
+          "text": "Use separate queues (priority lanes) for transactional and promotional traffic, with reserved capacity so critical messages never wait behind a blast."
+        },
+        {
+          "id": "c",
+          "text": "Pause all OTPs during the sale."
+        },
+        {
+          "id": "d",
+          "text": "Send promotions slower for everyone forever."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "Separating lanes and reserving capacity protects time-sensitive messages from bulk traffic. A single FIFO queue has head-of-line blocking, so a 10 million item promo blast delays a 1-item OTP by the whole backlog.",
+      "bottleneck_note": "Isolate critical traffic from bulk traffic with separate queues and reserved capacity.",
+      "concept_ids": [
+        "priority-lanes"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "A worker crashes after sending a batch but before marking it done, so the batch is re-processed and users get the same promo twice. How do you avoid duplicates?",
+      "context_note": "Queues redeliver. Users hate duplicates.",
+      "system_state": {
+        "nodes": [
+          "queue",
+          "workers",
+          "sent-ledger",
+          "push-provider"
+        ],
+        "links": [
+          [
+            "queue",
+            "workers"
+          ],
+          [
+            "workers",
+            "sent-ledger"
+          ],
+          [
+            "workers",
+            "push-provider"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Accept duplicates."
+        },
+        {
+          "id": "b",
+          "text": "Use a stable (campaign, user) id with provider-side deduplication when supported; record send attempts and reconcile uncertain outcomes before retrying."
+        },
+        {
+          "id": "c",
+          "text": "Never retry a batch."
+        },
+        {
+          "id": "d",
+          "text": "Send everything twice to be safe."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "A crash after the provider accepts a send but before the ledger is marked leaves the outcome unknown. A local sent ledger alone cannot prevent a second external send. A provider idempotency or collapse key can suppress repeats when its contract supports that; otherwise reconcile the attempt and accept that delivery may be at least once.",
+      "bottleneck_note": "A local ledger cannot make an external send exactly once across a crash boundary.",
+      "concept_ids": [
+        "dedupe"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "tradeoff",
+      "prompt": "Post-mortem: notifications went out fine, but within seconds millions of people opened the app together and your own API fell over. What is the better launch design?",
+      "context_note": "The push worked. The synchronized response broke your backend.",
+      "system_state": {
+        "nodes": [
+          "campaign-scheduler",
+          "push-pipeline",
+          "users",
+          "app-api",
+          "cache"
+        ],
+        "links": [
+          [
+            "campaign-scheduler",
+            "push-pipeline"
+          ],
+          [
+            "push-pipeline",
+            "users"
+          ],
+          [
+            "users",
+            "app-api"
+          ],
+          [
+            "app-api",
+            "cache"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Send all 10 million at exactly 12:00:00 for maximum excitement."
+        },
+        {
+          "id": "b",
+          "text": "Stagger the sends over a window (for example 10 to 15 minutes), cache and pre-warm the landing content and sale pages, and load test for the expected click-through burst."
+        },
+        {
+          "id": "c",
+          "text": "Send fewer notifications and hope nobody opens the app."
+        },
+        {
+          "id": "d",
+          "text": "Turn off the API for the first minute."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "A notification is a synchronised trigger for your own traffic: a 10 million blast can become a multi-million request spike. Spreading sends over a window flattens the peak, and pre-warmed caches plus load testing make the remaining burst survivable.",
+      "bottleneck_note": "Your notification system is a load generator pointed at your own backend.",
+      "concept_ids": [
+        "load-shaping"
+      ]
+    }
+  ]
+}

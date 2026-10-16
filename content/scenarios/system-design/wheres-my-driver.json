@@ -1,0 +1,271 @@
+{
+  "course_slug": "system-design",
+  "slug": "wheres-my-driver",
+  "title": "Where's My Driver",
+  "hook": "Your ride-hailing app has 1 million active drivers, and each one sends a GPS ping every 4 seconds. Riders want to see nearby cars instantly and watch their driver move on the map.",
+  "context": "Ride-hailing location pipeline: ingestion, nearby search, and live tracking.",
+  "tier": "advanced",
+  "concept_ids": [
+    "write-heavy-ingestion",
+    "latest-state-store",
+    "geospatial-index",
+    "cell-boundaries",
+    "push-tracking"
+  ],
+  "estimated_minutes": 14,
+  "status": "live",
+  "solution_brief": "Compute the write rate first (250k per second), store only latest positions hot with TTL, index by geospatial cells with neighbour queries, and push targeted updates with client interpolation. 1M drivers divided by 4s is 250,000 writes per second. Latest position in memory with TTL, history on a stream. Geohash, S2 or H3 cells with neighbour lookups. Move cell membership as drivers cross boundaries. Targeted push plus client interpolation for tracking.",
+  "steps": [
+    {
+      "kind": "initial",
+      "step_type": "design_choice",
+      "prompt": "1,000,000 drivers send one ping every 4 seconds. Roughly how many location writes per second must you ingest, and what does that suggest about how you store them?",
+      "context_note": "Start with the back-of-the-envelope number.",
+      "system_state": {
+        "nodes": [
+          "drivers",
+          "ingest-api",
+          "storage"
+        ],
+        "links": [
+          [
+            "drivers",
+            "ingest-api"
+          ],
+          [
+            "ingest-api",
+            "storage"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "About 250,000 writes per second. Use a write-optimised path, such as an in-memory store for the latest position and a stream or log for history, rather than one durable relational row per ping."
+        },
+        {
+          "id": "b",
+          "text": "About 250,000 writes per second. Keep latest positions in a store built for high update rates and stream history separately; capacity-test the chosen storage design."
+        },
+        {
+          "id": "c",
+          "text": "About 4 million writes per second, so it is impossible."
+        },
+        {
+          "id": "d",
+          "text": "About 1,000 writes per second, so any database works."
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "1,000,000 divided by 4 seconds is 250,000 updates per second. The matching path needs the latest position, while trip history has different retention and durability needs. A partitioned relational design may work at this rate, but it needs evidence from capacity tests; writing every ping as a durable row in an unplanned single table is risky.",
+      "bottleneck_note": "Calculate ingest rate first, then separate latest-state reads from historical storage.",
+      "concept_ids": [
+        "write-heavy-ingestion"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "Matching a rider to a driver only needs where each driver is now. Do you need to keep every ping forever in the hot path?",
+      "context_note": "Most of those 250,000 writes per second are immediately obsolete.",
+      "system_state": {
+        "nodes": [
+          "ingest-api",
+          "latest-location-store(TTL)",
+          "location-stream",
+          "cold-storage"
+        ],
+        "links": [
+          [
+            "ingest-api",
+            "latest-location-store(TTL)"
+          ],
+          [
+            "ingest-api",
+            "location-stream"
+          ],
+          [
+            "location-stream",
+            "cold-storage"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Yes. Every ping must be in the hot store forever."
+        },
+        {
+          "id": "b",
+          "text": "No. Keep only the latest position per driver, with a TTL so offline drivers disappear, and send a sampled or batched history to a stream for trips, analytics and disputes."
+        },
+        {
+          "id": "c",
+          "text": "Drop all pings and rely on the driver app to report on request."
+        },
+        {
+          "id": "d",
+          "text": "Keep only one ping per day."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "The hot path needs current state, which overwrites itself. A TTL naturally removes drivers who stop reporting, and sampling or batching history protects cost while preserving what you need for trip records. Hot storage of every ping forever is expensive and slows the queries that matter.",
+      "bottleneck_note": "Separate current state (small, hot) from history (large, cold).",
+      "concept_ids": [
+        "latest-state-store"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "algo_choice",
+      "prompt": "A rider requests a ride. How do you find drivers within 2 km without comparing the rider to all 1,000,000 drivers?",
+      "context_note": "The naive scan is O(N) per request.",
+      "system_state": {
+        "nodes": [
+          "rider-request",
+          "geo-index(cells)",
+          "latest-location-store(TTL)"
+        ],
+        "links": [
+          [
+            "rider-request",
+            "geo-index(cells)"
+          ],
+          [
+            "geo-index(cells)",
+            "latest-location-store(TTL)"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Scan all drivers and compute the distance to each."
+        },
+        {
+          "id": "b",
+          "text": "Index drivers by a geospatial cell (geohash, S2 or H3), look up the rider's cell and the neighbouring cells, then rank the small candidate set by distance."
+        },
+        {
+          "id": "c",
+          "text": "Sort drivers by their user id."
+        },
+        {
+          "id": "d",
+          "text": "Ask drivers who are nearby to raise their hand."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "Cell-based indexing converts a global search into a local one: the cost depends on the number of drivers in a few cells, not the whole fleet. Scanning a million drivers per request would be too slow and wasteful at ride-request rates.",
+      "bottleneck_note": "Index by location so the search cost scales with local density, not total size.",
+      "concept_ids": [
+        "geospatial-index"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "Riders standing near a cell edge sometimes see no nearby drivers, even though a driver is 100 metres away across the boundary. Also, a driver who drove into a new cell appears in two cells for a while. What are the two bugs?",
+      "context_note": "Cells are boundaries, not neighbourhoods.",
+      "system_state": {
+        "nodes": [
+          "rider",
+          "cell A",
+          "cell B",
+          "driver"
+        ],
+        "links": [
+          [
+            "rider",
+            "cell A"
+          ],
+          [
+            "driver",
+            "cell B"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "No bugs. Boundaries are part of geography."
+        },
+        {
+          "id": "b",
+          "text": "You must query the neighbouring cells as well as the rider's cell, and on each location update you must remove the driver from the old cell as you add them to the new one (with expiry as a safety net)."
+        },
+        {
+          "id": "c",
+          "text": "Make cells one metre wide."
+        },
+        {
+          "id": "d",
+          "text": "Disable the map near cell edges."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "A nearby driver can sit just across a cell boundary, so the query must cover adjacent cells. Membership also has to move when a driver crosses a boundary, or stale entries linger; a TTL cleans up anything missed. Tiny cells would explode the number of cells to query.",
+      "bottleneck_note": "Spatial indexes create edge cases at their borders. Query neighbours and move members.",
+      "concept_ids": [
+        "cell-boundaries"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "After a ride is booked, the rider's app polls for the driver's position every second, and 200,000 riders are tracking at once. How do you make live tracking efficient?",
+      "context_note": "Tracking is a one-to-one stream that updates frequently.",
+      "system_state": {
+        "nodes": [
+          "driver",
+          "ingest-api",
+          "pub-sub",
+          "tracking-gateway",
+          "rider-apps"
+        ],
+        "links": [
+          [
+            "driver",
+            "ingest-api"
+          ],
+          [
+            "ingest-api",
+            "pub-sub"
+          ],
+          [
+            "pub-sub",
+            "tracking-gateway"
+          ],
+          [
+            "tracking-gateway",
+            "rider-apps"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Keep every rider polling every second."
+        },
+        {
+          "id": "b",
+          "text": "Push position updates to only the rider tracking that driver through a persistent connection, and interpolate movement on the client, with ping frequency adjusted when the car is stationary."
+        },
+        {
+          "id": "c",
+          "text": "Show the driver's position only once, when booked."
+        },
+        {
+          "id": "d",
+          "text": "Broadcast every driver's position to every rider."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "Only the booked rider needs a given driver's updates, so targeted push avoids 200,000 constant polls. Client-side interpolation makes the motion look smooth at lower update rates, and adaptive ping frequency saves bandwidth, battery and backend load. Broadcasting everyone to everyone is wasteful and a privacy problem.",
+      "bottleneck_note": "Send each update only to those who need it, and let the client smooth the gaps.",
+      "concept_ids": [
+        "push-tracking"
+      ]
+    }
+  ]
+}

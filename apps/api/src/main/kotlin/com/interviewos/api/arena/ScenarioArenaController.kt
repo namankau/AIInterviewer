@@ -126,7 +126,19 @@ class ScenarioArenaController(
 
 private fun ScenarioDetails.toPublic() = ScenarioPublicView(id, courseId, title, hook, context, tier, estimatedMinutes)
 
-private fun ScenarioStepRow.toPublic() = ScenarioStepView(id, position, kind, stepType, prompt, contextNote, options, codeSnippet, language)
+private fun ScenarioStepRow.toPublic() =
+    ScenarioStepView(
+        id,
+        position,
+        kind,
+        stepType,
+        prompt,
+        contextNote,
+        options,
+        codeSnippet,
+        language,
+        systemState,
+    )
 
 data class ScenarioPublicView(
     val id: String,
@@ -148,6 +160,7 @@ data class ScenarioStepView(
     val options: List<ScenarioOption>,
     val codeSnippet: String?,
     val language: String?,
+    val systemState: ScenarioSystemState?,
 )
 
 data class ScenarioPlayView(

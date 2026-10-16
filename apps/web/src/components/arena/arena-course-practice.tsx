@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { ScenarioAnswerView, ScenarioCourseProgressView, ScenarioPlayView, ScenarioStepView } from "@untiered/shared";
 import { answerScenarioStep, fetchScenarioCourseProgress, startScenario } from "@/lib/api";
 import { useAccessToken } from "@/lib/use-access-token";
+import { shuffleScenarioOptions } from "@/lib/arena/shuffle-options";
 
 export function ArenaCoursePractice({ courseSlug }: { courseSlug: string }) {
   const token = useAccessToken();
@@ -17,6 +18,7 @@ export function ArenaCoursePractice({ courseSlug }: { courseSlug: string }) {
   const [error, setError] = useState<string | null>(null);
   const [loadStatus, setLoadStatus] = useState<"loading" | "ready" | "error">("loading");
   const [retryCount, setRetryCount] = useState(0);
+  const displayedOptions = useMemo(() => shuffleScenarioOptions(step?.options ?? []), [step]);
 
   useEffect(() => {
     if (!token) return;
@@ -82,10 +84,22 @@ export function ArenaCoursePractice({ courseSlug }: { courseSlug: string }) {
         <section aria-label="Scenario" className="space-y-6">
           <div className="rounded-2xl bg-[#102748] px-6 py-7 text-white"><p className="eyebrow text-blue-100">{play.scenario.context} · {play.scenario.estimatedMinutes} min</p><h2 className="mt-2 text-heading">{play.scenario.title}</h2><p className="mt-3 text-body leading-relaxed text-blue-100">{play.scenario.hook}</p></div>
           {step.contextNote ? <p className="rounded-xl border-l-4 border-accent bg-accent-wash p-4 text-body text-ink">{step.contextNote}</p> : null}
+          {step.systemState ? (
+            <section aria-label="System map" className="rounded-2xl border border-line bg-surface-raised p-5 shadow-sm">
+              <h3 className="text-caption font-bold uppercase tracking-wide text-ink-muted">System so far</h3>
+              <ul aria-label="Components" className="mt-3 flex flex-wrap gap-2">
+                {step.systemState.nodes.map((node) => <li key={node} className="rounded-lg border border-accent/20 bg-accent-wash px-3 py-2 text-caption font-medium text-ink">{node.replaceAll("-", " ")}</li>)}
+              </ul>
+              <p className="mt-4 text-caption font-semibold text-ink-muted">Connections</p>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {step.systemState.links.map(([from, to], index) => <li key={`${from}-${to}-${index}`} className="rounded-lg bg-surface-sunken px-3 py-2 text-caption text-ink">{from.replaceAll("-", " ")} <span aria-label="connects to">→</span> {to.replaceAll("-", " ")}</li>)}
+              </ul>
+            </section>
+          ) : null}
           <div><p className="eyebrow text-accent">{step.kind === "initial" ? "First decision" : `Probe ${step.position - 1}`} · {step.stepType.replaceAll("_", " ")}</p><h3 className="mt-2 text-title text-ink">{step.prompt}</h3></div>
           {step.codeSnippet ? <pre className="overflow-x-auto rounded-xl bg-[#102748] p-5 font-mono text-caption text-white"><code>{step.codeSnippet}</code></pre> : null}
           <fieldset disabled={feedback !== null || busy} className="space-y-3"><legend className="sr-only">Choose one answer</legend>
-            {step.options.map((option) => <label key={option.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-body transition-colors focus-within:ring-2 focus-within:ring-accent ${selected === option.id ? "border-accent bg-accent-wash" : "border-line bg-surface-raised"}`}><input type="radio" name={`step-${step.id}`} value={option.id} checked={selected === option.id} onChange={() => setSelected(option.id)} className="mt-1 accent-accent" /><span>{option.text}</span></label>)}
+          {displayedOptions.map((option) => <label key={option.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-body transition-colors focus-within:ring-2 focus-within:ring-accent ${selected === option.id ? "border-accent bg-accent-wash" : "border-line bg-surface-raised"}`}><input type="radio" name={`step-${step.id}`} value={option.id} checked={selected === option.id} onChange={() => setSelected(option.id)} className="mt-1 accent-accent" /><span>{option.text}</span></label>)}
           </fieldset>
           {!feedback ? <button type="button" disabled={!selected || busy} onClick={answer} className="rounded-xl bg-accent px-6 py-3 font-semibold text-accent-contrast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:opacity-60">{busy ? "Saving…" : "Check answer"}</button> : (
             <div role="status" className="space-y-3 rounded-xl border border-line bg-surface-sunken p-5"><p className={`font-bold ${feedback.correct ? "text-success" : "text-danger"}`}>{feedback.correct ? "Correct" : "Not quite"}</p><p className="text-body text-ink">Best answer: {step.options.find((option) => option.id === feedback.correctOptionId)?.text}</p><p className="text-body text-ink">{feedback.explanation}</p><p className="text-caption text-ink-muted"><strong>Bottleneck:</strong> {feedback.bottleneckNote}</p>

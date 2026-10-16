@@ -1,0 +1,287 @@
+{
+  "course_slug": "system-design",
+  "slug": "fest-night",
+  "title": "Fest Night",
+  "hook": "Your college fest ticket site opens at 12:00 and 5,000 students hit it at once. The page crawls, and one student gets charged twice. You built it, so you fix it.",
+  "context": "College fest ticketing site, one server, one SQL database, 200,000 ticket rows.",
+  "tier": "foundations",
+  "concept_ids": [
+    "client-server",
+    "database-indexes",
+    "atomic-updates",
+    "idempotency",
+    "caching",
+    "rate-limiting"
+  ],
+  "estimated_minutes": 10,
+  "status": "live",
+  "solution_brief": "A fast, correct ticket site comes from fixing the saturated tier first, making sales atomic, making payments idempotent, caching only what can be stale, and rate limiting on the right key. Bottleneck first: index the hot query before scaling anything. Sell a seat with one atomic conditional update. Idempotency key per payment attempt. Short-TTL cache for the listing, never for the buy decision. Rate limit per user or device, generous per IP.",
+  "steps": [
+    {
+      "kind": "initial",
+      "step_type": "design_choice",
+      "prompt": "At 12:00:05 the site is crawling. The web server CPU is at 20%, but the database CPU is pinned at 100%. The main query is: SELECT * FROM tickets WHERE event_id = ? AND status = 'available' LIMIT 1, and the tickets table has no index besides the primary key. What do you do first?",
+      "context_note": "The site is live and slow. Web servers look fine, the database is the one sweating.",
+      "system_state": {
+        "nodes": [
+          "students",
+          "web",
+          "db"
+        ],
+        "links": [
+          [
+            "students",
+            "web"
+          ],
+          [
+            "web",
+            "db"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Add three more web servers behind a load balancer."
+        },
+        {
+          "id": "b",
+          "text": "Add a composite index on (event_id, status) so the query stops scanning the whole table."
+        },
+        {
+          "id": "c",
+          "text": "Restart the database to clear its memory."
+        },
+        {
+          "id": "d",
+          "text": "Show a 'try again later' page to half the students."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "The web tier is idle at 20% CPU and the database is saturated, so more web servers just send more queries to the bottleneck. Without an index the query scans up to 200,000 rows for every request. A composite index on (event_id, status) lets the database jump straight to matching rows. A restart fixes nothing and drops the cache. Turning students away is a last resort, not a first move.",
+      "bottleneck_note": "First find which tier is saturated, then fix that tier. Scaling the wrong tier adds cost and no capacity.",
+      "concept_ids": [
+        "database-indexes",
+        "client-server"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "The site is faster, but two students both received a ticket for seat B14. Your code reads the seat, checks that it is available, then updates it to 'sold'. Why did both succeed, and what is the fix?",
+      "context_note": "The index fixed speed. Now concurrency exposes a correctness bug.",
+      "system_state": {
+        "nodes": [
+          "students",
+          "web",
+          "db(indexed)"
+        ],
+        "links": [
+          [
+            "students",
+            "web"
+          ],
+          [
+            "web",
+            "db(indexed)"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "The database is buggy. Switch to a different database."
+        },
+        {
+          "id": "b",
+          "text": "Both requests read 'available' before either wrote 'sold'. Use one atomic conditional update (UPDATE ... SET status='sold' WHERE id=? AND status='available') and check that one row changed."
+        },
+        {
+          "id": "c",
+          "text": "Add a sleep of 100ms between the read and the write."
+        },
+        {
+          "id": "d",
+          "text": "Run the app on a single thread."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "This is a check-then-act race: two requests interleave between the read and the write. Making the check and the write one atomic statement means the database serializes them, and exactly one request sees 'rows affected = 1'. A sleep only shrinks the window. A single thread does not help once you have more than one server or process.",
+      "bottleneck_note": "Any 'read, decide in app code, write' sequence on shared data is a race. Push the decision into the database operation.",
+      "concept_ids": [
+        "atomic-updates"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "A student's payment call timed out, so the app retried, and the student was charged twice for one ticket. How do you make retries safe?",
+      "context_note": "Races on seats are fixed. Now the payment call has an unknown outcome on timeout.",
+      "system_state": {
+        "nodes": [
+          "students",
+          "web",
+          "db",
+          "payment-gateway"
+        ],
+        "links": [
+          [
+            "students",
+            "web"
+          ],
+          [
+            "web",
+            "db"
+          ],
+          [
+            "web",
+            "payment-gateway"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Never retry payment calls."
+        },
+        {
+          "id": "b",
+          "text": "Disable the Pay button after the first click."
+        },
+        {
+          "id": "c",
+          "text": "Generate an idempotency key per order attempt, send it with the payment request, and enforce uniqueness on it so a retry returns the original result."
+        },
+        {
+          "id": "d",
+          "text": "Retry only after waiting 10 seconds."
+        }
+      ],
+      "correct_option_id": "c",
+      "explanation": "On a timeout you do not know whether the charge happened. An idempotency key lets the gateway and your own database recognise a repeat of the same request and return the first result instead of charging again. Disabling the button is a UI nicety that does not stop network retries or double submits from two tabs. Never retrying loses legitimate payments, and waiting does not make a retry safe.",
+      "bottleneck_note": "Timeouts mean 'unknown', not 'failed'. Safe retries need a stable identity for the operation.",
+      "concept_ids": [
+        "idempotency"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "Thousands of students keep refreshing the event listing page (event name, date, price, how many tickets are left). It is identical for everyone and changes rarely. What is the sensible use of a cache here?",
+      "context_note": "Writes are safe now, but the listing page still hits the database for every refresh.",
+      "system_state": {
+        "nodes": [
+          "students",
+          "web",
+          "cache",
+          "db",
+          "payment-gateway"
+        ],
+        "links": [
+          [
+            "students",
+            "web"
+          ],
+          [
+            "web",
+            "cache"
+          ],
+          [
+            "cache",
+            "db"
+          ],
+          [
+            "web",
+            "payment-gateway"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Cache the listing page for about 15 to 30 seconds, but never trust the cache for the actual 'buy' decision."
+        },
+        {
+          "id": "b",
+          "text": "Cache the buy endpoint's result for 5 minutes."
+        },
+        {
+          "id": "c",
+          "text": "Cache everything forever, including ticket counts."
+        },
+        {
+          "id": "d",
+          "text": "Do not cache anything, because data might be stale."
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "Reads that are identical for everyone and tolerate slight staleness are ideal for a short-TTL cache, which removes most database load. The decision to sell a ticket must still go through the atomic update, because a cached 'available' could be wrong by the time someone buys. Caching the buy result or caching forever would sell tickets that are gone.",
+      "bottleneck_note": "Cache reads that can be a little stale. Never cache the decision that must be exactly right.",
+      "concept_ids": [
+        "caching"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "A script is hitting your buy endpoint hundreds of times a second from a few accounts to grab tickets for resale. Many real students share the same campus Wi-Fi, so they share one public IP. What do you do?",
+      "context_note": "The site is fast and correct. Now someone is abusing it.",
+      "system_state": {
+        "nodes": [
+          "students",
+          "bots",
+          "rate-limiter",
+          "web",
+          "cache",
+          "db"
+        ],
+        "links": [
+          [
+            "students",
+            "rate-limiter"
+          ],
+          [
+            "bots",
+            "rate-limiter"
+          ],
+          [
+            "rate-limiter",
+            "web"
+          ],
+          [
+            "web",
+            "cache"
+          ],
+          [
+            "cache",
+            "db"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Block the campus IP address."
+        },
+        {
+          "id": "b",
+          "text": "Rate limit per logged-in user (and per device), with a small per-IP ceiling set high enough for a shared campus network."
+        },
+        {
+          "id": "c",
+          "text": "Hide the buy button for the first minute."
+        },
+        {
+          "id": "d",
+          "text": "Ask students to stop using scripts."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "Keying limits on the authenticated user or device targets the abuser. A per-IP limit alone would punish everyone behind the same campus NAT, so any IP ceiling must be generous. Blocking the whole IP locks out real students. Hiding the button or asking nicely does nothing against a script that calls the API directly.",
+      "bottleneck_note": "Choose the rate-limit key carefully. Shared IPs make 'per IP' a blunt instrument.",
+      "concept_ids": [
+        "rate-limiting"
+      ]
+    }
+  ]
+}

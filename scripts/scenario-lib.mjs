@@ -35,6 +35,8 @@ export function validateScenario(s, catalogue) {
   if (!["draft", "reviewed", "live"].includes(s.status)) fail("invalid status");
   if (!Number.isInteger(s.estimated_minutes) || s.estimated_minutes < 1 || s.estimated_minutes > 60) fail("invalid estimated_minutes");
   const known = new Set(course?.concepts.map((c) => c.id) ?? []);
+  const declared = new Set(s.concept_ids ?? []);
+  const covered = new Set();
   const conceptsValid = (ids, path) => {
     if (!Array.isArray(ids) || ids.length === 0) return fail(`${path}: concept_ids required`);
     for (const id of ids) if (!known.has(id)) fail(`${path}: unknown concept id ${id}`);
@@ -58,8 +60,21 @@ export function validateScenario(s, catalogue) {
     if (!present(step.bottleneck_note)) fail(`${path}: empty bottleneck_note`);
     if (["predict_output", "debug"].includes(step.step_type) && !present(step.code_snippet)) fail(`${path}: code-based step without snippet`);
     if (present(step.code_snippet) && !present(step.language)) fail(`${path}: snippet language required`);
+    if (step.system_state !== undefined) {
+      const state = step.system_state;
+      if (!state || !Array.isArray(state.nodes) || !state.nodes.length ||
+          state.nodes.some((node) => !present(node)) || new Set(state.nodes).size !== state.nodes.length ||
+          !Array.isArray(state.links) || state.links.some((link) => !Array.isArray(link) || link.length !== 2 || link.some((node) => !state.nodes.includes(node)))) {
+        fail(`${path}: invalid system_state graph`);
+      }
+    }
     conceptsValid(step.concept_ids, path);
+    for (const id of step.concept_ids ?? []) {
+      if (!declared.has(id)) fail(`${path}: concept ${id} not declared on scenario`);
+      covered.add(id);
+    }
   });
+  for (const id of declared) if (!covered.has(id)) fail(`scenario concept ${id} is not tested`);
   return errors;
 }
 
@@ -69,6 +84,7 @@ export function loadScenarios(root = ROOT) {
   for (const course of catalogue.courses) {
     for (const name of readdirSync(join(root, course.slug)).filter((n) => n.endsWith(".json"))) {
       const scenario = JSON.parse(readFileSync(join(root, course.slug, name), "utf8"));
+      if (scenario.slug !== name.slice(0, -5)) throw new Error(`${name}: slug does not match filename`);
       const errors = validateScenario(scenario, catalogue);
       if (errors.length) throw new Error(`${name}: ${errors.join("; ")}`);
       scenarios.push(scenario);

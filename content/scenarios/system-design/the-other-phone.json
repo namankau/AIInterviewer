@@ -1,0 +1,271 @@
+{
+  "course_slug": "system-design",
+  "slug": "the-other-phone",
+  "title": "The Other Phone",
+  "hook": "A user changes their account password after losing an old phone. Hours later the old phone is still logged in and can still like, comment and send messages. Your job is to log that session out.",
+  "context": "Social app with mobile clients, access tokens, and a backend serving 1,000 requests per second.",
+  "tier": "intermediate",
+  "concept_ids": [
+    "sessions-vs-jwt",
+    "token-revocation",
+    "multi-device-sessions",
+    "per-request-validation-cost",
+    "propagation-delay"
+  ],
+  "estimated_minutes": 12,
+  "status": "live",
+  "solution_brief": "Revocation needs server-side state. Enforce on the server, revoke every other session after a security event, keep the check on a fast store, and bound the stale-trust window with invalidation events and short TTLs. Stateless tokens need a session id or token version to be revocable. Server decides, the device is irrelevant. Password change revokes all sessions except the current one. In-memory validity check on every request. Revocation events plus short TTLs bound the window.",
+  "steps": [
+    {
+      "kind": "initial",
+      "step_type": "design_choice",
+      "prompt": "Your app issues a signed JWT valid for 30 days. The server validates only the signature and expiry, and stores nothing. After a password change, how can the server reject a token it issued earlier?",
+      "context_note": "Pure stateless tokens cannot be taken back.",
+      "system_state": {
+        "nodes": [
+          "old-phone",
+          "api",
+          "auth-service"
+        ],
+        "links": [
+          [
+            "old-phone",
+            "api"
+          ],
+          [
+            "api",
+            "auth-service"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "It cannot, because signed tokens are valid until they expire."
+        },
+        {
+          "id": "b",
+          "text": "Add server-side state: track a session id or per-user token version, and reject tokens that do not match the current state."
+        },
+        {
+          "id": "c",
+          "text": "Email the old phone and ask it to log out."
+        },
+        {
+          "id": "d",
+          "text": "Change the signing key for the whole app every day."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "A purely stateless token has no way to be revoked. To revoke, the server needs some state to compare against: a session record, a per-user token version number, or a revocation list. Changing the global signing key logs out every user, not just this one.",
+      "bottleneck_note": "Revocation requires state. Stateless tokens trade revocability for scale.",
+      "concept_ids": [
+        "sessions-vs-jwt",
+        "token-revocation"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "A teammate says 'just delete the token from the database'. But the old phone is offline or never calls you again, and the token lives only on that device. Is the old session still dangerous?",
+      "context_note": "You cannot reach into a lost phone.",
+      "system_state": {
+        "nodes": [
+          "old-phone(offline)",
+          "api",
+          "session-store"
+        ],
+        "links": [
+          [
+            "old-phone(offline)",
+            "api"
+          ],
+          [
+            "api",
+            "session-store"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Yes, always, until the token expires on its own."
+        },
+        {
+          "id": "b",
+          "text": "No. What matters is the server's decision: once the session is invalidated server-side, any later request from that phone is rejected, whether or not the device is told."
+        },
+        {
+          "id": "c",
+          "text": "Only if you wipe the phone remotely."
+        },
+        {
+          "id": "d",
+          "text": "Only if it is connected to Wi-Fi."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "A token is only useful when presented to your server, and the server decides whether to honour it. Invalidating the session server-side makes the copy on the device worthless the moment it is used, even if the device never hears about it. Remote wipe is unreliable and unnecessary for this.",
+      "bottleneck_note": "Enforce on the server, which you control, not on the device, which you do not.",
+      "concept_ids": [
+        "token-revocation"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "The user is logged in on three phones. They change their password on the phone in their hand. Which sessions should end?",
+      "context_note": "Multiple devices complicate the rule.",
+      "system_state": {
+        "nodes": [
+          "phone-1(current)",
+          "phone-2",
+          "phone-3",
+          "session-store"
+        ],
+        "links": [
+          [
+            "phone-1(current)",
+            "session-store"
+          ],
+          [
+            "phone-2",
+            "session-store"
+          ],
+          [
+            "phone-3",
+            "session-store"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Only the phone that did not call recently."
+        },
+        {
+          "id": "b",
+          "text": "Revoke all other sessions and keep the one performing the change, ideally with a clear message and an option to also sign out everywhere."
+        },
+        {
+          "id": "c",
+          "text": "Revoke nothing, because it is annoying for the user."
+        },
+        {
+          "id": "d",
+          "text": "Revoke only the oldest session."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "A password change usually means the user suspects compromise, so every other session should be ended. The device that just authenticated the change can stay signed in. Choosing by last activity or age is arbitrary and leaves risky sessions alive.",
+      "bottleneck_note": "Security events should invalidate everything except the proven-fresh session.",
+      "concept_ids": [
+        "multi-device-sessions"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "tradeoff",
+      "prompt": "Checking session validity on every request adds a lookup to a service that was happily handling 1,000 requests per second with no lookups. How do you keep that check cheap?",
+      "context_note": "Revocation now costs a lookup on the hot path.",
+      "system_state": {
+        "nodes": [
+          "clients",
+          "api",
+          "session-cache",
+          "session-db"
+        ],
+        "links": [
+          [
+            "clients",
+            "api"
+          ],
+          [
+            "api",
+            "session-cache"
+          ],
+          [
+            "session-cache",
+            "session-db"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Query the main relational database for every request."
+        },
+        {
+          "id": "b",
+          "text": "Check a fast in-memory store or short-lived cache keyed by session id or user token version, with the database as the source of truth behind it."
+        },
+        {
+          "id": "c",
+          "text": "Skip the check, since it is too expensive."
+        },
+        {
+          "id": "d",
+          "text": "Check validity only at login."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "A short-lived cache or fast session store can reduce database load, but a remote lookup is not guaranteed to be sub-millisecond. Measure the added latency and choose the cache TTL against the revocation window; sensitive actions may require an authoritative check. Skipping validation defeats revocation.",
+      "bottleneck_note": "Put the validity check on a fast store so the hot path stays hot.",
+      "concept_ids": [
+        "per-request-validation-cost"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "Session deletion is asynchronous and caches are used. How long can the old phone still post, and how do you shrink that window?",
+      "context_note": "Any cache or async step creates a window of stale trust.",
+      "system_state": {
+        "nodes": [
+          "auth-service",
+          "event-bus",
+          "api-cache x N",
+          "old-phone"
+        ],
+        "links": [
+          [
+            "auth-service",
+            "event-bus"
+          ],
+          [
+            "event-bus",
+            "api-cache x N"
+          ],
+          [
+            "old-phone",
+            "api-cache x N"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Zero seconds. Asynchronous never causes delays."
+        },
+        {
+          "id": "b",
+          "text": "Up to the propagation delay plus cache TTL. Shrink it by publishing a revocation event that invalidates caches immediately, keeping TTLs short, and requiring a fresh check for sensitive actions."
+        },
+        {
+          "id": "c",
+          "text": "Forever, because nothing can be done."
+        },
+        {
+          "id": "d",
+          "text": "Exactly 30 days."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "Any asynchronous deletion or caching leaves a window where an old session may still be accepted, bounded by event propagation delay and cache TTL. Pushing invalidation events and keeping TTLs short narrows that window, and sensitive operations can bypass the cache for an authoritative check.",
+      "bottleneck_note": "Know your staleness bound, and tighten it where the risk is highest.",
+      "concept_ids": [
+        "propagation-delay"
+      ]
+    }
+  ]
+}

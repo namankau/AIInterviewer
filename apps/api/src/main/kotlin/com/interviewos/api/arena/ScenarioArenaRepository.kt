@@ -80,8 +80,11 @@ class ScenarioArenaRepository(
 
     fun conceptNames(course: String): List<Pair<String, String>> =
         jdbc
-            .sql("select id, name from public.arena_concepts where course_id = :course order by name")
-            .param("course", course)
+            .sql(
+                "select c.id, c.name from public.arena_concepts c where c.course_id = :course " +
+                    "and exists (select 1 from public.arena_scenarios s where s.course_id = c.course_id " +
+                    "and s.status = 'live' and c.id = any(s.concept_ids)) order by c.name",
+            ).param("course", course)
             .query { rs, _ -> rs.getString(1) to rs.getString(2) }
             .list()
 
@@ -89,7 +92,7 @@ class ScenarioArenaRepository(
         jdbc
             .sql(
                 "select id, scenario_id, position, kind, step_type, prompt, context_note, options, correct_option_id, " +
-                    "explanation, bottleneck_note, concept_ids, code_snippet, language " +
+                    "explanation, bottleneck_note, concept_ids, code_snippet, language, system_state " +
                     "from public.arena_scenario_steps where id = :id",
             ).param("id", id)
             .query { rs, _ ->
@@ -108,6 +111,7 @@ class ScenarioArenaRepository(
                     strings(rs.getArray("concept_ids").array),
                     rs.getString("code_snippet"),
                     rs.getString("language"),
+                    rs.getString("system_state")?.let { mapper.readValue(it, ScenarioSystemState::class.java) },
                 )
             }.optional()
             .orElse(null)
@@ -231,6 +235,11 @@ data class ScenarioOption(
     val text: String,
 )
 
+data class ScenarioSystemState(
+    val nodes: List<String>,
+    val links: List<List<String>>,
+)
+
 data class ScenarioDetails(
     val id: String,
     val courseId: String,
@@ -258,4 +267,5 @@ data class ScenarioStepRow(
     val conceptIds: List<String>,
     val codeSnippet: String?,
     val language: String?,
+    val systemState: ScenarioSystemState? = null,
 )

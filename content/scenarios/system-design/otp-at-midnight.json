@@ -1,0 +1,277 @@
+{
+  "course_slug": "system-design",
+  "slug": "otp-at-midnight",
+  "title": "OTP at Midnight",
+  "hook": "Your midnight sale starts and OTPs are arriving 40 seconds late, if at all. Meanwhile your SMS bill is exploding and security has noticed someone guessing codes.",
+  "context": "E-commerce login via SMS one-time passwords, a single SMS provider, and a flash sale.",
+  "tier": "intermediate",
+  "concept_ids": [
+    "provider-failover",
+    "async-sending",
+    "otp-lifecycle",
+    "brute-force-protection",
+    "idempotent-sends",
+    "abuse-detection"
+  ],
+  "estimated_minutes": 12,
+  "status": "live",
+  "solution_brief": "Make OTP delivery asynchronous with provider failover, keep exactly one short-lived valid code, limit guesses, dedupe sends, and defend the send endpoint against fraud. Queue the send, short timeouts, provider failover. Cooldown, hourly cap, one valid code, 5-minute expiry. 5 attempts per code, throttle by number and IP. Unique send id and send log against duplicates. Country allowlist, bot checks, spend alerts against SMS pumping.",
+  "steps": [
+    {
+      "kind": "initial",
+      "step_type": "design_choice",
+      "prompt": "Your login API calls the SMS provider synchronously and waits up to 30 seconds for a response. Under load, the provider slows down and your login API threads all get stuck. What is a robust design?",
+      "context_note": "Everything depends on one slow third party.",
+      "system_state": {
+        "nodes": [
+          "users",
+          "login-api",
+          "sms-provider"
+        ],
+        "links": [
+          [
+            "users",
+            "login-api"
+          ],
+          [
+            "login-api",
+            "sms-provider"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Raise the timeout to 120 seconds."
+        },
+        {
+          "id": "b",
+          "text": "Enqueue the OTP send and return immediately, let workers call providers with short timeouts, and fail over to a second provider when the first is slow or erroring."
+        },
+        {
+          "id": "c",
+          "text": "Remove OTP login."
+        },
+        {
+          "id": "d",
+          "text": "Retry the same provider in a tight loop."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "Decoupling with a queue protects the login API from third-party latency, and a short timeout with failover to another provider keeps OTPs flowing when one provider degrades. Longer timeouts and tight retry loops just tie up more of your own capacity.",
+      "bottleneck_note": "Never let a third party's latency become your thread pool's problem.",
+      "concept_ids": [
+        "provider-failover",
+        "async-sending"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "Impatient users press 'Resend' five times and each press generates a new OTP, all of them valid for 10 minutes. This costs money and widens the guessing surface. What should the OTP lifecycle look like?",
+      "context_note": "Delays make people mash the button.",
+      "system_state": {
+        "nodes": [
+          "users",
+          "otp-service",
+          "otp-store"
+        ],
+        "links": [
+          [
+            "users",
+            "otp-service"
+          ],
+          [
+            "otp-service",
+            "otp-store"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Allow unlimited resends and keep all codes valid."
+        },
+        {
+          "id": "b",
+          "text": "Enforce a cooldown between resends, cap sends per number per hour, invalidate the previous code when a new one is issued, and use a short expiry (for example 5 minutes)."
+        },
+        {
+          "id": "c",
+          "text": "Block the user permanently after one resend."
+        },
+        {
+          "id": "d",
+          "text": "Make OTPs valid for 24 hours so nobody needs to resend."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "Only one code should be valid at a time, so resending invalidates the earlier one. A cooldown and an hourly cap bound cost and abuse, and a short expiry reduces the time window for guessing. Permanent blocks hurt legitimate users and long validity increases risk.",
+      "bottleneck_note": "Limit how many valid secrets exist at once, and for how long.",
+      "concept_ids": [
+        "otp-lifecycle"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "A 6-digit OTP has 1,000,000 possible values. An attacker scripts guesses against a victim's number. What protection actually works?",
+      "context_note": "Short numeric codes are guessable by brute force if unlimited.",
+      "system_state": {
+        "nodes": [
+          "attacker",
+          "verify-api",
+          "attempt-counter",
+          "otp-store"
+        ],
+        "links": [
+          [
+            "attacker",
+            "verify-api"
+          ],
+          [
+            "verify-api",
+            "attempt-counter"
+          ],
+          [
+            "verify-api",
+            "otp-store"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Allow unlimited attempts, because the code is random."
+        },
+        {
+          "id": "b",
+          "text": "Limit verification attempts per code (for example 5), invalidate the code after that, and throttle by number and by IP."
+        },
+        {
+          "id": "c",
+          "text": "Make the code 4 digits, so it is easier to type."
+        },
+        {
+          "id": "d",
+          "text": "Show a hint when the guess is close."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "With only 5 attempts against 1,000,000 possibilities, an attacker has roughly a 0.0005% chance of success per code, and invalidating the code after the limit prevents continued guessing. Unlimited attempts make brute force trivial, and fewer digits make it worse.",
+      "bottleneck_note": "A small secret is safe only when guesses are scarce.",
+      "concept_ids": [
+        "brute-force-protection"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "A worker times out calling provider A. It may have delivered the SMS, so immediately trying provider B could send a second code. What is the safest response?",
+      "context_note": "Failover plus retries can duplicate messages.",
+      "system_state": {
+        "nodes": [
+          "otp-queue",
+          "sender-workers",
+          "provider-A",
+          "provider-B",
+          "send-log"
+        ],
+        "links": [
+          [
+            "otp-queue",
+            "sender-workers"
+          ],
+          [
+            "sender-workers",
+            "provider-A"
+          ],
+          [
+            "sender-workers",
+            "provider-B"
+          ],
+          [
+            "sender-workers",
+            "send-log"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Record the attempt as unknown, query or await provider A when possible, and delay failover until its outcome is known or the product explicitly accepts a possible duplicate."
+        },
+        {
+          "id": "b",
+          "text": "Retry through provider B immediately and assume provider A failed."
+        },
+        {
+          "id": "c",
+          "text": "Send through A and B on every request."
+        },
+        {
+          "id": "d",
+          "text": "Never retry any timed-out send."
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A timeout does not tell you whether provider A sent the SMS. A local log and a stable request id help reconcile that uncertainty; a dedupe key only works within a provider that supports it, not automatically across two vendors. Immediate failover may duplicate delivery, while never retrying can strand a user.",
+      "bottleneck_note": "Cross-provider failover cannot guarantee one SMS after an unknown outcome.",
+      "concept_ids": [
+        "idempotent-sends"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "Your SMS spend triples overnight. Logs show thousands of OTP requests to numbers in countries you do not operate in, from many different IP addresses. What is happening and what do you do?",
+      "context_note": "This is a classic fraud pattern against SMS endpoints.",
+      "system_state": {
+        "nodes": [
+          "bots",
+          "risk-engine",
+          "otp-service",
+          "sms-providers"
+        ],
+        "links": [
+          [
+            "bots",
+            "risk-engine"
+          ],
+          [
+            "risk-engine",
+            "otp-service"
+          ],
+          [
+            "otp-service",
+            "sms-providers"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "It is SMS pumping fraud. Restrict sending to countries you serve, add per-number, per-device and per-IP limits, add a bot check before sending, and alert on spend anomalies."
+        },
+        {
+          "id": "b",
+          "text": "It is normal growth. Increase the SMS budget."
+        },
+        {
+          "id": "c",
+          "text": "Turn off SMS for everyone permanently."
+        },
+        {
+          "id": "d",
+          "text": "Ask the SMS provider to waive the costs."
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "Attackers trigger OTP sends to premium or colluding numbers to earn a share of the termination fees. Country allowlists, layered rate limits, bot checks on the send endpoint and spend-anomaly alerts cut it off. Raising the budget funds the attack, and disabling SMS for all users punishes everyone.",
+      "bottleneck_note": "Anything that sends a message costs you money, so protect the send endpoint like a payment endpoint.",
+      "concept_ids": [
+        "abuse-detection"
+      ]
+    }
+  ]
+}

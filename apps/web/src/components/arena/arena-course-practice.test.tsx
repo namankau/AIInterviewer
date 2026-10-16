@@ -19,6 +19,7 @@ const first = {
   prompt: "Which structure?", contextNote: null,
   options: [{ id: "a", text: "Trie" }, { id: "b", text: "Array scan" }, { id: "c", text: "Stack" }],
   codeSnippet: null, language: null,
+  systemState: { nodes: ["students", "web", "db"], links: [["students", "web"], ["web", "db"]] },
 };
 const next = { ...first, id: "dsa:autocomplete:2", position: 2, kind: "probe", prompt: "What about scale?", contextNote: "Traffic grew." };
 
@@ -35,6 +36,7 @@ describe("course scenario practice", () => {
     render(<ArenaCoursePractice courseSlug="dsa" />);
     await user.click(await screen.findByRole("button", { name: "Start scenario" }));
     expect(screen.getByText("A search box needs suggestions.")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "System map" })).toHaveTextContent("students");
     expect(screen.queryByText("Traffic grew.")).not.toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: "Array scan" }));
     await user.click(screen.getByRole("button", { name: "Check answer" }));

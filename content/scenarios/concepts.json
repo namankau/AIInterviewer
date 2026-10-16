@@ -1,29 +1,534 @@
 {
   "courses": [
-    {"slug":"system-design","title":"System Design","concepts":[
-      {"id":"session-revocation","name":"Session revocation","tier":"foundations","prerequisite_concept_ids":[]},
-      {"id":"token-validation","name":"Token validation and caching","tier":"intermediate","prerequisite_concept_ids":["session-revocation"]},
-      {"id":"inventory-reservation","name":"Inventory reservation","tier":"foundations","prerequisite_concept_ids":[]},
-      {"id":"atomic-stock","name":"Atomic stock updates","tier":"intermediate","prerequisite_concept_ids":["inventory-reservation"]}
-    ]},
-    {"slug":"dsa","title":"Data Structures and Algorithms","concepts":[
-      {"id":"trie","name":"Trie lookup","tier":"foundations","prerequisite_concept_ids":[]},
-      {"id":"top-k","name":"Top K maintenance","tier":"intermediate","prerequisite_concept_ids":["trie"]},
-      {"id":"sliding-window","name":"Sliding window","tier":"foundations","prerequisite_concept_ids":[]},
-      {"id":"amortized-analysis","name":"Amortized analysis","tier":"intermediate","prerequisite_concept_ids":["sliding-window"]}
-    ]},
-    {"slug":"ai-agents","title":"AI and Agentic AI","concepts":[
-      {"id":"tool-boundaries","name":"Tool boundaries and trust","tier":"foundations","prerequisite_concept_ids":[]},
-      {"id":"prompt-injection","name":"Prompt injection defenses","tier":"foundations","prerequisite_concept_ids":["tool-boundaries"]},
-      {"id":"stopping-conditions","name":"Stopping conditions and recovery","tier":"intermediate","prerequisite_concept_ids":["tool-boundaries"]},
-      {"id":"tool-idempotency","name":"Tool idempotency","tier":"intermediate","prerequisite_concept_ids":["tool-boundaries"]},
-      {"id":"agent-evaluation","name":"Evaluating agent outcomes","tier":"intermediate","prerequisite_concept_ids":["stopping-conditions"]}
-    ]},
-    {"slug":"java","title":"Java","concepts":[
-      {"id":"gc-leaks","name":"GC and memory leaks","tier":"foundations","prerequisite_concept_ids":[]},
-      {"id":"cache-bounds","name":"Bounded caches","tier":"intermediate","prerequisite_concept_ids":["gc-leaks"]},
-      {"id":"concurrency","name":"Concurrency primitives","tier":"foundations","prerequisite_concept_ids":[]},
-      {"id":"atomicity","name":"Atomicity and visibility","tier":"intermediate","prerequisite_concept_ids":["concurrency"]}
-    ]}
+    {
+      "slug": "system-design",
+      "title": "System Design",
+      "concepts": [
+        {
+          "id": "abuse-detection",
+          "name": "Abuse Detection",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "async-sending",
+          "name": "Async Sending",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "at-least-once-delivery",
+          "name": "At-least-once delivery",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "atomic-decrement",
+          "name": "Atomic decrement",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "atomic-stock",
+          "name": "Atomic stock updates",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": [
+            "inventory-reservation"
+          ]
+        },
+        {
+          "id": "atomic-updates",
+          "name": "Atomic updates",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "brute-force-protection",
+          "name": "Brute Force Protection",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "cached-availability",
+          "name": "Cached Availability",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "caching",
+          "name": "Caching",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "cdn",
+          "name": "CDN",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "cell-boundaries",
+          "name": "Cell Boundaries",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "client-server",
+          "name": "Client-server bottlenecks",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "compensating-actions",
+          "name": "Compensating Actions",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "cross-region-transactions",
+          "name": "Cross Region Transactions",
+          "tier": "expert",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "data-residency",
+          "name": "Data residency",
+          "tier": "expert",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "database-indexes",
+          "name": "Database Indexes",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "dedupe",
+          "name": "Dedupe",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "failover-and-fencing",
+          "name": "Failover and fencing",
+          "tier": "expert",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "fairness",
+          "name": "Fairness",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "fan-out",
+          "name": "Fan Out",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "geospatial-index",
+          "name": "Geospatial indexing",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "home-region-partitioning",
+          "name": "Home Region Partitioning",
+          "tier": "expert",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "honest-ux",
+          "name": "Honest Ux",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "hot-counter",
+          "name": "Hot counter contention",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "hot-keys",
+          "name": "Hot Keys",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "idempotency",
+          "name": "Idempotency",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "idempotency-keys",
+          "name": "Idempotency Keys",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "idempotent-consumers",
+          "name": "Idempotent Consumers",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "idempotent-sends",
+          "name": "Idempotent Sends",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "inventory-reservation",
+          "name": "Inventory reservation",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "latest-state-store",
+          "name": "Latest State Store",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "load-shaping",
+          "name": "Load Shaping",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "lock-contention",
+          "name": "Lock Contention",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "message-queues",
+          "name": "Message queues",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "multi-device-sessions",
+          "name": "Multi Device Sessions",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "multi-region-design",
+          "name": "Multi-region design",
+          "tier": "expert",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "otp-lifecycle",
+          "name": "OTP lifecycle",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "outbox-pattern",
+          "name": "Transactional outbox",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "per-request-validation-cost",
+          "name": "Per-request validation cost",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "polling-vs-push",
+          "name": "Polling Vs Push",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "priority-lanes",
+          "name": "Priority Lanes",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "propagation-delay",
+          "name": "Propagation Delay",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "provider-failover",
+          "name": "Provider failover",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "provider-rate-limits",
+          "name": "Provider Rate Limits",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "pub-sub",
+          "name": "Publish-subscribe",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "push-tracking",
+          "name": "Push Tracking",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "queues-and-workers",
+          "name": "Queues And Workers",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "rate-limiting",
+          "name": "Rate Limiting",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "read-heavy-traffic",
+          "name": "Read Heavy Traffic",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "read-your-writes",
+          "name": "Read-your-writes consistency",
+          "tier": "expert",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "reconciliation",
+          "name": "Reconciliation",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "reconnect-storms",
+          "name": "Reconnect Storms",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "replication-lag",
+          "name": "Replication Lag",
+          "tier": "expert",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "saga-compensation",
+          "name": "Saga compensation",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "seat-holds-with-ttl",
+          "name": "Seat holds with TTL",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "server-sent-events",
+          "name": "Server-sent events",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "session-revocation",
+          "name": "Session revocation",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "sessions-vs-jwt",
+          "name": "Sessions vs JWT",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "state-machine",
+          "name": "State Machine",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "static-precomputation",
+          "name": "Static Precomputation",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "thundering-herd",
+          "name": "Thundering Herd",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "timeouts-and-retries",
+          "name": "Timeouts And Retries",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "token-revocation",
+          "name": "Token Revocation",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "token-validation",
+          "name": "Token validation and caching",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": [
+            "session-revocation"
+          ]
+        },
+        {
+          "id": "ttl-reservations",
+          "name": "TTL reservations",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "unknown-outcomes",
+          "name": "Unknown Outcomes",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "virtual-waiting-room",
+          "name": "Virtual Waiting Room",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "write-heavy-ingestion",
+          "name": "Write-heavy ingestion",
+          "tier": "advanced",
+          "prerequisite_concept_ids": []
+        }
+      ]
+    },
+    {
+      "slug": "dsa",
+      "title": "Data Structures and Algorithms",
+      "concepts": [
+        {
+          "id": "trie",
+          "name": "Trie lookup",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "top-k",
+          "name": "Top K maintenance",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": [
+            "trie"
+          ]
+        },
+        {
+          "id": "sliding-window",
+          "name": "Sliding window",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "amortized-analysis",
+          "name": "Amortized analysis",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": [
+            "sliding-window"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "ai-agents",
+      "title": "AI and Agentic AI",
+      "concepts": [
+        {
+          "id": "tool-boundaries",
+          "name": "Tool boundaries and trust",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "prompt-injection",
+          "name": "Prompt injection defenses",
+          "tier": "foundations",
+          "prerequisite_concept_ids": [
+            "tool-boundaries"
+          ]
+        },
+        {
+          "id": "stopping-conditions",
+          "name": "Stopping conditions and recovery",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": [
+            "tool-boundaries"
+          ]
+        },
+        {
+          "id": "tool-idempotency",
+          "name": "Tool idempotency",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": [
+            "tool-boundaries"
+          ]
+        },
+        {
+          "id": "agent-evaluation",
+          "name": "Evaluating agent outcomes",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": [
+            "stopping-conditions"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "java",
+      "title": "Java",
+      "concepts": [
+        {
+          "id": "gc-leaks",
+          "name": "GC and memory leaks",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "cache-bounds",
+          "name": "Bounded caches",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": [
+            "gc-leaks"
+          ]
+        },
+        {
+          "id": "concurrency",
+          "name": "Concurrency primitives",
+          "tier": "foundations",
+          "prerequisite_concept_ids": []
+        },
+        {
+          "id": "atomicity",
+          "name": "Atomicity and visibility",
+          "tier": "intermediate",
+          "prerequisite_concept_ids": [
+            "concurrency"
+          ]
+        }
+      ]
+    }
   ]
 }

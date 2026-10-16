@@ -8,12 +8,20 @@ const base = scenarios.find((s) => s.course_slug === "dsa");
 const copy = () => structuredClone(base);
 
 test("all authored scenarios validate and have 5 ordered steps", () => {
-  assert.equal(scenarios.length, 8);
+  assert.equal(scenarios.length, 20);
   assert.equal(scenarios.filter((scenario) => scenario.course_slug === "ai-agents").length, 2);
+  assert.equal(scenarios.filter((scenario) => scenario.course_slug === "system-design" && scenario.status === "live").length, 12);
+  assert.equal(scenarios.filter((scenario) => scenario.course_slug === "system-design" && scenario.status === "draft").length, 2);
   for (const scenario of scenarios) {
     assert.equal(scenario.steps.length, 5);
     assert.deepEqual(validateScenario(scenario, catalogue), []);
   }
+});
+
+test("rejects system maps with links to missing components", () => {
+  const scenario = structuredClone(scenarios.find((value) => value.slug === "fest-night"));
+  scenario.steps[0].system_state.links.push(["students", "missing"]);
+  assert.match(validateScenario(scenario, catalogue).join(";"), /invalid system_state graph/);
 });
 
 test("rejects missing, duplicate, and too few options", () => {
@@ -32,6 +40,12 @@ test("rejects missing explanation, probe context and unknown concepts", () => {
   assert.match(errors, /probe without context_note/);
   assert.match(errors, /empty explanation/);
   assert.match(errors, /unknown concept id/);
+});
+
+test("rejects concepts that the campaign never tests", () => {
+  const value = copy();
+  value.concept_ids.push("amortized-analysis");
+  assert.match(validateScenario(value, catalogue).join(";"), /is not tested/);
 });
 
 test("checks complexity notation and code snippets", () => {

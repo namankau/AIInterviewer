@@ -45,4 +45,16 @@ describe("course scenario practice", () => {
     expect(screen.getByText("Traffic grew.")).toBeInTheDocument();
     expect(screen.getByText("What about scale?")).toBeInTheDocument();
   });
+
+  it("stops showing the loading state after a progress error and can retry", async () => {
+    fetchProgress.mockRejectedValueOnce(new Error("server error"));
+    const user = userEvent.setup();
+    render(<ArenaCoursePractice courseSlug="dsa" />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Please try again");
+    expect(screen.queryByText("Loading your progress…")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start scenario" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByRole("button", { name: "Start scenario" })).toBeEnabled();
+    expect(fetchProgress).toHaveBeenCalledTimes(2);
+  });
 });

@@ -14,7 +14,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "scenario:check": "node --test scripts/scenario-lib.test.mjs && node scripts/load-scenarios.mjs --check",
+    "scenario:check": "node --test scripts/scenario-lib.test.mjs && node scripts/load-scenarios.mjs --check --course=system-design,dsa,java && node scripts/load-scenarios.mjs --check --course=ai-agents supabase/migrations/20261016020000_ai_agents_scenarios.sql",
     "supabase": "node --env-file-if-exists=.env scripts/supabase.mjs",
     "db:login": "npm run supabase -- login",
     "db:link": "npm run supabase -- link --project-ref moeronogmgtmbdnzfzgu",

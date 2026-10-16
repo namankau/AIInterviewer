@@ -20,7 +20,7 @@ export function SiteNavLinks() {
             <Link
               href={link.href as Route}
               aria-current={active ? "page" : undefined}
-              className={`block rounded-lg px-3 py-1.5 text-caption transition-all ${
+              className={`flex min-h-11 items-center rounded-lg px-3 py-1.5 text-caption transition-all ${
                 active
                   ? "bg-surface-raised font-semibold text-accent-strong shadow-[var(--shadow-sm)]"
                   : "text-ink-muted hover:bg-surface-raised/70 hover:text-ink"

@@ -40,8 +40,8 @@ function DraggableComponent({
   return (
     <article
       ref={ref}
-      className={`rounded-xl border bg-white p-3 shadow-sm transition motion-reduce:transition-none ${
-        result ? (result.correct ? "border-success/50" : "border-danger/50") : "border-line"
+      className={`rounded-xl border bg-surface-raised p-3 shadow-sm transition motion-reduce:transition-none ${
+        result ? (result.correct ? "border-positive/50" : "border-danger/50") : "border-line"
       } ${isDragging ? "opacity-50 shadow-lg" : "opacity-100"}`}
       data-component-id={component.id}
     >
@@ -64,7 +64,7 @@ function DraggableComponent({
       <label className="mt-3 block text-micro font-medium text-ink-muted">
         Move without dragging
         <select
-          className="mt-1 w-full rounded-md border border-line-strong bg-white px-2 py-2 text-caption text-ink outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+          className="mt-1 w-full rounded-md border border-line-strong bg-surface-raised px-2 py-2 text-caption text-ink outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           value={currentZoneId ?? BANK_ID}
           onChange={(event) => onMove(component.id, event.target.value === BANK_ID ? null : event.target.value)}
           aria-label={`Move ${component.label} to a zone`}
@@ -75,7 +75,7 @@ function DraggableComponent({
       </label>
 
       {result ? (
-        <p className={`mt-2 text-caption leading-relaxed ${result.correct ? "text-success" : "text-danger"}`}>
+        <p className={`mt-2 text-caption leading-relaxed ${result.correct ? "text-positive" : "text-danger"}`}>
           <span className="font-semibold">{result.correct ? "Works: " : "Try again: "}</span>
           {result.message}
         </p>
@@ -167,8 +167,8 @@ export function ArchitectureLab({ scenario }: { scenario: ArchitectureScenario }
   );
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-line-strong bg-white shadow-sm" aria-labelledby={headingId}>
-      <div className="border-b border-line bg-gradient-to-br from-accent-wash to-white px-5 py-5 sm:px-6">
+    <section className="overflow-hidden rounded-2xl border border-line-strong bg-surface-raised shadow-sm" aria-labelledby={headingId}>
+      <div className="border-b border-line bg-gradient-to-br from-accent-wash to-surface-raised px-5 py-5 sm:px-6">
         <p className="font-mono text-micro tracking-widest text-accent uppercase">Architecture challenge</p>
         <h2 id={headingId} className="mt-2 text-heading text-ink">{scenario.title}</h2>
         <p className="mt-2 max-w-3xl text-body leading-relaxed text-ink-muted">{scenario.brief}</p>
@@ -193,19 +193,19 @@ export function ArchitectureLab({ scenario }: { scenario: ArchitectureScenario }
         <button
           type="button"
           onClick={checkDesign}
-          className="rounded-lg bg-accent px-4 py-2.5 text-caption font-semibold text-white outline-none transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 motion-reduce:transition-none"
+          className="rounded-lg bg-accent px-4 py-2.5 text-caption font-semibold text-accent-contrast outline-none transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 motion-reduce:transition-none"
         >
           Check architecture
         </button>
         <button
           type="button"
           onClick={resetDesign}
-          className="rounded-lg border border-line-strong bg-white px-4 py-2.5 text-caption font-semibold text-ink outline-none transition hover:bg-surface-sunken focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 motion-reduce:transition-none"
+          className="rounded-lg border border-line-strong bg-surface-raised px-4 py-2.5 text-caption font-semibold text-ink outline-none transition hover:bg-surface-sunken focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 motion-reduce:transition-none"
         >
           Reset
         </button>
         {check ? (
-          <p role="status" className={`text-caption font-medium ${check.correct ? "text-success" : "text-danger"}`}>
+          <p role="status" className={`text-caption font-medium ${check.correct ? "text-positive" : "text-danger"}`}>
             {check.correct ? scenario.successMessage : `${check.placedCount}/${check.totalCount} placed — review the marked cards.`}
           </p>
         ) : null}

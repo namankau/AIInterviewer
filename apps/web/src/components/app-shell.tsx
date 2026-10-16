@@ -31,8 +31,8 @@ export function AppShell({
 }) {
   return (
     <div className="flex min-h-dvh flex-col overflow-x-hidden bg-surface">
-      <header className="sticky top-0 z-40 border-b border-line bg-surface-raised/95 shadow-[var(--shadow-sm)] backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[78rem] flex-wrap items-center gap-x-5 px-4 sm:flex-nowrap sm:px-6 lg:px-8">
+      <header className="z-sticky sticky top-0 border-b border-line bg-surface-raised/95 shadow-[var(--shadow-sm)] backdrop-blur-xl">
+        <div className="layout-content mx-auto flex flex-wrap items-center gap-x-5 px-4 sm:flex-nowrap sm:px-6 lg:px-8">
           <Link
             href="/dashboard"
             className="flex shrink-0 items-center py-3.5 focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
@@ -49,7 +49,7 @@ export function AppShell({
           <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
             <Link
               href={"/upgrade" as Route}
-              className="inline-flex rounded-lg bg-accent-wash px-3 py-2 text-caption font-semibold text-accent-strong transition-colors hover:bg-accent hover:text-accent-contrast"
+              className="inline-flex min-h-11 items-center rounded-lg bg-accent-wash px-3 py-2 text-caption font-semibold text-accent-strong transition-colors hover:bg-accent hover:text-accent-contrast"
             >
               Upgrade
             </Link>
@@ -66,8 +66,8 @@ export function AppShell({
           * an unused canvas.
           */}
         <main
-          className={`mx-auto w-full flex-1 px-6 py-10 md:px-12 md:py-14 ${
-            wide ? "max-w-[100rem]" : "max-w-[78rem]"
+          className={`mx-auto w-full flex-1 px-4 py-8 sm:px-6 md:px-12 md:py-14 ${
+            wide ? "layout-wide" : "layout-content"
           }`}
         >
           {children}

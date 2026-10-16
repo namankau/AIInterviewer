@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { ArenaCoursePractice } from "@/components/arena/arena-course-practice";
+import { Card } from "@/components/ui/card";
+import { SurfaceHeader } from "@/components/ui/surface-header";
 import { courses, getCourse } from "@/content/courses";
 import { courseEnabled, featureEnabled } from "@/lib/flags";
 import { requireArenaCourse } from "@/lib/require-feature";
@@ -25,8 +27,8 @@ export default async function ArenaCoursePage({ params }: { params: Promise<{ co
   if (!course) notFound();
   return (
     <AppShell breadcrumb={course.title.toLowerCase()} parent={{ label: "arena", href: "/arena" }}>
-      <div className="space-y-8"><header className="hero-band px-7 py-9 sm:px-10"><p className="pill pill-navy w-fit">Scenario practice</p><h1 className="mt-4 text-display text-on-navy">{course.title} Arena</h1><p className="mt-3 max-w-2xl text-body text-on-navy-muted">{course.tagline}</p></header>
-        <div className="rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] md:p-8"><ArenaCoursePractice key={slug} courseSlug={slug} /></div>
+      <div className="space-y-8"><SurfaceHeader eyebrow="Scenario practice" title={`${course.title} Arena`} description={course.tagline} />
+        <Card className="p-6 md:p-8"><ArenaCoursePractice key={slug} courseSlug={slug} /></Card>
       </div>
     </AppShell>
   );

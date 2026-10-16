@@ -98,9 +98,9 @@ export default async function ChapterPage({
   const highlightedCode = await highlightChapterBlocks(chapter.blocks, course.codeLanguage ?? "java");
 
   return (
-    <div className="min-h-dvh bg-[linear-gradient(180deg,var(--surface-tint)_0,transparent_22rem)]">
+    <div className="chapter-page-bg min-h-dvh">
       <CourseSiteHeader />
-      <main className="mx-auto w-full max-w-[120rem] px-5 py-6 sm:px-7 lg:px-8 lg:py-8">
+      <main className="layout-reader mx-auto w-full px-4 py-6 sm:px-7 lg:px-8 lg:py-8">
         <div className="mb-5 flex flex-wrap items-center gap-2 font-mono text-micro tracking-widest text-ink-subtle uppercase">
           <Link href="/courses" className="transition-colors hover:text-accent">Courses</Link>
           <span aria-hidden="true">/</span>
@@ -109,7 +109,7 @@ export default async function ChapterPage({
           <span aria-current="page" className="text-ink-muted">{chapterModule?.title ?? "Chapter"}</span>
         </div>
 
-        <div className="grid items-start gap-7 lg:grid-cols-[17rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)_15rem] xl:gap-8">
+        <div className="chapter-layout-grid">
           <CourseToc course={courseToc} currentSlug={chapter.slug} />
 
           <article className="min-w-0">
@@ -163,7 +163,7 @@ export default async function ChapterPage({
                   <span className="block text-micro font-bold tracking-widest text-accent-contrast/80 uppercase">Up next · keep your momentum</span>
                     <span className="mt-2 block text-heading font-semibold leading-snug"><InlineText text={next.title} /></span>
                   </span>
-                  <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full border border-white/25 bg-white/15 text-heading transition-transform group-hover:translate-x-1">→</span>
+                  <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full border border-on-navy/25 bg-on-navy/15 text-heading transition-transform group-hover:translate-x-1">→</span>
                 </Link>
               ) : <span />}
             </nav>

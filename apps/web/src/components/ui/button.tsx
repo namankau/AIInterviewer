@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes } from "react";
 
 import { cn } from "@/lib/cn";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "quiet" | "destructive";
+export type ButtonVariant = "primary" | "secondary" | "onDark" | "ghost" | "quiet" | "destructive";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const BASE = "disabled:cursor-not-allowed disabled:opacity-50";
@@ -16,6 +16,7 @@ const SIZES: Record<ButtonSize, string> = {
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: "action-primary",
   secondary: "action-secondary",
+  onDark: "action-on-dark",
   ghost: "action-quiet",
   quiet: "action-quiet",
   destructive: "action-destructive",

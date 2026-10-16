@@ -16,12 +16,12 @@ export function Breadcrumbs({ items, wide = false }: { items: Crumb[]; wide?: bo
   const parent = [...items].reverse().find((item) => item.href);
 
   return (
-    <div className={`mx-auto px-6 pt-5 ${wide ? "max-w-[100rem] md:px-12" : "max-w-6xl"}`}>
+    <div className={`mx-auto px-6 pt-5 ${wide ? "layout-wide md:px-12" : "max-w-6xl"}`}>
       <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {parent?.href ? (
           <Link
             href={parent.href as Route}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-accent-wash px-3 text-caption font-semibold text-accent-strong transition-colors hover:bg-accent hover:text-accent-contrast"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-accent-wash px-3 text-caption font-semibold text-accent-strong transition-colors hover:bg-accent hover:text-accent-contrast"
           >
             <span aria-hidden="true">←</span>
             Back to {parent.label}

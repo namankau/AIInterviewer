@@ -14,6 +14,7 @@ import { AgentLab } from "@/components/courses/agent-lab";
 import { getScenario } from "@/lib/agent-lab/scenarios";
 import { ArchitectureLab } from "@/components/courses/architecture-lab";
 import { getArchitectureScenario } from "@/lib/architecture-lab/scenarios";
+import { Table, TableScroll } from "@/components/ui/table";
 
 /**
  * Block kinds allowed to break out of the ~70ch prose column (task 052) — the diagrams,
@@ -158,8 +159,8 @@ function BlockView({
 
     case "table":
       return (
-        <div className="overflow-x-auto rounded-md border border-line">
-          <table className="w-full border-collapse text-caption">
+        <TableScroll>
+          <Table>
             <thead>
               <tr className="border-b border-line-strong bg-surface-sunken text-left">
                 {block.head.map((h, i) => (
@@ -180,8 +181,8 @@ function BlockView({
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+          </Table>
+        </TableScroll>
       );
 
     case "trace":

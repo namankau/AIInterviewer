@@ -68,6 +68,10 @@
   --positive: #087f68;
   --warning: #9a5b08;
   --info: #1550c4;
+  --danger-contrast: #ffffff;
+  --positive-contrast: #ffffff;
+  --warning-contrast: #ffffff;
+  --info-contrast: #ffffff;
   --danger-wash: #fff0ef;
   --positive-wash: #e4f8f2;
   --warning-wash: #fff7e5;
@@ -162,6 +166,10 @@
     --positive: #4cc987;
     --warning: #f7bb55;
     --info: #8ab2fa;
+    --danger-contrast: #071023;
+    --positive-contrast: #071023;
+    --warning-contrast: #071023;
+    --info-contrast: #071023;
     --danger-wash: #351918;
     --positive-wash: #102c20;
     --warning-wash: #302411;
@@ -199,6 +207,10 @@
   --color-positive: var(--positive);
   --color-warning: var(--warning);
   --color-info: var(--info);
+  --color-danger-contrast: var(--danger-contrast);
+  --color-positive-contrast: var(--positive-contrast);
+  --color-warning-contrast: var(--warning-contrast);
+  --color-info-contrast: var(--info-contrast);
   --color-danger-wash: var(--danger-wash);
   --color-positive-wash: var(--positive-wash);
   --color-warning-wash: var(--warning-wash);
@@ -372,6 +384,7 @@
 
   .action-primary,
   .action-secondary,
+  .action-on-dark,
   .action-quiet,
   .action-destructive {
     display: inline-flex;
@@ -411,6 +424,14 @@
     background: var(--accent-wash);
     color: var(--accent-strong);
   }
+  .action-on-dark {
+    border: 1px solid color-mix(in srgb, var(--on-navy) 25%, transparent);
+    background: transparent;
+    color: var(--on-navy);
+  }
+  .action-on-dark:hover {
+    background: color-mix(in srgb, var(--on-navy) 12%, transparent);
+  }
   .action-quiet {
     color: var(--ink-muted);
   }
@@ -420,7 +441,7 @@
   }
   .action-destructive {
     background: var(--danger);
-    color: var(--surface-raised);
+    color: var(--danger-contrast);
   }
   .action-destructive:hover {
     background: color-mix(in srgb, var(--danger) 85%, var(--ink));

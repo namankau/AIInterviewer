@@ -17,6 +17,8 @@ The source of truth is `apps/web/src/app/globals.css`. Tailwind 4 reads the alia
 | Border | `--line` / `--line-strong` | Default and stronger dividers |
 | Semantic | `--positive`, `--warning`, `--danger`, `--info` | Status; pair with matching `-wash` |
 
+Solid status surfaces use the matching `-contrast` token for text (`text-positive-contrast`, etc.). It switches to dark text when the status color brightens in dark mode. The primary button uses `--accent-contrast` for the same reason.
+
 The dark palette uses the same roles under `prefers-color-scheme: dark`. Contrast must be checked in both modes. Use `text-on-navy` and `text-on-navy-muted` on navy bands. Never use a wash token as foreground text.
 
 ## Type
@@ -50,6 +52,6 @@ import { FieldLabel, Input, FieldHint } from "@/components/ui/field";
 
 Use `Button` and `ActionLink` for equivalent actions; keep native `button`, `label`, and form semantics. Reuse `ErrorPanel` and `RouteLoading` for route feedback. Dynamic chart positions and progress widths may use inline percentage styles; their colors and shapes still come from tokens.
 
-The component layer includes `Button` (primary, secondary, ghost, destructive and busy states), native `Input`/`Select`/`Textarea`/`Checkbox`/`Radio`/`Switch`, `Card`, `Badge`, `Avatar`, `Tabs`, `Dialog`/`Drawer`, `Dropdown`, `Tooltip`, `ProgressBar`, `Stepper`, `Alert`, `Toast`, `EmptyState`, `Skeleton`, `PageHeader`, and `SurfaceHeader`. These build on native HTML controls where possible and keep the same token roles. `CourseArtwork`, Arena challenge cards, and report views are the product-specific compositions; there are no mentor screens to supply with a `MentorCard`.
+The component layer includes `Button` (primary, secondary, ghost, destructive and busy states), native `Input`/`Select`/`Textarea`/`Checkbox`/`Radio`/`Switch`, `Card`, `Badge`, `Avatar`, `Tabs`, `Dialog`/`Drawer`, `Dropdown`, `Tooltip`, `Table`/`TableScroll`, `ProgressBar`, `Stepper`, `Alert`, `Toast`, `EmptyState`, `Skeleton`, `PageHeader`, and `SurfaceHeader`. These build on native HTML controls where possible and keep the same token roles. `CourseArtwork`, Arena challenge cards, and report views are the product-specific compositions; there are no mentor screens to supply with a `MentorCard`.
 
 Do not invent employer-specific visual labels or progress claims. The live interview remains sparse: speaking state, timer, round label, and exit are the primary visible controls.

@@ -27,7 +27,7 @@ export function ArenaDailyQuest({ questsByDate }: { questsByDate: Record<string,
   return (
     <section
       aria-labelledby="daily-arena-heading"
-      className="flex flex-col gap-6 rounded-[1.75rem] border border-accent/20 bg-[linear-gradient(135deg,var(--surface-raised)_0%,var(--accent-wash)_100%)] px-5 py-6 shadow-[var(--shadow-md)] sm:px-6 sm:py-7 md:px-8"
+      className="flex flex-col gap-6 rounded-surface border border-accent/20 bg-[linear-gradient(135deg,var(--surface-raised)_0%,var(--accent-wash)_100%)] px-5 py-6 shadow-[var(--shadow-md)] sm:px-6 sm:py-7 md:px-8"
     >
       {activeQuest ? (
         <DailyQuestWorkspace quest={activeQuest} onExit={() => setActiveCourseSlug(null)} />
@@ -53,7 +53,7 @@ export function ArenaDailyQuest({ questsByDate }: { questsByDate: Record<string,
               return (
                 <article
                   key={quest.courseSlug}
-                  className="group flex min-w-0 flex-col overflow-hidden rounded-[1.25rem] border border-line bg-surface-raised shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:border-accent/35 hover:shadow-[var(--shadow-md)]"
+                  className="card card-interactive group flex min-w-0 flex-col overflow-hidden"
                 >
                   <CourseArtwork courseSlug={quest.courseSlug} />
                   <div className="flex grow flex-col p-5">

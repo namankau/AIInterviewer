@@ -30,6 +30,7 @@ jobs:
       - run: npm ci
 
       - run: npm run typecheck
+      - run: npm run scenario:check
       - run: npm run lint
       - run: npm run test
       # scripts/ is plain Node, not an npm workspace, so it runs under node:test directly

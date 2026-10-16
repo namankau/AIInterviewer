@@ -1,0 +1,147 @@
+{
+  "course_slug": "system-design",
+  "slug": "limited-stock-checkout",
+  "title": "Who gets the last packets?",
+  "hook": "There are 340 packets of Maggi and 200,000 people adding them to cart. Where does the system make the stock promise?",
+  "context": "Flash sale checkout with a single limited SKU",
+  "tier": "intermediate",
+  "concept_ids": [
+    "inventory-reservation",
+    "atomic-stock"
+  ],
+  "estimated_minutes": 7,
+  "status": "live",
+  "solution_brief": "Cart shows an estimate, not a promise. At Place order, atomically reserve one unit with a short expiry. The checkout path owns the critical counter; expired reservations return stock, and confirmed payment commits the order idempotently.",
+  "steps": [
+    {
+      "kind": "initial",
+      "step_type": "design_choice",
+      "prompt": "What does Add to cart mean for stock?",
+      "options": [
+        {
+          "id": "a",
+          "text": "A best-effort availability hint, without reservation"
+        },
+        {
+          "id": "b",
+          "text": "A permanent reservation until the browser closes"
+        },
+        {
+          "id": "c",
+          "text": "An immediate purchase"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A avoids trapping 340 units in abandoned carts. B can strand every unit. C charges or commits before checkout consent.",
+      "bottleneck_note": "A cart is intent; it is not yet a stock guarantee.",
+      "concept_ids": [
+        "inventory-reservation"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "Two buyers click Place order for the final packet. How is one winner chosen?",
+      "options": [
+        {
+          "id": "a",
+          "text": "One conditional atomic decrement or reservation transaction"
+        },
+        {
+          "id": "b",
+          "text": "Read stock separately, then each writes stock minus one"
+        },
+        {
+          "id": "c",
+          "text": "Have both browsers hide the button"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A serializes the last-unit claim. B lets both see one and oversell. C is cosmetic and cannot arbitrate races across devices.",
+      "bottleneck_note": "The invariant is reserved plus sold never exceeds 340.",
+      "concept_ids": [
+        "atomic-stock"
+      ],
+      "context_note": "Only one unreserved packet remains."
+    },
+    {
+      "kind": "probe",
+      "step_type": "tradeoff",
+      "prompt": "A buyer reserves one packet but abandons payment. What prevents stock staying trapped?",
+      "options": [
+        {
+          "id": "a",
+          "text": "A short reservation expiry and idempotent release"
+        },
+        {
+          "id": "b",
+          "text": "Leave it reserved forever for fairness"
+        },
+        {
+          "id": "c",
+          "text": "Let another buyer spend the same reservation ID"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A returns the unit after the deadline. B permanently loses stock. C creates double-spend risk and breaks ownership.",
+      "bottleneck_note": "Expiry recovery must work even if the browser never returns.",
+      "concept_ids": [
+        "inventory-reservation"
+      ],
+      "context_note": "Payment has not completed after the hold deadline."
+    },
+    {
+      "kind": "probe",
+      "step_type": "tradeoff",
+      "prompt": "The cache says 12 left while the durable counter says 0. What should checkout do?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Reject reservation and explain that the estimate changed"
+        },
+        {
+          "id": "b",
+          "text": "Accept the cached value as final"
+        },
+        {
+          "id": "c",
+          "text": "Insert a negative stock row and reconcile later"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A treats the authoritative counter as the promise. B oversells. C creates a debt the seller may be unable to fulfil.",
+      "bottleneck_note": "Cached availability can guide display, never authorize the last unit.",
+      "concept_ids": [
+        "atomic-stock"
+      ],
+      "context_note": "Cart reads a slightly stale availability cache."
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "How should the UI behave as stock approaches zero?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Show less certain availability and confirm only after reservation"
+        },
+        {
+          "id": "b",
+          "text": "Promise stock as soon as the item appears in cart"
+        },
+        {
+          "id": "c",
+          "text": "Run every cart view through the critical stock transaction"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A is truthful and keeps the hot counter for checkout. B promises too early. C puts 200,000 cart views on a 340-unit contention path.",
+      "bottleneck_note": "Only checkout needs to contend on the critical counter.",
+      "concept_ids": [
+        "inventory-reservation",
+        "atomic-stock"
+      ],
+      "context_note": "The cart page is receiving far more traffic than checkout."
+    }
+  ]
+}

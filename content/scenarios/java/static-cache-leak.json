@@ -1,0 +1,151 @@
+{
+  "course_slug": "java",
+  "slug": "static-cache-leak",
+  "title": "The week-old service runs out of heap",
+  "hook": "A Java service throws OutOfMemoryError after a week. Heap dumps show millions of entries in a static HashMap cache.",
+  "context": "Production service whose cache keys are request-derived strings",
+  "tier": "foundations",
+  "concept_ids": [
+    "gc-leaks",
+    "cache-bounds"
+  ],
+  "estimated_minutes": 7,
+  "status": "live",
+  "solution_brief": "The static map retains strong references indefinitely. Use an explicit bounded cache with eviction; a LinkedHashMap access-order LRU is a small single-process option. WeakHashMap is not a size bound and fails if keys stay strongly referenced elsewhere. Confirm retained size and load behavior.",
+  "steps": [
+    {
+      "kind": "initial",
+      "step_type": "debug",
+      "prompt": "What is the most direct root cause?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The static map retains entries without an eviction bound"
+        },
+        {
+          "id": "b",
+          "text": "The garbage collector never scans static fields"
+        },
+        {
+          "id": "c",
+          "text": "Every String key is automatically interned"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A explains growing retained heap. B is false: statics are GC roots. C is not how arbitrary request strings behave.",
+      "bottleneck_note": "GC cannot reclaim objects still reachable from a static map.",
+      "concept_ids": [
+        "gc-leaks"
+      ],
+      "code_snippet": "static final Map<String, Result> CACHE = new HashMap<>();\nCACHE.put(requestKey, result);",
+      "language": "java"
+    },
+    {
+      "kind": "probe",
+      "step_type": "tradeoff",
+      "prompt": "A teammate switches to WeakHashMap. What remains risky?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Eviction depends on key reachability and GC timing, not a predictable capacity"
+        },
+        {
+          "id": "b",
+          "text": "It guarantees at most 100 entries"
+        },
+        {
+          "id": "c",
+          "text": "It makes every value weak as well as every key"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A is why it is not a bounded cache. B invents a limit. C misstates WeakHashMap: values remain strong while entries exist.",
+      "bottleneck_note": "Use weak keys only when key lifetime is the intended ownership rule.",
+      "concept_ids": [
+        "gc-leaks"
+      ],
+      "context_note": "The team wants a one-line fix."
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "Which simple standard-library strategy caps one JVM cache at 10,000 entries?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Access-order LinkedHashMap with removeEldestEntry"
+        },
+        {
+          "id": "b",
+          "text": "An unbounded ConcurrentHashMap"
+        },
+        {
+          "id": "c",
+          "text": "A static HashMap plus System.gc() on every insert"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A enforces capacity. B is thread-safe but still unbounded. C cannot collect strongly reachable entries and hurts throughput.",
+      "bottleneck_note": "Bound entries and estimate bytes per value; count alone may not cap memory tightly.",
+      "concept_ids": [
+        "cache-bounds"
+      ],
+      "context_note": "The cache does not need to be shared across hosts."
+    },
+    {
+      "kind": "probe",
+      "step_type": "debug",
+      "prompt": "The cache key is mutated after insertion. Why can lookup fail?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Its hashCode may change, so it is searched in the wrong bucket"
+        },
+        {
+          "id": "b",
+          "text": "HashMap automatically rehashes the single entry on mutation"
+        },
+        {
+          "id": "c",
+          "text": "equals is never used by HashMap"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A breaks hash-based lookup. B does not happen automatically. C is false: equals resolves candidate keys after hash selection.",
+      "bottleneck_note": "Use immutable keys whose equals and hashCode agree for their lifetime.",
+      "concept_ids": [
+        "cache-bounds"
+      ],
+      "context_note": "A new key object contains mutable fields.",
+      "code_snippet": "Map<Key, Result> cache = new HashMap<>();\ncache.put(key, result);\nkey.setTenant(\"other\");\ncache.get(key);",
+      "language": "java"
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "How should the fix be verified under load?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Track retained heap, cache entry count, hit rate and latency over a sustained test"
+        },
+        {
+          "id": "b",
+          "text": "Run one request and check that it returns 200"
+        },
+        {
+          "id": "c",
+          "text": "Call System.gc() and assume a smaller heap means success"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A checks both memory bound and usefulness. B misses week-long growth. C is not a representative workload or correctness check.",
+      "bottleneck_note": "A bounded cache that thrashes can trade the leak for latency.",
+      "concept_ids": [
+        "gc-leaks",
+        "cache-bounds"
+      ],
+      "context_note": "The eviction policy has been deployed to staging."
+    }
+  ]
+}

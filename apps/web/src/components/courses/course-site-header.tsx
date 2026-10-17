@@ -18,7 +18,7 @@ import { featureEnabled } from "@/lib/flags";
 export function CourseSiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface-raised/90 shadow-[var(--shadow-sm)] backdrop-blur-xl">
-      <div className="mx-auto flex max-w-[120rem] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 py-3 md:px-12">
+      <div className="mx-auto flex layout-reader flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 py-3 md:px-12">
         <Link
           href="/dashboard"
           className="flex shrink-0 items-center focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"

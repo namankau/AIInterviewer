@@ -82,7 +82,7 @@ export function DashboardQuestionOfDay({ questionsByDate, focused = false }: { q
         </div>
       ) : completed ? (
         <div role="status" aria-live="polite" className="flex items-start gap-4 rounded-2xl border border-positive/30 bg-positive/10 p-5 sm:p-6">
-          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-positive text-white shadow-[var(--shadow-sm)]">
+          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-positive text-positive-contrast shadow-[var(--shadow-sm)]">
             <svg aria-hidden="true" viewBox="0 0 24 24" className="size-6 fill-none stroke-current stroke-2.5">
               <polyline points="5,13 10,18 19,7" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

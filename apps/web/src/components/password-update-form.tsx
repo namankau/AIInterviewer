@@ -54,7 +54,7 @@ export function PasswordUpdateForm() {
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-surface-tint px-6 py-12">
-      <div className="w-full max-w-md rounded-[1.5rem] border border-line bg-surface-raised p-7 shadow-[var(--shadow-lg)] sm:p-10">
+      <div className="w-full max-w-md rounded-surface border border-line bg-surface-raised p-7 shadow-[var(--shadow-lg)] sm:p-10">
         <Link href="/" className="mb-8 flex w-fit focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent" aria-label="Untiered home">
           <BrandWordmark />
         </Link>

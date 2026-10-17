@@ -60,7 +60,7 @@ export default function UpgradePage() {
             </Link>
           </section>
 
-          <section aria-labelledby="pro-preview" className="relative overflow-hidden rounded-[var(--radius-xl)] border border-accent/25 bg-accent-wash p-6 shadow-[var(--shadow-md)] sm:p-8">
+          <section aria-labelledby="pro-preview" className="relative overflow-hidden rounded-surface border border-accent/25 bg-accent-wash p-6 shadow-[var(--shadow-md)] sm:p-8">
             <div aria-hidden className="absolute -top-20 -right-16 size-56 rounded-full bg-accent/15 blur-3xl" />
             <div className="relative flex h-full flex-col">
               <p className="pill pill-accent w-fit">Preview · not for sale yet</p>

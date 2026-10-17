@@ -129,7 +129,7 @@ export function DsaWorkspace({
           pythonReady={pythonReady}
         />
 
-        <div className="min-h-0 flex-1 overflow-auto bg-[#111827]">
+        <div className="min-h-0 flex-1 overflow-auto bg-navy">
           <CodeMirror
             value={source}
             height="100%"
@@ -236,7 +236,7 @@ function EditorBar({
   pythonReady: boolean | null;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-white/10 bg-navy px-4 py-2.5 text-on-navy">
+    <div className="flex flex-wrap items-center gap-3 border-b border-on-navy/10 bg-navy px-4 py-2.5 text-on-navy">
       <div className="flex gap-1" role="group" aria-label="Language">
         {(["python", "java"] as const).map((option) => (
           <button
@@ -245,7 +245,7 @@ function EditorBar({
             onClick={() => onLanguage(option)}
             aria-pressed={language === option}
             className={`rounded-md px-2.5 py-1 text-caption capitalize transition ${
-              language === option ? "bg-white/10 text-on-navy" : "text-on-navy-muted hover:bg-white/5"
+              language === option ? "bg-on-navy/10 text-on-navy" : "text-on-navy-muted hover:bg-on-navy/5"
             }`}
           >
             {option}

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { CONTROL_CLASS } from "@/components/ui/field";
+import { Checkbox, CONTROL_CLASS, Input, Radio } from "@/components/ui/field";
 import { DailyLimitNotice, isDailyLimitReached } from "@/components/daily-limit-notice";
 import { LoopBriefStep } from "@/components/loop-brief-step";
 import { ApiRequestError, composeRound, fetchEntitlement, startSession } from "@/lib/api";
@@ -234,13 +234,12 @@ export function NewInterviewForm({
             </div>
 
             <Field label="Company (optional)" hint="Leave this blank for employer-neutral practice.">
-              <input
+              <Input
                 value={structuredCompany}
                 onChange={(event) => setStructuredCompany(event.target.value)}
                 placeholder="Amazon"
                 autoComplete="organization"
                 maxLength={120}
-                className={CONTROL_CLASS}
               />
             </Field>
             <div className="flex flex-wrap gap-2" aria-label="Suggested companies">
@@ -249,7 +248,7 @@ export function NewInterviewForm({
                   key={company}
                   type="button"
                   onClick={() => setStructuredCompany(company)}
-                  className="rounded-full border border-line bg-surface-raised px-3 py-1 text-caption text-ink-muted transition-colors hover:border-accent/40 hover:bg-accent-wash hover:text-ink"
+                  className="min-h-11 rounded-full border border-line bg-surface-raised px-3 py-2 text-caption text-ink-muted transition-colors hover:border-accent/40 hover:bg-accent-wash hover:text-ink"
                 >
                   {company}
                 </button>
@@ -260,23 +259,21 @@ export function NewInterviewForm({
               label={campus ? "Role (optional for freshers)" : "Role"}
               hint={campus ? "It is fine if campus hiring has not named a role yet." : "Use the title you are preparing to interview for."}
             >
-              <input
+              <Input
                 value={structuredRole}
                 onChange={(event) => setStructuredRole(event.target.value)}
                 placeholder="Software Development Engineer"
                 autoComplete="organization-title"
                 required={!campus}
                 maxLength={120}
-                className={CONTROL_CLASS}
               />
             </Field>
 
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-sunken px-4 py-3">
-              <input
-                type="checkbox"
+            <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl bg-surface-sunken px-4 py-3 focus-within:ring-2 focus-within:ring-accent">
+              <Checkbox
                 checked={campus}
                 onChange={(event) => setStage(event.target.checked ? "student" : "")}
-                className="mt-1 size-4 accent-[var(--color-accent)]"
+                className="mt-1"
               />
               <span>
                 <span className="block text-caption font-semibold text-ink">I am preparing for campus placement</span>
@@ -301,10 +298,9 @@ export function NewInterviewForm({
                 return (
                   <label
                     key={round.value}
-                    className={`cursor-pointer rounded-xl border p-4 transition-colors ${selected ? "border-accent bg-accent-wash shadow-[var(--shadow-sm)]" : "border-line bg-surface-raised hover:border-accent/40"}`}
+                    className={`min-h-11 cursor-pointer rounded-xl border p-4 transition-colors focus-within:ring-2 focus-within:ring-accent ${selected ? "border-accent bg-accent-wash shadow-[var(--shadow-sm)]" : "border-line bg-surface-raised hover:border-accent/40"}`}
                   >
-                    <input
-                      type="radio"
+                    <Radio
                       name="structuredRound"
                       value={round.value}
                       checked={selected}
@@ -333,12 +329,12 @@ export function NewInterviewForm({
           <p className="mt-1 text-caption text-on-navy-muted">
             {structuredCompany.trim() || "General practice"} · {selectedStructuredRound ? (SHORT_ROUND_LABELS[selectedStructuredRound.value] ?? selectedStructuredRound.label) : "Interview round"}
           </p>
-          <ul className="mt-6 grid gap-3 border-y border-white/15 py-6 text-caption text-on-navy-muted">
+          <ul className="mt-6 grid gap-3 border-y border-on-navy/15 py-6 text-caption text-on-navy-muted">
             <li><span className="mr-2 text-accent-on-navy" aria-hidden>✓</span>Adaptive follow-up questions</li>
             <li><span className="mr-2 text-accent-on-navy" aria-hidden>✓</span>Evaluation matched to your selected round</li>
             <li><span className="mr-2 text-accent-on-navy" aria-hidden>✓</span>Detailed feedback after the round</li>
           </ul>
-          <div className="mt-5 rounded-xl bg-white/8 p-4">
+          <div className="mt-5 rounded-xl bg-on-navy/8 p-4">
             <p className="text-caption font-semibold text-on-navy">Included in your current access</p>
             <p className="mt-1 text-caption text-on-navy-muted">
               {entitlement?.message ?? "Your practice availability is checked before the interview begins."}
@@ -351,7 +347,7 @@ export function NewInterviewForm({
         </aside>
       </form>
 
-      <form onSubmit={read} className="flex flex-col gap-6 rounded-[var(--radius-xl)] border border-line bg-surface-sunken/65 p-5 sm:p-7">
+      <form onSubmit={read} className="flex flex-col gap-6 rounded-surface border border-line bg-surface-sunken/65 p-5 sm:p-7">
         <div className="flex flex-col gap-1">
           <p className="eyebrow text-accent">Prefer to describe it?</p>
           <h2 className="text-title text-ink">Tell us what you are walking into.</h2>

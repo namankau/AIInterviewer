@@ -35,13 +35,13 @@ export default function CoursesPage() {
     <AppShell breadcrumb="courses">
       <ImportBrowserProgress />
       <header className="hero-band relative overflow-hidden px-7 py-10 md:px-10 md:py-12">
-        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_14rem] lg:items-center">
+        <div className="courses-hero-grid relative">
           <div className="max-w-3xl">
             <p className="eyebrow text-accent-on-navy">Learn by doing</p>
             <h1 className="mt-4 text-display text-balance text-on-navy">Build skills that stick.</h1>
             <p className="mt-3 max-w-2xl text-body leading-relaxed text-on-navy-muted">Short, interactive chapters with runnable examples, visual explanations and quick checks. No passive video queue.</p>
           </div>
-          <div className="border-white/15 lg:border-l lg:pl-10">
+          <div className="border-on-navy/15 lg:border-l lg:pl-10">
             <p className="text-display text-on-navy">{lessonCount}</p>
             <p className="mt-1 text-caption text-on-navy-muted">free interactive chapters</p>
           </div>

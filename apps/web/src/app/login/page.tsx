@@ -26,7 +26,7 @@ export default async function LoginPage({
         />
         <div
           aria-hidden="true"
-          className="absolute -bottom-40 -left-24 size-[30rem] rounded-full bg-accent-2/10 blur-3xl"
+          className="absolute -bottom-40 -left-24 size-96 rounded-full bg-accent-2/10 blur-3xl"
         />
 
         <Link href="/" className="relative flex w-fit items-center focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-on-navy" aria-label="Untiered home">
@@ -49,7 +49,7 @@ export default async function LoginPage({
               ["02", "Employer-aware rounds"],
               ["03", "Evidence in every report"],
             ].map(([number, label]) => (
-              <li key={number} className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+              <li key={number} className="rounded-xl border border-on-navy/10 bg-on-navy/5 p-4 backdrop-blur-sm">
                 <span className="font-mono text-micro text-on-navy-muted">{number}</span>
                 <span className="mt-2 block text-caption font-semibold text-on-navy">{label}</span>
               </li>
@@ -64,7 +64,7 @@ export default async function LoginPage({
       </section>
 
       <section className="flex items-center justify-center bg-surface-tint px-6 py-16 sm:px-10">
-        <div className="flex w-full max-w-md flex-col gap-9 rounded-[1.5rem] border border-line bg-surface-raised p-7 shadow-[var(--shadow-lg)] sm:p-10 lg:shadow-[var(--shadow-md)]">
+        <div className="card flex w-full max-w-md flex-col gap-9 p-7 shadow-[var(--shadow-lg)] sm:p-10 lg:shadow-[var(--shadow-md)]">
           <Link href="/" className="flex w-fit items-center focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent lg:hidden" aria-label="Untiered home">
             <BrandWordmark />
           </Link>

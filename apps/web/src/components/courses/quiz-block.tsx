@@ -17,7 +17,7 @@ export function QuizBlock({ block }: { block: Quiz }) {
   const revealed = selected !== null;
 
   return (
-    <div className="overflow-hidden rounded-[1.35rem] border border-line bg-surface-raised shadow-[var(--shadow-sm)]">
+    <div className="overflow-hidden rounded-surface border border-line bg-surface-raised shadow-[var(--shadow-sm)]">
       <div className="border-b border-accent/15 bg-[linear-gradient(115deg,var(--accent-wash),var(--surface-raised))] px-5 py-5 sm:px-7 sm:py-6">
         <p className="inline-flex items-center gap-2 text-micro font-bold tracking-widest text-accent-strong uppercase">
           <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />
@@ -52,7 +52,7 @@ export function QuizBlock({ block }: { block: Quiz }) {
                         : "border-line bg-surface-sunken text-ink-subtle",
                 ].join(" ")}
               >
-                <span aria-hidden="true" className={`grid size-8 shrink-0 place-items-center rounded-lg text-caption font-bold ${isChosen && revealed ? isCorrect ? "bg-positive text-white" : "bg-danger text-white" : "bg-surface-sunken text-ink-muted group-hover:bg-surface-raised"}`}>
+                <span aria-hidden="true" className={`grid size-8 shrink-0 place-items-center rounded-lg text-caption font-bold ${isChosen && revealed ? isCorrect ? "bg-positive text-positive-contrast" : "bg-danger text-danger-contrast" : "bg-surface-sunken text-ink-muted group-hover:bg-surface-raised"}`}>
                   {String.fromCharCode(65 + i)}
                 </span>
                 <span className="min-w-0 flex-1">{option}</span>

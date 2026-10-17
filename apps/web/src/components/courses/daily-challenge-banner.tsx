@@ -16,9 +16,9 @@ export function DailyChallengeBanner({ questionsByDate, levelsByCourse }: { ques
   const monthLabel = new Intl.DateTimeFormat("en", { month: "short" }).format(date);
 
   return (
-    <section aria-label="Today's challenge" className="mt-7 flex flex-col gap-5 rounded-[1.35rem] border border-accent/20 bg-[linear-gradient(110deg,var(--accent-wash),var(--positive-wash))] px-5 py-5 shadow-[var(--shadow-sm)] sm:flex-row sm:items-center sm:gap-6 sm:px-6">
+    <section aria-label="Today's challenge" className="mt-7 flex flex-col gap-5 rounded-surface border border-accent/20 bg-[linear-gradient(110deg,var(--accent-wash),var(--positive-wash))] px-5 py-5 shadow-[var(--shadow-sm)] sm:flex-row sm:items-center sm:gap-6 sm:px-6">
       <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-5">
-        <div className="grid size-16 shrink-0 content-center rounded-2xl bg-accent text-center text-accent-contrast shadow-[0_8px_22px_rgba(70,84,220,0.2)]">
+        <div className="grid size-16 shrink-0 content-center rounded-2xl bg-accent text-center text-accent-contrast shadow-[var(--shadow-md)]">
           <span className="text-title font-extrabold leading-none">{day}</span>
           <span className="mt-1 text-micro font-bold uppercase tracking-widest">{monthLabel}</span>
         </div>

@@ -83,7 +83,7 @@ export function ChallengeCard({
   }, [submitted, selected, challenge.options.length, onSelect, onSubmit, onNext]);
 
   return (
-    <div ref={cardRef} className="flex flex-col gap-6 rounded-[1.35rem] border border-line bg-surface-raised p-6 shadow-[var(--shadow-md)] sm:p-9">
+    <div ref={cardRef} className="flex flex-col gap-6 rounded-surface border border-line bg-surface-raised p-6 shadow-[var(--shadow-md)] sm:p-9">
       <div className="flex flex-wrap items-center gap-2.5">
         <span className="rounded-full bg-accent-wash px-3 py-1 font-mono text-micro tracking-widest text-accent-strong uppercase">
           {KIND_LABEL[challenge.kind]}

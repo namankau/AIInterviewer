@@ -149,7 +149,7 @@ export function InterviewCompletePanel({ sessionId }: { sessionId: string }) {
           <div className="flex items-center justify-between gap-4">
             <div role="status" aria-live="polite" className="flex min-w-0 items-center gap-3">
               {ready ? (
-                <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-full bg-positive text-white">
+                <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-full bg-positive text-positive-contrast">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="size-3">
                     <path d="m6.5 12 3.5 3.5L17.5 8" />
                   </svg>

@@ -1,36 +1,42 @@
 # Handoff — 16 October 2026
 
 ## Task
-Add authored Arena campaigns from the supplied `arena-scenarios` folder, `Campaign scripts.pdf`, and pasted brief (ad hoc request; PRD §08).
+
+Audit and redesign the Untiered web UI across existing screens (user's attached brief; project design direction).
 
 ## What I built
-- Added 12 five-step System Design campaigns in `content/scenarios/system-design/`, their concepts in `content/scenarios/concepts.json`, and the generated seed migration `supabase/migrations/20261016030000_system_design_campaigns.sql`.
-- Made 10 campaigns live. Kept `result-day` and `follow-the-sun` as drafts for human review of private student-result access and legal/data-residency claims. Draft-only concepts no longer appear as practice suggestions.
-- Preserved the supplied per-step system maps through the database and public API, displayed them in the course Arena, and shuffled answer options while keeping option IDs stable for server grading.
-- Tightened the scenario validator and added web, controller, and database integration coverage. Corrected misleading claims about payment/SMS/push retries, duplicate sends, and cached stock availability.
+
+- `docs/ui-audit.md`: route and component inventory, visual inconsistencies, reuse opportunities, accessibility findings, and the proposed visual direction.
+- `apps/web/src/app/globals.css` and `docs/design-system.md`: shared light/dark color roles, typography, spacing, radius, elevation, motion, and responsive layout rules.
+- `apps/web/src/components/ui/`: accessible buttons, fields, feedback, overlays, tabs, progress, headers, avatars, and other reusable primitives.
+- `apps/web/src/app/` and feature components: consistent landing, auth, interview, Arena, courses, dashboard, profile, report, navigation, and loading presentation.
 
 ## Assumptions I made
-- The twelve complete campaigns were the immediate content request. The 18 proposed campaigns in the pasted brief have premises but no authored steps, so they remain a later writing task.
-- The supplied authored content was suitable to play after technical corrections, except for the two draft campaigns requiring a person's review.
-- The roughly 4,190 changed lines are justified as one library import because the twelve campaigns and their generated seed migration must stay in sync. Runtime changes are small.
+
+- The owner-approved bright learning-platform direction in `AGENTS.md` governs this redesign. The cobalt/navy/teal palette and Plus Jakarta Sans typography are implementation choices submitted for final visual review.
+- Mentor booking, mentor-facing screens, and leaderboards mentioned in the generic brief do not exist in this app; no new routes or features were scaffolded.
+- Existing interview-room sparseness and all business logic, routes, API contracts, and data flow remain intact.
 
 ## What I could NOT verify
-- A signed-in deployed browser session or human judgment of the learning flow and visual quality.
-- Live AI behavior; no model calls, interviews, or paid data-generation jobs were run.
-- Human approval for the two draft campaigns. They are stored but excluded from the playable pool.
+
+- Rendered visual quality at mobile and desktop sizes: the browser sandbox could not reach the local preview server. A human visual review of the PR remains necessary.
+- Final visual direction is reserved for the owner by `AGENTS.md`.
+- No live interviews or paid AI calls were run.
 
 ## Verification status
-- Web typecheck, lint, 3,068 tests, and production build: pass locally.
-- Backend `ktlintCheck test build`: pass locally.
-- Scenario validation and generated migration check: pass.
-- GitHub Actions run 38932144587: all four jobs green, including database migration application and integration tests.
-- Linked Supabase migration `20261016030000`: applied; local and remote versions match.
+
+- Local frontend typecheck, lint, 82 test files / 3,072 tests, and production build: pass.
+- GitHub CI run `38939102914` for implementation commit `726d84d`: all four jobs passed, including web, API, database, and images. See PR checks for the final handoff-only commit.
+- Backend files and migrations: unchanged.
 
 ## Merge status
-- Merged into `develop` by the merge commit containing this handoff, from feature commit `e092648cb22b9ab74d5f01b2a1ad4fa7515bd03e`. GitHub's connected app denied PR creation (403), so the repository's CI-gated direct-merge path was used.
+
+- Branch `feat/ui-consistency` pushed; [PR #115](https://github.com/softzenith-projects/Untiered/pull/115) opened against `develop` and left unmerged for the required human visual review.
 
 ## Suggested next task
-- Have a human review `result-day` and `follow-the-sun`, then write the five proposed first-batch campaigns as a separate content task.
+
+- Review the PR visually at 320px, tablet, and desktop widths in light and dark modes, then merge after approval and green checks.
 
 ## Open questions for you
-- Are the private-results and multi-region legal claims in the two drafts accurate enough to publish after your review?
+
+- Does the cobalt/navy/teal palette and Plus Jakarta Sans heading direction match the intended Untiered identity?

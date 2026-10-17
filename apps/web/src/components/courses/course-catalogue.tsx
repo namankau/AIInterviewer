@@ -5,6 +5,9 @@ import { useMemo, useState } from "react";
 
 import { CourseCardProgress } from "@/components/courses/course-progress";
 import { CourseArtwork } from "@/components/courses/course-visuals";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/field";
+import { EmptyState } from "@/components/ui/feedback";
 
 export type CatalogueCourse = {
   slug: string;
@@ -50,26 +53,22 @@ export function CourseCatalogue({ courses }: { courses: CatalogueCourse[] }) {
         <label className="relative block w-full sm:max-w-md">
           <span className="sr-only">Search courses and concepts</span>
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-ink-subtle"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 5 5" strokeLinecap="round" /></svg>
-          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search courses and concepts" className="min-h-12 w-full rounded-xl border border-line bg-surface-raised py-3 pl-12 pr-4 text-caption text-ink shadow-[var(--shadow-sm)] outline-none transition-[border-color,box-shadow] placeholder:text-ink-subtle focus:border-accent focus:shadow-[var(--focus-ring)]" />
+          <Input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search courses and concepts" className="min-h-12 pl-12" />
         </label>
         <div aria-label="Filter courses" className="flex min-w-0 gap-2 overflow-x-auto pb-1 sm:pb-0">
           {filters.map((item) => (
-            <button key={item} type="button" aria-pressed={filter === item} onClick={() => setFilter(item)} className={`min-h-10 shrink-0 rounded-full border px-4 py-2 text-caption font-medium transition-[background-color,color,border-color] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${filter === item ? "border-navy bg-navy text-on-navy" : "border-line bg-surface-raised text-ink-muted hover:border-accent/50 hover:text-ink"}`}>{item}</button>
+            <Button key={item} variant={filter === item ? "primary" : "secondary"} size="sm" aria-pressed={filter === item} onClick={() => setFilter(item)} className="shrink-0 rounded-full">{item}</Button>
           ))}
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div role="status" className="rounded-2xl border border-line bg-surface-raised px-6 py-12 text-center">
-          <p className="text-heading font-semibold text-ink">No courses found</p>
-          <p className="mt-1 text-caption text-ink-muted">Try a concept like arrays, recursion, or agents.</p>
-          <button type="button" onClick={() => { setQuery(""); setFilter("All"); }} className="mt-4 text-caption font-semibold text-accent hover:underline">Clear search and filters</button>
-        </div>
+        <EmptyState title="No courses found" description="Try a concept like arrays, recursion, or agents." action={<Button variant="ghost" onClick={() => { setQuery(""); setFilter("All"); }}>Clear search and filters</Button>} />
       ) : (
         <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((course) => (
             <li key={course.slug} className="min-w-0">
-              <Link href={`/courses/${course.slug}`} className="group flex h-full flex-col overflow-hidden rounded-[1.25rem] border border-line bg-surface-raised shadow-[var(--shadow-sm)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:border-accent/35 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
+              <Link href={`/courses/${course.slug}`} className="card card-interactive group flex h-full flex-col overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
                 <CourseArtwork courseSlug={course.slug} />
                 <div className="flex flex-1 flex-col p-5">
                   <div className="flex items-center justify-between gap-3">

@@ -304,7 +304,7 @@ export function DeviceCheck({
      * their own face, the checks, the button, then the notes.
      */
     <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col justify-center gap-6 px-6 py-10 lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:content-center lg:gap-6">
-      <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] lg:col-start-1 lg:row-start-1 sm:p-9">
+      <header className="relative overflow-hidden rounded-surface bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] lg:col-start-1 lg:row-start-1 sm:p-9">
         <div aria-hidden="true" className="absolute -top-20 -right-14 size-56 rounded-full bg-accent/25 blur-3xl" />
         <div className="relative flex max-w-2xl flex-col gap-3">
         <p className="pill pill-navy w-fit">

@@ -127,7 +127,7 @@ export function ChapterDoneMark({ courseSlug, chapterSlug }: { courseSlug: strin
   return (
     <span
       className={`flex size-5 shrink-0 items-center justify-center rounded-full border ${
-        done ? "border-positive bg-positive text-white" : "border-line-strong text-transparent"
+        done ? "border-positive bg-positive text-positive-contrast" : "border-line-strong text-transparent"
       }`}
     >
       {done ? <CheckIcon className="size-3" /> : null}

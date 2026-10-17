@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { BrandMark, BrandWordmark } from "@/components/brand-logo";
-import { DesignWorkspace } from "@/components/design-workspace";
+import { DesignCasePanel, DesignWorkspace } from "@/components/design-workspace";
+import { DsaProblemPanel } from "@/components/dsa-problem-panel";
 import { DeviceCheck } from "@/components/device-check";
 import { InterviewCompletePanel } from "@/components/interview-complete-panel";
 import { RoundClock, formatDuration } from "@/components/round-clock";
@@ -493,12 +494,15 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     const started = await capture.start();
     if (started) {
       setElapsed(0);
-      // A clean slate per answer: the previous one's words must not appear under this one.
-      liveTranscript.reset();
-      liveTranscript.start();
+      // Workspace rounds use the microphone meter for feedback and do not display a
+      // running transcript. In spoken-only rounds, clear the previous answer first.
+      if (!hasWorkspace) {
+        liveTranscript.reset();
+        liveTranscript.start();
+      }
       setPhase("answering");
     }
-  }, [capture, liveTranscript]);
+  }, [capture, hasWorkspace, liveTranscript]);
 
   /*
    * The floor passes to the candidate on its own.
@@ -772,14 +776,11 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         <DsaWorkspace problem={workspace.problem} board={session?.board ?? null} onBoardChange={onBoardChange} />
       ) : (
         <DesignWorkspace
-          designCase={workspace.case}
           board={session?.board ?? null}
-          minutesElapsed={minutesElapsed}
-          durationMinutes={session?.durationMinutes ?? 45}
           onBoardChange={onBoardChange}
         />
       ),
-    [workspace, session?.board, session?.durationMinutes, onBoardChange, minutesElapsed],
+    [workspace, session?.board, onBoardChange],
   );
 
   /*
@@ -985,7 +986,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
 
       <div className={workspace ? "flex min-h-0 flex-1 flex-col lg:flex-row" : "contents"}>
         {workspace ? (
-          <div className="order-2 min-h-[34rem] flex-1 border-t border-line lg:min-h-0 lg:w-[58%] lg:border-t-0 lg:border-l">
+          <div className="order-2 min-h-[34rem] flex-1 border-t border-line lg:min-h-0 lg:w-[66%] lg:border-t-0 lg:border-l">
             {boardSaveError ? <p role="alert" className="border-b border-danger/30 bg-danger/5 px-4 py-2 text-caption text-danger">{boardSaveError}</p> : null}
             {workspaceNode}
           </div>
@@ -994,13 +995,13 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
       <main
         className={
           workspace
-            ? "order-1 flex w-full shrink-0 flex-col justify-center gap-8 overflow-y-auto bg-surface px-6 py-10 lg:w-[42%] lg:px-10 xl:px-14"
+            ? "order-1 flex w-full shrink-0 flex-col gap-5 overflow-y-auto bg-surface px-5 py-6 lg:w-[34%] lg:px-7"
             : "mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center gap-10 px-6 py-16 sm:px-10"
         }
       >
-        <div className={`flex flex-col gap-5 ${workspace ? "" : "rounded-surface border border-line bg-surface-raised p-7 shadow-[var(--shadow-md)] sm:p-10"}`}>
+        <div className={`flex flex-col ${workspace ? "gap-3" : "gap-5 rounded-surface border border-line bg-surface-raised p-7 shadow-[var(--shadow-md)] sm:p-10"}`}>
           <div className="flex items-center justify-between gap-4">
-            <InterviewerPresence state={presenceState} level={capture.level} />
+            <InterviewerPresence state={presenceState} level={capture.level} compact={!!workspace} />
             {phase === "answering" ? (
               <span className="flex items-center gap-2 font-mono text-caption text-ink-subtle">
                 <SpeakingDot active level={capture.level} />
@@ -1010,13 +1011,15 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           </div>
 
           {/*
-            * The question appears as it is spoken. `aria-live` is deliberately absent:
-            * a screen reader announcing every partial reveal would be unusable, and the
-            * full text is always present in the DOM for assistive technology below.
+            * In a workspace the prompt is compact and available at once beside its
+            * details. Spoken-only rounds still reveal it with the voice. `aria-live`
+            * stays absent so a screen reader never announces every partial reveal.
             */}
-          <p className="eyebrow mt-4 text-accent">Current question</p>
-          <h1 className="text-display text-balance text-ink">
-            {awaitingVoice ? (
+          <p className={`eyebrow text-accent ${workspace ? "mt-2" : "mt-4"}`}>Current question</p>
+          <h1 className={workspace ? "text-heading font-semibold text-ink" : "text-display text-balance text-ink"}>
+            {workspace ? (
+              questionText
+            ) : awaitingVoice ? (
               <span className="text-ink-subtle">Composing the next question…</span>
             ) : (
               <>
@@ -1030,11 +1033,8 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
               </>
             )}
           </h1>
-          {/*
-            * Assistive technology gets the whole question as soon as it exists, rather
-            * than being made to sit through a reveal paced for the ear.
-            */}
-          <p className="sr-only">{questionText}</p>
+          {/* Spoken-only rounds also expose the complete question to assistive technology. */}
+          {!workspace ? <p className="sr-only">{questionText}</p> : null}
 
           {questionAudio.url ? (
             <div className="flex flex-col gap-2">
@@ -1061,8 +1061,18 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           ) : null}
         </div>
 
+        {workspace?.kind === "dsa" ? (
+          <DsaProblemPanel problem={workspace.problem} />
+        ) : workspace?.kind === "system_design" ? (
+          <DesignCasePanel
+            designCase={workspace.case}
+            minutesElapsed={minutesElapsed}
+            durationMinutes={session?.durationMinutes ?? 45}
+          />
+        ) : null}
+
         {/*
-          * What the candidate is saying, as they say it.
+          * In spoken-only rounds, what the candidate is saying, as they say it.
           *
           * Speaking into a machine that shows no sign of hearing you is the least
           * interview-like part of this, and the specific worry it removes is not knowing
@@ -1070,7 +1080,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           * built from the model's own transcription of the recording, not from this, and
           * saying so matters because the two will sometimes disagree.
           */}
-        {phase === "answering" && liveTranscript.supported ? (
+        {!workspace && phase === "answering" && liveTranscript.supported ? (
           <div className="flex flex-col gap-1.5 border-l-2 border-line pl-4">
             <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">
               What we are hearing

@@ -19,6 +19,7 @@ const submitAnswer = vi.hoisted(() => vi.fn());
 const fetchReport = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ token: "token-abc" }));
 const questionAudio = vi.hoisted(() => ({ current: { url: null as string | null, status: "unavailable" } }));
+const transcript = vi.hoisted(() => ({ supported: false, start: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/lib/api", () => ({
@@ -61,7 +62,13 @@ vi.mock("@/components/device-check", () => ({
     </div>
   ),
 }));
-vi.mock("@/components/design-workspace", () => ({ DesignWorkspace: () => null }));
+vi.mock("@/components/design-workspace", () => ({
+  DesignWorkspace: () => <div data-testid="design-workspace" />,
+  DesignCasePanel: () => <section aria-label="System design case">Design case details</section>,
+}));
+vi.mock("@/components/dsa-problem-panel", () => ({
+  DsaProblemPanel: () => <section aria-label="Coding problem">Coding problem details</section>,
+}));
 vi.mock("@/components/dsa-workspace", () => ({ DsaWorkspace: ({ onBoardChange }: { onBoardChange: (board: BoardState) => void }) => {
   dsaWorkspaceRender();
   dsaBoard.onChange = onBoardChange;
@@ -98,7 +105,7 @@ vi.mock("@/lib/use-browser-voice", () => ({
   }),
 }));
 vi.mock("@/lib/use-live-transcript", () => ({
-  useLiveTranscript: () => ({ supported: false, text: "", start: vi.fn(), stop: vi.fn(), reset: vi.fn() }),
+  useLiveTranscript: () => ({ supported: transcript.supported, text: "Recognised answer", start: transcript.start, stop: vi.fn(), reset: vi.fn() }),
 }));
 vi.mock("@/lib/use-question-audio", () => ({
   useQuestionAudio: () => questionAudio.current,
@@ -128,6 +135,7 @@ describe("InterviewRoom session entry", () => {
     auth.token = "token-abc";
     captureLevel.current = 0;
     questionAudio.current = { url: null, status: "unavailable" };
+    transcript.supported = false;
   });
 
   it.each([
@@ -243,6 +251,27 @@ describe("InterviewRoom workspace isolation", () => {
     auth.token = "token-abc";
     captureLevel.current = 0;
     questionAudio.current = { url: null, status: "unavailable" };
+    transcript.supported = false;
+  });
+
+  it.each([
+    ["dsa", { kind: "dsa", problem: {} }, "Coding problem", "dsa-workspace"],
+    ["system design", { kind: "system_design", case: {} }, "System design case", "design-workspace"],
+  ])("keeps %s question details beside the interviewer and the answer workspace separate", async (_label, workspace, panelName, workspaceId) => {
+    transcript.supported = true;
+    fetchSession.mockResolvedValue({ ...baseSession, workspace });
+    beginSession.mockResolvedValue({
+      startedAt: "2026-09-29T09:00:00Z",
+      scheduledEndAt: "2026-09-29T09:45:00Z",
+    });
+    render(<InterviewRoom sessionId={baseSession.id} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Enter the room" }));
+
+    const questionPane = screen.getByRole("main");
+    expect(questionPane).toContainElement(screen.getByRole("region", { name: panelName }));
+    expect(questionPane).toContainElement(screen.getByRole("heading", { name: "Tell me about the project." }));
+    expect(questionPane).not.toContainElement(await screen.findByTestId(workspaceId));
+    expect(screen.queryByText("What we are hearing")).not.toBeInTheDocument();
   });
 
   it("saves the latest board after five seconds and flushes on window blur", async () => {
@@ -329,6 +358,7 @@ describe("InterviewRoom across an access-token rotation", () => {
     vi.clearAllMocks();
     auth.token = "token-abc";
     questionAudio.current = { url: null, status: "unavailable" };
+    transcript.supported = false;
   });
 
   it("stays in the room, without re-reading the session, when the token rotates", async () => {
@@ -419,6 +449,7 @@ describe("InterviewRoom operational telemetry", () => {
   });
 
   it("shows processing feedback before the recorder finishes stopping", async () => {
+    transcript.supported = true;
     let completeStop!: (answer: { audio: Blob; timing: null }) => void;
     captureStop.mockReturnValueOnce(new Promise((resolve) => { completeStop = resolve; }));
     fetchSession.mockResolvedValue({ ...baseSession, workspace: { kind: "dsa" } });
@@ -431,6 +462,8 @@ describe("InterviewRoom operational telemetry", () => {
 
     await user.click(await screen.findByRole("button", { name: "Enter the room" }));
     await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    expect(screen.queryByText("Recognised answer")).not.toBeInTheDocument();
+    expect(transcript.start).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Over to you" }));
 
     expect(screen.getByRole("status")).toHaveTextContent("Listening to your answer…");

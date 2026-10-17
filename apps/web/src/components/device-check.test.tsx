@@ -337,9 +337,10 @@ describe("DeviceCheck", () => {
     render(<DeviceCheck session={workspaceSession} capture={capture()} onEnter={vi.fn()} />);
 
     expect(screen.getByText(work)).toBeInTheDocument();
-    expect(screen.getByText(/press “over to you”/i)).toBeInTheDocument();
+    expect(screen.getByText(/responds once you stop/i)).toBeInTheDocument();
     expect(screen.queryByText(/there is nothing to type/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/your answer ends itself/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/your answer ends itself/i)).toBeInTheDocument();
+    expect(screen.queryByText(/over to you/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/your words on screen/i)).not.toBeInTheDocument();
     expect(await screen.findByText("3 of 3", undefined, { timeout: 4_000 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /enter the room/i })).toBeEnabled();

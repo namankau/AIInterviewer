@@ -14,8 +14,8 @@
  * - **Never mistake a pause for an ending.** People pause mid-answer to think, and
  *   under pressure they pause for longer than they realise. The window is well past
  *   conversational, and any sound at all resets it.
- * - **Always leave a way out.** This is an aid to a manual control, not a replacement
- *   for one — the room keeps its button.
+ * - **Allow silent work.** In coding and design rounds, a longer quiet window also waits
+ *   for editing or drawing to stop before the interviewer comes back in.
  */
 
 /** Level above which we treat the microphone as carrying speech rather than room noise. */
@@ -23,6 +23,12 @@ export const SPEECH_LEVEL = 0.08;
 
 /** How long a silence has to last, once they have spoken, before the answer is taken as finished. */
 export const SILENCE_TO_END_MS = 3_500;
+
+/** A workspace answer includes quiet thinking between speaking, typing and drawing. */
+export const WORKSPACE_SILENCE_TO_END_MS = 8_000;
+
+/** Wait after the last editor or board change before taking the floor. */
+export const WORKSPACE_ACTIVITY_GRACE_MS = 12_000;
 
 /** Nothing ends an answer in its first moments, however quiet it is. */
 export const MINIMUM_ANSWER_MS = 2_000;
@@ -65,8 +71,24 @@ export function observe(state: SilenceState, level: number, now: number): Silenc
 }
 
 /** Whether the answer should now be submitted on its own. */
-export function shouldEnd(state: SilenceState, now: number, startedAt: number): boolean {
+export function shouldEnd(
+  state: SilenceState,
+  now: number,
+  startedAt: number,
+  silenceMs = SILENCE_TO_END_MS,
+): boolean {
   if (!state.hasSpoken || state.silentSince === null) return false;
   if (now - startedAt < MINIMUM_ANSWER_MS) return false;
-  return now - state.silentSince >= SILENCE_TO_END_MS;
+  return now - state.silentSince >= silenceMs;
+}
+
+/** Workspace turns finish once both speech and visible work have settled. */
+export function shouldEndWorkspace(
+  state: SilenceState,
+  now: number,
+  startedAt: number,
+  lastWorkAt: number | null,
+): boolean {
+  if (!shouldEnd(state, now, startedAt, WORKSPACE_SILENCE_TO_END_MS)) return false;
+  return lastWorkAt === null || now - lastWorkAt >= WORKSPACE_ACTIVITY_GRACE_MS;
 }

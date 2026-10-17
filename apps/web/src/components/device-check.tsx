@@ -466,17 +466,14 @@ export function DeviceCheck({
             term="You can ask for help"
             detail="Stuck on a question, ask for a nudge. It is recorded, and the report says so."
           />
-          {hasWorkspace ? (
-            <Note
-              term="Hand the turn over"
-              detail="Silence while you work will not end your answer. Press “Over to you” when you want the interviewer to respond."
-            />
-          ) : (
-            <Note
-              term="Your answer ends itself"
-              detail="Stop talking and it moves on. Pausing to think is fine — a pause is not an ending."
-            />
-          )}
+          <Note
+            term="Your answer ends itself"
+            detail={
+              hasWorkspace
+                ? "The interviewer waits through pauses while you speak, type or draw, then responds once you stop."
+                : "Stop talking and it moves on. Pausing to think is fine — a pause is not an ending."
+            }
+          />
         </dl>
       </section>
     </div>

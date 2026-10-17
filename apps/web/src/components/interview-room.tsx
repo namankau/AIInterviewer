@@ -24,7 +24,7 @@ import {
   saveBoard,
   submitAnswer,
 } from "@/lib/api";
-import { initialSilenceState, observe, shouldEnd } from "@/lib/silence";
+import { initialSilenceState, observe, shouldEnd, shouldEndWorkspace } from "@/lib/silence";
 import { revealedText } from "@/lib/spoken-text";
 import { useBrowserVoice } from "@/lib/use-browser-voice";
 import { useLiveTranscript } from "@/lib/use-live-transcript";
@@ -92,10 +92,9 @@ const MODEL_AUDIO_TIMEOUT_MS = 90_000;
  * The longest one unbroken turn runs in a room with a workspace before the interviewer
  * comes in on their own.
  *
- * Silence does not end a turn there — people go quiet to type and draw — so without a
- * ceiling a candidate who never hands over would be recorded for the whole round in one
- * take. Ten minutes is where a real interviewer checks in anyway, and it keeps one take at
- * about 3.6 MB, far inside what the model accepts in a single request.
+ * Silence usually ends a turn once speech and visible work have stopped. This ceiling
+ * still bounds a take if speech or board activity never settles, keeping one recording
+ * at about 3.6 MB, far inside what the model accepts in a single request.
  */
 const LONGEST_WORKSPACE_TAKE_MS = 10 * 60_000;
 
@@ -142,6 +141,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const answerRequestIds = useRef(new Map<number, string>());
   const hintRequestIds = useRef(new Map<number, string>());
+  const lastWorkspaceChange = useRef<number | null>(null);
 
   // Consent, and only consent, decides whether the camera opens. Tying this to session
   // status meant a candidate who declined video was recorded anyway (PRD 12).
@@ -460,14 +460,8 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     latest.current = { level: capture.level, finish: finishAnswer };
   });
 
-  // The answer timer and the silence that ends the answer run off one tick, so a reading
-  // and the timestamp it is judged against cannot disagree.
-  //
-  // Except in a room with a workspace, where silence ends nothing. Three and a half
-  // seconds of quiet is the end of a spoken answer and the middle of typing a loop, and
-  // treating it as an ending had the interviewer cut in with "let me stop you there" on a
-  // candidate who was simply writing code. There, the candidate hands over when they want
-  // the interviewer — "Over to you" — or the clock or the take ceiling does.
+  // The answer timer and silence detector run off one tick. Workspace rounds wait longer
+  // and also wait for editor or board activity to settle before taking the floor.
   useEffect(() => {
     if (phase !== "answering") return;
     const startedAt = Date.now();
@@ -480,7 +474,10 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
       setElapsed(Math.floor((now - startedAt) / 1000));
 
       silence = observe(silence, latest.current.level, now);
-      const over = hasWorkspace ? now - startedAt >= LONGEST_WORKSPACE_TAKE_MS : shouldEnd(silence, now, startedAt);
+      const over = hasWorkspace
+        ? shouldEndWorkspace(silence, now, startedAt, lastWorkspaceChange.current) ||
+          now - startedAt >= LONGEST_WORKSPACE_TAKE_MS
+        : shouldEnd(silence, now, startedAt);
       if (!ended && over) {
         ended = true;
         void latest.current.finish();
@@ -494,6 +491,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     const started = await capture.start();
     if (started) {
       setElapsed(0);
+      lastWorkspaceChange.current = null;
       // Workspace rounds use the microphone meter for feedback and do not display a
       // running transcript. In spoken-only rounds, clear the previous answer first.
       if (!hasWorkspace) {
@@ -739,6 +737,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
     (next: BoardState) => {
       latestBoard.current = next;
       boardDirty.current = true;
+      lastWorkspaceChange.current = Date.now();
       if (!accessToken || boardTimer.current) return;
       boardTimer.current = setTimeout(flushBoard, BOARD_SAVE_MS);
     },
@@ -1108,36 +1107,13 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
           </p>
         ) : null}
 
-        {/*
-          * No "Answer" button and no "Done answering" button.
-          *
-          * Both were the tell that this is a form rather than a conversation: nobody
-          * presses a key to begin speaking to a person, and nobody announces that they
-          * have finished. The room now opens the microphone as soon as the interviewer
-          * stops talking, and closes it when the candidate does — see the effects above
-          * and silence.ts. What is left here is the one control a real candidate would
-          * actually want, which is a way to ask for help.
-          */}
+        {/* The microphone opens after the question and closes after speech and, in
+            workspace rounds, visible work have settled. Help remains available. */}
         <div className="flex flex-wrap items-center gap-4">
           {phase === "submitting" ? (
             <p role="status" className="text-body text-ink-muted">
               Listening to your answer…
             </p>
-          ) : null}
-
-          {/*
-            * The one place the room has a hand-over control, and why: silence cannot mean
-            * "I'm done" when the work itself is silent. Saying "over to you" is what a
-            * candidate does at a whiteboard anyway.
-            */}
-          {hasWorkspace && phase === "answering" ? (
-            <button
-              type="button"
-              onClick={() => void finishAnswer()}
-              className="rounded-lg border border-line bg-surface-raised px-3.5 py-2 text-caption font-medium text-ink shadow-[var(--shadow-sm)] transition-colors hover:bg-surface-sunken"
-            >
-              Over to you
-            </button>
           ) : null}
 
           {!hint && (phase === "asking" || phase === "answering") ? (
@@ -1155,8 +1131,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
         <p className="text-caption text-ink-subtle">
           {phase === "answering"
             ? hasWorkspace
-              ? "Think out loud as you work — going quiet to type or draw won't end your turn. " +
-                "Press “Over to you” when you want the interviewer to come in."
+              ? "Think out loud as you work. The interviewer waits through pauses and comes in after you stop speaking and working."
               : "Just start talking. Stop, and the interviewer moves on — pausing to think is fine."
             : "Asking for a nudge is allowed once per question, and the report records that you did."}
         </p>

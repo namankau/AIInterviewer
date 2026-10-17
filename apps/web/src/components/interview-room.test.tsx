@@ -1,5 +1,5 @@
 import type { BoardState, SessionView } from "@untiered/shared";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -170,7 +170,9 @@ describe("InterviewRoom session entry", () => {
     expect(screen.getByText(/competency breakdown/i)).toBeInTheDocument();
     expect(screen.getByText(/evidence from your answers/i)).toBeInTheDocument();
     expect(screen.getByText(/analysing your interview/i)).toBeInTheDocument();
-    expect(fetchReport).toHaveBeenCalledWith(baseSession.id, expect.objectContaining({ accessToken: "token-abc" }));
+    await waitFor(() => {
+      expect(fetchReport).toHaveBeenCalledWith(baseSession.id, expect.objectContaining({ accessToken: "token-abc" }));
+    });
     // The report is offered only once it exists, so the click opens it rather than a wait.
     expect(screen.queryByRole("link", { name: /read the report/i })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /back to dashboard/i })).toHaveAttribute("href", "/dashboard");

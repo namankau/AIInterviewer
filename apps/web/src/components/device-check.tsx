@@ -27,13 +27,13 @@ type Capture = ReturnType<typeof useInterviewCapture>;
  * it here rather than discovering in the room that their volume was down. Nothing is a
  * green tick because a capability exists — only because it was exercised.
  *
- * Running them in sequence is not decoration either. Four spinners resolving at once is a
+ * Running them in sequence is not decoration either. All checks resolving at once is a
  * loading screen; one thing at a time, each settling before the next begins, is a person
  * being walked through it, and this screen's other job is to settle someone's nerves.
  *
- * **Only the microphone gates entry.** No local voice and no live transcript are ordinary
- * facts about a browser, not faults, and the round runs regardless — a check that blocked
- * on them would be inventing a requirement the product does not have.
+ * **Only the microphone gates entry.** No local voice and, for spoken-only rounds, no
+ * live transcript are ordinary facts about a browser, not faults. The round runs
+ * regardless — a check that blocked on them would invent a requirement.
  *
  * Entering is a click, and that is load-bearing rather than incidental: a browser refuses
  * to play audio with sound until the document has been interacted with, so without a
@@ -71,6 +71,15 @@ export function DeviceCheck({
   }, [capture.stream]);
 
   const firstName = useCandidateFirstName();
+  // The workspace is composed only when the candidate enters the room. Preflight must
+  // describe the selected round, even though session.workspace is still null here.
+  const workspaceKind =
+    session.roundType === "coding_practical"
+      ? "dsa"
+      : session.roundType === "system_design"
+        ? "system_design"
+        : session.workspace?.kind ?? null;
+  const hasWorkspace = workspaceKind !== null;
 
   const accessReady = capture.state === "ready" || capture.state === "recording";
   const blocked = capture.state === "denied" || capture.state === "unsupported";
@@ -203,7 +212,7 @@ export function DeviceCheck({
       : canMirror
         ? "passed"
         : "noted";
-  const transcriptSettled = settled(transcript);
+  const transcriptSettled = hasWorkspace || settled(transcript);
 
   /* ---- 5. The camera, if they asked for one. ------------------------------------ */
 
@@ -252,7 +261,10 @@ export function DeviceCheck({
           </button>
         ) : undefined,
     },
-    {
+  ];
+
+  if (!hasWorkspace) {
+    checks.push({
       label: "Your words on screen",
       detail:
         transcript === "passed"
@@ -261,8 +273,8 @@ export function DeviceCheck({
             ? "This browser cannot mirror your words back; Chrome and Edge can. Nothing else changes — the round is unaffected."
             : "Whether this browser can show your words back to you as you talk.",
       status: transcript,
-    },
-  ];
+    });
+  }
 
   if (session.consentVideo) {
     checks.push({
@@ -436,7 +448,16 @@ export function DeviceCheck({
           How this round runs
         </h2>
         <dl className="flex flex-col divide-y divide-line">
-          <Note term="It is spoken" detail="You answer out loud. There is nothing to type." />
+          <Note
+            term="It is spoken"
+            detail={
+              workspaceKind === "dsa"
+                ? "Think out loud as you write code in the editor."
+                : workspaceKind === "system_design"
+                  ? "Think out loud as you sketch on the board."
+                  : "You answer out loud. There is nothing to type."
+            }
+          />
           <Note
             term="It is on a clock"
             detail={`About ${session.durationMinutes} minutes. The round ends when the time does, not after a set number of questions.`}
@@ -445,10 +466,17 @@ export function DeviceCheck({
             term="You can ask for help"
             detail="Stuck on a question, ask for a nudge. It is recorded, and the report says so."
           />
-          <Note
-            term="Your answer ends itself"
-            detail="Stop talking and it moves on. Pausing to think is fine — a pause is not an ending."
-          />
+          {hasWorkspace ? (
+            <Note
+              term="Hand the turn over"
+              detail="Silence while you work will not end your answer. Press “Over to you” when you want the interviewer to respond."
+            />
+          ) : (
+            <Note
+              term="Your answer ends itself"
+              detail="Stop talking and it moves on. Pausing to think is fine — a pause is not an ending."
+            />
+          )}
         </dl>
       </section>
     </div>

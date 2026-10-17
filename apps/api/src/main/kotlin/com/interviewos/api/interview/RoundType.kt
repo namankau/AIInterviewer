@@ -52,8 +52,8 @@ enum class RoundType(
     CODING_PRACTICAL(
         "coding_practical",
         "Coding and practical problem solving",
-        "Spoken reasoning about a practical problem. Assess approach, edge cases and complexity awareness rather " +
-            "than syntax, since the candidate is speaking rather than typing.",
+        "Work through a practical problem in the editor while explaining the approach aloud. Assess reasoning, " +
+            "edge cases, complexity awareness and the code produced, without overvaluing syntax.",
         covers =
             listOf(
                 "how they scope the problem before writing anything",

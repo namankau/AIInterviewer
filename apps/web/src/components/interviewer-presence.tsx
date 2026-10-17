@@ -44,13 +44,14 @@ interface InterviewerPresenceProps {
   state: PresenceState;
   /** Microphone level, 0 to 1. Only meaningful while listening. */
   level?: number;
+  compact?: boolean;
 }
 
-export function InterviewerPresence({ state, level = 0 }: InterviewerPresenceProps) {
+export function InterviewerPresence({ state, level = 0, compact = false }: InterviewerPresenceProps) {
   const attentive = state === "listening";
 
   return (
-    <div className="flex items-center gap-4">
+    <div className={`flex items-center ${compact ? "gap-2.5" : "gap-4"}`}>
       <div className="relative shrink-0">
         {/*
          * The ring is the only thing that carries the accent, and only while the
@@ -68,7 +69,7 @@ export function InterviewerPresence({ state, level = 0 }: InterviewerPresencePro
           }`}
           style={attentive ? { transform: `scale(${1 + Math.min(level, 1) * 0.06})` } : undefined}
         />
-        <Portrait state={state} />
+        <Portrait state={state} compact={compact} />
       </div>
 
       <div className="flex flex-col gap-0.5">
@@ -105,11 +106,11 @@ const DESCRIPTION: Record<PresenceState, string> = {
  * nervous about their livelihood. Drawing it as line-work on a light face is not a style
  * preference; it is the difference between a person and a threat.
  */
-function Portrait({ state }: { state: PresenceState }) {
+function Portrait({ state, compact }: { state: PresenceState; compact: boolean }) {
   return (
     <svg
       viewBox="0 0 120 120"
-      className={`size-[72px] ${state === "speaking" ? "presence-speaking" : ""} ${
+      className={`${compact ? "size-11" : "size-[72px]"} ${state === "speaking" ? "presence-speaking" : ""} ${
         state === "thinking" ? "presence-thinking" : ""
       }`}
       aria-hidden

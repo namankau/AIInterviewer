@@ -1,42 +1,40 @@
-# Handoff — 16 October 2026
+# Handoff — 17 October 2026
 
 ## Task
 
-Audit and redesign the Untiered web UI across existing screens (user's attached brief; project design direction).
+Document and audit the same-day, low-cost launch recommendation (`docs/audits/launch-day-plan-2026-10-17.md`; no task file).
 
 ## What I built
 
-- `docs/ui-audit.md`: route and component inventory, visual inconsistencies, reuse opportunities, accessibility findings, and the proposed visual direction.
-- `apps/web/src/app/globals.css` and `docs/design-system.md`: shared light/dark color roles, typography, spacing, radius, elevation, motion, and responsive layout rules.
-- `apps/web/src/components/ui/`: accessible buttons, fields, feedback, overlays, tabs, progress, headers, avatars, and other reusable primitives.
-- `apps/web/src/app/` and feature components: consistent landing, auth, interview, Arena, courses, dashboard, profile, report, navigation, and loading presentation.
+- `docs/audits/launch-day-plan-2026-10-17.md`: deployment choice, cost comparison, launch gates, and claim-by-claim audit with dated provider sources.
+- `docs/audits/launch-plan.md`: points readers of the 14 October snapshot to the current plan.
 
 ## Assumptions I made
 
-- The owner-approved bright learning-platform direction in `AGENTS.md` governs this redesign. The cobalt/navy/teal palette and Plus Jakarta Sans typography are implementation choices submitted for final visual review.
-- Mentor booking, mentor-facing screens, and leaderboards mentioned in the generic brief do not exist in this app; no new routes or features were scaffolded.
-- Existing interview-room sparseness and all business logic, routes, API contracts, and data flow remain intact.
+- A public product on the organization repository warrants Vercel Pro and Supabase Pro; Oracle Always Free is an optional small-beta saving, with Lightsail as the dependable VM choice.
+- The existing Supabase project and `develop` commit are the intended launch inputs. Its actual region and production migration state were not available for this review.
+- This request was for a reviewable plan and audit, not authorization to create paid accounts or deploy.
 
 ## What I could NOT verify
 
-- Rendered visual quality at mobile and desktop sizes: the browser sandbox could not reach the local preview server. A human visual review of the PR remains necessary.
-- Final visual direction is reserved for the owner by `AGENTS.md`.
-- No live interviews or paid AI calls were run.
+- Live cloud account eligibility, Oracle capacity, Supabase region, linked migration state, SMTP delivery, backup restore, DNS, HTTPS, production latency, or VM memory headroom.
+- Voice quality and a complete spoken round; no live Gemini call or production deployment was made.
+- The exact monthly bill or cost per round. Gemini's configured fallback now routes to a newer model, and the configured TTS model has a November 2026 retirement date.
 
 ## Verification status
 
-- Local frontend typecheck, lint, 82 test files / 3,072 tests, and production build: pass.
-- GitHub CI run `38939102914` for implementation commit `726d84d`: all four jobs passed, including web, API, database, and images. See PR checks for the final handoff-only commit.
-- Backend files and migrations: unchanged.
+- Documentation diff whitespace check: pass. Local relative document links: checked.
+- [CI run 39031699315](https://github.com/softzenith-projects/Untiered/actions/runs/39031699315) on documentation commit `d8996be`: web, API, database, and image jobs all passed.
+- No application code or migrations changed; no live integration test was run.
 
 ## Merge status
 
-- Branch `feat/ui-consistency` pushed; [PR #115](https://github.com/softzenith-projects/Untiered/pull/115) opened against `develop` and left unmerged for the required human visual review.
+- Documentation branch `feat/launch-plan-audit` merged into `develop` after green CI. This changes the plan only; nothing was deployed.
 
 ## Suggested next task
 
-- Review the PR visually at 320px, tablet, and desktop widths in light and dark modes, then merge after approval and green checks.
+- Execute the launch-day checklist in the dated plan, starting with production migration and account checks.
 
 ## Open questions for you
 
-- Does the cobalt/navy/teal palette and Plus Jakarta Sans heading direction match the intended Untiered identity?
+- Confirm the production domain, cloud accounts, Supabase region, SMTP provider, and whether today's release is a private beta or public signup launch.

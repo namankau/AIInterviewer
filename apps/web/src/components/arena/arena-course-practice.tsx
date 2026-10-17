@@ -85,7 +85,7 @@ export function ArenaCoursePractice({ courseSlug }: { courseSlug: string }) {
         <div className="space-y-4"><p className="text-body text-ink-muted">No more live scenarios are unlocked for this course yet. More are on the way.</p><Button variant="ghost" onClick={() => setPlay(null)}>Back to course Arena</Button></div>
       ) : (
         <section aria-label="Scenario" className="space-y-6">
-          <div className="rounded-xl bg-navy px-6 py-7 text-on-navy"><p className="eyebrow text-on-navy-muted">{play.scenario.context} · {play.scenario.estimatedMinutes} min</p><h2 className="mt-2 text-heading">{play.scenario.title}</h2><p className="mt-3 text-body leading-relaxed text-on-navy-muted">{play.scenario.hook}</p></div>
+          <div className="rounded-xl border border-line bg-surface-sunken px-6 py-5"><p className="eyebrow text-ink-muted">{play.scenario.context} · {play.scenario.estimatedMinutes} min</p><h2 className="mt-2 text-heading font-semibold text-ink">{play.scenario.title}</h2><p className="mt-2 text-body leading-relaxed text-ink-muted">{play.scenario.hook}</p></div>
           {step.contextNote ? <p className="rounded-xl border-l-4 border-accent bg-accent-wash p-4 text-body text-ink">{step.contextNote}</p> : null}
           {step.systemState ? (
             <section aria-label="System map" className="rounded-2xl border border-line bg-surface-raised p-5 shadow-sm">
@@ -99,7 +99,7 @@ export function ArenaCoursePractice({ courseSlug }: { courseSlug: string }) {
               </ul>
             </section>
           ) : null}
-          <div><p className="eyebrow text-accent">{step.kind === "initial" ? "First decision" : `Probe ${step.position - 1}`} · {step.stepType.replaceAll("_", " ")}</p><h3 className="mt-2 text-title text-ink">{step.prompt}</h3></div>
+          <div className="rounded-xl border border-accent/30 bg-accent-wash px-6 py-5 shadow-sm"><p className="eyebrow text-accent-strong">{step.kind === "initial" ? "First decision" : `Probe ${step.position - 1}`} · {step.stepType.replaceAll("_", " ")}</p><h3 className="mt-2 text-title text-ink">{step.prompt}</h3></div>
           {step.codeSnippet ? <pre className="overflow-x-auto rounded-xl bg-navy p-5 font-mono text-caption text-on-navy"><code>{step.codeSnippet}</code></pre> : null}
           <fieldset disabled={feedback !== null || busy} className="space-y-3"><legend className="sr-only">Choose one answer</legend>
           {displayedOptions.map((option) => <label key={option.id} className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border p-4 text-body transition-colors focus-within:ring-2 focus-within:ring-accent ${selected === option.id ? "border-accent bg-accent-wash" : "border-line bg-surface-raised"}`}><Radio name={`step-${step.id}`} value={option.id} checked={selected === option.id} onChange={() => setSelected(option.id)} className="mt-1" /><span>{option.text}</span></label>)}

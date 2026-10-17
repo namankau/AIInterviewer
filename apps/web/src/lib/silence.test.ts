@@ -5,9 +5,12 @@ import {
   SILENCE_TO_END_MS,
   SPEECH_LEVEL,
   SPEECH_TO_START_MS,
+  WORKSPACE_ACTIVITY_GRACE_MS,
+  WORKSPACE_SILENCE_TO_END_MS,
   initialSilenceState,
   observe,
   shouldEnd,
+  shouldEndWorkspace,
 } from "./silence";
 
 const LOUD = SPEECH_LEVEL + 0.2;
@@ -78,5 +81,25 @@ describe("ending an answer on silence", () => {
     const state = observe(observe(initialSilenceState, LOUD, 0), QUIET, 10);
 
     expect(shouldEnd(state, MINIMUM_ANSWER_MS - 1, 0)).toBe(false);
+  });
+
+  it("waits longer through a workspace pause, then advances without a button", () => {
+    const spoken = observe(initialSilenceState, LOUD, 0);
+    const started = observe(spoken, LOUD, SPEECH_TO_START_MS);
+    const quiet = observe(started, QUIET, 1_000);
+
+    expect(shouldEndWorkspace(quiet, 1_000 + SILENCE_TO_END_MS, 0, null)).toBe(false);
+    expect(shouldEndWorkspace(quiet, 1_000 + WORKSPACE_SILENCE_TO_END_MS, 0, null)).toBe(true);
+  });
+
+  it("lets typing or drawing continue after speech stops", () => {
+    const spoken = observe(initialSilenceState, LOUD, 0);
+    const started = observe(spoken, LOUD, SPEECH_TO_START_MS);
+    const quiet = observe(started, QUIET, 1_000);
+    const lastWorkAt = 6_000;
+
+    expect(shouldEndWorkspace(quiet, lastWorkAt + WORKSPACE_ACTIVITY_GRACE_MS - 1, 0, lastWorkAt)).toBe(false);
+    expect(shouldEndWorkspace(quiet, lastWorkAt + WORKSPACE_ACTIVITY_GRACE_MS, 0, lastWorkAt)).toBe(true);
+    expect(shouldEndWorkspace(initialSilenceState, 30_000, 0, lastWorkAt)).toBe(false);
   });
 });

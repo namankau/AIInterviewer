@@ -1,5 +1,7 @@
 # Launch plan
 
+> **Historical snapshot (14 October 2026).** Several open findings below were fixed after this document was written. For the current hosting decision, code-status audit, and same-day release gates, use the [17 October launch-day plan](launch-day-plan-2026-10-17.md).
+
 **14 October 2026.** The evidence and fix details for every item are in the [architecture audit](architecture-audit.md). The "Audit" column gives the finding number there (`001` = ARCH-001).
 
 ## Verdict

@@ -321,6 +321,31 @@ describe("DeviceCheck", () => {
     expect(screen.getByRole("button", { name: /enter the room/i })).toBeEnabled();
   });
 
+  it.each([
+    {
+      label: "coding",
+      roundType: "coding_practical",
+      work: /write code in the editor/i,
+    },
+    {
+      label: "system design",
+      roundType: "system_design",
+      work: /sketch on the board/i,
+    },
+  ] as const)("describes the $label workspace before it is composed", async ({ roundType, work }) => {
+    const workspaceSession: SessionView = { ...session, roundType };
+    render(<DeviceCheck session={workspaceSession} capture={capture()} onEnter={vi.fn()} />);
+
+    expect(screen.getByText(work)).toBeInTheDocument();
+    expect(screen.getByText(/responds once you stop/i)).toBeInTheDocument();
+    expect(screen.queryByText(/there is nothing to type/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/your answer ends itself/i)).toBeInTheDocument();
+    expect(screen.queryByText(/over to you/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/your words on screen/i)).not.toBeInTheDocument();
+    expect(await screen.findByText("3 of 3", undefined, { timeout: 4_000 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /enter the room/i })).toBeEnabled();
+  });
+
   describe("the camera", () => {
     const seen: SessionView = { ...session, consentVideo: true };
     const withCamera = () =>

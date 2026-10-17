@@ -107,10 +107,10 @@ export const ROUND_CATALOGUE: CatalogueRound[] = [
   {
     value: "coding_practical",
     eyebrow: "Global and Indian product",
-    label: "Coding, spoken aloud",
+    label: "Coding and practical problem solving",
     blurb:
-      "A practical problem reasoned through in speech rather than typed. Approach, edge " +
-      "cases, complexity — the parts an interviewer is actually grading.",
+      "Work through a practical problem in the editor while explaining your approach, edge " +
+      "cases and complexity out loud.",
     listeningFor:
       "whether you can be followed. A correct solution nobody could follow does not pass a " +
       "real round either.",

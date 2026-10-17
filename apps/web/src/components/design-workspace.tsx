@@ -39,7 +39,8 @@ export function phaseAt(minutesElapsed: number, durationMinutes: number): Design
 }
 
 /**
- * The system design round's workspace: the case on the left, a board in the middle.
+ * The system design round's answer workspace. The case lives beside the interviewer,
+ * leaving the entire right pane available for the board.
  *
  * The candidate draws. The interviewer does not — not yet. A board that fills itself in
  * as somebody talks is the most striking thing in the reference, and it is also the thing
@@ -47,20 +48,12 @@ export function phaseAt(minutesElapsed: number, durationMinutes: number): Design
  * own build and its own latency budget rather than being smuggled in here.
  */
 export function DesignWorkspace({
-  designCase,
   board,
-  minutesElapsed,
-  durationMinutes,
   onBoardChange,
 }: {
-  designCase: DesignCase;
   board: BoardState | null;
-  minutesElapsed: number;
-  durationMinutes: number;
   onBoardChange: (board: BoardState) => void;
 }) {
-  const phase = phaseAt(minutesElapsed, durationMinutes);
-
   /*
    * Excalidraw is uncontrolled: it takes its opening scene once and owns it after that.
    * Passing a changing `initialData` would reset the board under the candidate's hand
@@ -83,40 +76,52 @@ export function DesignWorkspace({
   );
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-1 gap-px bg-line lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
-      <aside className="min-h-0 overflow-y-auto bg-surface-raised p-6">
-        <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">The case</p>
-        <h2 className="mt-1 text-title text-ink">{designCase.title}</h2>
-
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {designCase.constraints.map((constraint) => (
-            <span
-              key={constraint}
-              className="rounded-full border border-line-strong px-2.5 py-1 font-mono text-caption text-ink-muted"
-            >
-              {constraint}
-            </span>
-          ))}
-        </div>
-
-        <p className="mt-4 text-body leading-relaxed text-ink-muted">{designCase.summary}</p>
-
-        <PhaseRail current={phase} />
-
-        <p className="mt-6 text-caption leading-relaxed text-ink-subtle">
-          The board is yours. Nothing on it is scored on neatness — it is here so you can point at
-          something while you think.
-        </p>
-      </aside>
-
-      <div className="min-h-0 bg-surface-raised">
-        <Excalidraw
-          initialData={initialData}
-          onChange={save}
-          UIOptions={{ canvasActions: { loadScene: false, saveToActiveFile: false, export: false, saveAsImage: false } }}
-        />
-      </div>
+    <div className="h-full min-h-[34rem] bg-surface-raised">
+      <Excalidraw
+        initialData={initialData}
+        onChange={save}
+        UIOptions={{ canvasActions: { loadScene: false, saveToActiveFile: false, export: false, saveAsImage: false } }}
+      />
     </div>
+  );
+}
+
+export function DesignCasePanel({
+  designCase,
+  minutesElapsed,
+  durationMinutes,
+}: {
+  designCase: DesignCase;
+  minutesElapsed: number;
+  durationMinutes: number;
+}) {
+  const phase = phaseAt(minutesElapsed, durationMinutes);
+
+  return (
+    <section aria-label="System design case" className="border-t border-line pt-5">
+      <p className="font-mono text-micro tracking-widest text-ink-subtle uppercase">The case</p>
+      <h2 className="mt-1 text-heading font-semibold text-ink">{designCase.title}</h2>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {designCase.constraints.map((constraint) => (
+          <span
+            key={constraint}
+            className="rounded-full border border-line-strong px-2.5 py-1 font-mono text-caption text-ink-muted"
+          >
+            {constraint}
+          </span>
+        ))}
+      </div>
+
+      <p className="mt-4 text-body text-ink-muted">{designCase.summary}</p>
+
+      <PhaseRail current={phase} />
+
+      <p className="mt-6 text-caption leading-relaxed text-ink-subtle">
+        The board is yours. Nothing on it is scored on neatness — it is here so you can point at
+        something while you think.
+      </p>
+    </section>
   );
 }
 

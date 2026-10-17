@@ -19,8 +19,8 @@ interface RunState {
 }
 
 /**
- * The DSA round's workspace: the problem on the left, an editor in the middle, the cases
- * underneath.
+ * The DSA round's answer workspace: the editor and its test cases. The problem stays
+ * beside the interviewer so the candidate can read it while working.
  *
  * Deliberately **not** a coding-practice tool. There is no submit-to-a-judge, no score,
  * no green tick parade. The candidate is being assessed on what they say while they
@@ -113,101 +113,40 @@ export function DsaWorkspace({
   const extensions = useMemo(() => [language === "java" ? java() : python()], [language]);
 
   return (
-    <div className="grid h-full min-h-0 grid-rows-[minmax(18rem,42%)_minmax(22rem,1fr)] gap-px bg-line">
-      <ProblemPanel problem={problem} />
+    <div className="flex h-full min-h-0 flex-col bg-navy">
+      <EditorBar
+        language={language}
+        onLanguage={(next) => {
+          setLanguage(next);
+          onBoardChange({ kind: "dsa", sources, language: next });
+        }}
+        onRun={() => void run()}
+        running={running}
+        canRun={Boolean(testCase)}
+        pythonReady={pythonReady}
+      />
 
-      <div className="flex min-h-0 flex-col bg-navy">
-        <EditorBar
-          language={language}
-          onLanguage={(next) => {
-            setLanguage(next);
-            onBoardChange({ kind: "dsa", sources, language: next });
-          }}
-          onRun={() => void run()}
-          running={running}
-          canRun={Boolean(testCase)}
-          pythonReady={pythonReady}
-        />
-
-        <div className="min-h-0 flex-1 overflow-auto bg-navy">
-          <CodeMirror
-            value={source}
-            height="100%"
-            extensions={extensions}
-            theme="dark"
-            onChange={setSource}
-            basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: false }}
-            aria-label={`Your ${language} solution`}
-          />
-        </div>
-
-        <TestCases
-          cases={problem.testCases}
-          selected={selectedCase}
-          onSelect={setSelectedCase}
-          result={result}
-          stdinFormat={problem.stdinFormat}
-          verified={problem.testsVerified === true}
+      <div className="min-h-0 flex-1 overflow-auto bg-navy">
+        <CodeMirror
+          value={source}
+          height="100%"
+          extensions={extensions}
+          theme="dark"
+          onChange={setSource}
+          basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: false }}
+          aria-label={`Your ${language} solution`}
         />
       </div>
+
+      <TestCases
+        cases={problem.testCases}
+        selected={selectedCase}
+        onSelect={setSelectedCase}
+        result={result}
+        stdinFormat={problem.stdinFormat}
+        verified={problem.testsVerified === true}
+      />
     </div>
-  );
-}
-
-function ProblemPanel({ problem }: { problem: CodingProblem }) {
-  return (
-    <aside className="min-h-0 overflow-y-auto bg-surface-raised px-6 py-5">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
-        <div>
-          <p className="eyebrow text-accent">Problem</p>
-          <h2 className="mt-2 text-title text-ink">{problem.title}</h2>
-        </div>
-        <span className="pill pill-highlight">{problem.difficulty}</span>
-      </div>
-      <p className="mt-4 font-mono text-micro tracking-widest text-ink-subtle uppercase">{problem.topic}</p>
-
-      <Section title="Problem">
-        <p className="whitespace-pre-wrap text-body leading-relaxed text-ink-muted">{problem.statement}</p>
-      </Section>
-
-      {problem.examples.length > 0 && (
-        <Section title="Examples">
-          <div className="space-y-3">
-            {problem.examples.map((example, index) => (
-              <div key={index} className="rounded-lg bg-surface-sunken p-3">
-                <p className="text-caption font-medium text-ink">Example {index + 1}</p>
-                <Field label="Input" value={example.input} />
-                <Field label="Output" value={example.output} />
-                {example.explanation && (
-                  <p className="mt-2 text-caption leading-relaxed text-ink-muted">{example.explanation}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {problem.constraints.length > 0 && (
-        <Section title="Constraints">
-          <ul className="space-y-1">
-            {problem.constraints.map((constraint) => (
-              <li key={constraint} className="font-mono text-caption text-ink-muted">
-                · {constraint}
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
-    </aside>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-6">
-      <h3 className="mb-2 font-mono text-micro tracking-widest text-ink-subtle uppercase">{title}</h3>
-      {children}
-    </section>
   );
 }
 

@@ -42,7 +42,7 @@ export default async function CoursePage({ params }: { params: Promise<{ course:
     <AppShell breadcrumb={course.title.toLowerCase()} parent={{ label: "courses", href: "/courses" }}>
       <section className="relative overflow-hidden rounded-3xl border border-accent/20 bg-surface-raised p-7 shadow-[var(--shadow-md)] md:p-10">
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-accent via-positive to-warning" />
-        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,.75fr)]">
+        <div className="course-hero-grid">
           <div>
             <div className="flex items-center gap-4">
               <CourseMotif courseSlug={course.slug} large />
@@ -70,7 +70,7 @@ export default async function CoursePage({ params }: { params: Promise<{ course:
               </div>
               <p className="font-mono text-micro text-ink-subtle">{totalChapters(course)} chapters · {totalMinutes(course)} min</p>
             </div>
-            <ol className="relative mt-6 space-y-0 before:absolute before:bottom-5 before:left-[1.15rem] before:top-5 before:w-px before:bg-line-strong">
+            <ol className="relative mt-6 space-y-0 before:absolute before:bottom-5 before:left-4 before:top-5 before:w-px before:bg-line-strong">
               {course.modules.map((module, index) => (
                 <li key={module.title} className="relative flex items-center gap-4 py-2.5">
                   <span className="relative z-10 grid size-9 shrink-0 place-items-center rounded-full border border-accent/25 bg-surface-raised font-mono text-micro font-semibold text-accent shadow-[var(--shadow-sm)]">

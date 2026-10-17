@@ -45,7 +45,7 @@ export function CourseToc({ course, currentSlug }: { course: CourseTocData; curr
           <p className="font-editorial mt-3 text-heading leading-tight text-on-navy">{course.title}</p>
           {ready ? (
             <div className="mt-4">
-              <div className="h-1.5 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-label="Course progress" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
+              <div className="h-1.5 overflow-hidden rounded-full bg-on-navy/15" role="progressbar" aria-label="Course progress" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
                 <div className="h-full rounded-full bg-positive" style={{ width: `${percent}%` }} />
               </div>
               <p className="mt-2 text-caption text-on-navy-muted">{done} of {total} chapters complete</p>
@@ -73,7 +73,7 @@ export function CourseToc({ course, currentSlug }: { course: CourseTocData; curr
                         }`}
                       >
                         <span className="flex items-start gap-2.5">
-                          <span className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border ${completed.has(chapter.slug) ? "border-positive bg-positive text-white" : active ? "border-accent bg-surface-raised" : "border-line-strong"}`}>
+                          <span className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border ${completed.has(chapter.slug) ? "border-positive bg-positive text-positive-contrast" : active ? "border-accent bg-surface-raised" : "border-line-strong"}`}>
                           {completed.has(chapter.slug) ? (
                             <span>
                               <CheckIcon className="size-2.5" />

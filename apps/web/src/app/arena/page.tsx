@@ -1,45 +1,26 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { ArenaDailyQuest } from "@/components/arena/arena-daily-quest";
 import { AppShell } from "@/components/app-shell";
+import { CourseArtwork } from "@/components/courses/course-visuals";
+import { SurfaceHeader } from "@/components/ui/surface-header";
 import { courses } from "@/content/courses";
-import { allArenaChallenges } from "@/lib/arena/corpus";
-import { dailyCourseQuests, possibleDateKeysWorldwide } from "@/lib/arena/progression";
 import { courseEnabled } from "@/lib/flags";
 import { requireFeature } from "@/lib/require-feature";
 
-export const metadata: Metadata = {
-  title: "Arena — Untiered",
-  description:
-    "Short, sharp practice rounds derived from every chapter of every course — spot the mistake, predict " +
-    "the output, say what happens next. Included free in the signed-in learning workspace.",
-};
+export const metadata: Metadata = { title: "Arena — Untiered", description: "Course-specific scenario practice." };
 
-/**
- * The signed-in Arena landing page. Daily sets are selected server-side from the real
- * corpus; account progress is the only part that needs the browser.
- */
 export default function ArenaPage() {
   requireFeature("arena");
   const visibleCourses = courses.filter((course) => courseEnabled(course.slug));
   if (visibleCourses.length === 0) notFound();
-  // Computed here, against the full corpus, server-side — only the resulting handful of
-  // challenges (at most 3 dates * number of courses * 3 questions) crosses into the client (task 056, L3).
-  const questsByDate = Object.fromEntries(
-    possibleDateKeysWorldwide().map((dateKey) => [
-      dateKey,
-      dailyCourseQuests(
-        allArenaChallenges,
-        visibleCourses.map(({ slug, title }) => ({ slug, title })),
-        dateKey,
-      ),
-    ]),
-  );
-
   return (
-    <AppShell breadcrumb="arena">
-      <ArenaDailyQuest questsByDate={questsByDate} />
-    </AppShell>
+    <AppShell breadcrumb="arena"><div className="space-y-8">
+      <SurfaceHeader eyebrow="Arena" title="Practise decisions, not flashcards" description="Choose a course and work through a real-world situation with deeper probes at every step." />
+      <div className="grid gap-5 md:grid-cols-2">{visibleCourses.map((course) => (
+        <Link key={course.slug} href={`/arena/${course.slug}`} className="card card-interactive group overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"><CourseArtwork courseSlug={course.slug} /><div className="p-5"><h2 className="text-heading text-ink group-hover:text-accent">{course.title}</h2><p className="mt-2 text-caption text-ink-muted">{course.tagline}</p><p className="mt-4 font-semibold text-accent">Open Arena →</p></div></Link>
+      ))}</div>
+    </div></AppShell>
   );
 }

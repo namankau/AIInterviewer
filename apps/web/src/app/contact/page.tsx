@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { LegalPage, LegalSection } from "@/components/legal-page";
-import { CONTACT_EMAIL_DISPLAY, LEGAL } from "@/lib/legal";
+import { LEGAL } from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -19,13 +19,9 @@ export default function ContactPage() {
     >
       <LegalSection id="email" title="Email">
         <p>
-          {LEGAL.contactEmail ? (
-            <a href={`mailto:${LEGAL.contactEmail}`} className="font-medium text-accent hover:underline">
-              {LEGAL.contactEmail}
-            </a>
-          ) : (
-            CONTACT_EMAIL_DISPLAY
-          )}
+          <a href={`mailto:${LEGAL.contactEmail}`} className="font-medium text-accent hover:underline">
+            {LEGAL.contactEmail}
+          </a>
         </p>
         <p>
           If something went wrong in an interview, include the date and the company you were

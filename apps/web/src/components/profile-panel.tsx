@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
+import { Tabs } from "@/components/ui/tabs";
 import { CONTROL_CLASS } from "@/components/ui/field";
 import {
   ApiRequestError,
@@ -204,24 +206,7 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
         }
       />
 
-      <div className="border-b border-line" role="tablist" aria-label="Profile sections">
-        <div className="nav-scroll flex gap-7 overflow-x-auto">
-          {PROFILE_TABS.filter((tab) => tab.id !== "reports" || reportsEnabled).map((tab) => (
-            <button
-              key={tab.id}
-              id={`profile-tab-${tab.id}`}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              aria-controls={`profile-panel-${tab.id}`}
-              onClick={() => setActiveTab(tab.id)}
-              className={`shrink-0 border-b-[3px] px-1 pb-3 text-caption font-semibold transition-colors ${activeTab === tab.id ? "border-accent text-accent-strong" : "border-transparent text-ink-muted hover:text-ink"}`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <Tabs tabs={PROFILE_TABS.filter((tab) => tab.id !== "reports" || reportsEnabled)} active={activeTab} onChange={(value) => setActiveTab(value as typeof activeTab)} label="Profile sections" idPrefix="profile" />
 
       <div
         id="profile-panel-overview"
@@ -382,7 +367,7 @@ export function ProfilePanel({ outlines = [] }: { outlines?: CourseOutline[] }) 
 function ProfileLoadingState() {
   return (
     <div role="status" aria-label="Loading your profile" className="flex animate-pulse flex-col gap-6">
-      <div className="h-32 rounded-[1.5rem] border border-line bg-surface-raised shadow-[var(--shadow-sm)]" />
+      <div className="h-32 rounded-surface border border-line bg-surface-raised shadow-[var(--shadow-sm)]" />
       <div className="h-16 rounded-2xl border border-line bg-surface-raised" />
       <div className="h-28 rounded-2xl border border-line bg-surface-raised" />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(17rem,0.7fr)]">
@@ -452,20 +437,13 @@ function ProfileHeader({
 
   return (
     <section aria-label="Profile identity" className="space-y-4">
-      <div className="relative overflow-hidden rounded-[1.65rem] bg-[linear-gradient(120deg,#3546b7,var(--navy))] px-6 py-8 text-on-navy shadow-[var(--shadow-md)] sm:px-9 sm:py-10">
-        <div aria-hidden="true" className="absolute -right-20 -top-28 size-72 rounded-full bg-white/8 blur-3xl" />
+      <div className="hero-band relative overflow-hidden px-6 py-8 text-on-navy sm:px-9 sm:py-10">
+        <div aria-hidden="true" className="absolute -right-20 -top-28 size-72 rounded-full bg-on-navy/8 blur-3xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-6">
           <div className="flex min-w-0 items-center gap-5 sm:gap-6">
             <div className="relative shrink-0">
-              {details?.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- signed, expiring API URL
-                <img src={details.avatarUrl} alt="Profile photo" className="size-20 rounded-[1.4rem] border-2 border-white/40 object-cover shadow-[var(--shadow-md)] sm:size-24" />
-              ) : (
-                <span aria-label="Profile photo placeholder" className="grid size-20 place-items-center rounded-[1.4rem] bg-[#a8e7d7] text-title font-bold text-navy shadow-[var(--shadow-md)] sm:size-24">
-                  {initialsOf(name)}
-                </span>
-              )}
-              <button type="button" onClick={() => avatarInput.current?.click()} disabled={disabled} aria-label={details?.avatarUrl ? "Change profile photo" : "Add profile photo"} className="absolute -bottom-2 -right-2 grid size-9 place-items-center rounded-full border-2 border-navy bg-accent text-heading text-white shadow-[var(--shadow-sm)] transition-transform hover:scale-105 disabled:opacity-50">
+              <Avatar src={details?.avatarUrl} alt="Profile photo" fallback={initialsOf(name)} className="border-2 border-on-navy/40 shadow-[var(--shadow-md)] sm:size-24" />
+              <button type="button" onClick={() => avatarInput.current?.click()} disabled={disabled} aria-label={details?.avatarUrl ? "Change profile photo" : "Add profile photo"} className="absolute -bottom-2 -right-2 grid size-11 place-items-center rounded-full border-2 border-navy bg-accent text-heading text-accent-contrast shadow-[var(--shadow-sm)] transition-transform hover:scale-105 disabled:opacity-50">
                 <span aria-hidden>{avatarBusy ? "…" : "+"}</span>
               </button>
               <input ref={avatarInput} type="file" accept="image/*" className="sr-only" onChange={(event) => {
@@ -480,10 +458,10 @@ function ProfileHeader({
               <p className="mt-2 text-caption text-on-navy-muted sm:text-body">
                 {[role, location].filter(Boolean).join(" · ") || "Make this space yours before your next round."}
               </p>
-              {details?.targetLevel ? <p className="mt-3 inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-micro font-semibold text-on-navy">Working toward {details.targetLevel}</p> : null}
+              {details?.targetLevel ? <p className="mt-3 inline-flex rounded-full border border-on-navy/20 bg-on-navy/10 px-3 py-1 text-micro font-semibold text-on-navy">Working toward {details.targetLevel}</p> : null}
             </div>
           </div>
-          <button type="button" onClick={onEdit} className="inline-flex min-h-11 items-center rounded-xl bg-white px-5 py-2.5 text-caption font-bold text-navy shadow-[var(--shadow-sm)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-accent-wash">
+          <button type="button" onClick={onEdit} className="inline-flex min-h-11 items-center rounded-xl bg-on-navy px-5 py-2.5 text-caption font-bold text-navy shadow-[var(--shadow-sm)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-on-navy/85">
             Edit profile
           </button>
         </div>

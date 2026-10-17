@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { ArenaCoursePractice } from "@/components/arena/arena-course-practice";
+import { Card } from "@/components/ui/card";
+import { SurfaceHeader } from "@/components/ui/surface-header";
 import { courses, getCourse } from "@/content/courses";
-import { challengesForCourse } from "@/lib/arena/corpus";
 import { courseEnabled, featureEnabled } from "@/lib/flags";
 import { requireArenaCourse } from "@/lib/require-feature";
 
@@ -15,105 +14,21 @@ export function generateStaticParams() {
   return courses.filter((course) => courseEnabled(course.slug)).map((course) => ({ course: course.slug }));
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ course: string }>;
-}): Promise<Metadata> {
-  const { course: courseSlug } = await params;
-  if (!featureEnabled("arena") || !courseEnabled(courseSlug)) return {};
-  const course = getCourse(courseSlug);
-  if (!course) return {};
-  return {
-    title: `${course.title} — Arena — Untiered`,
-    description: `Practise ${course.title} as short rounds derived from its own chapters.`,
-  };
+export async function generateMetadata({ params }: { params: Promise<{ course: string }> }): Promise<Metadata> {
+  const { course: slug } = await params;
+  const course = getCourse(slug);
+  return course ? { title: `${course.title} — Arena — Untiered`, description: `Scenario practice for ${course.title}.` } : {};
 }
 
-/**
- * One course's Arena — its modules as campaigns, rising in difficulty in the same order
- * the course teaches them (task 055: "the courses already have a module structure — use
- * it. This is nearly free"). Every count is real, from the derived corpus. Statically
- * generated, like `/courses/[course]` — the only client-rendered piece is
- * `ArenaCoursePractice`, which reads an optional `?chapter=` query string.
- */
 export default async function ArenaCoursePage({ params }: { params: Promise<{ course: string }> }) {
-  const { course: courseSlug } = await params;
-  requireArenaCourse(courseSlug);
-  const course = getCourse(courseSlug);
+  const { course: slug } = await params;
+  requireArenaCourse(slug);
+  const course = getCourse(slug);
   if (!course) notFound();
-
-  const challenges = challengesForCourse(course.slug);
-  const challengesByChapter = new Map<string, number>();
-  for (const challenge of challenges) {
-    challengesByChapter.set(challenge.chapterSlug, (challengesByChapter.get(challenge.chapterSlug) ?? 0) + 1);
-  }
-  const chapters = course.modules.flatMap((module) => module.chapters).map((c) => ({ slug: c.slug, title: c.title }));
-
   return (
     <AppShell breadcrumb={course.title.toLowerCase()} parent={{ label: "arena", href: "/arena" }}>
-      <div className="flex flex-col gap-10">
-        <header className="hero-band relative overflow-hidden px-7 py-9 sm:px-10 sm:py-11">
-          <div aria-hidden="true" className="absolute -right-16 -bottom-24 size-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative flex flex-col gap-4">
-            <p className="pill pill-navy w-fit">
-              {course.level} · personalised review
-            </p>
-            <h1 className="max-w-3xl text-display text-balance text-on-navy">{course.title}</h1>
-            <p className="max-w-2xl text-body leading-relaxed text-on-navy-muted">{course.tagline}</p>
-          </div>
-        </header>
-
-        <div className="rounded-2xl border border-line bg-surface-raised p-6 shadow-[var(--shadow-sm)] md:p-8">
-          <Suspense fallback={null}>
-            <ArenaCoursePractice key={course.slug} courseSlug={course.slug} chapters={chapters} />
-          </Suspense>
-        </div>
-
-        <section className="flex flex-col gap-6">
-          <div className="flex flex-col gap-1.5">
-            <h2 className="text-title text-ink">Practise one chapter</h2>
-            <p className="max-w-2xl text-caption text-ink-muted">
-              Modules run in the order the course teaches them. Pick a chapter to practise only its
-              questions; a chapter without questions yet opens the chapter itself.
-            </p>
-          </div>
-          {course.modules.map((module, moduleIndex) => (
-            <div key={module.title} className="flex flex-col gap-4 rounded-2xl border border-line bg-surface-raised px-6 py-5 shadow-[var(--shadow-sm)]">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="font-mono text-micro tracking-widest text-accent uppercase">
-                  Module {moduleIndex + 1}
-                </span>
-                <h3 className="text-heading text-ink">{module.title}</h3>
-              </div>
-              <ul className="flex flex-wrap gap-2">
-                {module.chapters.map((chapter) => {
-                  const count = challengesByChapter.get(chapter.slug) ?? 0;
-                  return (
-                    <li key={chapter.slug}>
-                      <Link
-                        href={
-                          count > 0
-                            ? `/arena/${course.slug}?chapter=${encodeURIComponent(chapter.slug)}`
-                            : `/courses/${course.slug}/${chapter.slug}`
-                        }
-                        aria-label={
-                          count > 0
-                            ? `Practise ${chapter.title}, ${count} question${count === 1 ? "" : "s"}`
-                            : `Read ${chapter.title}`
-                        }
-                        className="inline-flex rounded-full border border-line bg-surface-sunken px-3 py-1 text-caption text-ink-muted transition-colors hover:border-accent hover:bg-accent-wash hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-                      >
-                        {chapter.title}
-                        {count > 0 ? <span className="ml-1.5 text-ink-subtle">· {count}</span> : null}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-        </section>
+      <div className="space-y-8"><SurfaceHeader eyebrow="Scenario practice" title={`${course.title} Arena`} description={course.tagline} />
+        <Card className="p-6 md:p-8"><ArenaCoursePractice key={slug} courseSlug={slug} /></Card>
       </div>
     </AppShell>
   );

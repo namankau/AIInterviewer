@@ -121,7 +121,7 @@ export function LoopBriefStep({
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="relative overflow-hidden rounded-[1.5rem] bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] sm:p-9">
+      <header className="relative overflow-hidden rounded-surface bg-navy p-7 text-on-navy shadow-[var(--shadow-md)] sm:p-9">
         <div aria-hidden="true" className="absolute -top-20 -right-14 size-56 rounded-full bg-accent/25 blur-3xl" />
         <div className="relative flex flex-col gap-3">
         <p className="pill pill-navy w-fit">

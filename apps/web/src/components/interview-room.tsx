@@ -36,7 +36,7 @@ import { useQuestionAudio } from "@/lib/use-question-audio";
 // out of the first load for every other interview room.
 const DsaWorkspace = dynamic(() => import("@/components/dsa-workspace").then((module) => module.DsaWorkspace), {
   ssr: false,
-  loading: () => <div role="status" className="flex h-full items-center justify-center bg-navy text-white/80">Loading the editor…</div>,
+  loading: () => <div role="status" className="flex h-full items-center justify-center bg-navy text-on-navy-muted">Loading the editor…</div>,
 });
 
 /**
@@ -998,7 +998,7 @@ export function InterviewRoom({ sessionId }: { sessionId: string }) {
             : "mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center gap-10 px-6 py-16 sm:px-10"
         }
       >
-        <div className={`flex flex-col gap-5 ${workspace ? "" : "rounded-[2rem] border border-line bg-surface-raised p-7 shadow-[var(--shadow-md)] sm:p-10"}`}>
+        <div className={`flex flex-col gap-5 ${workspace ? "" : "rounded-surface border border-line bg-surface-raised p-7 shadow-[var(--shadow-md)] sm:p-10"}`}>
           <div className="flex items-center justify-between gap-4">
             <InterviewerPresence state={presenceState} level={capture.level} />
             {phase === "answering" ? (

@@ -20,8 +20,8 @@ export function SiteFooter() {
   ].filter((link): link is { href: Route; label: string } => link !== null);
 
   return (
-    <footer className="border-t border-white/10 bg-navy text-on-navy">
-      <div className="mx-auto grid max-w-[78rem] gap-10 px-6 py-12 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] lg:px-8">
+    <footer className="border-t border-on-navy/10 bg-navy text-on-navy">
+      <div className="layout-content mx-auto grid gap-10 px-6 py-12 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] lg:px-8">
         <div>
           <Link href="/" className="inline-flex items-center focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-on-navy" aria-label="Untiered home">
             <BrandWordmark inverse />
@@ -30,23 +30,23 @@ export function SiteFooter() {
         </div>
         <nav aria-label="Product" className="flex flex-col items-start gap-3">
           <h2 className="text-caption font-semibold text-on-navy">Product</h2>
-          {product.map((link) => <Link key={link.href} href={link.href} className="text-caption text-on-navy-muted transition-colors hover:text-on-navy">{link.label}</Link>)}
+          {product.map((link) => <Link key={link.href} href={link.href} className="inline-flex min-h-11 items-center text-caption text-on-navy-muted transition-colors hover:text-on-navy">{link.label}</Link>)}
         </nav>
         <nav aria-label="Legal" className="flex flex-col items-start gap-3">
           <h2 className="text-caption font-semibold text-on-navy">Legal</h2>
-          {LEGAL_LINKS.map((link) => <Link key={link.href} href={link.href} className="text-caption text-on-navy-muted transition-colors hover:text-on-navy">{link.label}</Link>)}
+          {LEGAL_LINKS.map((link) => <Link key={link.href} href={link.href} className="inline-flex min-h-11 items-center text-caption text-on-navy-muted transition-colors hover:text-on-navy">{link.label}</Link>)}
         </nav>
         <nav aria-label="Support" className="flex flex-col items-start gap-3">
           <h2 className="text-caption font-semibold text-on-navy">Support</h2>
-          <Link href="/contact" className="text-caption text-on-navy-muted transition-colors hover:text-on-navy">Contact us</Link>
+          <Link href="/contact" className="inline-flex min-h-11 items-center text-caption text-on-navy-muted transition-colors hover:text-on-navy">Contact us</Link>
           <SessionLink
             signedIn={{ href: "/dashboard", label: "Dashboard" }}
             signedOut={{ href: "/login", label: "Sign in" }}
-            className="text-caption text-on-navy-muted transition-colors hover:text-on-navy"
+            className="inline-flex min-h-11 items-center text-caption text-on-navy-muted transition-colors hover:text-on-navy"
           />
         </nav>
       </div>
-      <div className="mx-auto flex max-w-[78rem] flex-wrap justify-between gap-2 border-t border-white/10 px-6 py-5 text-micro text-on-navy-muted lg:px-8">
+      <div className="layout-content mx-auto flex flex-wrap justify-between gap-2 border-t border-on-navy/10 px-6 py-5 text-micro text-on-navy-muted lg:px-8">
         <span>© {new Date().getFullYear()} Untiered</span>
         <span>Your voice. Your progress. Your call.</span>
       </div>

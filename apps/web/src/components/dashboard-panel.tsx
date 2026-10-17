@@ -58,13 +58,13 @@ export function DashboardLoadingState() {
       <div className="hero-band min-h-44 animate-pulse px-6 py-7 sm:px-9 sm:py-8" aria-hidden="true">
         <div className="grid gap-7 lg:grid-cols-2 lg:gap-14">
           <div className="space-y-4">
-            <div className="h-3 w-32 rounded-full bg-white/15" />
-            <div className="h-9 w-full max-w-lg rounded-xl bg-white/12" />
-            <div className="h-4 w-full max-w-xl rounded-full bg-white/10" />
+            <div className="h-3 w-32 rounded-full bg-on-navy/15" />
+            <div className="h-9 w-full max-w-lg rounded-xl bg-on-navy/12" />
+            <div className="h-4 w-full max-w-xl rounded-full bg-on-navy/10" />
           </div>
           <div className="space-y-5">
-            <div className="h-5 rounded-full bg-white/10" />
-            <div className="h-5 rounded-full bg-white/10" />
+            <div className="h-5 rounded-full bg-on-navy/10" />
+            <div className="h-5 rounded-full bg-on-navy/10" />
           </div>
         </div>
       </div>
@@ -523,7 +523,7 @@ function AllowanceMeters({ entitlement, loaded }: { entitlement: EntitlementView
 
   if (meters.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/12 bg-white/8 px-5 py-4">
+      <div className="rounded-2xl border border-on-navy/12 bg-on-navy/8 px-5 py-4">
         <p className="eyebrow text-accent-on-navy">Open access</p>
         <p className="mt-2 text-caption text-on-navy">No daily round or minute limit is active.</p>
       </div>
@@ -541,8 +541,8 @@ function AllowanceMeters({ entitlement, loaded }: { entitlement: EntitlementView
               <dt className="text-on-navy-muted">{meter.label}</dt>
               <dd className="font-semibold text-on-navy">{meter.used} of {meter.limit}{unit} used</dd>
             </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15" aria-hidden>
-              <span className="block h-full rounded-full bg-[#a8e7d7]" style={{ width: `${percent}%` }} />
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-on-navy/15" aria-hidden>
+              <span className="block h-full rounded-full bg-accent-2" style={{ width: `${percent}%` }} />
             </div>
           </div>
         );
@@ -630,10 +630,10 @@ export function PastRoundsSection({
  * explanation is announced politely instead, and Cancel is one tab away.
  */
 const ROUND_TONES = [
-  { surface: "bg-[linear-gradient(110deg,var(--accent-wash),var(--surface-raised)_65%)]", edge: "border-l-accent", icon: "bg-accent text-white" },
-  { surface: "bg-[linear-gradient(110deg,var(--positive-wash),var(--surface-raised)_65%)]", edge: "border-l-positive", icon: "bg-positive text-white" },
-  { surface: "bg-[linear-gradient(110deg,var(--warning-wash),var(--surface-raised)_65%)]", edge: "border-l-warning", icon: "bg-warning text-white" },
-  { surface: "bg-[linear-gradient(110deg,var(--info-wash),var(--surface-raised)_65%)]", edge: "border-l-info", icon: "bg-info text-white" },
+  { surface: "bg-[linear-gradient(110deg,var(--accent-wash),var(--surface-raised)_65%)]", edge: "border-l-accent", icon: "bg-accent text-accent-contrast" },
+  { surface: "bg-[linear-gradient(110deg,var(--positive-wash),var(--surface-raised)_65%)]", edge: "border-l-positive", icon: "bg-positive text-positive-contrast" },
+  { surface: "bg-[linear-gradient(110deg,var(--warning-wash),var(--surface-raised)_65%)]", edge: "border-l-warning", icon: "bg-warning text-warning-contrast" },
+  { surface: "bg-[linear-gradient(110deg,var(--info-wash),var(--surface-raised)_65%)]", edge: "border-l-info", icon: "bg-info text-info-contrast" },
 ] as const;
 
 function PastRound({
@@ -692,7 +692,7 @@ function PastRound({
         {session.status === "completed" && !session.reportExpired ? (
           <Link
             href={`/report/${session.id}`}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-accent px-4 py-2 text-caption font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-accent-strong"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-4 py-2 text-caption font-semibold text-accent-contrast shadow-[var(--shadow-sm)] transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-accent-strong"
           >
             Read report <span aria-hidden="true">→</span>
           </Link>

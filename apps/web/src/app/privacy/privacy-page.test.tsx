@@ -26,12 +26,24 @@ describe("legal pages", () => {
     expect(screen.getByText(/never receives recordings of your voice/i)).toBeInTheDocument();
   });
 
-  it("shows an obvious gap, never an invented contact, when the owner has not set one", () => {
+  it("shows the confirmed support email and keeps the unset grievance officer visible", () => {
     render(<ContactPage />);
 
     expect(screen.getAllByText(/to be confirmed before launch/i).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("link", { name: /@/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "help@untiered.tech" })).toHaveAttribute(
+      "href",
+      "mailto:help@untiered.tech",
+    );
     expect(screen.getAllByRole("link", { name: "Sign in" }).length).toBeGreaterThan(0);
+  });
+
+  it("uses the same support email in the privacy policy and terms", () => {
+    const privacy = render(<PrivacyPage />);
+    expect(screen.getAllByText(/help@untiered\.tech/).length).toBe(2);
+
+    privacy.unmount();
+    render(<TermsPage />);
+    expect(screen.getByText(/help@untiered\.tech/)).toBeInTheDocument();
   });
 
   it("states the same daily allowance the API enforces", () => {

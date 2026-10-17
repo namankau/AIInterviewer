@@ -80,7 +80,7 @@ export function GuidedLessonControls({
       progress={{ allBeatsVisited, totalCount: beats.length, visitedCount: visitedBeats.size }}
     >
       <section aria-labelledby={`${lessonId}-title`}>
-        <header className="rounded-[1.35rem] border border-line bg-surface-raised px-5 py-6 shadow-[var(--shadow-sm)] sm:px-8 sm:py-7">
+        <header className="rounded-surface border border-line bg-surface-raised px-5 py-6 shadow-[var(--shadow-sm)] sm:px-8 sm:py-7">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="font-mono text-micro tracking-widest text-accent uppercase">Guided lesson</p>
@@ -110,7 +110,7 @@ export function GuidedLessonControls({
               data-testid={`lesson-beat-${beat.key}`}
               data-visited={visitedBeats.has(index) ? "true" : "false"}
               aria-labelledby={`${lessonId}-${beat.key}-title`}
-              className="scroll-mt-28 rounded-[1.35rem] border border-line bg-surface-raised px-5 py-8 shadow-[var(--shadow-sm)] sm:px-8 sm:py-10"
+              className="scroll-mt-28 rounded-surface border border-line bg-surface-raised px-5 py-8 shadow-[var(--shadow-sm)] sm:px-8 sm:py-10"
             >
               <div className="relative flex items-start gap-4">
                 <span className={`mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl border ${visitedBeats.has(index) ? "border-accent bg-accent text-accent-contrast" : "border-accent/25 bg-accent-wash text-accent"}`}><BeatIcon beat={beat.key} /></span>
@@ -133,7 +133,7 @@ export function GuidedLessonControls({
           {completion ? (
             <div className={`flex flex-wrap items-center justify-between gap-5 rounded-2xl border px-5 py-5 shadow-[var(--shadow-sm)] transition-colors sm:px-7 ${allBeatsVisited ? "border-positive/30 bg-[linear-gradient(110deg,var(--positive-wash),var(--surface-raised))]" : "border-line bg-surface-raised"}`}>
               <div className="flex min-w-0 items-start gap-4">
-                <span aria-hidden="true" className={`grid size-11 shrink-0 place-items-center rounded-xl ${allBeatsVisited ? "bg-positive text-white" : "bg-surface-sunken text-ink-muted"}`}>
+                <span aria-hidden="true" className={`grid size-11 shrink-0 place-items-center rounded-xl ${allBeatsVisited ? "bg-positive text-positive-contrast" : "bg-surface-sunken text-ink-muted"}`}>
                   <BeatIcon beat="check" />
                 </span>
                 <div>

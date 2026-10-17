@@ -5,6 +5,8 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { FieldHint, FieldLabel, Input } from "@/components/ui/field";
+import { Alert } from "@/components/ui/feedback";
 import { TurnstileChallenge } from "@/components/turnstile-challenge";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -102,17 +104,14 @@ export function EmailPasswordAuth({ next }: { next: string }) {
     }
   }
 
-  const fieldClass =
-    "min-h-11 w-full rounded-xl border border-line bg-surface px-4 text-body text-ink outline-none transition focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30";
-
   return (
     <div className="flex flex-col gap-5">
       {mode !== "forgot" ? (
         <div role="group" className="grid grid-cols-2 rounded-xl bg-surface-tint p-1" aria-label="Email account action">
-          <button type="button" onClick={() => changeMode("sign-in")} aria-pressed={mode === "sign-in"} className={`min-h-10 rounded-lg text-caption font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${mode === "sign-in" ? "bg-surface-raised text-ink shadow-sm" : "text-ink-muted hover:text-ink"}`}>
+          <button type="button" onClick={() => changeMode("sign-in")} aria-pressed={mode === "sign-in"} className={`min-h-11 rounded-lg text-caption font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${mode === "sign-in" ? "bg-surface-raised text-ink shadow-sm" : "text-ink-muted hover:text-ink"}`}>
             Sign in
           </button>
-          <button type="button" onClick={() => changeMode("sign-up")} aria-pressed={mode === "sign-up"} className={`min-h-10 rounded-lg text-caption font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${mode === "sign-up" ? "bg-surface-raised text-ink shadow-sm" : "text-ink-muted hover:text-ink"}`}>
+          <button type="button" onClick={() => changeMode("sign-up")} aria-pressed={mode === "sign-up"} className={`min-h-11 rounded-lg text-caption font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${mode === "sign-up" ? "bg-surface-raised text-ink shadow-sm" : "text-ink-muted hover:text-ink"}`}>
             Create account
           </button>
         </div>
@@ -125,25 +124,25 @@ export function EmailPasswordAuth({ next }: { next: string }) {
 
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="auth-email" className="text-caption font-semibold text-ink">Email address</label>
-          <input id="auth-email" className={fieldClass} type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} disabled={pending} />
+          <FieldLabel htmlFor="auth-email">Email address</FieldLabel>
+          <Input id="auth-email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} disabled={pending} />
         </div>
         {mode !== "forgot" ? (
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="auth-password" className="text-caption font-semibold text-ink">Password</label>
-            <input id="auth-password" className={fieldClass} type="password" autoComplete={mode === "sign-up" ? "new-password" : "current-password"} minLength={mode === "sign-up" ? 8 : undefined} required value={password} onChange={(event) => setPassword(event.target.value)} disabled={pending} />
-            {mode === "sign-up" ? <p className="text-micro text-ink-subtle">Use at least 8 characters.</p> : null}
+            <FieldLabel htmlFor="auth-password">Password</FieldLabel>
+            <Input id="auth-password" type="password" autoComplete={mode === "sign-up" ? "new-password" : "current-password"} minLength={mode === "sign-up" ? 8 : undefined} required value={password} onChange={(event) => setPassword(event.target.value)} disabled={pending} aria-describedby={mode === "sign-up" ? "auth-password-hint" : undefined} />
+            {mode === "sign-up" ? <FieldHint id="auth-password-hint">Use at least 8 characters.</FieldHint> : null}
           </div>
         ) : null}
         {mode === "sign-up" ? (
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="auth-confirm-password" className="text-caption font-semibold text-ink">Confirm password</label>
-            <input id="auth-confirm-password" className={fieldClass} type="password" autoComplete="new-password" required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} disabled={pending} />
+            <FieldLabel htmlFor="auth-confirm-password">Confirm password</FieldLabel>
+            <Input id="auth-confirm-password" type="password" autoComplete="new-password" required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} disabled={pending} />
           </div>
         ) : null}
         {turnstileSiteKey ? <TurnstileChallenge key={challengeAttempt} siteKey={turnstileSiteKey} onToken={setCaptchaToken} /> : null}
-        {error ? <p role="alert" className="text-caption text-danger">{error}</p> : null}
-        {success ? <p role="status" className="text-caption text-positive">{success}</p> : null}
+        {error ? <Alert tone="error">{error}</Alert> : null}
+        {success ? <Alert tone="success">{success}</Alert> : null}
         <Button type="submit" disabled={pending || (Boolean(turnstileSiteKey) && !captchaToken)} aria-busy={pending} className="w-full">
           {pending ? "Please wait…" : mode === "sign-up" ? "Create account" : mode === "forgot" ? "Send reset link" : "Sign in with email"}
         </Button>

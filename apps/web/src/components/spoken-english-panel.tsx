@@ -1,4 +1,5 @@
 import type { ReportSpokenEnglish } from "@untiered/shared";
+import { Table } from "@/components/ui/table";
 
 /**
  * The report's "Spoken English" section (PRD 09).
@@ -152,7 +153,7 @@ function PerAnswer({ spoken }: { spoken: ReportSpokenEnglish }) {
         Answer by answer
       </summary>
       <div className="overflow-x-auto pt-3">
-        <table className="w-full min-w-[32rem] text-left text-caption">
+        <Table className="min-w-128">
           <caption className="sr-only">Measured timing for each answer</caption>
           <thead className="text-ink-subtle">
             <tr className="border-b border-line">
@@ -178,7 +179,7 @@ function PerAnswer({ spoken }: { spoken: ReportSpokenEnglish }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
         <p className="pt-2 text-caption text-ink-subtle">
           A dash means that answer could not be measured — too short to pace, or no timing was
           recorded for it.

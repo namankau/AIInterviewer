@@ -77,7 +77,7 @@ const privateItems = [
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-white/15 bg-white/10 px-5 py-4 backdrop-blur-sm">
+    <div className="rounded-2xl border border-on-navy/15 bg-on-navy/10 px-5 py-4 backdrop-blur-sm">
       <p className="text-title font-extrabold text-on-navy">{value}</p>
       <p className="mt-1 text-caption leading-relaxed text-on-navy-muted">{label}</p>
     </div>

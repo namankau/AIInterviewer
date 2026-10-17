@@ -144,7 +144,7 @@ export function AccountSummary() {
 }
 
 const MENU_ITEM =
-  "flex w-full items-center rounded-lg px-3 py-2 text-left text-caption text-ink transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60";
+  "flex min-h-11 w-full items-center rounded-lg px-3 py-2 text-left text-caption text-ink transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60";
 
 /**
  * A disclosure rather than an ARIA `menu`: it is a short list of links and one button, and
@@ -201,7 +201,7 @@ function AccountMenu({ me }: { me: MeResponse }) {
       >
         <span
           aria-hidden
-          className="grid size-10 shrink-0 place-items-center rounded-full bg-[#a8e7d7] text-caption font-bold text-navy ring-1 ring-white"
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-avatar-fill text-caption font-bold text-avatar-ink ring-1 ring-line"
         >
           {initialsOf(name)}
         </span>
@@ -221,11 +221,11 @@ function AccountMenu({ me }: { me: MeResponse }) {
       </button>
 
       {open ? (
-        <ul id={menuId} className="absolute top-[calc(100%+0.5rem)] right-0 z-50 flex min-w-56 flex-col gap-0.5 rounded-xl border border-line bg-surface-raised p-1.5 shadow-[var(--shadow-lg)]">
+        <ul id={menuId} className="z-overlay absolute top-full right-0 mt-2 flex min-w-56 flex-col gap-0.5 rounded-xl border border-line bg-surface-raised p-1.5 shadow-[var(--shadow-lg)]">
           <li>
             <Link
               href={"/upgrade" as Route}
-              className="mb-1 flex w-full items-center justify-between rounded-lg bg-accent-wash px-3 py-2.5 text-left text-caption font-semibold text-accent-strong transition-colors hover:bg-accent hover:text-accent-contrast"
+              className="mb-1 flex min-h-11 w-full items-center justify-between rounded-lg bg-accent-wash px-3 py-2.5 text-left text-caption font-semibold text-accent-strong transition-colors hover:bg-accent hover:text-accent-contrast"
               onClick={() => setOpen(false)}
             >
               Explore Untiered Pro <span aria-hidden>→</span>

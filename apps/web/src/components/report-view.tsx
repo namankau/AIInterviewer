@@ -117,7 +117,7 @@ function ReportLoadAttempt({
     return (
       <section
         aria-labelledby="expired"
-        className="flex flex-col items-start gap-5 rounded-[1.5rem] border border-line bg-surface-raised p-7 shadow-[var(--shadow-md)] sm:p-10"
+        className="flex flex-col items-start gap-5 rounded-surface border border-line bg-surface-raised p-7 shadow-[var(--shadow-md)] sm:p-10"
       >
         <p className="pill pill-highlight">
           No longer held
@@ -155,7 +155,7 @@ function ReportLoadAttempt({
 
   if (waitTimedOut) {
     return (
-      <section className="rounded-[1.5rem] border border-line bg-surface-raised p-7 shadow-[var(--shadow-md)] sm:p-10">
+      <section className="rounded-surface border border-line bg-surface-raised p-7 shadow-[var(--shadow-md)] sm:p-10">
         <h1 className="text-display text-ink">Your report is taking longer than expected.</h1>
         <p className="mt-3 max-w-prose text-body text-ink-muted">
           Your interview is saved. We could not finish loading the report yet.
@@ -181,7 +181,7 @@ function ReportLoadAttempt({
 /** A useful waiting room for the model-written report, without inventing a score. */
 export function ReportLoadingState() {
   return (
-    <section role="status" aria-labelledby="report-loading" className="overflow-hidden rounded-[2rem] border border-line bg-surface-raised shadow-[var(--shadow-md)]">
+    <section role="status" aria-labelledby="report-loading" className="overflow-hidden rounded-surface border border-line bg-surface-raised shadow-[var(--shadow-md)]">
       <div className="hero-band relative overflow-hidden px-6 py-8 sm:px-9 sm:py-10">
         <div aria-hidden="true" className="absolute -right-20 -top-24 size-72 rounded-full bg-accent/25 blur-3xl" />
         <div className="relative max-w-3xl">
@@ -277,7 +277,7 @@ export function ReportDocument({ report, detailed = true }: { report: SessionRep
                 background: `conic-gradient(var(--${headlineTone}) ${headlineScore}%, rgba(255,255,255,0.16) 0)`,
               }}
             >
-              <div className="grid size-full place-items-center rounded-full bg-[#303b94] text-center">
+              <div className="grid size-full place-items-center rounded-full bg-navy-raised text-center">
                 <span>
                   <strong className="block text-title text-on-navy">{headlineScore}%</strong>
                   <span className="block max-w-20 text-micro text-accent-on-navy">{headlineBand.name}</span>

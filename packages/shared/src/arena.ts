@@ -79,3 +79,26 @@ export interface ImportArenaProgressRequest {
   badgeIds: string[];
   cards: ImportedArenaCard[];
 }
+
+/** Authored, server-graded scenario Arena. Answer keys appear only after grading. */
+export interface ScenarioOption { id: string; text: string }
+export interface ScenarioSystemState { nodes: string[]; links: [string, string][] }
+export interface ScenarioPublicView {
+  id: string; courseId: string; title: string; hook: string; context: string;
+  tier: string; estimatedMinutes: number;
+}
+export interface ScenarioStepView {
+  id: string; position: number; kind: "initial" | "probe"; stepType: string;
+  prompt: string; contextNote: string | null; options: ScenarioOption[];
+  codeSnippet: string | null; language: string | null;
+  systemState: ScenarioSystemState | null;
+}
+export interface ScenarioPlayView { scenario: ScenarioPublicView | null; step: ScenarioStepView | null }
+export interface ScenarioAnswerView {
+  correct: boolean; correctOptionId: string; explanation: string; bottleneckNote: string;
+  nextStep: ScenarioStepView | null; solutionBrief: string | null; conceptsCovered: string[];
+}
+export interface ScenarioCourseProgressView {
+  scenariosDone: number; activeScenarioId: string | null; unlockedTier: number;
+  weakestConcepts: { id: string; name: string; score: number }[];
+}

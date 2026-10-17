@@ -3,7 +3,7 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { BrandWordmark } from "@/components/brand-logo";
+import { BrandMark, BrandWordmark } from "@/components/brand-logo";
 import { ActionLink } from "@/components/ui/action-link";
 import { Testimonials } from "@/components/testimonials";
 import { courses, totalChapters, totalMinutes } from "@/content/courses";
@@ -67,27 +67,28 @@ export default function LandingPage() {
 
 function SiteHeader({ mockInterviewsEnabled, coursesEnabled }: { mockInterviewsEnabled: boolean; coursesEnabled: boolean }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-surface-raised/90 shadow-[var(--shadow-sm)] backdrop-blur-xl">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
-        <Link href="/" className="flex items-center gap-2.5 focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent" aria-label="Untiered home">
-          <BrandWordmark />
+    <header className="z-sticky sticky top-0 border-b border-line bg-surface-raised/90 shadow-[var(--shadow-sm)] backdrop-blur-xl">
+      <div className="mx-auto flex layout-content items-center justify-between gap-6 px-6 py-4">
+        <Link href="/" className="flex min-h-11 items-center gap-2.5 focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent" aria-label="Untiered home">
+          <span className="sm:hidden"><BrandMark /></span>
+          <span className="hidden sm:block"><BrandWordmark /></span>
           <span className="hidden font-mono text-micro tracking-widest text-ink-subtle uppercase sm:inline">
             beta
           </span>
         </Link>
         <nav aria-label="Site" className="hidden items-center gap-8 md:flex">
           {mockInterviewsEnabled ? (
-            <Link href="/interview/new" className="text-caption font-medium text-ink-muted hover:text-ink">Mock interviews</Link>
+            <Link href="/interview/new" className="inline-flex min-h-11 items-center text-caption font-medium text-ink-muted hover:text-ink">Mock interviews</Link>
           ) : null}
           {coursesEnabled ? (
-            <Link href={"/courses" as Route} className="text-caption font-medium text-ink-muted hover:text-ink">Courses</Link>
+            <Link href={"/courses" as Route} className="inline-flex min-h-11 items-center text-caption font-medium text-ink-muted hover:text-ink">Courses</Link>
           ) : null}
         </nav>
         <div className="flex items-center gap-3">
           <SessionLink
             signedIn={{ href: "/dashboard", label: "Dashboard" }}
             signedOut={{ href: "/login", label: "Sign in" }}
-            className="hidden rounded-lg px-3 py-2 text-caption font-medium text-ink transition-colors hover:bg-surface-sunken sm:inline-block"
+            className="hidden min-h-11 items-center rounded-lg px-3 py-2 text-caption font-medium text-ink transition-colors hover:bg-surface-sunken sm:inline-flex"
           />
           <ActionLink href={coursesEnabled && !mockInterviewsEnabled ? "/courses" : mockInterviewsEnabled ? "/interview/new" : "/login"} size="sm">
             {mockInterviewsEnabled ? "Start free" : coursesEnabled ? "Start learning" : "Sign in"}
@@ -110,7 +111,7 @@ function Hero({
   const learningHref = coursesEnabled ? "/courses" : arenaEnabled ? "/arena" : "/login";
   return (
     <section className="bg-navy text-on-navy">
-      <div className={`mx-auto grid max-w-6xl gap-14 px-6 py-20 lg:items-center lg:gap-10 lg:py-28 ${mockInterviewsEnabled ? "lg:grid-cols-[1.1fr_1fr]" : "lg:grid-cols-[1.25fr_.75fr]"}`}>
+      <div className={`mx-auto grid layout-content gap-14 px-6 py-20 lg:items-center lg:gap-10 lg:py-28 ${mockInterviewsEnabled ? "lg:grid-cols-[1.1fr_1fr]" : "lg:grid-cols-[1.25fr_.75fr]"}`}>
         <div className="flex flex-col gap-7">
           <span className="pill pill-navy w-fit">Talent has no tiers.</span>
           <h1 className="text-hero text-balance text-on-navy">
@@ -127,12 +128,12 @@ function Hero({
           </p>
           <div className="flex flex-wrap items-center gap-4 pt-1">
             {mockInterviewsEnabled ? (
-              <Link href="/interview/new" className="rounded-lg bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-colors hover:bg-accent-strong">Take a free interview</Link>
+              <ActionLink href="/interview/new" size="lg">Take a free interview</ActionLink>
             ) : (
-              <Link href={learningHref as Route} className="rounded-lg bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-colors hover:bg-accent-strong">Start learning</Link>
+              <ActionLink href={learningHref as Route} size="lg">Start learning</ActionLink>
             )}
             {coursesEnabled && mockInterviewsEnabled ? (
-              <Link href={"/courses" as Route} className="rounded-lg border border-white/20 px-7 py-3.5 text-body font-semibold text-on-navy transition-colors hover:bg-white/10">Explore free courses</Link>
+              <ActionLink href={"/courses" as Route} variant="onDark" size="lg">Explore free courses</ActionLink>
             ) : null}
           </div>
           <p className="text-caption text-on-navy-muted">{mockInterviewsEnabled ? "Every round free while we build. Full report included, no card." : "Free learning paths. Sign in once and continue where you stopped."}</p>
@@ -158,7 +159,7 @@ function LearningVisual({ coursesEnabled, arenaEnabled }: { coursesEnabled: bool
   return (
     <div className="grid gap-4">
       {cards.map((card, index) => (
-        <div key={card.eyebrow} className={`card border-white/10 p-6 shadow-[var(--shadow-lg)] ${index === 1 ? "sm:ml-10" : ""}`}>
+        <div key={card.eyebrow} className={`card border-on-navy/10 p-6 shadow-[var(--shadow-lg)] ${index === 1 ? "sm:ml-10" : ""}`}>
           <p className="font-mono text-micro tracking-widest text-accent uppercase">{card.eyebrow}</p>
           <p className="mt-3 text-heading font-bold text-ink">{card.title}</p>
           <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-surface-sunken"><span className="block h-full w-2/3 rounded-full bg-accent" /></div>
@@ -258,7 +259,7 @@ function EmployerStrip() {
   ];
   return (
     <section className="border-b border-line bg-surface-sunken">
-      <div className="mx-auto max-w-6xl px-6 py-8">
+      <div className="mx-auto layout-content px-6 py-8">
         <p className="pb-4 text-center font-mono text-micro tracking-widest text-ink-subtle uppercase">
           Rounds built for interviews at
         </p>
@@ -291,7 +292,7 @@ function VoiceSection() {
   ];
   return (
     <section className="border-b border-line">
-      <div className="mx-auto max-w-6xl px-6 py-20">
+      <div className="mx-auto layout-content px-6 py-20">
         <div className="flex flex-col gap-3 pb-10">
           <span className="pill pill-accent w-fit">Voice mock interviews</span>
           <h2 className="text-display text-balance text-ink">Practice by talking, not by typing.</h2>
@@ -316,7 +317,7 @@ function VoiceSection() {
 function TranscriptSample() {
   return (
     <section className="border-b border-line bg-surface-sunken">
-      <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+      <div className="mx-auto grid layout-content gap-10 px-6 py-20 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
         <div className="flex flex-col gap-4">
           <h2 className="text-display text-balance text-ink">It listens to the answer.</h2>
           <p className="max-w-md text-body text-ink-muted">
@@ -416,7 +417,7 @@ function Coverage() {
 
   return (
     <section className="border-b border-line">
-      <div className="mx-auto max-w-6xl px-6 py-20">
+      <div className="mx-auto layout-content px-6 py-20">
         <div className="flex flex-col gap-3 pb-10">
           <h2 className="text-display text-balance text-ink">The loops most tools skip.</h2>
           <p className="max-w-2xl text-body text-ink-muted">
@@ -477,7 +478,7 @@ function ReportContents() {
 
   return (
     <section className="border-b border-line bg-surface-sunken">
-      <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+      <div className="mx-auto grid layout-content gap-10 px-6 py-20 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
         <div className="flex flex-col gap-4">
           <span className="pill pill-accent w-fit">The feedback report</span>
           <h2 className="text-display text-balance text-ink">The report is the product.</h2>
@@ -524,7 +525,7 @@ function Courses({
 }) {
   return (
     <section className="border-b border-line">
-      <div className="mx-auto max-w-6xl px-6 py-20">
+      <div className="mx-auto layout-content px-6 py-20">
         <div className="flex flex-col gap-3 pb-10">
           <span className="pill pill-highlight w-fit">Free courses</span>
           <h2 className="text-display text-balance text-ink">Study before you sit the round.</h2>
@@ -573,7 +574,7 @@ function HowItWorks() {
   ];
   return (
     <section className="border-b border-line bg-surface-sunken">
-      <div className="mx-auto max-w-6xl px-6 py-20">
+      <div className="mx-auto layout-content px-6 py-20">
         <h2 className="pb-10 text-display text-balance text-ink">How it works.</h2>
         <ol className="grid gap-8 sm:grid-cols-3">
           {steps.map((s) => (
@@ -606,7 +607,7 @@ function CtaBand({
   const href = mockInterviewsEnabled ? "/interview/new" : coursesEnabled ? "/courses" : arenaEnabled ? "/arena" : "/login";
   return (
     <section className="bg-navy text-on-navy">
-      <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-6 py-20">
+      <div className="mx-auto flex layout-content flex-col items-start gap-6 px-6 py-20">
         <h2 className="text-display text-balance text-on-navy">
           {mockInterviewsEnabled ? "Every round is free right now." : "Keep building the skill behind the answer."}
         </h2>
@@ -615,12 +616,9 @@ function CtaBand({
             ? "Not a trial round, and not a sample report — the whole thing, as many times as you want, while we are still building it. No card. When there is something worth charging for, we will say so before we charge for it."
             : "Choose a learning path, practise what you studied, and come back with a stronger explanation than the one you had yesterday."}
         </p>
-        <Link
-          href={href as Route}
-          className="rounded-lg bg-accent px-7 py-3.5 text-body font-semibold text-accent-contrast shadow-[var(--shadow-md)] transition-colors hover:bg-accent-strong"
-        >
+        <ActionLink href={href as Route} size="lg">
           {mockInterviewsEnabled ? "Start an interview" : coursesEnabled ? "Explore courses" : arenaEnabled ? "Open the Arena" : "Sign in"}
-        </Link>
+        </ActionLink>
       </div>
     </section>
   );

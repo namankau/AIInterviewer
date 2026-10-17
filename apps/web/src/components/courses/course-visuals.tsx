@@ -1,15 +1,15 @@
 const artwork: Record<string, string> = {
-  java: "from-[#fff0d9] to-[#f7e6d5]",
-  dsa: "from-[#dcf5ef] to-[#e5ecff]",
-  "ai-agents": "from-[#ebe6ff] to-[#e3efff]",
-  "system-design": "from-[#e2ebff] to-[#f1e9ff]",
+  java: "from-course-java-start to-course-java-end",
+  dsa: "from-course-dsa-start to-course-dsa-end",
+  "ai-agents": "from-course-ai-start to-course-ai-end",
+  "system-design": "from-course-design-start to-course-design-end",
 };
 
 export function CourseArtwork({ courseSlug }: { courseSlug: string }) {
   return (
     <div className={`relative flex h-28 items-center justify-center overflow-hidden bg-gradient-to-br ${artwork[courseSlug] ?? artwork.dsa}`}>
-      <span aria-hidden="true" className="absolute -left-5 -top-12 size-36 rotate-12 rounded-[2rem] border-[18px] border-white/35" />
-      <span aria-hidden="true" className="absolute -bottom-20 -right-8 size-44 -rotate-12 rounded-[2.5rem] border-[20px] border-white/40" />
+      <span aria-hidden="true" className="absolute -left-5 -top-12 size-36 rotate-12 rounded-surface border-[18px] border-on-navy/35" />
+      <span aria-hidden="true" className="absolute -bottom-20 -right-8 size-44 -rotate-12 rounded-[2.5rem] border-[20px] border-on-navy/40" />
       <div className="relative scale-90 transition-transform duration-200 group-hover:scale-100"><CourseMotif courseSlug={courseSlug} large /></div>
     </div>
   );

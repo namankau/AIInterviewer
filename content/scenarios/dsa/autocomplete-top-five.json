@@ -1,0 +1,147 @@
+{
+  "course_slug": "dsa",
+  "slug": "autocomplete-top-five",
+  "title": "Autocomplete under 50 ms",
+  "hook": "A search box needs five suggestions for each typed prefix in under 50 ms. What data structure fits?",
+  "context": "Search suggestion service; query frequencies change throughout the day",
+  "tier": "foundations",
+  "concept_ids": [
+    "trie",
+    "top-k"
+  ],
+  "estimated_minutes": 7,
+  "status": "live",
+  "solution_brief": "Use a trie and cache top five suggestions at each prefix node for O(L + 5) query work, where L is prefix length. This spends O(5 \u00d7 total indexed prefix nodes) extra references. Batch frequency updates; a full sort at query time loses the latency budget.",
+  "steps": [
+    {
+      "kind": "initial",
+      "step_type": "algo_choice",
+      "prompt": "Which structure finds the prefix without scanning every query string?",
+      "options": [
+        {
+          "id": "a",
+          "text": "A trie keyed by characters"
+        },
+        {
+          "id": "b",
+          "text": "An unsorted array scanned linearly"
+        },
+        {
+          "id": "c",
+          "text": "A stack of recent queries"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A walks the prefix in L characters. B costs a scan over all N strings. C has recency order but no prefix index.",
+      "bottleneck_note": "A trie indexes prefixes directly.",
+      "concept_ids": [
+        "trie"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "complexity",
+      "prompt": "With prefix length L, what is trie lookup time before collecting suggestions?",
+      "options": [
+        {
+          "id": "a",
+          "text": "O(L)"
+        },
+        {
+          "id": "b",
+          "text": "O(N)"
+        },
+        {
+          "id": "c",
+          "text": "O(L log N)"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A follows one edge per character. B describes a scan of all N entries. C adds a logarithmic search that a character-edge lookup does not perform.",
+      "bottleneck_note": "The number of stored queries does not appear in prefix traversal time.",
+      "concept_ids": [
+        "trie"
+      ],
+      "context_note": "The trie is already built in memory."
+    },
+    {
+      "kind": "probe",
+      "step_type": "algo_choice",
+      "prompt": "How can the endpoint return top five without traversing a huge subtree per keystroke?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Store a precomputed top-five list at each prefix node"
+        },
+        {
+          "id": "b",
+          "text": "Sort every matching query on every request"
+        },
+        {
+          "id": "c",
+          "text": "Return the first five insertion-order leaves"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A makes collection bounded to five after lookup. B grows with the matching set. C does not produce the highest-frequency suggestions.",
+      "bottleneck_note": "Precomputation trades memory and update work for read latency.",
+      "concept_ids": [
+        "top-k"
+      ],
+      "context_note": "A popular prefix has millions of matching queries."
+    },
+    {
+      "kind": "probe",
+      "step_type": "tradeoff",
+      "prompt": "What is the main cost of caching five suggestions at each node?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Up to five suggestion references per indexed prefix node plus update work"
+        },
+        {
+          "id": "b",
+          "text": "Exactly five bytes total"
+        },
+        {
+          "id": "c",
+          "text": "No update cost because the trie is immutable"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A scales with nodes and changes in frequency. B ignores pointers and node count. C contradicts live frequency updates.",
+      "bottleneck_note": "Measure indexed prefix nodes, not just the count of full terms.",
+      "concept_ids": [
+        "top-k"
+      ],
+      "context_note": "The team agrees to cache top five per node."
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "The query log updates every second and traffic reaches a billion daily requests. What should be separated?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Batch ranking updates from the read-serving trie and atomically publish refreshed snapshots"
+        },
+        {
+          "id": "b",
+          "text": "Sort the full log for each keystroke"
+        },
+        {
+          "id": "c",
+          "text": "Mutate every ancestor node synchronously inside the user request"
+        }
+      ],
+      "correct_option_id": "a",
+      "explanation": "A keeps reads predictable and permits slightly stale popularity. B scales with log volume per request. C makes user latency depend on update fan-out.",
+      "bottleneck_note": "Freshness can be seconds while the 50 ms read target stays firm.",
+      "concept_ids": [
+        "trie",
+        "top-k"
+      ],
+      "context_note": "Read traffic now dwarfs frequency-update traffic."
+    }
+  ]
+}

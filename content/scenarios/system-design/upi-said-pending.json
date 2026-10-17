@@ -1,0 +1,294 @@
+{
+  "course_slug": "system-design",
+  "slug": "upi-said-pending",
+  "title": "UPI Said Pending",
+  "hook": "A customer's bank shows the money debited, but your app says the order failed. They screenshot it, post it, and ten more people report the same thing.",
+  "context": "Checkout flow integrated with a payment gateway and UPI, with an order service and an inventory service.",
+  "tier": "advanced",
+  "concept_ids": [
+    "unknown-outcomes",
+    "idempotency-keys",
+    "reconciliation",
+    "outbox-pattern",
+    "saga-compensation"
+  ],
+  "estimated_minutes": 14,
+  "status": "live",
+  "solution_brief": "Treat timeouts as unknown, give every payment a stable identity, verify state through webhooks plus polling plus reconciliation, publish events through an outbox, and compensate with refunds when later steps fail. PENDING is a first-class state. Idempotency key per payment attempt. Webhook, status poller and settlement reconciliation. Transactional outbox for reliable events. Saga with idempotent compensating refund.",
+  "steps": [
+    {
+      "kind": "initial",
+      "step_type": "design_choice",
+      "prompt": "Your code calls the payment gateway. The call times out after 10 seconds, so you mark the order FAILED. Later the gateway confirms the payment succeeded. What was the design mistake?",
+      "context_note": "A timeout is not a failure. It is silence.",
+      "system_state": {
+        "nodes": [
+          "checkout",
+          "payment-gateway",
+          "bank"
+        ],
+        "links": [
+          [
+            "checkout",
+            "payment-gateway"
+          ],
+          [
+            "payment-gateway",
+            "bank"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "The timeout was too short, so use 5 minutes."
+        },
+        {
+          "id": "b",
+          "text": "Treating a timeout as failure. The outcome is unknown, so the order should be PENDING until the payment state is confirmed."
+        },
+        {
+          "id": "c",
+          "text": "Using UPI at all."
+        },
+        {
+          "id": "d",
+          "text": "Not retrying fast enough."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "When a call times out you do not know whether the other side processed it. Modelling an explicit PENDING state avoids declaring failure on money that may already have moved. A longer timeout reduces but never eliminates uncertain outcomes.",
+      "bottleneck_note": "Distributed calls have three outcomes: success, failure and unknown. Model all three.",
+      "concept_ids": [
+        "unknown-outcomes"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "While the order is PENDING the user taps Pay again. Without protection, what can happen and how do you prevent it?",
+      "context_note": "Humans retry when screens spin.",
+      "system_state": {
+        "nodes": [
+          "user",
+          "checkout",
+          "payment-gateway",
+          "payment-attempts-db"
+        ],
+        "links": [
+          [
+            "user",
+            "checkout"
+          ],
+          [
+            "checkout",
+            "payment-gateway"
+          ],
+          [
+            "checkout",
+            "payment-attempts-db"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Nothing bad can happen."
+        },
+        {
+          "id": "b",
+          "text": "A second charge may be created. Use a unique payment attempt id per order as an idempotency key, enforce uniqueness in your database, and send it to the gateway so repeats return the original attempt."
+        },
+        {
+          "id": "c",
+          "text": "Disable the Pay button forever."
+        },
+        {
+          "id": "d",
+          "text": "Show an error and ask the user to call support."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "Idempotency keys make repeated submissions of the same logical payment collapse into one. Enforcing uniqueness in your own database as well as at the gateway protects against both client double-taps and server retries.",
+      "bottleneck_note": "Every money-moving call needs a stable identity.",
+      "concept_ids": [
+        "idempotency-keys"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "PENDING orders must eventually become SUCCESS or FAILED. The gateway sends webhooks, but webhooks can be delayed, duplicated or lost. How do you resolve pending payments reliably?",
+      "context_note": "Waiting for a webhook alone is not reliable.",
+      "system_state": {
+        "nodes": [
+          "gateway",
+          "webhook-handler",
+          "status-poller",
+          "order-db",
+          "settlement-file"
+        ],
+        "links": [
+          [
+            "gateway",
+            "webhook-handler"
+          ],
+          [
+            "status-poller",
+            "gateway"
+          ],
+          [
+            "webhook-handler",
+            "order-db"
+          ],
+          [
+            "status-poller",
+            "order-db"
+          ],
+          [
+            "settlement-file",
+            "order-db"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Rely only on webhooks."
+        },
+        {
+          "id": "b",
+          "text": "Combine idempotent webhook handling with a scheduled job that polls the gateway's status API for old PENDING orders, plus a daily reconciliation against the gateway's settlement report."
+        },
+        {
+          "id": "c",
+          "text": "Mark all PENDING orders as failed after 1 minute."
+        },
+        {
+          "id": "d",
+          "text": "Ask users to confirm their payment by email."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "Webhooks are an optimisation, not a guarantee. A poller catches the lost ones, and reconciliation against settlement reports catches anything else, giving you a final source of truth. Failing every pending order after a minute recreates the original bug.",
+      "bottleneck_note": "Never trust a single notification channel. Verify state by asking.",
+      "concept_ids": [
+        "reconciliation"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "Your service marks the order PAID in the database and then publishes an 'OrderPaid' event so shipping can start. The service crashes between the two steps. The order is paid, but shipping never hears about it. What pattern fixes this?",
+      "context_note": "Two separate writes cannot be made atomic without help.",
+      "system_state": {
+        "nodes": [
+          "order-service",
+          "order-db",
+          "outbox-table",
+          "relay",
+          "event-bus",
+          "shipping"
+        ],
+        "links": [
+          [
+            "order-service",
+            "order-db"
+          ],
+          [
+            "order-service",
+            "outbox-table"
+          ],
+          [
+            "relay",
+            "outbox-table"
+          ],
+          [
+            "relay",
+            "event-bus"
+          ],
+          [
+            "event-bus",
+            "shipping"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Publish the event first, then update the database."
+        },
+        {
+          "id": "b",
+          "text": "Transactional outbox: write the order update and the event to an outbox table in the same database transaction, and have a relay publish outbox rows reliably, with consumers handling duplicates."
+        },
+        {
+          "id": "c",
+          "text": "Hope the service does not crash."
+        },
+        {
+          "id": "d",
+          "text": "Skip the event and make shipping poll every order."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "Writing the state change and the event record in one database transaction removes the crash window, and the relay guarantees the event is eventually published. Because the relay may publish twice, consumers must be idempotent. Publishing first has the same problem in reverse.",
+      "bottleneck_note": "Never rely on two independent writes (database and message bus) staying in sync.",
+      "concept_ids": [
+        "outbox-pattern"
+      ]
+    },
+    {
+      "kind": "probe",
+      "step_type": "design_choice",
+      "prompt": "A payment succeeds, but when you try to confirm the order the inventory service says the item just sold out. The money has already been taken. What is the correct handling?",
+      "context_note": "A multi-step business flow that cannot be rolled back with one database transaction.",
+      "system_state": {
+        "nodes": [
+          "order-service",
+          "payment",
+          "inventory",
+          "refund-service"
+        ],
+        "links": [
+          [
+            "order-service",
+            "payment"
+          ],
+          [
+            "order-service",
+            "inventory"
+          ],
+          [
+            "order-service",
+            "refund-service"
+          ]
+        ]
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": "Keep the money and cancel silently."
+        },
+        {
+          "id": "b",
+          "text": "Run a compensating step: automatically refund (idempotently) and notify the customer, treating the flow as a saga with an explicit compensation for each step."
+        },
+        {
+          "id": "c",
+          "text": "Roll back the bank's database."
+        },
+        {
+          "id": "d",
+          "text": "Wait for the customer to complain."
+        }
+      ],
+      "correct_option_id": "b",
+      "explanation": "Across services there is no single transaction that can undo everything, so each step needs an explicit compensating action. The refund must itself be idempotent so repeated attempts never refund twice. Staying silent or waiting for complaints damages trust and may breach regulations.",
+      "bottleneck_note": "If you cannot roll back, you must design the roll-forward undo.",
+      "concept_ids": [
+        "saga-compensation"
+      ]
+    }
+  ]
+}

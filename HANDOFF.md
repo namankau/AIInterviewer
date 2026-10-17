@@ -2,39 +2,39 @@
 
 ## Task
 
-Compact the interviewer area and keep coding and system design question details on the left, with the answer workspace on the right (user screenshots; no task file).
+Try a live interview and inspect the other round types after compacting the coding and system design workspace (user request; no task file).
 
 ## What I built
 
-- `apps/web/src/components/interview-room.tsx`: narrowed the question pane, made workspace prompts compact and immediately readable, and stopped the live browser transcript in workspace rounds.
-- `apps/web/src/components/dsa-problem-panel.tsx` and `dsa-workspace.tsx`: moved the full coding problem into the left pane and reserved the right pane for the editor and test cases.
-- `apps/web/src/components/design-workspace.tsx`: moved the case details and round phase into the left pane and gave Excalidraw the full right pane.
-- `apps/web/src/components/interviewer-presence.tsx`: added a smaller interviewer portrait for workspace rounds.
-- Added behaviour tests for panel placement and question details.
+- `apps/web/src/components/device-check.tsx`: coding and system design preflight now describes the editor or board and the manual “Over to you” handoff; it omits the browser transcript check for those rounds. The preflight uses round type because the workspace is composed after room entry.
+- `apps/web/src/lib/rounds.ts` and `apps/api/src/main/kotlin/com/interviewos/api/interview/RoundType.kt`: replaced stale speech-only coding descriptions with wording that matches the editor and spoken reasoning.
+- `apps/web/src/components/device-check.test.tsx`: verifies both workspace round types before composition, and keeps spoken-only behavior covered.
 
 ## Assumptions I made
 
-- “No need to transcribe what he is saying” means no word-by-word on-screen reveal in coding and design rounds. The current prompt appears in full, in compact type, so details remain readable while the interviewer speaks. Spoken-only rounds retain their existing reveal.
-- The live browser transcript of the candidate's answer is also omitted in workspace rounds; audio capture and server assessment are unchanged.
+- Coding and system design are the only workspace round types. The other eight types remain spoken rounds; their room layout and preflight text fit that mode.
+- When workspace composition fails, the server deliberately falls back to a spoken round. Preflight describes the normal selected mode before that result is known.
 
 ## What I could NOT verify
 
-- Final visual judgement on the owner's screen, especially a narrow laptop or phone. No live interview or paid AI call was run, per project rule 7.
+- A live coding session was created and reopened in this checkout, but the in-app browser stayed at “Waiting on the browser's permission prompt” and exposed no prompt to grant microphone access. I could not enter the room, speak an answer, or assess voice latency and interviewer quality. I did not create further sessions that would stop at the same gate.
+- Ports 3000/8080 were running a separate older checkout. This checkout was run on ports 3001/8081 to verify the corrected live coding preflight, then stopped. The first session was created against the older checkout's API and reopened against this checkout's API; both use the same backing data.
+- System design and the eight spoken round types were audited in code and tests, not entered live. Final visual judgement remains with the owner.
 
 ## Verification status
 
-- Frontend typecheck, lint, all 3,076 tests, and production build: pass.
-- Backend `ktlintCheck test build`: pass on full rerun. The first run had one intermittent `QuestionSpeechTest` failure; the test passed alone and the full rerun passed.
-- [CI run 39007183041](https://github.com/softzenith-projects/Untiered/actions/runs/39007183041): web, API, database, and image jobs all passed.
+- Frontend typecheck, lint, all 3,078 tests, and production build: pass.
+- Backend `ktlintCheck test build`: pass.
+- [CI run 39014047405](https://github.com/softzenith-projects/Untiered/actions/runs/39014047405): web, API, database, and image jobs passed.
 - No database migrations changed.
 
 ## Merge status
 
-- Fast-forwarded and pushed `develop` at `973f3a9` after green CI. `main` was not changed.
+- Fast-forwarded and pushed `develop` at `bdd54df` after green CI. `main` was not changed.
 
 ## Suggested next task
 
-- Review one coding and one system design round visually on desktop and phone before making further spacing adjustments.
+- Complete one coding and one system design room check in a browser with microphone access, then judge voice pacing and desktop/mobile spacing.
 
 ## Open questions for you
 
